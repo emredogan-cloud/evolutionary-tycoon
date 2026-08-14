@@ -437,28 +437,47 @@ UI hiçbir zaman per-frame çalışmaz. HUD 10 Hz'de güncellenir; animasyonlu s
 
 ### 8.1 Save şeması
 
+v1 şeması, Faz 2'de implemente edildiği hâliyle (`src/persistence/schema.ts`, Zod ile doğrulanır):
+
 ```ts
-interface SaveFile {
-  schemaVersion: number;          // migration zinciri anahtarı
-  buildSha: string;               // teşhis
-  createdAt: number;              // epoch ms
-  lastSeenAt: number;             // offline hesabı için
-  lastSeenServerAt: number | null;// sunucu zaman referansı
-  playtimeMs: number;
+interface SaveFileV1 {
+  schemaVersion: 1; // migration zinciri anahtarı
+  buildSha: string; // teşhis
+  createdAt: number; // epoch ms — ilk kayıtta sabitlenir, sonraki kayıtlarda korunur
+  lastSeenAt: number; // offline hesabı için
+  lastSeenServerAt: number | null; // sunucu zaman referansı
+  playtimeMs: number; // SİMÜLASYON zamanı (açık bırakılan sekme oynanmış sayılmaz)
 
-  rng: Record<RngStreamName, RngState>;
-  clock: { simTimeMs: number; gameDay: number };
+  tick: number; // devam edilecek tick
+  nextEntityId: number; // entity kimlik sayacı; geri sarılmaz
+  clock: { simTimeMs: number }; // gameDay/gameHour bundan türetilir, ayrıca saklanmaz
+  rng: Record<RngStreamName, RngState>; // altı stream de — cosmetic dahil
+  control: { speedMultiplier: 1 | 2 | 4; paused: boolean };
 
-  progression: { stage: 1|2|3|4; unlocks: string[]; objectives: ObjectiveState[]; milestones: string[] };
-  economy:     { cash: number; reputation: number; lifetimeRevenue: number; prices: Record<string, number> };
-  layout:      { placed: PlacedObject[]; upgrades: Record<string, number> };  // upgradeId → level
-  staff:       { employees: EmployeeSave[] };
-  stats:       { customersServed: number; archetypesSeen: string[]; ... };
-  settings:    { audio: AudioSettings; a11y: A11ySettings; };
+  progression: { stage: 1 | 2 | 3 | 4; unlocks: string[]; milestones: string[] };
+  economy: {
+    cash: number;
+    reputation: number;
+    lifetimeRevenue: number;
+    prices: [string, number][];
+  }; // anahtara göre SIRALI
+  layout: { placed: PlacedObject[]; upgrades: [string, number][] }; // upgradeId → level
+  staff: { hired: { entityId: number; roleId: string }[] };
+  stats: { customersServed: number; vehiclesSpawned: number; commandsApplied: number };
+  settings: { audio: AudioSettings; a11y: A11ySettings };
 
-  checksum: string;               // CRC32 — bozulma tespiti (güvenlik DEĞİL)
+  checksum: string; // CRC-32 — bozulma tespiti (güvenlik DEĞİL)
 }
 ```
+
+**Uygulamada netleşen üç ayrıntı:**
+
+- **`Map` yerine sıralı çift dizisi.** JSON'da map tipi yok. Anahtara göre sıralamak, aynı içeriğe
+  farklı yollardan ulaşmış iki kaydın aynı baytları — dolayısıyla aynı checksum'ı — üretmesini sağlar.
+- **`cosmetic` stream'i kaydedilir ama hash'lenmez.** Hash'ten dışlanma sebebi "simülasyon sonucunu
+  etkilemiyor" olması; kaydedilme sebebi ise görsel çeşitliliğin yeniden yükleyince değişmemesi.
+- **`objectives`/`archetypesSeen` v1'de yok.** İlgili sistemler henüz yok; alanı boş taşımak yerine
+  migration zinciriyle eklenecekler (Faz 11 ve Faz 6).
 
 **Transient state kaydedilmez.** Yoldaki araçlar, yarım siparişler, yürüyen müşteriler — hepsi yeniden başlangıçta temiz olarak oluşturulur. Save yalnızca **kalıcı** durumu tutar. Bu, save boyutunu ~15 KB'ta tutar ve migration'ları basitleştirir.
 

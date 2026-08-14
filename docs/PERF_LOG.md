@@ -42,6 +42,49 @@ whether 550 kB is the right ceiling. That is answered in Phase 3.
 
 **No FPS measured.** There is no rendering yet. First real-GPU measurement is due in Phase 3.
 
+### Phase 2 — 2026-08-15 · simulation core reference point
+
+```
+Machine:  AMD Ryzen 5 5500 (12 threads), 15 GB RAM
+OS:       Ubuntu 24.04.4 LTS, kernel 7.0.0-28-generic
+Runtime:  Node v24.13.1
+Command:  pnpm bench:sim   (vitest.bench.config.ts, forked worker with --expose-gc)
+Scene:    empty system pipeline — this is the floor every later phase builds on
+```
+
+| Measurement                                            |      p50 |      p95 |          per op | Budget            |
+| ------------------------------------------------------ | -------: | -------: | --------------: | ----------------- |
+| 1000 empty ticks                                       | 0.195 ms | 0.317 ms |   0.195 µs/tick | **< 5 ms** ✅     |
+| World hash (120 vehicles, 60 customers)                | 3.772 ms | 4.074 ms |   37.72 µs/hash | < 500 µs ✅       |
+| 1000 ticks, one command each                           | 0.328 ms | 0.482 ms |   0.328 µs/tick | < 20 µs ✅        |
+| 1000 ticks, 8 events/tick, 3 subscribers               | 0.428 ms | 0.566 ms |  0.054 µs/event | < 10 µs ✅        |
+| Vehicle spawn + despawn cycles                         | 0.057 ms | 0.060 ms | 0.036 µs/entity | < 5 µs ✅         |
+| World snapshot + `JSON.stringify`                      | 0.345 ms | 0.603 ms |   3.455 µs/save | **< 8 ms** ✅     |
+| **Steady-state allocation** (200 000 ticks, gc forced) |        — |        — | **0.20 B/tick** | **≈ 0 B/tick** ✅ |
+
+| Build metric             |                        Value | Change from Phase 1 |
+| ------------------------ | ---------------------------: | ------------------- |
+| Production build time    |                       0.47 s | +0.07 s             |
+| JS bundle (raw / gzip)   |     134.24 kB / **41.22 kB** | +28.11 kB gzip      |
+| CSS bundle (gzip)        |                  **1.52 kB** | unchanged           |
+| Unit + integration suite |            ~19 s (313 tests) | +286 tests          |
+| E2E Chromium             | 3.1 s (17 passed, 6 skipped) | +9 tests            |
+| E2E Firefox              | 7.2 s (17 passed, 6 skipped) | +9 tests            |
+
+**Where the 28 kB went:** the deterministic core plus Zod, which now ships because save
+validation happens against _untrusted input_ (a file that may be hand-edited, truncated by a
+quota, or written by an older build) and therefore cannot be a dev-only check. 41 kB of a 550 kB
+budget; the ceiling is still untested against Phaser, which lands in Phase 3.
+
+**Honest caveats:**
+
+- **No FPS measured. There is still no rendering.** First real-GPU measurement is due in Phase 3.
+- These are _local_ numbers on the machine above. The CI baseline is recorded separately in
+  `tools/bench/baseline.json` from a CI run, because the 15% regression gate must compare like
+  with like — a local number would make every CI run look like a regression or hide a real one.
+- Allocation is 0.20 B/tick rather than exactly 0. That is V8 bookkeeping over 200 000 ticks, not
+  a per-tick allocation: one object literal per tick would be ~50 B/tick, two hundred times higher.
+
 ### Template for future entries
 
 ```

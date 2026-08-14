@@ -14,27 +14,33 @@
 
 ## 1. Project Identity
 
-|                    |                                                                                   |
-| ------------------ | --------------------------------------------------------------------------------- |
-| **Proje adı**      | Evolutionary Tycoon                                                               |
-| **Repository**     | `https://github.com/emredogan-cloud/evolutionary-tycoon` (Faz 1'de oluşturulacak) |
-| **Sürüm**          | 0.1.0 (Faz 1 hedefi)                                                              |
-| **Mevcut faz**     | **PHASE 1 — Foundation: Repository + CI/CD + Testing + Deployment**               |
-| **Mevcut kapı**    | GATE 0 ✅ ONAYLANDI (2026-08-14) → GATE 1 açık                                    |
-| **Durum**          | 🟡 Faz 1 yürütülüyor                                                              |
-| **Son güncelleme** | 2026-08-14 — CHECKPOINT A                                                         |
-| **Son commit SHA** | — (henüz commit yok)                                                              |
-| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                        |
+|                    |                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| **Proje adı**      | Evolutionary Tycoon                                                                 |
+| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)              |
+| **Sürüm**          | 0.1.0                                                                               |
+| **Mevcut faz**     | **PHASE 2 — Simulation Core & Determinism** (BATCH P2→P4'ün ilk fazı)               |
+| **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi)      |
+| **Durum**          | 🟡 Batch 2→4 yürütülüyor                                                            |
+| **Son güncelleme** | 2026-08-14 — CHECKPOINT F                                                           |
+| **Son commit SHA** | `cbdaef4bcc6ba99edc1eef2f96737bfe47791286` (main, doğrulandı: `git rev-parse HEAD`) |
+| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                          |
 
 ---
 
 ## 2. Current Mission
 
-Hiç oyun kodu yazmadan, projeyi taşıyacak mühendislik temelini kurmak: public repo, katı TypeScript,
-tip-farkında lint, **makine tarafından zorlanan katman sınırları**, test altyapısı (Vitest + Playwright),
-GitHub Actions CI, üretim build'i, Vercel preview + production deployment, ve doğrulanmış sağlık kontrolü.
+**BATCH P2 → P3 → P4** (kullanıcı tarafından 2026-08-14'te toplu yetkilendirildi, otonom yürütme).
 
-**Faz 1'in ürünü görsel olarak minimaldir. Mühendislik temeli güçlü olmalıdır.**
+| Faz    | Misyon                                                                                                                                                                                                                      |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P2** | Motordan bağımsız, deterministik, headless simülasyon çekirdeği: Clock, 6 RNG stream'i, World+hash, 18 slotluk sistem hattı, CommandLog, EventBus, store'lar, SaveManager v1, GameLoop, determinizm süiti, sim benchmark'ı. |
+| **P3** | İzometrik render temeli: Phaser 4 bootstrap, 2:1 dimetrik projeksiyon, depth sort, 9 katmanlı sahne, kamera, RenderBridge, görsel determinizm modu, ilk visual golden'lar, gerçek GPU perf ölçümü.                          |
+| **P4** | Sanat yönü + asset pipeline v1: lisans kapısı (9 madde, birincil kaynak), palet, validate/process/atlas/manifest/report, deterministik asset build'i, bütçeler.                                                             |
+
+**Batch kuralı:** faz geçişleri otomatik, ama her geçiş tam doğrulama kapısı gerektirir
+(implementasyon + testler + CI + preview E2E + dokümantasyon + memory + faz raporu).
+**P4 sonunda DUR.** P5–P7 yetkilendirilmemiştir.
 
 ---
 
@@ -86,43 +92,57 @@ Detay: [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md)
 
 ## 5. Phase State
 
-| Faz                  | Durum                | Başlangıç  | Bitiş      | Commit/PR  | Kapı                    | Kanıt                  |
-| -------------------- | -------------------- | ---------- | ---------- | ---------- | ----------------------- | ---------------------- |
-| P0 Research & Design | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo) | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime |
-| **P1 Foundation**    | 🟡 **YÜRÜTÜLÜYOR**   | 2026-08-14 | —          | —          | GATE 1 açık             | —                      |
-| P2 Sim Core          | ⬜ Yetkilendirilmedi | —          | —          | —          | —                       | —                      |
-| P3–P24               | ⬜ Yetkilendirilmedi | —          | —          | —          | —                       | —                      |
+| Faz                  | Durum                | Başlangıç  | Bitiş      | Commit/PR                  | Kapı                    | Kanıt                                      |
+| -------------------- | -------------------- | ---------- | ---------- | -------------------------- | ----------------------- | ------------------------------------------ |
+| P0 Research & Design | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                 | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime                     |
+| P1 Foundation        | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`      | **GATE 1 ✅ ONAYLANDI** | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md) |
+| **P2 Sim Core**      | 🟡 **YÜRÜTÜLÜYOR**   | 2026-08-14 | —          | `phase/02-simulation-core` | Batch içi kapı          | —                                          |
+| P3 Iso Render        | 🟢 Yetkilendirildi   | —          | —          | —                          | Batch içi kapı          | —                                          |
+| P4 Asset Pipeline v1 | 🟢 Yetkilendirildi   | —          | —          | —                          | **BATCH ÇIKIŞ KAPISI**  | —                                          |
+| P5–P24               | ⬜ Yetkilendirilmedi | —          | —          | —                          | —                       | —                                          |
 
 **Onaylı roadmap:** 25 faz (P0–P24). Orijinal 22 fazlık yapıya **dönülmeyecek**.
 Onaylı 6 değişiklik: D1 (yeni P2 Sim Core) · D2 (Pathfinding→P7) · D3 (Asset P4+P16) · D4 (Economy P9+P12+P13) · D5 (Employee AI, Evolution'dan önce) · D6 (P9 sonunda Vertical Slice Kapısı).
 
 ---
 
-## 6. Current Phase — PHASE 1 (tamamlandı, kapı bekliyor)
+## 6. Current Phase — BATCH P2 → P4
 
-**Yetkilendirilmiş kapsam:** Yalnızca mühendislik temeli. **Sıfır oyun kodu.**
+### CHECKPOINT F — Batch başlangıcı (2026-08-14)
 
-Açıkça yasak: simülasyon implementasyonu · entity · trafik · müşteri · restoran · ekonomi ·
-oyun sahnesi · üretim asset'i · "altyapı kılığında" Faz 2+ özelliği.
+**Context reset tespit edildi ve kabul edildi.** Önceki Claude oturumu kasıtlı olarak sıfırlandı;
+durum bu dosyadan, `PHASE_1_REPORT.md`'den ve **doğrudan repo/CI/deployment ölçümünden** yeniden kuruldu.
 
-**38 teslim kalemi** — [GAME_EXECUTION_ROADMAP Faz 1](GAME_EXECUTION_ROADMAP.md#phase-1--foundation-repo--cicd--testing--deployment)
+**Yetkilendirme değişikliği (kullanıcı, 2026-08-14):** Yürütme kadansı üçlü batch'e geçti.
+`P2 → P3 → P4` **otonom** yürütülecek; ara onay istenmeyecek; **P4 sonunda DURULACAK**.
+Sonraki batch adayı `P5 → P6 → P7` — **henüz yetkilendirilmemiş.**
 
-**Başlangıç ortamı (doğrulandı, 2026-08-14):**
+**Ölçülen başlangıç durumu (varsayım değil):**
 
-```
-node        v24.13.1
-npm         11.8.0
-pnpm        10.33.4
-git         2.43.0
-gh          2.45.0    → emredogan-cloud (scopes: gist, read:org, repo, workflow)
-vercel CLI  56.5.0 (global)  → repo'da 59.0.0 pinlenecek (§8 D-04)
-disk        502 GB boş
-repo        emredogan-cloud/evolutionary-tycoon → HENÜZ YOK (doğrulandı: gh repo view → 404)
-```
+| Ne                        | Ölçüm                                                                     | Nasıl                                            |
+| ------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------ |
+| main HEAD                 | `cbdaef4bcc6ba99edc1eef2f96737bfe47791286`                                | `git rev-parse HEAD`                             |
+| Çalışma ağacı             | temiz                                                                     | `git status`                                     |
+| Son CI (main)             | ✅ başarılı — run 31837638087                                             | `gh run list`                                    |
+| CodeQL (main)             | ✅ başarılı — run 31837638095                                             | `gh run list`                                    |
+| Production `/health.json` | 200, `buildSha` = `cbdaef4…` → **main ile eşleşiyor**                     | `curl`                                           |
+| `/api/time`               | 204                                                                       | `curl`                                           |
+| node / pnpm               | v24.13.1 / 10.33.4 → `.nvmrc` + `packageManager` ile birebir              | `node -v`, `pnpm -v`                             |
+| **Vercel SSO koruması**   | **`ssoProtection.enabled = false` — KAPALI**                              | Vercel API (`get_project_deployment_protection`) |
+| **Deployment-başına URL** | **HTTP 200** (`…-1ob1fg36g-…vercel.app/health.json`) — artık erişilebilir | `curl`                                           |
 
-**Bitiş CI durumu:** ✅ CI 7/7 yeşil · CodeQL yeşil · preview-e2e uyarıyla atlandı (§16)
+**Bunun sonucu:** Faz 1'in bilinen açık sorunu #1 (Deployment Protection) **çözüldü**.
+`preview-e2e`'nin "uyarıp atla" davranışı artık gerekçesiz — bu batch'te **bloke edici kapıya geri çevrilecek**.
 
-**Faz risklerinin sonucu:**
+### Düzeltilen doküman tutarsızlığı (CHECKPOINT F)
+
+Bu dosyanın §1 ve §5'i "P1 yürütülüyor, henüz commit yok" diyordu; aynı dosyanın §6/§15/§16/§20/§21'i,
+`PHASE_1_REPORT.md` ve repo'nun kendisi P1'in tamamlandığını söylüyordu. Bu bir otorite çelişkisi değil,
+tek dosya içinde **bayat başlık alanı**ydı; repo ve faz raporu doğruluk kaynağı kabul edilip düzeltildi.
+`PHASE_1_REPORT.md` "main HEAD `64988ba`" diyor; o rapor yazıldıktan sonra iki docs commit'i daha girdi,
+güncel HEAD `cbdaef4`. Rapor tarihsel kayıt olarak olduğu gibi bırakıldı.
+
+### Faz 1'den taşınan risk sonuçları
 
 - R-P1-01 (Vercel davranışı) → gerçekleşti, çözüldü: `vercel.json`+`vercel.ts` çakışması, `vercel.ts` tek kaynak
 - R-P1-02 (typescript-eslint + ESLint 10) → **sorun çıkmadı**, uyumlu
@@ -158,6 +178,7 @@ repo        emredogan-cloud/evolutionary-tycoon → HENÜZ YOK (doğrulandı: gh
 | D-06 | **Motordan bağımsız deterministik sim çekirdeği**        | Projenin en önemli kararı. Headless test, CI'da ekonomi doğrulaması, piksel-kesin visual regression, tekrar üretilebilir bug'lar, Day Replay — hepsi buna bağlı. | ADR-004                             |
 | D-07 | **Visual regression yalnızca Chromium**                  | Firefox `xvfb` gerektiriyor, WebKit canvas'ı screenshot'ta göstermiyor (Playwright#586). Teknik zorunluluk.                                                      | ADR-011                             |
 | D-08 | **CI asla FPS iddia etmez**                              | GH Actions Chromium'u SwiftShader (yazılım rasterizasyonu) kullanıyor. Gerçek FPS manuel ölçülür, PERF_LOG'a yazılır.                                            | ADR-011                             |
+| D-09 | **Vercel Authentication kapalı kalır**                   | Açıkken `preview-e2e` doğrulayacağı deployment-başına URL'e erişemiyor ve kapı kör kalıyor. Oyun zaten kayıt gerektirmeyen public bir ürün.                      | Kullanıcı kararı 2026-08-14, §16    |
 
 ---
 
@@ -213,21 +234,21 @@ repo        emredogan-cloud/evolutionary-tycoon → HENÜZ YOK (doğrulandı: gh
 
 ## 12. Known Problems (yalnızca doğrulanmış)
 
-| #   | Sorun                                                                                                                     | Etki                                                                           | Durum                                                             |
-| --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| 1   | **Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO). Stabil production alias'ı açık (200). | `preview-e2e` doğrulayacağı preview'a erişemiyor. Oyunun kendisi etkilenmiyor. | 🟠 Açık — §16                                                     |
-| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)                                              | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s)                  | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                  |
-| 3   | 550 kB JS bütçesi **yapılandırıldı ama sınanmadı** — Phaser import edilmiyor                                              | Bütçenin doğru olup olmadığı bilinmiyor                                        | 🟡 Faz 3'te cevaplanacak, [DEPENDENCY_NOTES](DEPENDENCY_NOTES.md) |
+| #   | Sorun                                                                                  | Etki                                                          | Durum                                                             |
+| --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
+| 1   | ~~**Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO)~~ | —                                                             | ✅ **ÇÖZÜLDÜ** 2026-08-14 (CHECKPOINT F) — §16                    |
+| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)           | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s) | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                  |
+| 3   | 550 kB JS bütçesi **yapılandırıldı ama sınanmadı** — Phaser import edilmiyor           | Bütçenin doğru olup olmadığı bilinmiyor                       | 🟡 Faz 3'te cevaplanacak, [DEPENDENCY_NOTES](DEPENDENCY_NOTES.md) |
 
 ---
 
 ## 13. Temporary Workarounds
 
-| #   | Geçici çözüm                                      | Neden                                                                        | Ne zaman kalkar                                 |
-| --- | ------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
-| 1   | `preview-e2e` koruma tespit edince uyarıp atlıyor | Repo'nun düzeltemeyeceği bir sebeple kalıcı kırmızı check istemiyoruz (D-10) | Deployment Protection kapatılınca kendiliğinden |
-| 2   | `HOME=/root` Playwright job'larında               | Container root koşuyor, `$HOME` başka kullanıcıya ait; Firefox açılmıyor     | Playwright imajı davranışı değişirse            |
-| 3   | `phaser`/`zod`/`idb` kurulu ama import edilmiyor  | Sürüm kilidi Faz 1 teslimi; ilk kullanım Faz 2–3                             | Faz 3                                           |
+| #   | Geçici çözüm                                          | Neden                                                                    | Ne zaman kalkar                      |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------ |
+| 1   | ~~`preview-e2e` koruma tespit edince uyarıp atlıyor~~ | —                                                                        | ✅ **KALDIRILDI** 2026-08-14 (P2)    |
+| 2   | `HOME=/root` Playwright job'larında                   | Container root koşuyor, `$HOME` başka kullanıcıya ait; Firefox açılmıyor | Playwright imajı davranışı değişirse |
+| 3   | `phaser` kurulu ama import edilmiyor                  | Sürüm kilidi Faz 1 teslimi; ilk kullanım Faz 3                           | Faz 3                                |
 
 ---
 
@@ -287,24 +308,27 @@ CI run [31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/acti
 | Sağlık              | ✅ `/health.json` 200 · header'lar doğru · `/assets/**` immutable · SPA rewrite · `/api/time` 204 + Date |
 | Config kaynağı      | `vercel.ts` (tek kaynak; `vercel.json` yok)                                                              |
 
-### ⚠ AÇIK KARAR — Deployment Protection
+### ✅ ÇÖZÜLDÜ — Deployment Protection (2026-08-14, CHECKPOINT F)
 
-**Ölçüm (2026-08-14, varsayım değil):**
+Kullanıcı **Seçenek A**'yı uyguladı: Vercel Authentication kapatıldı.
 
-| URL                       | Kimliksiz sonuç                |
-| ------------------------- | ------------------------------ |
-| Stabil production alias   | **HTTP 200 — herkese açık** ✅ |
-| Deployment-başına URL'ler | **HTTP 302 → Vercel SSO** ⚠    |
+**Ölçüm (varsayım değil):**
 
-Ayar: `ssoProtection.enabled = true`, `deploymentType = all_except_custom_domains`.
+| Ne                      | Faz 1'de                    | CHECKPOINT F'te |
+| ----------------------- | --------------------------- | --------------- |
+| `ssoProtection.enabled` | `true`                      | **`false`**     |
+| Stabil production alias | HTTP 200                    | HTTP 200        |
+| Deployment-başına URL   | **HTTP 302 → Vercel SSO** ⚠ | **HTTP 200** ✅ |
 
-**Sonuç:** Oyun herkese açık — onaylı ürün gereksinimi ("indirme yok, kayıt yok") karşılanıyor.
-Ama `preview-e2e`, `deployment_status`'ın bildirdiği deployment-başına URL'i hedefliyor ve ona erişemiyor.
+Kanıt: Vercel API `get_project_deployment_protection` →
+`{"ssoProtection":{"enabled":false,"deploymentType":null},"passwordProtection":{"enabled":false}}`
+ve `curl -o /dev/null -w '%{http_code}' https://evolutionary-tycoon-1ob1fg36g-emre30283-4955s-projects.vercel.app/health.json` → `200`.
 
-**Ayarı kapatma girişimi permission classifier tarafından engellendi** — doğru davranış, bu sahibinin kararı.
+**Karar D-09:** Vercel Authentication **kapalı kalır**. Yeniden açılmaz — açılırsa `preview-e2e` kapısı
+tekrar kör kalır. Oyun zaten kayıt gerektirmeyen public bir üründür.
 
-- **Seçenek A (public oyun için önerilen):** Vercel → Project → Settings → Deployment Protection → Vercel Authentication → **Disabled**
-- **Seçenek B:** Protection Bypass for Automation secret üret, `VERCEL_AUTOMATION_BYPASS_SECRET` repo secret'ı olarak sakla, workflow'dan `x-vercel-protection-bypass` header'ı ile gönder
+**Aksiyon:** `preview-e2e.yml`'deki "koruma tespit edilirse uyarıp atla" yolu kaldırıldı; iş yeniden
+bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 17. Asset State
 
@@ -375,22 +399,28 @@ Ama `preview-e2e`, `deployment_status`'ın bildirdiği deployment-başına URL'i
 
 ## 21. Next Authorized Action
 
-> ## 🔴 HİÇBİR ŞEY — GATE 1 ONAY BEKLİYOR
+> ## 🟢 BATCH P2 → P3 → P4 (otonom)
 >
-> Faz 1 tamamlandı ve raporlandı. **Faz 2 (Simulation Core & Determinism) YETKİLENDİRİLMEMİŞTİR.**
+> Kullanıcı 2026-08-14'te üç fazı **birlikte** yetkilendirdi. Sıra:
 >
-> Açık kullanıcı onayı olmadan başlanmaz. "tamam", "iyi", "güzel" yetki sayılmaz.
+> `P2 tamamla → tam doğrulama → memory → P3 tamamla → tam doğrulama → memory → P4 tamamla → tam doğrulama → memory → BATCH RAPORU → DUR`
+>
+> **Şu an:** P2 — Simulation Core & Determinism (`phase/02-simulation-core`).
+>
+> **Yasak:** P5 (Trafik), P6 (Müşteri), P7 (Navigasyon), P8 (Servis), P9 (Ekonomi) ve sonrası.
+> "Hazırlık" kılığında ileri faz implementasyonu da yasak. P4 bittiğinde DURULUR ve onay beklenir.
 >
 > **Onay beklerken yapılabilecek tek şey:** kullanıcı §16'daki Deployment Protection kararını
 > verirse ilgili ayarı/secret'ı uygulamak.
 
 ## 22. Change Log
 
-| Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                 |
-| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                 |
-| 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                               |
-| 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı. |
-| 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                     |
-| 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                    |
-| 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                   |
+| Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                             |
+| ---------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                                                                                                             |
+| 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                                                                                                                           |
+| 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı.                                                                                             |
+| 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                 |
+| 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                |
+| 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                               |
+| 2026-08-14 | **F**      | **Batch P2→P4 başladı.** Context reset sonrası durum repo/CI/deployment ölçümüyle yeniden kuruldu. GATE 1 onaylandı, P2+P3+P4 toplu yetkilendirildi. Vercel Authentication kapatıldığı **doğrulandı** (API + curl) → bilinen sorun #1 ve geçici çözüm #1 kapandı, D-09 eklendi. §1/§5'teki bayat "P1 yürütülüyor" alanları düzeltildi. |

@@ -85,7 +85,9 @@ pnpm knip             # dead code / unused deps
 pnpm config:check     # vercel.json is in sync with vercel.ts
 
 pnpm test             # Vitest unit + integration
-pnpm test:coverage    # with coverage thresholds
+pnpm test:coverage    # with coverage thresholds (per-layer, see TESTING_STRATEGY §13)
+pnpm test:determinism # the determinism suite on its own — the most important signal
+pnpm bench:sim        # headless simulation benchmark + budgets (needs --expose-gc; config handles it)
 pnpm e2e              # Playwright: chromium + firefox
 pnpm e2e:smoke        # Playwright: webkit reduced suite
 pnpm size             # bundle budgets
@@ -107,6 +109,16 @@ pnpm verify           # everything above, in order — run before claiming done
   fails the build if they drift.
 - **Placeholders must be registered** in `docs/PLACEHOLDER_REGISTER.md` and must look obviously
   wrong. A placeholder that looks "good enough" is the dangerous kind.
+- **`World.hash()` deliberately excludes three things**, and each exclusion is itself under test:
+  the `cosmetic` RNG stream, `control.speedMultiplier` / `control.paused`, and the per-tick event
+  queue. They are excluded because none of them may change a simulation _outcome_ — which is
+  exactly what makes "1x, 2x and 4x produce the same world" a statement worth testing. Adding one
+  of them to the digest silently breaks the determinism suite's meaning, not just its result.
+- **Commands land at the start of a tick, never on dispatch.** `sim.dispatch()` queues; `tick()`
+  stamps, applies and logs. Applying immediately would let wall-clock arrival time change the
+  outcome.
+- **The eighteen system slots are ordered and that order is architecture.** Changing it changes
+  throughput and invalidates every balance number measured before the change (WORKING_DISCIPLINE §6).
 
 ## 7. Git
 
