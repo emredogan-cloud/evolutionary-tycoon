@@ -90,6 +90,8 @@ pnpm test:determinism # the determinism suite on its own — the most important 
 pnpm bench:sim        # headless simulation benchmark + budgets (needs --expose-gc; config handles it)
 pnpm e2e              # Playwright: chromium + firefox
 pnpm e2e:smoke        # Playwright: webkit reduced suite
+pnpm test:visual      # visual goldens (chromium, forced SwiftShader)
+pnpm test:visual:update  # regenerate goldens INSIDE the pinned CI container
 pnpm size             # bundle budgets
 
 pnpm verify           # everything above, in order — run before claiming done
@@ -104,7 +106,15 @@ pnpm verify           # everything above, in order — run before claiming done
   about frame rate, and never report an FPS number you did not measure on real hardware. Real
   measurements go in `docs/PERF_LOG.md`.
 - **Visual regression is Chromium-only.** Headless WebKit does not render canvas into screenshots
-  (playwright#586); headless Firefox WebGL needs `xvfb-run`.
+  (playwright#586); headless Firefox WebGL needs `xvfb-run`. Goldens are generated in the pinned
+  container via `pnpm test:visual:update` — verified to produce byte-identical output to the host,
+  so a diff always means the _render_ changed.
+- **A visual diff is never auto-accepted.** Look at it, decide whether the change was intended, and
+  only then update the golden with the reason in the PR (TESTING_STRATEGY §8.4).
+- **Phaser 4.2.1 opens a WebGL _1_ context, not WebGL2** — `WebGLRenderer.js:709`, and the string
+  "webgl2" appears nowhere in its source. Four documents say otherwise. This is an open
+  contradiction recorded in `docs/PROJECT_MEMORY.md` §12; do not "fix" the documents or the
+  capability gate without the decision it asks for.
 - **`vercel.json` is generated.** Edit `vercel.ts`, then run `pnpm config:build`. `pnpm config:check`
   fails the build if they drift.
 - **Placeholders must be registered** in `docs/PLACEHOLDER_REGISTER.md` and must look obviously
@@ -119,6 +129,10 @@ pnpm verify           # everything above, in order — run before claiming done
   outcome.
 - **The eighteen system slots are ordered and that order is architecture.** Changing it changes
   throughput and invalidates every balance number measured before the change (WORKING_DISCIPLINE §6).
+- **Objects anchor at their footprint centre, never their visual centre.** A tree's sprite middle is
+  in the canopy; what decides whether someone walks in front of it is where its trunk meets the
+  ground. The depth tie-break is bounded below the smallest meaningful height difference (5 cm), not
+  below one whole height unit — the looser bound lets an entity id outrank a step.
 
 ## 7. Git
 

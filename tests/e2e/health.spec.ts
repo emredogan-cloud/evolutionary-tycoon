@@ -1,3 +1,4 @@
+import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 import { expect, test } from './fixtures';
 
 /**
@@ -20,7 +21,7 @@ test.describe('health endpoint', () => {
     // Explicitly null until the asset pipeline exists (Phase 4) — absent would
     // be ambiguous between "no pipeline" and "pipeline produced nothing".
     expect(body['assetManifestHash']).toBeNull();
-    expect(body['schemaVersion']).toBe(1);
+    expect(body['schemaVersion']).toBe(SAVE_SCHEMA_VERSION);
   });
 
   test('the served bundle and /health.json report the same commit', async ({ page, request }) => {
