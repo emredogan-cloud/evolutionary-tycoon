@@ -254,16 +254,25 @@ güncel HEAD `cbdaef4`. Rapor tarihsel kayıt olarak olduğu gibi bırakıldı.
 
 ## 14. Performance Baseline (yalnızca ölçülmüş)
 
-| Metrik                    |                       Değer | Nasıl                |
-| ------------------------- | --------------------------: | -------------------- |
-| Production build          |                      395 ms | `pnpm build`, yerel  |
-| JS bundle (gzip)          | **13.11 kB** / bütçe 550 kB | `pnpm size`          |
-| CSS bundle (gzip)         |   **1.52 kB** / bütçe 30 kB | `pnpm size`          |
-| Unit + architecture süiti |             ~17 s (27 test) | `pnpm test:coverage` |
-| CI toplam (en uzun job)   |     1 m 09 s (E2E chromium) | run 31836097461      |
+| Metrik                             |                       Değer | Nasıl                      |
+| ---------------------------------- | --------------------------: | -------------------------- |
+| Production build                   |                      470 ms | `pnpm build`, yerel        |
+| JS bundle (gzip)                   | **41.22 kB** / bütçe 550 kB | `pnpm size`                |
+| CSS bundle (gzip)                  |   **1.52 kB** / bütçe 30 kB | `pnpm size`                |
+| **1000 boş tick**                  |   **0.195 ms** / bütçe 5 ms | `pnpm bench:sim`, yerel    |
+| **Steady-state tahsis**            |  **0.20 B/tick** / bütçe ≈0 | `pnpm bench:sim` (gc açık) |
+| World hash (120 araç + 60 müşteri) |                     37.7 µs | `pnpm bench:sim`           |
+| Save snapshot + JSON               |                     3.46 µs | `pnpm bench:sim`           |
+| Unit + integration süiti           |            ~19 s (314 test) | `pnpm test:coverage`       |
 
-**FPS ölçülmedi** — henüz render yok, ve CI FPS ölçemez (SwiftShader). İlk gerçek GPU ölçümü Faz 3.
-Detay: [PERF_LOG.md](PERF_LOG.md).
+**JS bundle 13.11 → 41.22 kB:** çekirdek + Zod. Zod artık production'a giriyor çünkü save
+doğrulaması **güvenilmeyen girdi** üzerinde çalışıyor (elle düzenlenmiş, kotayla kesilmiş veya
+eski build'in yazdığı dosya) — dev-only bir kontrol olamaz. Bütçenin %7.5'i.
+
+**FPS ölçülmedi** — hâlâ render yok, ve CI FPS ölçemez (SwiftShader). İlk gerçek GPU ölçümü Faz 3.
+Detay: [PERF_LOG.md](PERF_LOG.md). CI baseline'ı `tools/bench/baseline.json`'da ayrıca tutulur;
+regresyon kapısı 25 örneğin **minimumunu** karşılaştırır, medyanını değil — paylaşımlı runner'da
+medyan %15'i tesadüfen aşıyor ve rastgele patlayan kapı, kapı olmamaktan kötüdür (§11).
 
 ---
 
@@ -363,6 +372,30 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 5. **CI'da FPS ölçme.** SwiftShader. Gerçek FPS manuel, PERF_LOG'a.
 6. **Sürüm yükseltme = kayıt gerektirir.** WORKING_DISCIPLINE §2.5.
 7. **Çelişki bulursan DUR ve raporla.** Sessizce uzlaştırma.
+
+**Faz 2'den taşınan çekirdek değişmezleri — bunları bilmeden `src/sim`'e dokunma:**
+
+1. **`World.hash()` üç şeyi bilerek dışlar:** `cosmetic` RNG stream'i, `control.speedMultiplier`
+   ve `control.paused`, ve tick içi event kuyruğu. Sebep tek: hiçbiri simülasyon **sonucunu**
+   değiştiremez. "1×/2×/4× aynı dünyayı üretir" ifadesini test edilebilir kılan şey tam olarak bu
+   dışlama — hız hash'in içinde olsaydı test yalnızca bir koşuyu kendisiyle karşılaştırabilirdi.
+   Her dışlamanın kendisi ayrıca test edilir. Birini hash'e eklemek testin sonucunu değil
+   **anlamını** bozar.
+2. **Command'ler tick'in başında uygulanır, dispatch anında değil.** `dispatch()` kuyruğa alır;
+   `tick()` damgalar, uygular, loglar. Anında uygulamak, oyuncunun tıkladığı duvar-saati anının
+   sonuca sızmasına izin verirdi.
+3. **18 sistem slotunun sırası mimaridir.** Değiştirmek throughput'u değiştirir ve o değişiklikten
+   önce ölçülmüş her denge sayısını geçersiz kılar → onay gerektirir (WORKING_DISCIPLINE §6).
+4. **Saat `Sim.tick()` içinde ilerler, `TimeSystem` içinde değil.** Roadmap "18 slot da no-op"
+   diyor, TECHNICAL_ARCHITECTURE §5.5 ise saati `TimeSystem`'e veriyor. Lafzi okuma seçildi:
+   simülasyon zamanının ilerlemesi bir tick'in **tanımı**dır, bir sistemin davranışı değil.
+   `TimeSystem` saatin değişmesinin oyun sonuçları için (açılış saatleri, gün eğrisi) Faz 5'e ayrıldı.
+5. **Transient state kaydedilmez.** Yoldaki araçlar, yürüyen müşteriler, yarım siparişler yüklemede
+   temiz kurulur. Faz 2'de transient state üreten sistem yok, bu yüzden save/load testi bugün
+   **tam hash** eşitliği kuruyor; Faz 5'ten sonra bu test kalıcı duruma daraltılmalı — sözleşme
+   `determinism/saveload.test.ts` içinde zaten yazılı.
+6. **`vec2` ve `easing` Faz 3'e ertelendi.** Roadmap'in Faz 2 dosya listesinde yer alıyorlar ama
+   Faz 2'de onları kullanan bir şey yok; `knip` kullanılmayan export'ta build'i kırıyor.
 
 **Faz 1'den taşınan pratik bilgiler:**
 

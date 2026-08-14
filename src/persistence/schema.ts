@@ -2,6 +2,25 @@ import { z } from 'zod';
 import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 
 /**
+ * Tell Zod not to probe for its JIT fast path.
+ *
+ * By default Zod tests whether it may compile validators with the `Function`
+ * constructor. Our Content-Security-Policy is `script-src 'self'` with no
+ * `unsafe-eval`, so that probe is refused. Zod catches the refusal and falls
+ * back to the interpreted path — correct behaviour — but the browser logs the
+ * CSP violation to the console first, and Firefox reports it as an error.
+ *
+ * Found by the preview E2E gate against a real deployment, which is exactly the
+ * class of problem a local build cannot show.
+ *
+ * Declaring `jitless` up front skips the probe entirely: no violation, no
+ * console error, and the CSP stays as strict as it should be. `unsafe-eval` is
+ * the single most valuable thing that policy forbids, and it is not being
+ * loosened for a validator fast path that runs once per save load.
+ */
+z.config({ jitless: true });
+
+/**
  * The save file — schema version 1.
  *
  * The envelope fields and the world snapshot sit side by side at the top level
