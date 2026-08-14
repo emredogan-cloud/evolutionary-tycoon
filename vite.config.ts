@@ -102,6 +102,10 @@ export default defineConfig(({ command }) => {
     preview: {
       port: 4173,
       strictPort: true,
+      // Explicit loopback binding. Inside the Playwright CI container the
+      // default `localhost` resolution did not match the address Playwright
+      // polls, and the webServer wait timed out with no diagnostic.
+      host: '127.0.0.1',
     },
   };
 });

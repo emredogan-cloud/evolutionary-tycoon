@@ -19,9 +19,8 @@ discrepancy that would make local and CI deploys silently different.
 3. **Dependabot is enabled but never auto-merges.** It surfaces updates; a human decides.
 4. **Reproducibility pins:** Node via `.nvmrc` + `engines`, pnpm via `packageManager`, the
    Playwright Docker image by full tag, GitHub Actions by major version.
-5. **Vercel CLI pinned as a repo devDependency at 59.0.0**, invoked via `pnpm exec vercel`, so the
-   deploy toolchain is captured in the lockfile rather than depending on whatever is installed
-   globally.
+5. **Vercel CLI is NOT a repo dependency.** It is invoked as `pnpm dlx vercel@59.0.0`, with the
+   version recorded here and in PROJECT_MEMORY §4. See the revision below.
 6. `strict-peer-dependencies=true` so incompatibilities surface loudly at install time.
 
 ## Honest note on unused declared dependencies

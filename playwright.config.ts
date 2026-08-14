@@ -84,6 +84,10 @@ export default defineConfig({
           url: 'http://127.0.0.1:4173',
           reuseExistingServer: !isCI,
           timeout: 120_000,
+          // Without these a failed start surfaces only as "timed out waiting",
+          // which says nothing about why.
+          stdout: 'pipe',
+          stderr: 'pipe',
         },
       }),
 });
