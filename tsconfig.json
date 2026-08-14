@@ -1,0 +1,49 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": false,
+
+    /* Strictness — see docs/TECHNICAL_ARCHITECTURE.md §3.
+       These are not negotiable: a silent truthiness bug or a swallowed promise
+       inside the deterministic simulation core produces bugs that cannot be
+       reproduced, which defeats the entire testing architecture. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "useUnknownInCatchVariables": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "skipLibCheck": true,
+    "noEmit": true,
+    "sourceMap": true,
+    "types": ["vite/client"],
+
+    /* No `baseUrl`: it is deprecated in TypeScript 6 and removed in 7. Relative
+       `paths` entries work without it and keep the TS7 upgrade path clear
+       (docs/RESEARCH_NOTES.md §2). */
+    "paths": {
+      "@app/*": ["./src/app/*"],
+      "@sim/*": ["./src/sim/*"],
+      "@render/*": ["./src/render/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@config/*": ["./src/config/*"],
+      "@persistence/*": ["./src/persistence/*"],
+      "@platform/*": ["./src/platform/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte"],
+  "exclude": ["node_modules", "dist", ".vercel"]
+}

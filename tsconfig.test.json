@@ -1,0 +1,12 @@
+{
+  /* Unit and integration tests need BOTH DOM types (they exercise browser-facing
+     modules) and Node types (they spawn processes and touch the filesystem).
+     Keeping this separate from tsconfig.json means src/** still cannot reach for
+     a Node API by accident — which matters most for src/sim, where any I/O would
+     break determinism. */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  },
+  "include": ["tests/unit/**/*.ts", "tests/integration/**/*.ts", "src/**/*.ts", "src/**/*.svelte"]
+}
