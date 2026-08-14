@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#12161d" />
+    <title>Evolutionary Tycoon</title>
+    <meta
+      name="description"
+      content="Yol kenarındaki minicik bir tezgâhı, önünden akan trafiği müşteriye çevirerek bir restoran imparatorluğuna dönüştür."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <!--
+      #app is the single mount point. The game canvas (Phase 3) is inserted
+      beneath the Svelte overlay by the renderer; the overlay itself is
+      pointer-events: none except on interactive elements, so clicks fall
+      through to the world.
+    -->
+    <div id="app"></div>
+    <noscript>
+      <div class="noscript">
+        <h1>Evolutionary Tycoon</h1>
+        <p>Bu oyun JavaScript gerektiriyor. Lütfen tarayıcı ayarlarınızdan JavaScript'i etkinleştirin.</p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/app/main.ts"></script>
+  </body>
+</html>
