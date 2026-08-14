@@ -4,6 +4,8 @@ import Shell from '@ui/shell/Shell.svelte';
 import UnsupportedBrowser from '@ui/shell/UnsupportedBrowser.svelte';
 import { detectCapabilities, type CapabilityReport } from '@platform/capability';
 import { buildInfo } from '@platform/buildInfo';
+import { createContainer, resolveSeed, selectStorage } from '@app/container';
+import { DebugOverlay, debugOverlayEnabled } from '@app/debug/DebugOverlay';
 
 /**
  * Composition root.
@@ -69,6 +71,40 @@ function boot(): void {
 
   document.documentElement.dataset['appState'] = 'ready';
   mount(Shell, { target, props: { capabilities } });
+
+  void startSimulation(window);
+}
+
+/**
+ * Start the deterministic kernel.
+ *
+ * Asynchronous only because probing the storage backend is: IndexedDB reports
+ * availability by succeeding or failing to open, and a browser that blocks it
+ * must fall through to localStorage before anything tries to autosave.
+ *
+ * `data-sim-state` on the document is the readiness signal the E2E suite waits
+ * on. Waiting on a state attribute rather than a timeout is what keeps the suite
+ * off the list in docs/FLAKY.md.
+ */
+async function startSimulation(win: Window): Promise<void> {
+  try {
+    const storage = await selectStorage(win);
+    const seed = resolveSeed(win.location.search, Date.now());
+    const container = createContainer(win, seed, storage);
+
+    if (debugOverlayEnabled()) {
+      new DebugOverlay(win.document, container.sim, container.loop).start(win);
+    }
+
+    container.loop.start();
+    win.document.documentElement.dataset['simState'] = 'running';
+  } catch (error) {
+    // A kernel that fails to start is a broken build, not a recoverable state.
+    // Surfacing it on the document lets the E2E console assertion catch it
+    // instead of the page merely looking idle.
+    win.document.documentElement.dataset['simState'] = 'failed';
+    console.error('Simulation failed to start', error);
+  }
 }
 
 boot();
