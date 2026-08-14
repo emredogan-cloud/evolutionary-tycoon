@@ -29,6 +29,10 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --user root
+    defaults:
+      run:
+        # The container's default shell is dash, which has no `set -o pipefail`.
+        shell: bash
     env:
       HOME: /root
       # The STABLE production alias, not the per-deployment URL. Measured
