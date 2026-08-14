@@ -20,11 +20,25 @@
 
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+
+    /* The benchmark harness under tools/ imports the simulation directly, which
+       pulls src/** into this project. Without the alias map those imports fail
+       to resolve here even though they resolve in the browser project. */
+    "paths": {
+      "@app/*": ["./src/app/*"],
+      "@sim/*": ["./src/sim/*"],
+      "@render/*": ["./src/render/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@config/*": ["./src/config/*"],
+      "@persistence/*": ["./src/persistence/*"],
+      "@platform/*": ["./src/platform/*"]
+    }
   },
   "include": [
     "vite.config.ts",
     "vitest.config.ts",
+    "vitest.bench.config.ts",
     "playwright.config.ts",
     "vercel.ts",
     "tools/**/*.ts",

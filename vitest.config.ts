@@ -44,15 +44,25 @@ export default defineConfig({
         // is nothing to unit test that E2E does not cover better. Excluding it
         // keeps the threshold meaningful instead of diluting it.
         'src/app/main.ts',
+        // IndexedDB has no meaningful test double: a hand-written stub would
+        // prove the stub works. Its decision branches (availability probing,
+        // open failure) ARE unit-tested via IdbAdapter.open in
+        // tests/unit/app/container.test.ts; the read/write/remove path is
+        // covered against a real browser database in
+        // tests/e2e/simulation.spec.ts, which is a stronger test than a fake.
+        'src/persistence/idbAdapter.ts',
       ],
-      // Phase 1 thresholds. These are a floor, not a target, and they ratchet up
-      // per phase as real logic lands (see docs/TESTING_STRATEGY.md §13):
-      //   src/sim ≥ 90% from Phase 2, src/config ≥ 95%, src/persistence ≥ 90%.
+      // Ratcheted for Phase 2 (docs/TESTING_STRATEGY.md §13). Thresholds are a
+      // floor, not a target; they rise as each phase lands real logic. Per-glob
+      // entries mean a well-covered layer cannot mask a thin one.
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 75,
-        statements: 80,
+        lines: 90,
+        functions: 90,
+        branches: 85,
+        statements: 90,
+        'src/sim/**': { lines: 90, functions: 90, branches: 85, statements: 90 },
+        'src/config/**': { lines: 95, functions: 95, branches: 95, statements: 95 },
+        'src/persistence/**': { lines: 90, functions: 90, branches: 85, statements: 90 },
       },
     },
   },
