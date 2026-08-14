@@ -6,7 +6,8 @@
 **Gate:** 🔴 **GATE 1 — awaiting user approval. Phase 2 is not authorised.**
 
 **Repository:** <https://github.com/emredogan-cloud/evolutionary-tycoon>
-**Pull request:** [#1](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/1)
+**Pull request:** [#1](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/1) — **merged (rebase) into protected `main`**
+**`main` HEAD:** `64988ba0b062dfc9a2b9b0fbd27c55c6be1dff3d`
 **Production:** <https://evolutionary-tycoon.vercel.app>
 
 ---
@@ -117,13 +118,25 @@ $ curl -I .../api/time                  → HTTP 204, date: Fri, 14 Aug 2026 19:
 $ curl .../some/deep/unknown/route      → HTTP 200 text/html   (SPA rewrite)
 ```
 
-**Full E2E against the live production alias — 14/14 passed**, including the six deployment-only
-assertions that are skipped locally (security headers, document not cached, `/health.json` not
-cached, assets immutable, SPA rewrite, `/api/time` clock reference):
+**Full E2E against the live production alias — 14/14 on both browsers**, including the six
+deployment-only assertions that are skipped locally (security headers, document not cached,
+`/health.json` not cached, assets immutable, SPA rewrite, `/api/time` clock reference):
 
 ```
 $ E2E_BASE_URL=https://evolutionary-tycoon.vercel.app pnpm exec playwright test --project=chromium
-  14 passed (1.9s)
+  14 passed (7.0s)
+$ E2E_BASE_URL=https://evolutionary-tycoon.vercel.app pnpm exec playwright test --project=firefox
+  14 passed (6.2s)
+```
+
+**Post-merge production check — the deployed artefact is the merged commit:**
+
+```
+$ git rev-parse main                                        64988ba0b062dfc9a2b9b0fbd27c55c6be1dff3d
+$ curl https://evolutionary-tycoon.vercel.app/health.json   "buildSha":"64988ba0b062dfc9a2b9b0fbd27c55c6be1dff3d"
+                                                            → MATCH
+$ curl -o/dev/null -w '%{http_code}' .../                   200
+$ curl -o/dev/null -w '%{http_code}' .../api/time           204
 ```
 
 ---
@@ -242,24 +255,31 @@ bug reports, CI economy validation and the Day Replay feature possible at once (
 
 ---
 
-## 10. Commits (12)
+## 10. Commits (14 on the phase branch, rebased onto `main`)
+
+Final SHAs on `main` after the rebase merge:
 
 ```
-ddf539f chore(repo): initialise pnpm project with exactly pinned toolchain
-80608d4 build(tooling): enforce architecture and determinism mechanically
-2036f16 feat(app): add shell with WebGL2 capability gate
-00d1d06 feat(deploy): add vercel config, health endpoint and server time reference
-7d638a5 test(tooling): add unit, architecture-enforcement and e2e suites
-160086c ci(repo): add CI, preview e2e, production smoke and CodeQL workflows
-286901b docs(repo): add agent instructions, twelve ADRs and project memory
-2a740b6 chore(repo): keep .env.example unignored after vercel link
-a4b9199 fix(deploy): use vercel.ts alone as the single source of deployment config
-5502d1b fix(ci): remove the vercel CLI dependency and repair the e2e preview server
-b552ea9 fix(ci): unblock firefox in the container and make preview e2e report honestly
-382a5ae fix(ci): run deployment workflow steps under bash
+31bec1c docs(repo): add approved GATE 0 research and design documents   (bootstrap)
+0118d43 chore(repo): initialise pnpm project with exactly pinned toolchain
+f3677d3 build(tooling): enforce architecture and determinism mechanically
+aa415c3 feat(app): add shell with WebGL2 capability gate
+ff73692 feat(deploy): add vercel config, health endpoint and server time reference
+d3edc07 test(tooling): add unit, architecture-enforcement and e2e suites
+f78430e ci(repo): add CI, preview e2e, production smoke and CodeQL workflows
+597cd05 docs(repo): add agent instructions, twelve ADRs and project memory
+3479ae5 chore(repo): keep .env.example unignored after vercel link
+fe01de3 fix(deploy): use vercel.ts alone as the single source of deployment config
+cdd7116 fix(ci): remove the vercel CLI dependency and repair the e2e preview server
+8aa3572 fix(ci): unblock firefox in the container and make preview e2e report honestly
+3a50b92 fix(ci): run deployment workflow steps under bash
+b02356b docs(repo): record phase 1 completion evidence and project memory checkpoints
+64988ba ci(repo): pin github actions to immutable commit shas
 ```
 
-Plus `31bec1c` on `main` — the approved GATE 0 documents.
+The protected-main workflow was exercised end to end: the first merge attempt was **refused** by the
+base-branch policy because of eight unresolved CodeQL conversations. Fixing the findings resolved
+them, and only then did the merge go through. The gate works.
 
 ---
 
