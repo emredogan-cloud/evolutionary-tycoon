@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["api/**/*.ts", "tools/**/*.mjs"],
+  "project": ["src/**/*.{ts,svelte}", "api/**/*.ts", "tools/**/*.mjs"],
+  "ignoreDependencies": ["phaser", "idb", "zod", "vercel"],
+  "vitest": {
+    "config": ["vitest.config.ts"]
+  },
+  "playwright": {
+    "config": ["playwright.config.ts"]
+  }
+}
