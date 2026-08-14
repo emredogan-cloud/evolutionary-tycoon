@@ -1,7 +1,7 @@
 import type { Sim } from '@sim/core/Sim';
 import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 import type { LoadResult, SaveManager } from '@persistence/SaveManager';
-import type { SaveFileV1 } from '@persistence/schema';
+import type { CurrentSaveFile } from '@persistence/schema';
 
 /**
  * Bridges the simulation and the storage layer.
@@ -34,7 +34,7 @@ export class SaveService {
     return this.saves.backendName;
   }
 
-  async save(): Promise<SaveFileV1> {
+  async save(): Promise<CurrentSaveFile> {
     const nowMs = this.now();
     const file = await this.saves.save(snapshotWorld(this.sim.world), {
       buildSha: this.buildSha,

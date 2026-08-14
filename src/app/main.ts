@@ -6,6 +6,7 @@ import { detectCapabilities, type CapabilityReport } from '@platform/capability'
 import { buildInfo } from '@platform/buildInfo';
 import { createContainer, resolveSeed, selectStorage } from '@app/container';
 import { DebugOverlay, debugOverlayEnabled } from '@app/debug/DebugOverlay';
+import { createPhaserGame } from '@render/PhaserBootstrap';
 
 /**
  * Composition root.
@@ -37,6 +38,24 @@ function readForcedFailure(search: string): CapabilityReport | null {
     hardwareConcurrency: null,
     maxTextureSize: null,
   };
+}
+
+/**
+ * The canvas host, beneath the Svelte overlay.
+ *
+ * Its own fixed, full-viewport element rather than `#app`: the overlay needs to
+ * sit above the canvas with `pointer-events: none`, so clicks that miss a
+ * control fall through to the world (TECHNICAL_ARCHITECTURE §7).
+ */
+function canvasHost(doc: Document): HTMLElement {
+  const existing = doc.getElementById('game-canvas');
+  if (existing !== null) return existing;
+
+  const host = doc.createElement('div');
+  host.id = 'game-canvas';
+  host.style.cssText = 'position:fixed;inset:0;z-index:0';
+  doc.body.insertBefore(host, doc.body.firstChild);
+  return host;
 }
 
 function boot(): void {
@@ -92,12 +111,20 @@ async function startSimulation(win: Window): Promise<void> {
     const seed = resolveSeed(win.location.search, Date.now());
     const container = createContainer(win, seed, storage);
 
-    if (debugOverlayEnabled()) {
+    if (debugOverlayEnabled() && !container.renderMode.visualDeterminism) {
       new DebugOverlay(win.document, container.sim, container.loop).start(win);
     }
 
-    container.loop.start();
+    createPhaserGame({ parent: canvasHost(win.document), context: container.renderContext });
+
+    // A frozen scene must not advance: the loop would tick past the target while
+    // the screenshot is being taken. The world is already at `freezeAt`.
+    if (container.renderMode.freezeAt === null) container.loop.start();
+
     win.document.documentElement.dataset['simState'] = 'running';
+    if (container.renderMode.visualDeterminism) {
+      win.document.documentElement.dataset['visualMode'] = '1';
+    }
   } catch (error) {
     // A kernel that fails to start is a broken build, not a recoverable state.
     // Surfacing it on the document lets the E2E console assertion catch it

@@ -11,4 +11,9 @@ interpolation alpha) · `SaveService.ts` (simulation ↔ storage bridge, and whe
 enters) · `testHooks.ts` (`window.__EVOTYCOON__`, gated on `?e2e=1`) · `debug/DebugOverlay.ts`
 (dev-only, tree-shaken from production).
 
-`bridge/` — the throttled sim → UI view model — arrives in Phase 3 with the renderer.
+Phase 3 adds `container.ts`'s render wiring (`RenderContext`), `renderMode.ts` (the visual
+determinism mode), `devScene.ts` (authored scene staging — test scaffolding, replaced by real
+spawning in Phase 5) and `FrameMeter.ts` (the `?bench=1` frame sampler).
+
+`bridge/` — the throttled sim → UI view model — is still to come. Phase 3 needed no UI data, so
+building it would have been a guess at what Phase 9's HUD wants.
