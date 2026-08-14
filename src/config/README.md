@@ -12,7 +12,12 @@ than producing a subtly wrong game.
 
 See [ECONOMY_DESIGN §12](../../docs/ECONOMY_DESIGN.md).
 
-**Status:** `simulation.ts` (tick rate, catch-up limits, entity capacities, save schema version).
-World/layout data arrives in Phase 3, economy in Phase 9 — and with it the first Zod schemas, since
-compile-time constants are already guaranteed by `as const` and a runtime schema over them would be
-theatre.
+**Status:** `simulation.ts` (tick rate, catch-up limits, entity capacities, save schema version) ·
+`world.ts` (tile geometry, camera limits, the nine render layers) · `actors.ts` (the render
+catalogue) · `layouts/stage1.ts` (lot, road, statics) · `scenes.ts` (authored fixtures for visual
+regression and performance).
+
+Economy data arrives in Phase 9, and with it the first Zod schemas — compile-time constants are
+already guaranteed by `as const`, and a runtime schema over values that cannot vary is theatre. The
+save schema is validated with Zod because a save is genuinely untrusted input; that lives in
+`src/persistence`.

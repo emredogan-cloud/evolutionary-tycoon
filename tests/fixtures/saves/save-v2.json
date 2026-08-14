@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "buildSha": "0000000000000000000000000000000000000000",
+  "createdAt": 1770100000000,
+  "lastSeenAt": 1770100000000,
+  "lastSeenServerAt": 1770100000500,
+  "playtimeMs": 90000,
+  "tick": 1800,
+  "nextEntityId": 1,
+  "clock": {
+    "simTimeMs": 90000
+  },
+  "rng": {
+    "traffic": {
+      "a": 329164916,
+      "b": -429893892,
+      "c": -1716960223,
+      "d": 179281172
+    },
+    "conversion": {
+      "a": -812448231,
+      "b": -410334676,
+      "c": 1488923042,
+      "d": 1018225985
+    },
+    "customer": {
+      "a": 1045605125,
+      "b": -1945175716,
+      "c": 1384928012,
+      "d": 639578587
+    },
+    "tips": {
+      "a": -1900594541,
+      "b": -446101977,
+      "c": 899329291,
+      "d": -1941108807
+    },
+    "events": {
+      "a": -2028393869,
+      "b": 518688473,
+      "c": 1203038653,
+      "d": -1353633737
+    },
+    "cosmetic": {
+      "a": 1355816087,
+      "b": 269386119,
+      "c": 1485929123,
+      "d": 84360716
+    }
+  },
+  "control": {
+    "speedMultiplier": 2,
+    "paused": false
+  },
+  "progression": {
+    "stage": 2,
+    "unlocks": ["grill", "awning", "signage"],
+    "milestones": ["first-customer", "first-hundred"]
+  },
+  "economy": {
+    "cash": 2410.75,
+    "reputation": 47,
+    "lifetimeRevenue": 8120.5,
+    "prices": [
+      ["burger", 4.5],
+      ["cola", 1.75]
+    ]
+  },
+  "layout": {
+    "placed": [
+      {
+        "objectId": "counter",
+        "x": 3,
+        "y": 4,
+        "z": 0
+      },
+      {
+        "objectId": "awning",
+        "x": 3,
+        "y": 6,
+        "z": 0
+      },
+      {
+        "objectId": "register",
+        "x": 3,
+        "y": 4,
+        "z": 0.9
+      }
+    ],
+    "upgrades": [
+      ["grill", 2],
+      ["signage", 1]
+    ]
+  },
+  "staff": {
+    "hired": [
+      {
+        "entityId": 12,
+        "roleId": "cook"
+      }
+    ]
+  },
+  "stats": {
+    "customersServed": 131,
+    "vehiclesSpawned": 902,
+    "commandsApplied": 1
+  },
+  "settings": {
+    "audio": {
+      "master": 0.8,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": true,
+      "highContrast": false
+    }
+  },
+  "checksum": "33dad278"
+}

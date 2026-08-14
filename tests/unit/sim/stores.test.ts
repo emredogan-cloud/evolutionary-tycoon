@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { Hasher } from '@sim/math/hash';
+import { ACTOR_KIND_CUSTOMER } from '@config/actors';
+import type { ActorRecord } from '@sim/stores/actors';
 import { createActorPool, createOrderPool, writeActor, writeOrder } from '@sim/stores/actors';
 import type { SlotPool } from '@sim/stores/pool';
 import { VehicleStore } from '@sim/stores/VehicleStore';
 
 describe('SlotPool', () => {
   it('rejects a non-positive capacity', () => {
-    expect(() => createActorPool(0)).toThrow(RangeError);
-    expect(() => createActorPool(-1)).toThrow(RangeError);
+    expect(() => createActorPool(0, ACTOR_KIND_CUSTOMER)).toThrow(RangeError);
+    expect(() => createActorPool(-1, ACTOR_KIND_CUSTOMER)).toThrow(RangeError);
   });
 
   it('hands out ascending slots from empty', () => {
-    const pool = createActorPool(4);
+    const pool = createActorPool(4, ACTOR_KIND_CUSTOMER);
     expect([pool.acquire(), pool.acquire(), pool.acquire()]).toEqual([0, 1, 2]);
     expect(pool.activeCount).toBe(3);
   });
@@ -19,7 +21,7 @@ describe('SlotPool', () => {
   it('returns -1 rather than growing when exhausted', () => {
     // Growth in a pool is an allocation on a hot path. A dropped spawn is a
     // visible, budgetable outcome; a hidden allocation is not.
-    const pool = createActorPool(2);
+    const pool = createActorPool(2, ACTOR_KIND_CUSTOMER);
     expect(pool.acquire()).toBe(0);
     expect(pool.acquire()).toBe(1);
     expect(pool.acquire()).toBe(-1);
@@ -27,7 +29,7 @@ describe('SlotPool', () => {
   });
 
   it('reuses released slots and wipes the record', () => {
-    const pool = createActorPool(3);
+    const pool = createActorPool(3, ACTOR_KIND_CUSTOMER);
     const slot = pool.acquire();
     pool.at(slot).entityId = 99;
     pool.at(slot).x = 4.5;
@@ -43,7 +45,7 @@ describe('SlotPool', () => {
   });
 
   it('ignores a release of a slot that is not active', () => {
-    const pool = createActorPool(2);
+    const pool = createActorPool(2, ACTOR_KIND_CUSTOMER);
     pool.release(0);
     pool.release(-1);
     pool.release(99);
@@ -53,7 +55,7 @@ describe('SlotPool', () => {
 
   it('reuses slots deterministically for the same acquire/release sequence', () => {
     const run = (): number[] => {
-      const pool = createActorPool(5);
+      const pool = createActorPool(5, ACTOR_KIND_CUSTOMER);
       const order: number[] = [];
       const held = [pool.acquire(), pool.acquire(), pool.acquire()];
       pool.release(held[1] ?? -1);
@@ -65,12 +67,12 @@ describe('SlotPool', () => {
   });
 
   it('rejects an out-of-range slot rather than returning undefined', () => {
-    const pool = createActorPool(2);
+    const pool = createActorPool(2, ACTOR_KIND_CUSTOMER);
     expect(() => pool.at(5)).toThrow(RangeError);
   });
 
   it('reset frees every slot and restores allocation order', () => {
-    const pool = createActorPool(3);
+    const pool = createActorPool(3, ACTOR_KIND_CUSTOMER);
     pool.acquire();
     pool.acquire();
     pool.at(0).entityId = 7;
@@ -83,8 +85,8 @@ describe('SlotPool', () => {
   });
 
   it('hashes live slots only, and independently of the free-list history', () => {
-    const direct = createActorPool(4);
-    const churned = createActorPool(4);
+    const direct = createActorPool(4, ACTOR_KIND_CUSTOMER);
+    const churned = createActorPool(4, ACTOR_KIND_CUSTOMER);
 
     for (const pool of [direct, churned]) {
       const a = pool.acquire();
@@ -97,7 +99,7 @@ describe('SlotPool', () => {
     churned.at(scratch).entityId = 42;
     churned.release(scratch);
 
-    const hashOf = (pool: SlotPool<{ entityId: number; x: number; y: number }>): string => {
+    const hashOf = (pool: SlotPool<ActorRecord>): string => {
       const hasher = new Hasher();
       pool.hashInto(hasher, writeActor);
       return hasher.digest();
@@ -107,14 +109,14 @@ describe('SlotPool', () => {
   });
 
   it('hashes differently when a live record differs', () => {
-    const a = createActorPool(2);
-    const b = createActorPool(2);
+    const a = createActorPool(2, ACTOR_KIND_CUSTOMER);
+    const b = createActorPool(2, ACTOR_KIND_CUSTOMER);
     a.acquire();
     b.acquire();
     a.at(0).x = 1;
     b.at(0).x = 1.0000001;
 
-    const hashOf = (pool: SlotPool<{ entityId: number; x: number; y: number }>): string => {
+    const hashOf = (pool: SlotPool<ActorRecord>): string => {
       const hasher = new Hasher();
       pool.hashInto(hasher, writeActor);
       return hasher.digest();

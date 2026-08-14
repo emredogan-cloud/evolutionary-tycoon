@@ -109,7 +109,7 @@ describe('World', () => {
           w.economy.prices.set('burger', 5);
         },
         (w) => {
-          w.layout.placed.push({ objectId: 'counter', x: 1, y: 2 });
+          w.layout.placed.push({ objectId: 'counter', x: 1, y: 2, z: 0 });
         },
         (w) => {
           w.layout.upgrades.set('grill', 1);
@@ -224,7 +224,7 @@ describe('World', () => {
     world.economy.reputation = 50;
     world.economy.lifetimeRevenue = 999;
     world.economy.prices.set('burger', 5);
-    world.layout.placed.push({ objectId: 'x', x: 1, y: 1 });
+    world.layout.placed.push({ objectId: 'x', x: 1, y: 1, z: 0 });
     world.layout.upgrades.set('grill', 1);
     world.staff.hired.push({ entityId: 1, roleId: 'cook' });
     world.stats.customersServed = 9;

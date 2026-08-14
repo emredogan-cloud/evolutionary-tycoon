@@ -60,5 +60,10 @@ export const COMMAND_LOG_CAPACITY = 5000;
  */
 export const EVENT_QUEUE_CAPACITY = 512;
 
-/** Save schema version this build writes. Bumped alongside a migration. */
-export const SAVE_SCHEMA_VERSION = 1;
+/**
+ * Save schema version this build writes. Bumped alongside a migration.
+ *
+ * v2 (Phase 3): placed objects gained `z`, because the renderer sorts on height
+ * and an object on a counter has to draw in front of the counter.
+ */
+export const SAVE_SCHEMA_VERSION = 2;
