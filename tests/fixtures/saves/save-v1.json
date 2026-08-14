@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "buildSha": "0000000000000000000000000000000000000000",
+  "createdAt": 1770000000000,
+  "lastSeenAt": 1770000000000,
+  "lastSeenServerAt": 1770000000500,
+  "playtimeMs": 60000,
+  "tick": 1200,
+  "nextEntityId": 1,
+  "clock": {
+    "simTimeMs": 60000
+  },
+  "rng": {
+    "traffic": {
+      "a": 1315108721,
+      "b": -1450769975,
+      "c": -1225770436,
+      "d": 1348801874
+    },
+    "conversion": {
+      "a": -59842988,
+      "b": 1179598229,
+      "c": -138219012,
+      "d": 843862068
+    },
+    "customer": {
+      "a": -39295973,
+      "b": 416286085,
+      "c": 1700236420,
+      "d": 527483790
+    },
+    "tips": {
+      "a": 1829685579,
+      "b": 1965172597,
+      "c": 1721241080,
+      "d": -987463879
+    },
+    "events": {
+      "a": 424750533,
+      "b": -344305264,
+      "c": -1627597014,
+      "d": -1574533843
+    },
+    "cosmetic": {
+      "a": -964752907,
+      "b": 1042752426,
+      "c": 105394428,
+      "d": 2068136990
+    }
+  },
+  "control": {
+    "speedMultiplier": 2,
+    "paused": false
+  },
+  "progression": {
+    "stage": 2,
+    "unlocks": ["grill", "awning"],
+    "milestones": ["first-customer", "first-hundred"]
+  },
+  "economy": {
+    "cash": 1875.5,
+    "reputation": 41,
+    "lifetimeRevenue": 5240.25,
+    "prices": [
+      ["burger", 4.5],
+      ["cola", 1.75]
+    ]
+  },
+  "layout": {
+    "placed": [
+      {
+        "objectId": "counter",
+        "x": 3,
+        "y": 4
+      },
+      {
+        "objectId": "awning",
+        "x": 3,
+        "y": 6
+      }
+    ],
+    "upgrades": [
+      ["grill", 2],
+      ["signage", 1]
+    ]
+  },
+  "staff": {
+    "hired": [
+      {
+        "entityId": 12,
+        "roleId": "cook"
+      }
+    ]
+  },
+  "stats": {
+    "customersServed": 87,
+    "vehiclesSpawned": 640,
+    "commandsApplied": 1
+  },
+  "settings": {
+    "audio": {
+      "master": 0.8,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": true,
+      "highContrast": false
+    }
+  },
+  "checksum": "6a0e3abb"
+}
