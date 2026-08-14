@@ -8,14 +8,20 @@
 
   const { capabilities }: Props = $props();
 
-  // Phase 1 has no game. This screen exists to prove the whole chain works:
-  // build -> bundle -> deploy -> CDN -> browser -> capability probe -> DOM.
+  // Phase 2 has a running simulation but nothing to draw yet — the renderer
+  // arrives in Phase 3. This screen proves the whole chain works: build ->
+  // bundle -> deploy -> CDN -> browser -> capability probe -> DOM -> kernel.
   // It is deliberately honest about being a foundation, not a teaser.
+  //
+  // It shows no simulation state on purpose. `src/ui` may not import `src/sim`
+  // (dependency-cruiser enforces it), and the throttled view-model bridge that
+  // would carry it belongs to Phase 3. Until then the debug overlay and the E2E
+  // hook are how simulation state is observed.
 </script>
 
 <main class="screen" aria-labelledby="shell-title">
   <div class="stack">
-    <p class="eyebrow">Phase 1 — Foundation</p>
+    <p class="eyebrow">Phase 2 — Simulation core</p>
 
     <h1 id="shell-title">Evolutionary&nbsp;Tycoon</h1>
 
@@ -25,7 +31,7 @@
 
     <div class="status" role="status">
       <span class="dot" aria-hidden="true"></span>
-      <span>Mühendislik temeli çalışıyor — oyun içeriği Faz 2'den itibaren gelecek.</span>
+      <span>Deterministik simülasyon çekirdeği 20 Hz'de çalışıyor — dünya Faz 3'te çizilecek.</span>
     </div>
 
     <dl class="facts" data-testid="build-facts">
