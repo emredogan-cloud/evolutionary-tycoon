@@ -14,17 +14,17 @@
 
 ## 1. Project Identity
 
-|                    |                                                                                     |
-| ------------------ | ----------------------------------------------------------------------------------- |
-| **Proje adı**      | Evolutionary Tycoon                                                                 |
-| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)              |
-| **Sürüm**          | 0.1.0                                                                               |
-| **Mevcut faz**     | **PHASE 2 — Simulation Core & Determinism** (BATCH P2→P4'ün ilk fazı)               |
-| **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi)      |
-| **Durum**          | 🟡 Batch 2→4 yürütülüyor — P2 ✅, sırada P3                                         |
-| **Son güncelleme** | 2026-08-15 — CHECKPOINT H (P2 tamamlandı)                                           |
-| **Son commit SHA** | `cbdaef4bcc6ba99edc1eef2f96737bfe47791286` (main, doğrulandı: `git rev-parse HEAD`) |
-| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                          |
+|                    |                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| **Proje adı**      | Evolutionary Tycoon                                                                |
+| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)             |
+| **Sürüm**          | 0.1.0                                                                              |
+| **Mevcut faz**     | **PHASE 3 — Isometric Rendering & World** (BATCH P2→P4'ün ikinci fazı)             |
+| **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi)     |
+| **Durum**          | 🟡 Batch 2→4 yürütülüyor — P2 ✅, sırada P3                                        |
+| **Son güncelleme** | 2026-08-15 — CHECKPOINT H (P2 tamamlandı)                                          |
+| **Son commit SHA** | `4643d88de950c48313888979eb4d31f266467945` (main — P2 merge, `git rev-parse HEAD`) |
+| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                         |
 
 ---
 
@@ -187,6 +187,28 @@ karşılaştırılıyor. Paylaşımlı runner'da medyan, yalnızca zamanlayıcı
 rastgele patlayan bir kapı, kapı olmamaktan kötüdür (WORKING_DISCIPLINE §11). Eşik %15 olarak
 korundu; yalnızca **ölçülebilir** istatistik seçildi. Baseline bir **CI koşusundan** kaydedildi —
 yerel sayı, her CI koşusunu regresyon gibi gösterirdi.
+
+### CHECKPOINT I — P3 başlangıcı (2026-08-15)
+
+Dal: `phase/03-isometric-world`, main `4643d88`'ten. P2 kapısı geçildi; production `4643d88`'i
+sunuyor ve production E2E 23/23.
+
+**P3 kapsamı (roadmap Faz 3):** Phaser 4 bootstrap (WebGL2 zorunlu, context loss/restore) ·
+`IsoProjection` (2:1 dimetrik, round-trip ≤1e-9) · `DepthSorter` (painter's, footprint anchor,
+kararlı tie-break) · 9 katmanlı `SceneGraph` · `CameraController` · `RenderBridge` + `ActorView`
+havuzu · görsel determinizm modu · placeholder set + register · `stage1` layout · ilk 3 visual
+golden · **gerçek GPU FPS ölçümü**.
+
+**Yasak:** trafik davranışı, müşteri davranışı, servis, ekonomi, çalışan AI. Render sim'i çizer,
+sim'e sahip olmaz.
+
+**Ortam doğrulaması (P3 için kritik):**
+
+- `docker` 29.6.2 kurulu ve daemon erişilebilir → visual golden'lar **pinlenmiş
+  `mcr.microsoft.com/playwright:v1.62.1-noble` container'ında** üretilebilir (roadmap şartı:
+  yerel ve CI aynı pikselleri üretmeli).
+- Gerçek GPU FPS ölçümü için kullanıcının gerçek Chrome'u erişilebilir (browser automation) —
+  CI'ın SwiftShader'ı bunu ölçemez, ADR-011.
 
 ---
 
@@ -353,7 +375,7 @@ CI run [31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/acti
 | Plan                | Hobby — ⚠ ticari kullanıma kapalı; monetizasyon öncesi Pro (Faz 23 görevi)                               |
 | GitHub entegrasyonu | ✅ bağlı, push'ta otomatik deploy                                                                        |
 | **Production URL**  | **<https://evolutionary-tycoon.vercel.app>**                                                             |
-| Build SHA (canlı)   | `2a740b6a272c7e189f19e9e7b49ffbd5d4b67765`                                                               |
+| Build SHA (canlı)   | `4643d88de950c48313888979eb4d31f266467945` — main ile eşleşiyor, production E2E 23/23                    |
 | Sağlık              | ✅ `/health.json` 200 · header'lar doğru · `/assets/**` immutable · SPA rewrite · `/api/time` 204 + Date |
 | Config kaynağı      | `vercel.ts` (tek kaynak; `vercel.json` yok)                                                              |
 
