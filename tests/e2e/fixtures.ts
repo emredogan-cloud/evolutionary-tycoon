@@ -25,12 +25,13 @@ const IGNORED_ERROR_PATTERNS: readonly RegExp[] = [
   // silence a preview-only toolbar would weaken production for a convenience
   // feature. So the block stays and this specific message is tolerated.
   //
-  // Anchored on both the host and the CSP wording so it cannot mask anything
-  // else. If the toolbar is ever unwanted on previews, the alternative fix is
-  // to turn Comments off in Vercel project settings — a deployment setting, not
-  // a code change.
-  /Content Security Policy[\s\S]*vercel\.live/i,
-  /vercel\.live[\s\S]*Content Security Policy/i,
+  // Anchored on the host *and* on CSP wording so it cannot mask anything else.
+  // Both spellings are needed: Chromium says "Content Security Policy",
+  // Firefox says "Content-Security-Policy". If the toolbar is ever unwanted on
+  // previews, the alternative fix is to turn Comments off in Vercel project
+  // settings — a deployment setting, not a code change.
+  /Content[- ]Security[- ]Policy[\s\S]*vercel\.live/i,
+  /vercel\.live[\s\S]*Content[- ]Security[- ]Policy/i,
 ];
 
 interface Fixtures {

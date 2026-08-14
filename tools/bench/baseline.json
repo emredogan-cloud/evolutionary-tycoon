@@ -1,0 +1,14 @@
+{
+  "recordedAt": "f6687915e3c65cf7b8bc7bc4b626e0f16c83c7c5",
+  "environment": "github-actions ubuntu-24.04, node 24.13.1",
+  "statistic": "minMs",
+  "timings": {
+    "1000 empty ticks": 0.2718,
+    "world hash (120 vehicles, 60 customers)": 4.5001,
+    "1000 ticks, one command each": 0.3462,
+    "1000 ticks, 8 events per tick, 3 subscribers": 0.5563,
+    "vehicle spawn + despawn cycles": 0.1182,
+    "world snapshot + JSON serialise": 0.4246
+  },
+  "bytesPerTick": 0.227
+}
