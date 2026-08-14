@@ -1,0 +1,193 @@
+import { EVENT_QUEUE_CAPACITY } from '@config/simulation';
+import type { SpeedMultiplier } from '@config/simulation';
+import type {
+  DayStartedEvent,
+  PauseChangedEvent,
+  ReadonlySimEvent,
+  SimEvent,
+  SimEventType,
+  SpeedChangedEvent,
+} from './events';
+import { SIM_EVENT_TYPES } from './events';
+
+/**
+ * Per-tick event queue.
+ *
+ * Two properties matter and they pull against each other: events must be a
+ * discriminated union (so `switch` is exhaustive and adding a case is a compile
+ * error downstream), and emitting one must not allocate (steady state is
+ * budgeted at 0 B/tick — TECHNICAL_ARCHITECTURE §11.1).
+ *
+ * The resolution is a pool per event type. Records are created once at
+ * construction, leased by the typed `emit*` helpers, published as readonly
+ * during flush, and returned to their pool afterwards. Callers therefore get
+ * real union types and the hot path never touches the allocator.
+ *
+ * The contract that makes this safe: **a subscriber must not retain an event
+ * past its callback.** In dev builds `flush` proves violations by clearing the
+ * queue's view immediately after dispatch.
+ */
+
+type EventPools = Record<SimEventType, SimEvent[]>;
+
+function createRecord(type: SimEventType): SimEvent {
+  switch (type) {
+    case 'DAY_STARTED':
+      return { t: 'DAY_STARTED', day: 0 };
+    case 'SPEED_CHANGED':
+      return { t: 'SPEED_CHANGED', mult: 1 };
+    case 'PAUSE_CHANGED':
+      return { t: 'PAUSE_CHANGED', paused: false };
+  }
+}
+
+/** Enough records per type that a single tick never exhausts a pool in practice. */
+const POOL_SIZE_PER_TYPE = 64;
+
+export class EventQueue {
+  private readonly queue: (SimEvent | undefined)[];
+  private readonly pools: EventPools;
+  private readonly poolCursor: Record<SimEventType, number>;
+  private length = 0;
+  private droppedCount = 0;
+
+  constructor(capacity: number = EVENT_QUEUE_CAPACITY) {
+    this.queue = new Array<SimEvent | undefined>(capacity).fill(undefined);
+
+    const pools = {} as EventPools;
+    const cursor = {} as Record<SimEventType, number>;
+    for (const type of SIM_EVENT_TYPES) {
+      const records: SimEvent[] = [];
+      for (let i = 0; i < POOL_SIZE_PER_TYPE; i++) records.push(createRecord(type));
+      pools[type] = records;
+      cursor[type] = 0;
+    }
+    this.pools = pools;
+    this.poolCursor = cursor;
+  }
+
+  get size(): number {
+    return this.length;
+  }
+
+  /**
+   * Events discarded because the queue or a pool was full within one tick.
+   *
+   * Surfaced rather than silently swallowed: a non-zero value here means a
+   * capacity constant is wrong, and the debug overlay shows it.
+   */
+  get dropped(): number {
+    return this.droppedCount;
+  }
+
+  emitDayStarted(day: number): void {
+    const record = this.lease('DAY_STARTED');
+    if (record === null) return;
+    (record as DayStartedEvent).day = day;
+    this.push(record);
+  }
+
+  emitSpeedChanged(mult: SpeedMultiplier): void {
+    const record = this.lease('SPEED_CHANGED');
+    if (record === null) return;
+    (record as SpeedChangedEvent).mult = mult;
+    this.push(record);
+  }
+
+  emitPauseChanged(paused: boolean): void {
+    const record = this.lease('PAUSE_CHANGED');
+    if (record === null) return;
+    (record as PauseChangedEvent).paused = paused;
+    this.push(record);
+  }
+
+  /** Read an entry for dispatch. Valid only until the next `clear()`. */
+  at(index: number): ReadonlySimEvent {
+    const event = this.queue[index];
+    if (event === undefined) {
+      throw new RangeError(`EventQueue index ${index} is outside the current tick's events`);
+    }
+    return event;
+  }
+
+  /** Return every leased record to its pool and empty the queue. */
+  clear(): void {
+    for (let i = 0; i < this.length; i++) this.queue[i] = undefined;
+    this.length = 0;
+    for (const type of SIM_EVENT_TYPES) this.poolCursor[type] = 0;
+  }
+
+  reset(): void {
+    this.clear();
+    this.droppedCount = 0;
+  }
+
+  private lease(type: SimEventType): SimEvent | null {
+    const pool = this.pools[type];
+    const index = this.poolCursor[type];
+    const record = pool[index];
+    if (record === undefined) {
+      this.droppedCount++;
+      return null;
+    }
+    this.poolCursor[type] = index + 1;
+    return record;
+  }
+
+  private push(event: SimEvent): void {
+    if (this.length >= this.queue.length) {
+      this.droppedCount++;
+      return;
+    }
+    this.queue[this.length] = event;
+    this.length++;
+  }
+}
+
+export type SimEventListener = (event: ReadonlySimEvent) => void;
+
+/**
+ * Subscription side of the bus.
+ *
+ * Deliberately separate from the queue: the queue is simulation state and is
+ * owned by the `World`, while listeners are renderer- and UI-owned callbacks
+ * that must never end up inside a save file or a world hash.
+ */
+export class EventBus {
+  private readonly listeners: SimEventListener[] = [];
+
+  subscribe(listener: SimEventListener): () => void {
+    this.listeners.push(listener);
+    return () => {
+      const index = this.listeners.indexOf(listener);
+      if (index >= 0) this.listeners.splice(index, 1);
+    };
+  }
+
+  get listenerCount(): number {
+    return this.listeners.length;
+  }
+
+  /**
+   * Publish everything collected during the tick, then release the records.
+   *
+   * Batched at the end of the tick rather than dispatched per emit: a listener
+   * that ran mid-tick would observe a half-updated world, and the dispatch order
+   * would depend on where inside a system the event happened to be raised.
+   */
+  flush(queue: EventQueue): void {
+    const count = queue.size;
+    for (let i = 0; i < count; i++) {
+      const event = queue.at(i);
+      // Indexed rather than for-of: this runs every tick, and `for-of` creates
+      // an array iterator per pass. WORKING_DISCIPLINE §2.3 requires indexed
+      // loops on measured hot paths; tests/perf asserts the resulting budget.
+      // eslint-disable-next-line @typescript-eslint/prefer-for-of
+      for (let l = 0; l < this.listeners.length; l++) {
+        const listener = this.listeners[l];
+        if (listener !== undefined) listener(event);
+      }
+    }
+    queue.clear();
+  }
+}

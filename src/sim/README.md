@@ -28,4 +28,19 @@ One stray `Math.random()` destroys all six, and the damage surfaces much later a
 
 See [TECHNICAL_ARCHITECTURE §2 and §5](../../docs/TECHNICAL_ARCHITECTURE.md).
 
-**Status:** empty. Populated in Phase 2 (Simulation Core & Determinism).
+## What is here (Phase 2)
+
+```
+core/     Clock · Rng (6 streams) · World (+ hash) · SystemPipeline (18 slots) ·
+          CommandLog · commands · EventBus · events · snapshot · Sim
+stores/   VehicleStore (SoA typed arrays) · SlotPool · actor and order records
+math/     hash (FNV-1a 64) · typedArray
+systems/  the eighteen reserved slots, all no-ops until their phase
+```
+
+`vec2` and `easing` are deliberately **not** here yet. The roadmap lists them under Phase 2, but
+nothing in Phase 2 consumes them and unused code in the deterministic core is worse than absent
+code — `knip` fails the build on it, and rule 12 forbids a feature without a defined purpose. They
+arrive in Phase 3 with the projection and camera maths that need them.
+
+**Status:** deterministic kernel complete. Gameplay systems arrive from Phase 5 onward.
