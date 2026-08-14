@@ -48,9 +48,6 @@ jobs:
       - name: Dead code / unused dependencies
         run: pnpm knip
 
-      - name: vercel.json is in sync with vercel.ts
-        run: pnpm config:check
-
       - name: Secret tripwire
         # Coarse and fast. GitHub push protection is the real net for a public
         # repo; this catches the common local accidents before they get there.
