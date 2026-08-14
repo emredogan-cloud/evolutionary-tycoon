@@ -25,6 +25,9 @@ updates:
     directory: '/'
     schedule:
       interval: monthly
+    # Actions are pinned to full commit SHAs (CodeQL: "Unpinned tag for a
+    # non-immutable Action"). A SHA pin only stays safe if something keeps it
+    # current, so Dependabot owns bumping them.
     commit-message:
       prefix: 'ci(deps)'
     labels: ['dependencies']
