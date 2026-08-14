@@ -137,6 +137,12 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --user root
+    env:
+      # The container runs as root while $HOME defaults to /github/home, which is
+      # owned by pwuser. Firefox refuses to launch in that situation
+      # ("Running Nightly as root in a regular user's session is not supported").
+      # This is Playwright's own documented workaround.
+      HOME: /root
     strategy:
       fail-fast: false
       matrix:
@@ -186,6 +192,8 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --user root
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

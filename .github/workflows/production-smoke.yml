@@ -30,6 +30,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --user root
     env:
+      HOME: /root
       # The STABLE production alias, not the per-deployment URL. Measured
       # 2026-08-14: the alias is publicly reachable while immutable
       # per-deployment URLs sit behind Vercel Authentication.
