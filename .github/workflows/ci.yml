@@ -110,6 +110,12 @@ jobs:
       # measure is the simulation, which is where the CPU cost actually is and
       # which is engine-independent by construction (docs/WORKING_DISCIPLINE.md §8).
       - name: Simulation benchmark and budgets
+        # The recorded baseline must come from a CI run, not a laptop: comparing
+        # a local number against a shared runner would make every run look like a
+        # regression, or hide a real one. The job prints a copy-ready baseline.
+        env:
+          BENCH_RECORDED_AT: ${{ github.sha }}
+          BENCH_ENVIRONMENT: github-actions ubuntu-24.04, node ${{ env.NODE_VERSION }}
         run: pnpm bench:sim
 
   build:
