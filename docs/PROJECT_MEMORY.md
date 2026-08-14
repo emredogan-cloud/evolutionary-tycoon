@@ -21,8 +21,8 @@
 | **Sürüm**          | 0.1.0                                                                               |
 | **Mevcut faz**     | **PHASE 2 — Simulation Core & Determinism** (BATCH P2→P4'ün ilk fazı)               |
 | **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi)      |
-| **Durum**          | 🟡 Batch 2→4 yürütülüyor                                                            |
-| **Son güncelleme** | 2026-08-14 — CHECKPOINT F                                                           |
+| **Durum**          | 🟡 Batch 2→4 yürütülüyor — P2 ✅, sırada P3                                         |
+| **Son güncelleme** | 2026-08-15 — CHECKPOINT H (P2 tamamlandı)                                           |
 | **Son commit SHA** | `cbdaef4bcc6ba99edc1eef2f96737bfe47791286` (main, doğrulandı: `git rev-parse HEAD`) |
 | **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                          |
 
@@ -149,6 +149,44 @@ güncel HEAD `cbdaef4`. Rapor tarihsel kayıt olarak olduğu gibi bırakıldı.
 - R-P1-03 (Playwright container hızı) → e2e job'ları 53 s–1 m 09 s, kabul edilebilir
 - R-P1-04 (branch protection gh ile) → **başarılı**, API ile kuruldu
 - R-P1-05 (Firefox headless WebGL) → gerçekleşti ama farklı sebeple: `HOME` sahipliği; `HOME=/root` ile çözüldü
+
+### CHECKPOINT G — P2 başlangıcı (2026-08-14)
+
+Dal: `phase/02-simulation-core`, `cbdaef4`'ten. Kapsam: motordan bağımsız deterministik çekirdek,
+**sıfır gameplay**. 18 sistem slotu sırasıyla ayrıldı, hepsi no-op.
+
+### CHECKPOINT H — P2 tamamlandı (2026-08-15) ✅
+
+| Kanıt           | Değer                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| PR              | [#8](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/8) · 11 commit                                             |
+| CI              | [run 31844494830](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844494830) — 8/8 + CodeQL           |
+| **preview-e2e** | [run 31844512902](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844512902) — **BLOKE EDİCİ, 23/23** |
+| Testler         | 314 unit/integration (58'i determinizm) · lines %99.53 · branches %91.73                                                    |
+| Bench           | 1000 boş tick 0.195 ms (bütçe 5 ms) · 0.20 B/tick (bütçe ≈0) · 7 bütçenin 7'si geçti                                        |
+| Bundle          | 41.23 kB gzip / 550 kB                                                                                                      |
+| Canlı preview   | Chromium 23/23 · Firefox 23/23 · buildSha eşleşti                                                                           |
+| Rapor           | [PHASE_2_REPORT.md](phases/PHASE_2_REPORT.md)                                                                               |
+
+**Preview kapısı ilk kez gerçekten koştu** ve ilk koşuşunda iki gerçek sorun buldu — ikisi de yerel
+build'in gösteremeyeceği cinsten:
+
+1. **Vercel preview-comments toolbar'ı** (`vercel.live/.../feedback.js`) yalnızca preview'lara
+   enjekte ediliyor; CSP'miz (`script-src 'self'`) onu doğru biçimde blokluyor ve tarayıcı bunu
+   konsola hata olarak yazıyor. Blok **doğru davranış**; CSP korundu, yalnızca o tek mesaj —
+   host + CSP ifadesi ile çift çapalanarak — tolere ediliyor. Chromium "Content Security Policy",
+   Firefox "Content-Security-Policy" yazıyor; ikisi de eşleşiyor.
+2. **Kendi bundle'ımız CSP'nin blokladığı bir `eval()` deniyordu** (Firefox, yalnızca preview).
+   Kaynak: Zod, açılışta validator'ları `Function` constructor ile JIT derleyip derleyemeyeceğini
+   yokluyor. Zod reddi yakalayıp yorumlanan yola düşüyordu — doğrulama hiç bozulmadı — ama tarayıcı
+   ihlali önce logluyor. Kaynağında çözüldü: `z.config({ jitless: true })`.
+   **CSP'ye `unsafe-eval` EKLENMEDİ.** O direktif, bu politikanın en değerli maddesi.
+
+**Perf regresyon kapısı hakkında bir tasarım kararı:** 25 örneğin **medyanı** yerine **minimumu**
+karşılaştırılıyor. Paylaşımlı runner'da medyan, yalnızca zamanlayıcı gürültüsünden %15'i aşıyor;
+rastgele patlayan bir kapı, kapı olmamaktan kötüdür (WORKING_DISCIPLINE §11). Eşik %15 olarak
+korundu; yalnızca **ölçülebilir** istatistik seçildi. Baseline bir **CI koşusundan** kaydedildi —
+yerel sayı, her CI koşusunu regresyon gibi gösterirdi.
 
 ---
 
@@ -280,25 +318,27 @@ medyan %15'i tesadüfen aşıyor ve rastgele patlayan kapı, kapı olmamaktan k�
 
 CI run [31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31836097461) — **7/7 yeşil**.
 
-|                                        | Durum | Kanıt                                                          |
-| -------------------------------------- | ----- | -------------------------------------------------------------- |
-| lint (ESLint 10, type-aware)           | ✅    | exit 0                                                         |
-| format check (Prettier)                | ✅    | "All matched files use Prettier code style!"                   |
-| typecheck (3 proje + svelte-check)     | ✅    | 81 dosya, 0 hata, 0 uyarı                                      |
-| architecture (dependency-cruiser)      | ✅    | 11 modül, 13 bağımlılık, 0 ihlal                               |
-| dead code (knip)                       | ✅    | exit 0                                                         |
-| unit + integration (Vitest)            | ✅    | 27 test; statements %100, branches %92.85                      |
-| **architecture enforcement (12 vaka)** | ✅    | Yasak import ve global'lerin gerçekten reddedildiği kanıtlandı |
-| E2E chromium                           | ✅    | yerel 8/6 skip · CI ✅ · **canlı deployment 14/14**            |
-| E2E firefox                            | ✅    | yerel 8/6 skip · CI ✅ (xvfb + HOME=/root)                     |
-| WebKit smoke                           | ✅    | CI ✅ (yerelde sistem kütüphanesi eksik)                       |
-| visual regression                      | ⬜    | Altyapı hazır; golden'lar Faz 3                                |
-| balance                                | ⬜    | Faz 12                                                         |
-| performance (sim)                      | ⬜    | Faz 2                                                          |
-| security (`pnpm audit`)                | ✅    | **No known vulnerabilities found**                             |
-| CodeQL                                 | ✅    | Analyze (javascript-typescript) pass                           |
-| build + bundle budget                  | ✅    | 13.11 kB / 550 kB                                              |
-| deployment validation                  | ✅    | §16                                                            |
+|                                        | Durum | Kanıt (Faz 2 sonu)                                                           |
+| -------------------------------------- | ----- | ---------------------------------------------------------------------------- |
+| lint (ESLint 10, type-aware)           | ✅    | exit 0                                                                       |
+| format check (Prettier)                | ✅    | "All matched files use Prettier code style!"                                 |
+| typecheck (3 proje + svelte-check)     | ✅    | **196 dosya**, 0 hata, 0 uyarı                                               |
+| architecture (dependency-cruiser)      | ✅    | **43 modül, 100 bağımlılık**, 0 ihlal                                        |
+| dead code (knip)                       | ✅    | exit 0                                                                       |
+| unit + integration (Vitest)            | ✅    | **314 test**; lines %99.53, branches %91.73, functions %99.47                |
+| **determinizm süiti**                  | ✅    | **58 test** (`pnpm test:determinism`) — ayrı CI adımı                        |
+| **architecture enforcement (12 vaka)** | ✅    | Yasak import ve global'lerin gerçekten reddedildiği kanıtlandı               |
+| **`src/sim` AST taraması**             | ✅    | Gerçek TypeScript parser, opt-out yok; tarayıcının kendisi 20 probe ile test |
+| E2E chromium                           | ✅    | yerel 17/6 skip · CI ✅ · **canlı preview 23/23**                            |
+| E2E firefox                            | ✅    | yerel 17/6 skip · CI ✅ (xvfb + HOME=/root)                                  |
+| WebKit smoke                           | ✅    | CI ✅ (yerelde sistem kütüphanesi eksik)                                     |
+| visual regression                      | ⬜    | Altyapı hazır; golden'lar Faz 3                                              |
+| balance                                | ⬜    | Faz 12                                                                       |
+| **performance (sim)**                  | ✅    | 7 bütçe ölçüldü ve geçti; CI baseline kaydedildi, %15 regresyon kapısı canlı |
+| security (`pnpm audit`)                | ✅    | **No known vulnerabilities found**                                           |
+| CodeQL                                 | ✅    | Analyze (javascript-typescript) pass                                         |
+| build + bundle budget                  | ✅    | 41.23 kB / 550 kB                                                            |
+| **preview deployment doğrulaması**     | ✅    | **Artık BLOKE EDİCİ** ve gerçekten koşuyor — §16                             |
 
 **Branch protection:** `main` korumalı — 7 zorunlu check, strict (branch güncel olmalı), linear history, force push ve silme kapalı.
 `required_approving_review_count = 0` (tek kişilik repo kendini onaylayamaz; kapı status check'ler).
@@ -410,50 +450,54 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P1 — Foundation**
+**Son tamamlanan faz: P2 — Simulation Core & Determinism**
 
-| Kanıt             | Değer                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Repo              | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT, 83 dosya)                                   |
-| PR                | [#1](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/1) · 12 commit · HEAD `382a5ae`                   |
-| CI                | [run 31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31836097461) — **7/7 yeşil** |
-| CodeQL            | Analyze (javascript-typescript) — pass                                                                             |
-| Production        | <https://evolutionary-tycoon.vercel.app> — 200, header'lar ve cache doğrulandı                                     |
-| Canlı E2E         | **14/14** (deployment-only header/cache/SPA/api testleri dahil)                                                    |
-| Testler           | 27 unit · statements %100 · branches %92.85                                                                        |
-| Mimari zorlama    | **12 vaka** ile kanıtlandı (yasak import ve global'ler gerçekten reddediliyor)                                     |
-| Bundle            | 13.11 kB gzip / 550 kB bütçe                                                                                       |
-| Güvenlik          | `pnpm audit` — sıfır zafiyet                                                                                       |
-| Branch protection | 7 zorunlu check, strict, linear history                                                                            |
-| Rapor             | [PHASE_1_REPORT.md](phases/PHASE_1_REPORT.md)                                                                      |
-| Kapı              | **GATE 1 🔴 ONAY BEKLİYOR**                                                                                        |
+| Kanıt                         | Değer                                                                                                                            |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| PR                            | [#8](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/8) · 11 commit                                                  |
+| CI                            | [run 31844494830](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844494830) — **8/8 yeşil** + CodeQL      |
+| **preview-e2e (bloke edici)** | [run 31844512902](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844512902) — **23/23**, SHA eşleşti      |
+| Canlı preview                 | Chromium **23/23** · Firefox **23/23** (yerelden, deployment'a karşı)                                                            |
+| Testler                       | **314** unit/integration · **58** determinizm · lines %99.53 · branches %91.73 · functions %99.47                                |
+| Determinizm                   | 10.000 tick replay · frame pacing · 1×/2×/4× · save→resume · stream izolasyonu · AST taraması · **motorlar arası hash eşitliği** |
+| Perf                          | 1000 boş tick **0.195 ms** (bütçe 5 ms) · **0.20 B/tick** (bütçe ≈0) · 7/7 bütçe geçti                                           |
+| Bundle                        | **41.23 kB** gzip / 550 kB bütçe                                                                                                 |
+| Güvenlik                      | `pnpm audit` — sıfır zafiyet · CodeQL pass                                                                                       |
+| Rapor                         | [PHASE_2_REPORT.md](phases/PHASE_2_REPORT.md)                                                                                    |
+| Kapı                          | **✅ PASS** — batch içi, P3'e otomatik devam                                                                                     |
 
-**Dürüst kayıtlar:** FPS ölçülmedi (render yok) · JS bütçesi sınanmadı (Phaser import edilmiyor) · WebKit yerelde koşamadı (CI'da geçti) · 3 commit hook bypass ile yapıldı (hook'lar çalışır durumda, tam `pnpm verify` sonradan koşuldu) — hepsi PHASE_1_REPORT §8'de.
+**Dürüst kayıtlar:** FPS hâlâ ölçülmedi (render yok, Faz 3'ün borcu) · JS bütçesi Phaser'a karşı
+hâlâ sınanmadı (Faz 3) · save/resume testi bugün **tam hash** eşitliği kuruyor, Faz 5'ten sonra
+kalıcı duruma daraltılmalı · `MS_PER_GAME_DAY` provizyonel (S1, Faz 5) · WebKit smoke yerelde
+koşamıyor (CI'da geçiyor) · yeni flaky test yok, `FLAKY.md` büyümedi.
 
 ## 21. Next Authorized Action
 
-> ## 🟢 BATCH P2 → P3 → P4 (otonom)
+> ## 🟢 PHASE 3 — Isometric Rendering & World
 >
-> Kullanıcı 2026-08-14'te üç fazı **birlikte** yetkilendirdi. Sıra:
+> Batch P2 → P3 → P4 içindeyiz. **P2 ✅ PASS**, kapı geçildi, otomatik devam.
 >
-> `P2 tamamla → tam doğrulama → memory → P3 tamamla → tam doğrulama → memory → P4 tamamla → tam doğrulama → memory → BATCH RAPORU → DUR`
+> **Şimdi:** Phaser 4 bootstrap · 2:1 dimetrik `IsoProjection` · `DepthSorter` (painter's, footprint
+> anchor, topolojik sıralama YOK) · 9 katmanlı `SceneGraph` · `CameraController` · `RenderBridge` +
+> `ActorView` havuzu · görsel determinizm modu · placeholder set + register · `stage1` layout ·
+> ilk 3 visual golden · **gerçek GPU perf ölçümü** (PERF_LOG'un Faz 3 borcu).
 >
-> **Şu an:** P2 — Simulation Core & Determinism (`phase/02-simulation-core`).
+> **P3'ün miras aldığı hazır parçalar:** motorlar arası deterministik hash · `?paused=1` ·
+> `Sim.readView()` (readonly, tahsissiz) · `GameLoop.interpolationAlpha`.
 >
 > **Yasak:** P5 (Trafik), P6 (Müşteri), P7 (Navigasyon), P8 (Servis), P9 (Ekonomi) ve sonrası.
-> "Hazırlık" kılığında ileri faz implementasyonu da yasak. P4 bittiğinde DURULUR ve onay beklenir.
->
-> **Onay beklerken yapılabilecek tek şey:** kullanıcı §16'daki Deployment Protection kararını
-> verirse ilgili ayarı/secret'ı uygulamak.
+> P4 bittiğinde DURULUR ve onay beklenir.
 
 ## 22. Change Log
 
-| Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                             |
-| ---------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                                                                                                             |
-| 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                                                                                                                           |
-| 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı.                                                                                             |
-| 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                 |
-| 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                |
-| 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                               |
-| 2026-08-14 | **F**      | **Batch P2→P4 başladı.** Context reset sonrası durum repo/CI/deployment ölçümüyle yeniden kuruldu. GATE 1 onaylandı, P2+P3+P4 toplu yetkilendirildi. Vercel Authentication kapatıldığı **doğrulandı** (API + curl) → bilinen sorun #1 ve geçici çözüm #1 kapandı, D-09 eklendi. §1/§5'teki bayat "P1 yürütülüyor" alanları düzeltildi. |
+| Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                                                                                                                                                                                                                                         |
+| 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı.                                                                                                                                                                                                           |
+| 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                                                                                                                               |
+| 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                                                                                                                              |
+| 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-08-15 | **H**      | **P2 TAMAMLANDI ✅** — PR #8, CI 8/8, preview-e2e 23/23 (ilk kez bloke edici ve gerçekten koşan). Determinizm motorlar arası doğrulandı (Node V8 = Firefox SpiderMonkey). Perf baseline CI'dan kaydedildi, %15 regresyon kapısı canlı. Preview kapısı ilk koşuşunda iki gerçek sorun buldu: Vercel toolbar CSP bloğu (doğru davranış, tolere edildi) ve Zod'un `Function` probe'u (kaynağında `jitless` ile çözüldü, CSP'ye dokunulmadı). Sırada P3. |
+| 2026-08-14 | **G**      | P2 başladı — dal `phase/02-simulation-core`, `cbdaef4`'ten.                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-08-14 | **F**      | **Batch P2→P4 başladı.** Context reset sonrası durum repo/CI/deployment ölçümüyle yeniden kuruldu. GATE 1 onaylandı, P2+P3+P4 toplu yetkilendirildi. Vercel Authentication kapatıldığı **doğrulandı** (API + curl) → bilinen sorun #1 ve geçici çözüm #1 kapandı, D-09 eklendi. §1/§5'teki bayat "P1 yürütülüyor" alanları düzeltildi.                                                                                                               |

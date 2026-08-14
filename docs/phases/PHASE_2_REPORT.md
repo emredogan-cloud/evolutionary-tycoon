@@ -2,7 +2,7 @@
 
 **Phase:** 2 — the deterministic, engine-independent simulation kernel
 **Date:** 2026-08-15
-**Result:** _(filled in below, §11)_
+**Result:** ✅ **PASS**
 **Batch:** P2 → P3 → P4, authorised together on 2026-08-14. Execution continues to Phase 3 on pass.
 
 **Branch:** `phase/02-simulation-core`
@@ -52,23 +52,23 @@ for a phase whose product _is_ a guarantee.
 
 ## 3. Definition of Done — 15 items, with evidence
 
-| #   | Criterion                                    | Result | Evidence                                                                                                            |
-| --- | -------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
-| 1   | Implementation works                         | ✅     | Kernel runs in Chromium and Firefox against real `requestAnimationFrame`; §5                                        |
-| 2   | `pnpm lint` clean                            | ✅     | exit 0                                                                                                              |
-| 3   | `pnpm typecheck` clean                       | ✅     | 3 tsc projects + svelte-check: **196 files, 0 errors, 0 warnings**                                                  |
-| 4   | Tests green + coverage                       | ✅     | **313 passed**; lines 99.53%, branches 91.73%, functions 99.47%; per-layer thresholds enforced                      |
-| 5   | Build succeeds, within budget                | ✅     | 0.47 s; JS **41.22 kB gzip** (limit 550), CSS **1.52 kB** (limit 30)                                                |
-| 6   | E2E green (Chromium + Firefox), WebKit smoke | ✅     | local 17/17 both browsers; CI §4                                                                                    |
-| 7   | Visual regression                            | n/a    | No rendering exists yet. Goldens land in Phase 3.                                                                   |
-| 8   | **CI GREEN**                                 | _(§4)_ | _(run URL below)_                                                                                                   |
-| 9   | Preview deployment healthy                   | _(§6)_ | _(preview URL below)_                                                                                               |
-| 10  | No critical console errors                   | ✅     | Asserted automatically on every E2E test by the shared fixture                                                      |
-| 11  | No runtime errors in real use                | ✅     | §5 — 600 ms and 500 ms live-loop observations, console clean                                                        |
-| 12  | Performance within budget                    | ✅     | All seven budgets measured and passing; `docs/PERF_LOG.md` Phase 2 entry. **No FPS claimed — nothing renders yet.** |
-| 13  | Documentation synchronised                   | ✅     | §8                                                                                                                  |
-| 14  | Git clean, commits pushed                    | ✅     | 9 commits, working tree clean                                                                                       |
-| 15  | Phase report written                         | ✅     | This document                                                                                                       |
+| #   | Criterion                                    | Result | Evidence                                                                                                                                            |
+| --- | -------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Implementation works                         | ✅     | Kernel runs in Chromium and Firefox against real `requestAnimationFrame`; §5                                                                        |
+| 2   | `pnpm lint` clean                            | ✅     | exit 0                                                                                                                                              |
+| 3   | `pnpm typecheck` clean                       | ✅     | 3 tsc projects + svelte-check: **196 files, 0 errors, 0 warnings**                                                                                  |
+| 4   | Tests green + coverage                       | ✅     | **314 passed**; lines 99.53%, branches 91.73%, functions 99.47%; per-layer thresholds enforced                                                      |
+| 5   | Build succeeds, within budget                | ✅     | 0.47 s; JS **41.23 kB gzip** (limit 550), CSS **1.52 kB** (limit 30)                                                                                |
+| 6   | E2E green (Chromium + Firefox), WebKit smoke | ✅     | local 17/17 both browsers; **live preview 23/23 both**; CI chromium ✅ firefox ✅ webkit ✅                                                         |
+| 7   | Visual regression                            | n/a    | No rendering exists yet. Goldens land in Phase 3.                                                                                                   |
+| 8   | **CI GREEN**                                 | ✅     | [run 31844494830](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844494830) — 8/8, plus CodeQL and the blocking preview gate |
+| 9   | Preview deployment healthy                   | ✅     | §6 — SHA match, headers verified, **23/23 E2E against the live preview in both browsers**                                                           |
+| 10  | No critical console errors                   | ✅     | Asserted automatically on every E2E test by the shared fixture                                                                                      |
+| 11  | No runtime errors in real use                | ✅     | §5 — 600 ms and 500 ms live-loop observations, console clean                                                                                        |
+| 12  | Performance within budget                    | ✅     | All seven budgets measured and passing; `docs/PERF_LOG.md` Phase 2 entry. **No FPS claimed — nothing renders yet.**                                 |
+| 13  | Documentation synchronised                   | ✅     | §8                                                                                                                                                  |
+| 14  | Git clean, commits pushed                    | ✅     | 11 commits on the phase branch, working tree clean                                                                                                  |
+| 15  | Phase report written                         | ✅     | This document                                                                                                                                       |
 
 ---
 
@@ -94,7 +94,34 @@ $ pnpm e2e:chromium        → 17 passed, 6 skipped (3.1s)
 $ pnpm e2e:firefox         → 17 passed, 6 skipped (7.2s)
 ```
 
-_(CI run table inserted below once the pipeline reports.)_
+**CI run [31844494830](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844494830) — 8/8 green**, plus CodeQL and the preview gate:
+
+| Job                                      | Result                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Quality (lint, types, architecture)      | ✅ pass                                                                                                      |
+| Unit + integration (+ determinism step)  | ✅ pass                                                                                                      |
+| **Simulation performance**               | ✅ pass                                                                                                      |
+| Build + bundle budget                    | ✅ pass                                                                                                      |
+| E2E (chromium)                           | ✅ pass                                                                                                      |
+| E2E (firefox)                            | ✅ pass                                                                                                      |
+| WebKit smoke (non-blocking)              | ✅ pass                                                                                                      |
+| Security                                 | ✅ pass                                                                                                      |
+| CodeQL — Analyze (javascript-typescript) | ✅ pass                                                                                                      |
+| **Verify deployed preview** (blocking)   | ✅ pass — [run 31844512902](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844512902) |
+
+CI-measured benchmark, recorded as the regression baseline in `tools/bench/baseline.json`:
+
+```
+name                                                    min ms   p50 ms   p95 ms
+1000 empty ticks                                         0.272    0.276    0.316
+world hash (120 vehicles, 60 customers)                  4.500    4.606    5.129
+1000 ticks, one command each                             0.346    0.354    0.398
+1000 ticks, 8 events per tick, 3 subscribers             0.556    0.567    0.640
+vehicle spawn + despawn cycles                           0.118    0.122    0.135
+world snapshot + JSON serialise                          0.425    0.436    0.503
+
+allocation: 0.23 B/tick over 200000 ticks
+```
 
 ---
 
@@ -141,7 +168,48 @@ or a string cannot be a false positive), and its own detection is verified again
 
 ## 6. Deployment verification
 
-_(filled in from the preview deployment; see §11)_
+**The preview gate ran for real for the first time in this project.** It had skipped with a warning
+through all of Phase 1 because Vercel Deployment Protection put the per-deployment URLs behind SSO.
+That setting is now off, verified two ways before any code changed:
+
+```
+Vercel API get_project_deployment_protection
+  → {"ssoProtection":{"enabled":false,...},"passwordProtection":{"enabled":false,...}}
+
+$ curl -o /dev/null -w '%{http_code}' \
+    https://evolutionary-tycoon-1ob1fg36g-…vercel.app/health.json     → 200   (was 302 → SSO)
+```
+
+Verified against the **live preview deployment**, not assumed from a CLI exit code:
+
+```
+Preview: https://evolutionary-tycoon-o9kkb7b3h-emre30283-4955s-projects.vercel.app
+
+$ curl .../health.json      → 200
+  {"version":"0.1.0","buildSha":"ce19f60e76859adb00ef5074fed4e1562153cb54",
+   "builtAt":"2026-08-14T22:0…","assetManifestHash":null,"schemaVersion":1}
+
+  deployed=ce19f60e76859adb00ef5074fed4e1562153cb54
+  expected=ce19f60e76859adb00ef5074fed4e1562153cb54            → MATCH
+
+$ curl -o /dev/null -w '%{http_code}' .../          → 200
+$ curl -o /dev/null -w '%{http_code}' .../api/time  → 204
+$ curl -D - .../  → content-security-policy: default-src 'self'; script-src 'self'; …
+                    x-frame-options: DENY
+                    cache-control: no-cache, must-revalidate
+```
+
+**Full E2E against the live preview — 23/23 on both browsers**, including the six deployment-only
+assertions that are skipped locally and the nine new simulation assertions:
+
+```
+$ E2E_BASE_URL=https://…-o9kkb7b3h-… pnpm exec playwright test --project=chromium
+  23 passed (3.3s)
+$ E2E_BASE_URL=https://…-o9kkb7b3h-… pnpm exec playwright test --project=firefox
+  23 passed (6.8s)
+```
+
+CI's own preview job reports the same: `health.json is up after 1 attempt(s)`, SHA match, `23 passed`.
 
 ---
 
@@ -254,19 +322,50 @@ exclusion is recorded in `vitest.config.ts` with this reason.
 
 Every one of these was caught by a test or a check, and none was worked around by weakening one.
 
-| #   | Problem                                                                                                                                            | Resolution                                                                                                                                                                                                                                                                          |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **The 8-tick catch-up ceiling was unreachable.** The 250 ms frame clamp yields 5 ticks, so the guard never fired and `droppedTicks` was dead code. | Changed the ceiling to bound _ticks_ rather than accumulator steps, so it binds when the machine is behind **and** fast-forwarding — the case it exists for. Both guards now have a test recording which one fires.                                                                 |
-| 2   | **CRC-32 did not match the published vectors.** It consumed two bytes per UTF-16 code unit.                                                        | Switched to CRC-32/ISO-HDLC over UTF-8 bytes. The implementation is now validated against something other than itself.                                                                                                                                                              |
-| 3   | Coverage sat below the §13 per-layer targets (sim branches 82%, persistence lines 87%)                                                             | Fixed the causes, not the thresholds: collapsed ~12 unreachable `?? 0` fallbacks into one tested helper, made the migration chain injectable so the algorithm is testable while the list is empty, and added the failure-path tests the gaps were pointing at. Now 90.6% and 91.9%. |
-| 4   | `installTestHooks` threw a bare `TypeError` on a second install                                                                                    | Named the real condition — two simulations wired to one page — and left the property non-configurable so a page script still cannot swap the hook.                                                                                                                                  |
-| 5   | Vitest 4 removed `poolOptions`, so `--expose-gc` was silently not applied and the allocation figure was an upper bound                             | Moved `execArgv` to the top level. The harness reports `gcForced`, and the test asserts it — an unforced measurement now fails loudly instead of passing quietly.                                                                                                                   |
-| 6   | `tsconfig.node.json` had no `paths`, so the benchmark's imports into `src/**` failed to resolve                                                    | Added the alias map to that project.                                                                                                                                                                                                                                                |
-| 7   | The E2E pause-event test failed because the page booted paused                                                                                     | The test was wrong, not the code: re-sending the current value is a deliberate no-op that announces nothing. The test now unpauses.                                                                                                                                                 |
-| 8   | jsdom keeps one document per file, so overlay tests queried the first overlay's stale element                                                      | Cleared the document between tests.                                                                                                                                                                                                                                                 |
+| #   | Problem                                                                                                                                                                                         | Resolution                                                                                                                                                                                                                                                                                                                         |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **The 8-tick catch-up ceiling was unreachable.** The 250 ms frame clamp yields 5 ticks, so the guard never fired and `droppedTicks` was dead code.                                              | Changed the ceiling to bound _ticks_ rather than accumulator steps, so it binds when the machine is behind **and** fast-forwarding — the case it exists for. Both guards now have a test recording which one fires.                                                                                                                |
+| 2   | **CRC-32 did not match the published vectors.** It consumed two bytes per UTF-16 code unit.                                                                                                     | Switched to CRC-32/ISO-HDLC over UTF-8 bytes. The implementation is now validated against something other than itself.                                                                                                                                                                                                             |
+| 3   | Coverage sat below the §13 per-layer targets (sim branches 82%, persistence lines 87%)                                                                                                          | Fixed the causes, not the thresholds: collapsed ~12 unreachable `?? 0` fallbacks into one tested helper, made the migration chain injectable so the algorithm is testable while the list is empty, and added the failure-path tests the gaps were pointing at. Now 90.6% and 91.9%.                                                |
+| 4   | `installTestHooks` threw a bare `TypeError` on a second install                                                                                                                                 | Named the real condition — two simulations wired to one page — and left the property non-configurable so a page script still cannot swap the hook.                                                                                                                                                                                 |
+| 5   | Vitest 4 removed `poolOptions`, so `--expose-gc` was silently not applied and the allocation figure was an upper bound                                                                          | Moved `execArgv` to the top level. The harness reports `gcForced`, and the test asserts it — an unforced measurement now fails loudly instead of passing quietly.                                                                                                                                                                  |
+| 6   | `tsconfig.node.json` had no `paths`, so the benchmark's imports into `src/**` failed to resolve                                                                                                 | Added the alias map to that project.                                                                                                                                                                                                                                                                                               |
+| 7   | The E2E pause-event test failed because the page booted paused                                                                                                                                  | The test was wrong, not the code: re-sending the current value is a deliberate no-op that announces nothing. The test now unpauses.                                                                                                                                                                                                |
+| 8   | jsdom keeps one document per file, so overlay tests queried the first overlay's stale element                                                                                                   | Cleared the document between tests.                                                                                                                                                                                                                                                                                                |
+| 9   | **Preview E2E failed on its first blocking run** — Vercel injects its preview-comments toolbar (`vercel.live/.../feedback.js`), our CSP blocks it, and the refusal is logged as a console error | The refusal is the correct outcome. The CSP stays; that one message is tolerated, anchored on the host _and_ on CSP wording so it cannot mask anything else. Both spellings are matched — Chromium writes "Content Security Policy", Firefox writes "Content-Security-Policy".                                                     |
+| 10  | **Our own bundle attempted an `eval()` that the CSP blocked** (Firefox, preview only)                                                                                                           | Traced to Zod probing at startup whether it may JIT-compile validators with the `Function` constructor. Zod caught the refusal and fell back correctly — validation was never broken — but the browser logged the violation first. Fixed at source with `z.config({ jitless: true })`. `unsafe-eval` was **not** added to the CSP. |
+| 11  | A 15% regression gate on a shared runner's **median** would have flaked, which §11 forbids                                                                                                      | The gate compares the **minimum** of 25 samples, which approximates the uncontended cost that a code change actually moves. Threshold unchanged at 15%; only the statistic is chosen to be measurable, and the baseline is recorded from a CI run rather than a laptop.                                                            |
 
 ---
 
 ## 11. Gate
 
-_(filled in on completion)_
+> ## ✅ PHASE 2 — PASS
+>
+> All fifteen Definition of Done criteria are met with evidence, item 7 (visual regression) being
+> the only `n/a` and correctly so: nothing renders yet.
+>
+> **Execution continues automatically to Phase 3 (Isometric Rendering & World)**, which the user
+> authorised as part of the P2 → P3 → P4 batch on 2026-08-14. The batch stops after Phase 4.
+
+### What Phase 3 inherits
+
+- A simulation that is deterministic **across engines**, so a golden screenshot can be pixel-exact.
+- `?paused=1`, the first piece of the visual determinism mode that visual regression needs.
+- `Sim.readView()` — a readonly, allocation-free projection for the render bridge to consume.
+- `GameLoop.interpolationAlpha`, ready for the renderer to draw between two simulation states.
+- A bundle at 41 kB of a 550 kB budget. **Phase 3 is where that ceiling is finally tested**, since
+  Phaser is declared but still not imported (`docs/DEPENDENCY_NOTES.md`).
+
+### Honest caveats carried forward
+
+1. **No frame rate has ever been measured**, because nothing renders. Phase 3 owes the first
+   real-GPU number in `docs/PERF_LOG.md`.
+2. **The save/resume test asserts full-hash equality**, which is exact only because Phase 2 has no
+   system that creates transient entities. From Phase 5 that assertion must narrow to persistent
+   state; the contract is already written into `determinism/saveload.test.ts` so the change is a
+   deliberate edit rather than a surprise.
+3. **`MS_PER_GAME_DAY` is provisional** — open decision S1, due in Phase 5.
+4. **WebKit smoke still cannot run on this development machine** (`libevent-2.1-7t64` missing). It
+   passes in the pinned CI container. Unchanged from Phase 1, recorded in `docs/FLAKY.md`.
+5. **No new flaky test.** `docs/FLAKY.md` did not grow.
