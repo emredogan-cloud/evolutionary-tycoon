@@ -79,6 +79,12 @@ jobs:
       - name: Vitest with coverage thresholds
         run: pnpm test:coverage
 
+      # Run again on its own so the determinism suite has a distinct signal in
+      # the log. If it ever goes red, no other result in this pipeline means
+      # what it claims to mean (docs/TESTING_STRATEGY.md §3.7).
+      - name: Determinism suite
+        run: pnpm test:determinism
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -86,6 +92,25 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 7
+
+  perf:
+    name: Simulation performance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # CI has no GPU, so it never measures or claims a frame rate. What it can
+      # measure is the simulation, which is where the CPU cost actually is and
+      # which is engine-independent by construction (docs/WORKING_DISCIPLINE.md §8).
+      - name: Simulation benchmark and budgets
+        run: pnpm bench:sim
 
   build:
     name: Build + bundle budget
