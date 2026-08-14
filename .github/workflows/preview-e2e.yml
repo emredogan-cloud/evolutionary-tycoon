@@ -5,6 +5,14 @@ name: Preview E2E
 # runs the suite against the real Vercel preview URL, which is where the
 # deployment-facing assertions (headers.spec.ts, health.spec.ts) actually carry
 # weight. See docs/GAME_EXECUTION_ROADMAP.md §23.
+#
+# This job is blocking. It previously detected Vercel Deployment Protection and
+# skipped with a warning, because the per-deployment URLs that `deployment_status`
+# reports returned 302 to Vercel SSO and no change in this repository could fix
+# that. The project owner disabled Vercel Authentication on 2026-08-14
+# (ssoProtection.enabled = false, verified against the API and by fetching a
+# per-deployment URL), so the skip path is gone and a preview that cannot be
+# verified now fails the run.
 
 on:
   deployment_status:
@@ -41,48 +49,36 @@ jobs:
       - name: Show target
         run: echo "Testing against $E2E_BASE_URL"
 
-      - name: Wait for the deployment, or detect that it is protected
-        id: reach
+      - name: Wait for the deployment to serve health.json
         run: |
           set -euo pipefail
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' "$E2E_BASE_URL/health.json" || true)
             if [ "$code" = "200" ]; then
-              echo "reachable=true" >> "$GITHUB_OUTPUT"
-              echo "health.json is up"
+              echo "health.json is up after ${i} attempt(s)"
               exit 0
             fi
 
-            # Distinguish "not ready yet" from "protected". Waiting never resolves
-            # the second, and a bare timeout hides the real cause.
+            # Name the cause instead of timing out anonymously. A protected
+            # deployment never becomes reachable by waiting, so it fails fast
+            # with the fix written down rather than after 150 seconds.
             if [ "$code" = "401" ] || [ "$code" = "302" ]; then
               loc=$(curl -s -o /dev/null -D - "$E2E_BASE_URL/health.json" | grep -i '^location:' || true)
               case "$loc" in
                 *vercel.com/sso-api*)
-                  echo "reachable=false" >> "$GITHUB_OUTPUT"
-                  echo "::warning::Preview E2E skipped - Vercel Deployment Protection blocks per-deployment URLs."
+                  echo "::error::Vercel Deployment Protection is blocking $E2E_BASE_URL."
                   {
-                    echo "## Preview E2E skipped"
+                    echo "## Preview E2E cannot reach the deployment"
                     echo ""
-                    echo "**Vercel Deployment Protection is enabled for per-deployment URLs.**"
+                    echo "\`$E2E_BASE_URL/health.json\` returned **$code** and redirected to Vercel SSO."
                     echo ""
-                    echo "Measured 2026-08-14: the stable production alias is publicly reachable (HTTP 200),"
-                    echo "but the immutable per-deployment URLs reported by \`deployment_status\` return 302 to"
-                    echo "Vercel SSO. This job therefore cannot reach the preview it exists to verify."
-                    echo ""
-                    echo "This is **not** a code failure, and it is **not** resolved by waiting."
-                    echo ""
-                    echo "### Fix A (recommended for a public game)"
-                    echo "Vercel → Project → Settings → Deployment Protection → Vercel Authentication → **Disabled**."
-                    echo ""
-                    echo "### Fix B (keep protection)"
-                    echo "Generate a Protection Bypass for Automation secret, store it as the"
-                    echo "\`VERCEL_AUTOMATION_BYPASS_SECRET\` repository secret, and send it as the"
-                    echo "\`x-vercel-protection-bypass\` header from this workflow."
-                    echo ""
-                    echo "Tracked in \`docs/PROJECT_MEMORY.md\` §16 as an open item."
+                    echo "Deployment Protection was disabled on 2026-08-14 (decision D-09 in"
+                    echo "\`docs/PROJECT_MEMORY.md\` §16). If it is on again, either turn it back off at"
+                    echo "Project → Settings → Deployment Protection → Vercel Authentication, or add a"
+                    echo "Protection Bypass for Automation secret as \`VERCEL_AUTOMATION_BYPASS_SECRET\`"
+                    echo "and send it as the \`x-vercel-protection-bypass\` header from this workflow."
                   } >> "$GITHUB_STEP_SUMMARY"
-                  exit 0
+                  exit 1
                   ;;
               esac
             fi
@@ -90,12 +86,10 @@ jobs:
             echo "attempt $i: health.json returned $code"
             sleep 5
           done
-          echo "reachable=false" >> "$GITHUB_OUTPUT"
-          echo "::error::$E2E_BASE_URL/health.json never returned 200 and did not look protected."
+          echo "::error::$E2E_BASE_URL/health.json never returned 200."
           exit 1
 
       - name: Assert the deployment serves this commit
-        if: steps.reach.outputs.reachable == 'true'
         # This is the assertion that turns "Vercel accepted an upload" into
         # "the commit CI tested is the commit that is live".
         run: |
@@ -103,19 +97,18 @@ jobs:
           DEPLOYED_SHA=$(curl -sf "$E2E_BASE_URL/health.json" | node -e "
             let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).buildSha));
           ")
-          echo "deployed=$DEPLOYED_SHA expected=${{ github.event.deployment_status.deployment.sha || github.sha }}"
           EXPECTED="${{ github.event.deployment_status.deployment.sha || github.sha }}"
+          echo "deployed=$DEPLOYED_SHA expected=$EXPECTED"
           if [ -n "$EXPECTED" ] && [ "$DEPLOYED_SHA" != "$EXPECTED" ]; then
             echo "::error::Deployed buildSha ($DEPLOYED_SHA) does not match the deployment commit ($EXPECTED)"
             exit 1
           fi
 
       - name: E2E against the live preview (Chromium)
-        if: steps.reach.outputs.reachable == 'true'
         run: pnpm exec playwright test --project=chromium
 
       - name: Upload report
-        if: always() && steps.reach.outputs.reachable == 'true'
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: preview-e2e-report
