@@ -36,3 +36,6 @@ pnpm-debug.log*
 assets/processed/
 public/atlas/
 public/asset-manifest.json
+
+# vercel cli
+.vercel/
