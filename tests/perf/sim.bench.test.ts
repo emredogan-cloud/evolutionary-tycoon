@@ -8,6 +8,7 @@ import {
   benchSnapshot,
   benchStoreChurn,
   benchWorldHash,
+  formatBaselineJson,
   formatReport,
   measureAllocationPerTick,
   runSimBench,
@@ -28,6 +29,14 @@ import {
  *    TESTING_STRATEGY §6. Only compared when a baseline file exists, so the
  *    first CI run records rather than fails.
  *
+ *    The comparison uses the *minimum* of 25 samples, not the median. On a
+ *    shared CI runner the median swings well past 15% between runs purely from
+ *    scheduler contention, and a gate that fires at random is worse than no
+ *    gate at all (WORKING_DISCIPLINE §11). The minimum approximates the
+ *    uncontended cost, which is the thing a code change actually moves. The
+ *    threshold stays at 15%; only the statistic being compared is chosen to be
+ *    measurable.
+ *
  * What this suite deliberately does *not* do is claim a frame rate. CI has no
  * GPU (SwiftShader), and WORKING_DISCIPLINE §8 forbids reporting one from here.
  * Real-device FPS is measured by hand and recorded in docs/PERF_LOG.md.
@@ -39,6 +48,8 @@ const REGRESSION_THRESHOLD = 1.15;
 interface Baseline {
   readonly recordedAt: string;
   readonly environment: string;
+  /** Which statistic `timings` holds. Only 'minMs' is understood. */
+  readonly statistic: string;
   readonly timings: Record<string, number>;
   readonly bytesPerTick: number;
 }
@@ -101,13 +112,22 @@ describe('regression against the recorded baseline', () => {
 
   it('reports the current numbers', () => {
     const report = runSimBench();
-    // Printed so the CI log carries the measurement, not just a pass/fail.
+    // Printed so the CI log carries the measurement, not just a pass/fail, and
+    // so a baseline can be recorded from a CI run rather than a local one.
     console.log(`\n${formatReport(report)}\n`);
+    console.log(
+      `--- tools/bench/baseline.json candidate ---\n${formatBaselineJson(
+        report,
+        process.env['BENCH_RECORDED_AT'] ?? 'unrecorded',
+        process.env['BENCH_ENVIRONMENT'] ?? 'unrecorded',
+      )}\n--- end candidate ---\n`,
+    );
     expect(report.timings.length).toBeGreaterThan(0);
   });
 
   it.runIf(baseline !== null)('has not regressed by more than 15%', () => {
     if (baseline === null) return;
+    expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMs');
 
     const report = runSimBench();
     const regressions: string[] = [];
@@ -115,10 +135,10 @@ describe('regression against the recorded baseline', () => {
     for (const timing of report.timings) {
       const recorded = baseline.timings[timing.name];
       if (recorded === undefined) continue;
-      const ratio = timing.p50Ms / recorded;
+      const ratio = timing.minMs / recorded;
       if (ratio > REGRESSION_THRESHOLD) {
         regressions.push(
-          `${timing.name}: ${timing.p50Ms.toFixed(3)} ms vs baseline ${recorded.toFixed(3)} ms (${((ratio - 1) * 100).toFixed(0)}% slower)`,
+          `${timing.name}: ${timing.minMs.toFixed(3)} ms vs baseline ${recorded.toFixed(3)} ms (${((ratio - 1) * 100).toFixed(0)}% slower)`,
         );
       }
     }

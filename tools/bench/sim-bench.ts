@@ -213,14 +213,14 @@ export function formatReport(report: BenchReport): string {
   const lines = [
     `Simulation benchmark — tick = ${TICK_MS} ms (${1000 / TICK_MS} Hz)`,
     '',
-    'name                                                   p50 ms   p95 ms    per-op µs',
-    '-------------------------------------------------------------------------------',
+    'name                                                    min ms   p50 ms   p95 ms    per-op µs',
+    '------------------------------------------------------------------------------------------',
   ];
   for (const timing of report.timings) {
     lines.push(
-      `${timing.name.padEnd(52)} ${timing.p50Ms.toFixed(3).padStart(8)} ${timing.p95Ms
+      `${timing.name.padEnd(52)} ${timing.minMs.toFixed(3).padStart(8)} ${timing.p50Ms
         .toFixed(3)
-        .padStart(8)} ${timing.perOpUs.toFixed(3).padStart(12)}`,
+        .padStart(8)} ${timing.p95Ms.toFixed(3).padStart(8)} ${timing.perOpUs.toFixed(3).padStart(12)}`,
     );
   }
   lines.push('');
@@ -229,4 +229,27 @@ export function formatReport(report: BenchReport): string {
       (report.allocation.gcForced ? '' : '  (gc NOT forced — upper bound only)'),
   );
   return lines.join('\n');
+}
+
+/**
+ * A `tools/bench/baseline.json` body for the current run, ready to copy.
+ *
+ * Printed by the CI job so the recorded baseline is always a CI measurement.
+ * Recording a local number would make every CI run look like a regression, or
+ * hide a real one — the gate has to compare like with like.
+ */
+export function formatBaselineJson(report: BenchReport, recordedAt: string, environment: string): string {
+  const timings: Record<string, number> = {};
+  for (const timing of report.timings) timings[timing.name] = Number(timing.minMs.toFixed(4));
+  return JSON.stringify(
+    {
+      recordedAt,
+      environment,
+      statistic: 'minMs',
+      timings,
+      bytesPerTick: Number(report.allocation.bytesPerTick.toFixed(3)),
+    },
+    null,
+    2,
+  );
 }
