@@ -12,4 +12,7 @@ than producing a subtly wrong game.
 
 See [ECONOMY_DESIGN §12](../../docs/ECONOMY_DESIGN.md).
 
-**Status:** empty. Populated from Phase 3 (world/layout) and Phase 9 (economy).
+**Status:** `simulation.ts` (tick rate, catch-up limits, entity capacities, save schema version).
+World/layout data arrives in Phase 3, economy in Phase 9 — and with it the first Zod schemas, since
+compile-time constants are already guaranteed by `as const` and a runtime schema over them would be
+theatre.
