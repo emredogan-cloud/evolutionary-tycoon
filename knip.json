@@ -2,7 +2,6 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["api/**/*.ts", "tools/**/*.ts"],
   "project": ["src/**/*.{ts,svelte}", "api/**/*.ts", "tools/**/*.ts"],
-  "ignoreDependencies": ["phaser"],
   "vitest": {
     "config": ["vitest.config.ts"]
   },

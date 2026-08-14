@@ -85,6 +85,66 @@ budget; the ceiling is still untested against Phaser, which lands in Phase 3.
 - Allocation is 0.20 B/tick rather than exactly 0. That is V8 bookkeeping over 200 000 ticks, not
   a per-tick allocation: one object literal per tick would be ~50 B/tick, two hundred times higher.
 
+### Phase 3 — 2026-08-15 · first real-GPU measurement
+
+**This is the first frame-rate number this project has ever recorded**, because Phase 3 is the
+first phase with anything to render. CI still does not and will not produce one.
+
+```
+Device:   AMD Ryzen 5 5500, NVIDIA GeForce GTX 1660 Ti
+          ANGLE (NVIDIA Corporation, NVIDIA GeForce GTX 1660 Ti/PCIe/SSE2, OpenGL 4.5.0)
+OS:       Ubuntu 24.04.4 LTS, X11
+Browser:  Chromium 150 (Playwright 1.62.1), headed, real GPU — no --disable-gpu, no SwiftShader
+Tier:     n/a (degradation tiers arrive in Phase 20)
+Viewport: 1920x1080, devicePixelRatio 1
+Command:  ?scene=stress&bench=1&e2e=1&seed=424242
+Method:   3 s warm-up discarded, then a 12 s window; 2048 frame deltas; percentiles from FrameMeter
+```
+
+| Scene                        | Actors drawn |   FPS p50 |   FPS p05 | Frame p95 | Worst frame | Budget                 |
+| ---------------------------- | -----------: | --------: | --------: | --------: | ----------: | ---------------------- |
+| `stress` (the demanding one) |      **100** | **200.0** | **196.1** |    5.1 ms |       10 ms | p50 ≥ 60 ✅            |
+| `depth-testcard`             |           15 |     200.0 |     196.1 |    5.1 ms |      5.1 ms | p05 ≥ 50 ✅            |
+| `empty`                      |            0 |     200.0 |     196.1 |    5.1 ms |      5.1 ms | frame p95 ≤ 16.6 ms ✅ |
+
+**Read this number carefully.** All three scenes measure _identically_ at exactly 200.0 FPS and
+5.0 ms. That is the display's refresh cap, not the renderer's ceiling — an empty scene and a
+hundred-actor scene cannot genuinely cost the same. So:
+
+- What is proven: at 100 actors and 1920×1080 this renderer is **nowhere near** the frame budget.
+  Frame time p95 is 5.1 ms of a 16.6 ms allowance, and 0 ticks were dropped over 12 seconds.
+- What is **not** proven: how much headroom is left. The measurement is bounded by vsync, so the
+  true ceiling is somewhere above 200 FPS and this run cannot say where.
+- What is still owed: a mid-range Android phone and an iPhone. Neither was available. The mobile
+  budget (p50 ≥ 45) remains **unmeasured** and is Phase 20's to answer, or earlier if a device appears.
+
+| CI-measurable metric (no GPU needed) |        Value | Budget             |
+| ------------------------------------ | -----------: | ------------------ |
+| **Depth sort, 260 objects**          | **0.013 ms** | ≤ 0.15 ms ✅ (11×) |
+| Steady-state simulation allocation   |  0.04 B/tick | ≈ 0 B/tick ✅      |
+| 1000 empty ticks                     |     0.195 ms | < 5 ms ✅          |
+
+| Build metric          |                         Value | Change from Phase 2 |
+| --------------------- | ----------------------------: | ------------------- |
+| **JS bundle (gzip)**  | **405.08 kB** / 550 kB budget | **+363.86 kB**      |
+| JS bundle (raw)       |                    1533.02 kB | +1398.78 kB         |
+| CSS bundle (gzip)     |                       1.52 kB | unchanged           |
+| Production build time |                        1.08 s | +0.61 s             |
+| Unit + integration    |             ~23 s (404 tests) | +90 tests           |
+| Visual regression     |               9.4 s (6 tests) | new                 |
+
+### The 550 kB budget, finally exercised
+
+Open since Phase 1: _"13 kB says nothing about whether 550 kB is the right ceiling."_ Now it does.
+
+**Phaser costs ~364 kB gzip** (measured as the delta from Phase 2's 41.22 kB; the ~1 000 lines of
+new render code account for a few kB of that). Total **405.08 kB against 550 kB — 26% headroom.**
+
+The budget holds, but note the sub-line: TECHNICAL_ARCHITECTURE §11.3 allocates ≤ 320 kB to a
+_custom_ Phaser build, and this is the **default** build at ~364 kB. The total is what CI gates on
+and it passes; the breakdown line does not. A custom Phaser build is the documented remedy and
+belongs to Phase 20 (Performance Optimization) unless the total gets tight sooner.
+
 ### Template for future entries
 
 ```

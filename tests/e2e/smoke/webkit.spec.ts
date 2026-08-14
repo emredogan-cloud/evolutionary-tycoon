@@ -1,3 +1,4 @@
+import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 import { expect, test } from '../fixtures';
 
 /**
@@ -23,7 +24,7 @@ test.describe('webkit smoke', () => {
     const response = await request.get('/health.json');
     expect(response.status()).toBe(200);
     const body = (await response.json()) as { schemaVersion: number };
-    expect(body.schemaVersion).toBe(1);
+    expect(body.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
   });
 
   test('the unsupported path still renders', async ({ page }) => {

@@ -77,7 +77,7 @@ describe('determinism — save and resume', () => {
     dirty.world.economy.cash = 9_999;
     dirty.world.progression.stage = 4;
     dirty.world.progression.unlocks.push('leftover');
-    dirty.world.layout.placed.push({ objectId: 'stale', x: 1, y: 1 });
+    dirty.world.layout.placed.push({ objectId: 'stale', x: 1, y: 1, z: 0 });
     dirty.world.layout.upgrades.set('stale', 3);
     dirty.world.staff.hired.push({ entityId: 42, roleId: 'ghost' });
     dirty.world.economy.prices.set('stale', 1);
@@ -97,20 +97,20 @@ describe('determinism — save and resume', () => {
   it('a snapshot is a copy, not a view of live state', () => {
     const sim = new Sim({ seed: 3 });
     sim.world.progression.unlocks.push('grill');
-    sim.world.layout.placed.push({ objectId: 'counter', x: 1, y: 2 });
+    sim.world.layout.placed.push({ objectId: 'counter', x: 1, y: 2, z: 0 });
     sim.world.staff.hired.push({ entityId: 1, roleId: 'cook' });
 
     const snapshot = snapshotWorld(sim.world);
 
     sim.world.progression.unlocks.push('fryer');
-    sim.world.layout.placed.push({ objectId: 'awning', x: 3, y: 4 });
+    sim.world.layout.placed.push({ objectId: 'awning', x: 3, y: 4, z: 0 });
     const firstPlaced = sim.world.layout.placed[0];
     if (firstPlaced !== undefined) firstPlaced.x = 999;
     const firstHire = sim.world.staff.hired[0];
     if (firstHire !== undefined) firstHire.roleId = 'mutated';
 
     expect(snapshot.progression.unlocks).toEqual(['grill']);
-    expect(snapshot.layout.placed).toEqual([{ objectId: 'counter', x: 1, y: 2 }]);
+    expect(snapshot.layout.placed).toEqual([{ objectId: 'counter', x: 1, y: 2, z: 0 }]);
     expect(snapshot.staff.hired).toEqual([{ entityId: 1, roleId: 'cook' }]);
   });
 

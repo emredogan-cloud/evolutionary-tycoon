@@ -210,6 +210,41 @@ sim'e sahip olmaz.
 - Gerçek GPU FPS ölçümü için kullanıcının gerçek Chrome'u erişilebilir (browser automation) —
   CI'ın SwiftShader'ı bunu ölçemez, ADR-011.
 
+### CHECKPOINT J — P3 tamamlandı (2026-08-15) ✅
+
+| Kanıt              | Değer                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------- |
+| Testler            | **447** unit/integration + 10 perf · lines %98.56 · branches %89.81                    |
+| Visual regression  | **3 golden + 3 determinizm testi** · 10/10 bayt-özdeş ekran görüntüsü                  |
+| Golden üretimi     | Pinlenmiş container'da üretildi **ve** host çıktısıyla SHA-256 eşitliği ölçüldü        |
+| **Gerçek GPU FPS** | **200 FPS p50 · 5.1 ms frame p95** (bütçe 16.6 ms) — GTX 1660 Ti, 100 aktör, 1920×1080 |
+| Depth sort         | **0.013 ms** / 260 nesne (bütçe 0.15 ms) — 11× pay                                     |
+| **Bundle**         | **405.39 kB** gzip / 550 kB — Faz 1'den beri açık olan soru **cevaplandı**             |
+| Save şeması        | **v1 → v2** (placed objects `z` kazandı) — zincirin ilk gerçek migration'ı             |
+| Rapor              | [PHASE_3_REPORT.md](phases/PHASE_3_REPORT.md)                                          |
+
+**Faz 3'ün bulduğu dört gerçek hata** (hepsi test/ölçüm tarafından yakalandı, hiçbiri etrafından dolanılmadı):
+
+1. **İnterpolasyon sessizce çöküyordu** — pozisyonlar tick'in ilk frame'inin _sonunda_ kaydediliyordu,
+   böylece o tick'in sonraki frame'leri zaten varılmış konumdan harmanlıyordu. İki anlık görüntüye
+   (previous/current) geçildi. "Yüksek frame rate'te hareket basamaklı görünüyor" olarak
+   yayınlanacaktı ve sebebi çok zor bulunacaktı.
+2. **Depth tie-break'i yükseklik farkını ezebiliyordu** — tavanı tam bir `Z_WEIGHT` birimiydi (10),
+   oysa 0.5 m'lik bir basamak yalnızca 5 katkı veriyor. Tavan `Z_WEIGHT × 0.05 m`'ye indirildi.
+   Aksi hâlde yerdeki bir müşteri, tezgâhın üstündekinin önüne geçebiliyordu — üstelik entity id'ye göre.
+3. **Checksum migration'dan SONRA doğrulanıyordu** ama saklanan baytlar üzerinden hesaplanmıştı →
+   v2 çıkar çıkmaz her v1 save'i "bozuk" oldu. Sıra düzeltildi: önce checksum (saklanan hâl üzerinde),
+   sonra migration, en sonda şema.
+4. **Stress sahnesi 100 değil 74 aktör ölçüyordu** — eşit müşteri/çalışan bölüşümü 24 kapasiteli
+   havuzdan 50 çalışan istiyordu. Artık her 5'te 1 çalışan ve `scenes.test.ts` her fixture'ın
+   havuzlara sığdığını doğruluyor. Gerçek donanımda ölçüm alırken fark edildi.
+
+**Kapatılan Faz 1 borçları:** visual regression altyapısı (DoD #7) ve gerçek performans ölçümü
+(DoD #12) — ikisi de Faz 1'de "Faz 3'te" diye ertelenmişti.
+
+**Kullanıcıya havale edilen:** Phaser'ın WebGL1/WebGL2 çelişkisi (§12, AÇIK ÇELİŞKİ #4). Faz 3
+bu yüzden hiçbir şeyi değiştirmedi ve Faz 4'ü bloke etmiyor.
+
 ---
 
 ## 7. Completed Work (yalnızca doğrulanmış)
@@ -294,11 +329,67 @@ sim'e sahip olmaz.
 
 ## 12. Known Problems (yalnızca doğrulanmış)
 
-| #   | Sorun                                                                                  | Etki                                                          | Durum                                                             |
-| --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------- |
-| 1   | ~~**Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO)~~ | —                                                             | ✅ **ÇÖZÜLDÜ** 2026-08-14 (CHECKPOINT F) — §16                    |
-| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)           | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s) | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                  |
-| 3   | 550 kB JS bütçesi **yapılandırıldı ama sınanmadı** — Phaser import edilmiyor           | Bütçenin doğru olup olmadığı bilinmiyor                       | 🟡 Faz 3'te cevaplanacak, [DEPENDENCY_NOTES](DEPENDENCY_NOTES.md) |
+| #   | Sorun                                                                                   | Etki                                                          | Durum                                                                     |
+| --- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | ~~**Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO)~~  | —                                                             | ✅ **ÇÖZÜLDÜ** 2026-08-14 (CHECKPOINT F) — §16                            |
+| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)            | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s) | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                          |
+| 3   | ~~550 kB JS bütçesi yapılandırıldı ama sınanmadı~~                                      | —                                                             | ✅ **CEVAPLANDI** Faz 3: Phaser ile **405.08 kB** / 550 kB, %26 pay kaldı |
+| 4   | ⚠ **Phaser 4.2.1 WebGL2 değil, WebGL1 context'i açıyor** — dört doküman aksini söylüyor | Faz 1 capability gate'i gereğinden **katı** — aşağıya bak     | 🔴 **AÇIK ÇELİŞKİ — kullanıcı kararı gerekiyor**                          |
+
+### 🔴 AÇIK ÇELİŞKİ #4 — Phaser 4 WebGL2 kullanmıyor (Faz 3'te ölçüldü, 2026-08-15)
+
+**Ölçüm, varsayım değil:**
+
+```
+node_modules/phaser/src/renderer/webgl/WebGLRenderer.js:709
+  gl = canvas.getContext('webgl', config.contextCreation)
+       || canvas.getContext('experimental-webgl', config.contextCreation);
+
+$ grep -rn "webgl2" node_modules/phaser/src/ | wc -l      → 0
+
+Tarayıcıda (Chromium; hem SwiftShader hem normal GPU ile aynı sonuç):
+  Phaser'ın canvas'ı  → "WebGL 1.0 (OpenGL ES 2.0 Chromium)", WebGL2RenderingContext DEĞİL
+  Taze bir canvas     → "WebGL 2.0 (OpenGL ES 3.0 Chromium)"   ← tarayıcı WebGL2'yi destekliyor
+```
+
+Yani **tarayıcı WebGL2 sunuyor, Phaser onu istemiyor.**
+
+**Çelişen dokümanlar:**
+
+| Doküman                           | Ne diyor                                                                |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| `RESEARCH_NOTES §4`               | "Phaser 4 bir WebGL2 yeniden yazımıdır", "WebGL2 + RenderNode mimarisi" |
+| `TECHNICAL_ARCHITECTURE §1.2/§12` | "Phaser 4.2.1 (WebGL2)", "WebGL2 yoksa oyun çalışmaz; Kademe C zorunlu" |
+| `PROJECT_MEMORY §3` (bu dosya)    | "Phaser 4.2.1 (WebGL2)"                                                 |
+| `GAME_EXECUTION_ROADMAP` Faz 3    | "Phaser 4 deprecated the Canvas renderer. WebGL2 is mandatory."         |
+
+**Olası doğruluk kaynağı:** Phaser'ın kendi v4 dokümanı — "a complete overhaul of the **WebGL**
+rendering engine" (RenderNode grafiği). Bu, WebGL2 API'sine geçiş değil **mimari** yeniden yazımdır.
+GATE 0 araştırması ikincil kaynaklara dayanıyordu ve "WebGL2 rewrite" ifadesini API seviyesinde
+yorumladı.
+
+**Somut etki — tek bir yerde:** Faz 1'in capability gate'i WebGL2 yoksa oyunu reddediyor
+(`src/platform/capability.ts` → Kademe C ekranı). Phaser'a WebGL1 yettiğine göre bu kapı
+**gereğinden katı**: WebGL1'i olup WebGL2'si olmayan bir tarayıcı oyunu çalıştırabilecekken
+"desteklenmiyor" ekranı görüyor. **Hiçbir oyuncuya bozuk oyun sunulmuyor** — bazıları gereksiz yere
+geri çevriliyor.
+
+**Faz 3 bunu değiştirmedi.** Kapı olduğu gibi (katı) bırakıldı ve render katmanı her iki durumda da
+çalışıyor. Tarayıcı destek matrisi bir **ürün kararıdır** (TECHNICAL_ARCHITECTURE §12);
+CLAUDE.md §2 gereği tek başıma uzlaştırılamaz.
+
+**Önerilen çözüm (kullanıcı kararı):**
+
+- **A (önerilen):** Dokümanları ölçümle düzelt (Phaser 4 = WebGL1 context) **ve** capability
+  gate'ini "WebGL1 yeterli, WebGL2 bonus" olacak şekilde gevşet.
+  Kazanç: daha geniş tarayıcı desteği. Maliyet: 4 doküman + `capability.ts` + Kademe C testleri.
+- **B:** Dokümanları düzelt, kapıyı WebGL2'de bırak. Gerekçe "WebGL2'si olmayan cihaz zaten
+  performans hedefini tutturamaz" olurdu — ama bu **ölçülmedi**, dolayısıyla şu an bir varsayım.
+  Kazanç: değişiklik yok. Maliyet: yok.
+- **C:** `game.config.context` (Config.js:146) ile elle açılmış bir WebGL2 context'i enjekte et.
+  Kazanç: dokümanlar olduğu gibi doğru olur. Maliyet: Phaser'ın test etmediği bir yol. **Önerilmiyor.**
+
+**Karar verilene kadar:** kapı katı kalır; yukarıdaki dört doküman bu kayıtla birlikte okunmalıdır.
 
 ---
 
