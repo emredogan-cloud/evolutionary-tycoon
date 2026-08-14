@@ -1,0 +1,226 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24.13.1'
+  # Pinned so goldens and E2E behave identically locally and in CI.
+  # See docs/RESEARCH_NOTES.md §3.
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.62.1-noble
+
+jobs:
+  quality:
+    name: Quality (lint, types, architecture)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Architecture boundaries
+        run: pnpm depcruise
+
+      - name: Dead code / unused dependencies
+        run: pnpm knip
+
+      - name: vercel.json is in sync with vercel.ts
+        run: pnpm config:check
+
+      - name: Secret tripwire
+        # Coarse and fast. GitHub push protection is the real net for a public
+        # repo; this catches the common local accidents before they get there.
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '^\.env($|\.)' | grep -v '^\.env\.example$'; then
+            echo "::error::A .env file is tracked. Secrets must live in Vercel project settings."
+            exit 1
+          fi
+          if git grep -nIE '(ghp_[A-Za-z0-9]{36}|gho_[A-Za-z0-9]{36}|sk-[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)' -- . ':!pnpm-lock.yaml'; then
+            echo "::error::Possible credential found in tracked files."
+            exit 1
+          fi
+          echo "No obvious secrets in tracked files."
+
+  test:
+    name: Unit + integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Vitest with coverage thresholds
+        run: pnpm test:coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
+
+  build:
+    name: Build + bundle budget
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # resolveBuildSha() prefers GITHUB_SHA, but a full checkout keeps the
+          # git fallback usable too.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify /health.json carries this commit
+        run: |
+          set -euo pipefail
+          test -f dist/health.json || { echo "::error::dist/health.json was not emitted"; exit 1; }
+          cat dist/health.json
+          BUILT_SHA=$(node -p "require('./dist/health.json').buildSha")
+          if [ "$BUILT_SHA" != "${GITHUB_SHA}" ]; then
+            echo "::error::health.json buildSha ($BUILT_SHA) != GITHUB_SHA (${GITHUB_SHA})"
+            exit 1
+          fi
+          echo "health.json buildSha matches the commit."
+
+      - name: Bundle budgets
+        run: pnpm size
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  e2e:
+    name: E2E (${{ matrix.browser }})
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Run E2E
+        # Firefox WebGL is unstable headless without a virtual framebuffer
+        # (microsoft/playwright#21783), so it runs under xvfb.
+        run: |
+          if [ "${{ matrix.browser }}" = "firefox" ]; then
+            xvfb-run --auto-servernum pnpm exec playwright test --project=firefox
+          else
+            pnpm exec playwright test --project=chromium
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  webkit-smoke:
+    name: WebKit smoke (non-blocking)
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Informational. Headless WebKit cannot screenshot canvas and has no hardware
+    # acceleration, so it validates boot/DOM/console only and must not gate merge
+    # on platform limitations we do not control (docs/TESTING_STRATEGY.md §7.7).
+    continue-on-error: true
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user root
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - run: pnpm exec playwright test --project=webkit-smoke
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-webkit
+          path: playwright-report/
+          retention-days: 7
+
+  security:
+    name: Security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Audit (high and critical fail the build)
+        run: pnpm audit --audit-level=high
