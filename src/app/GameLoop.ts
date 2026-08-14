@@ -57,9 +57,23 @@ export class GameLoop {
   private tickCount = 0;
   private dropped = 0;
 
+  /** Optional observer for the manual performance pass (`?bench=1`). */
+  private frameObserver: ((deltaMs: number) => void) | null = null;
+
   constructor(sim: Sim, scheduler: FrameScheduler) {
     this.sim = sim;
     this.scheduler = scheduler;
+  }
+
+  /**
+   * Watch raw frame deltas.
+   *
+   * Fed from here rather than from a second `requestAnimationFrame` loop: two
+   * loops would interleave unpredictably and the meter would be measuring its
+   * own scheduling as much as the renderer's.
+   */
+  observeFrames(observer: ((deltaMs: number) => void) | null): void {
+    this.frameObserver = observer;
   }
 
   get running(): boolean {
@@ -108,6 +122,10 @@ export class GameLoop {
     const previous = this.lastFrameMs;
     this.lastFrameMs = timestampMs;
     if (previous === null) return 0;
+
+    // The unclamped delta: the meter wants what actually happened, including
+    // the stalls the simulation deliberately refuses to replay.
+    this.frameObserver?.(timestampMs - previous);
 
     // A backgrounded tab reports a huge delta. Clamping it means returning to
     // the tab does not replay the missed hour at 20 Hz; offline progression

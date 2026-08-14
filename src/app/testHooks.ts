@@ -1,3 +1,4 @@
+import type { FrameStats } from '@app/FrameMeter';
 import type { GameLoop } from '@app/GameLoop';
 import type { SaveService } from '@app/SaveService';
 import type { CommandInput } from '@sim/core/commands';
@@ -44,6 +45,9 @@ export interface EvoTycoonTestApi {
   drainEvents(): readonly SimEvent[];
   getLoopStats(): { frames: number; ticks: number; droppedTicks: number };
   getSystemOrder(): readonly string[];
+  /** Frame-time percentiles from `?bench=1`. Zeroed when the meter is off. */
+  getFrameStats(): FrameStats;
+  resetFrameStats(): void;
   save(): Promise<TestSaveResult>;
   load(): Promise<TestLoadResult>;
   clearSaves(): Promise<void>;
@@ -60,7 +64,13 @@ export function shouldExposeTestHooks(search: string): boolean {
   return new URLSearchParams(search).get('e2e') === '1';
 }
 
-export function installTestHooks(target: Window, sim: Sim, loop: GameLoop, saves: SaveService): void {
+export function installTestHooks(
+  target: Window,
+  sim: Sim,
+  loop: GameLoop,
+  saves: SaveService,
+  frames: { stats(): FrameStats; reset(): void },
+): void {
   // Events are pooled and reused, so the buffer holds copies. Keeping the
   // records themselves would hand the test whatever the next tick wrote into them.
   const buffer: SimEvent[] = [];
@@ -84,6 +94,10 @@ export function installTestHooks(target: Window, sim: Sim, loop: GameLoop, saves
       return { frames: stats.frames, ticks: stats.ticks, droppedTicks: stats.droppedTicks };
     },
     getSystemOrder: () => sim.systemOrder,
+    getFrameStats: () => frames.stats(),
+    resetFrameStats: () => {
+      frames.reset();
+    },
 
     save: async () => {
       try {

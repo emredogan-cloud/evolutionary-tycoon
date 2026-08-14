@@ -1,6 +1,12 @@
+import { stageScene } from '@app/devScene';
+import { FrameMeter } from '@app/FrameMeter';
 import { browserScheduler, GameLoop } from '@app/GameLoop';
+import { parseRenderMode, prefersReducedMotion } from '@app/renderMode';
+import type { RenderMode } from '@app/renderMode';
 import { SaveService } from '@app/SaveService';
 import { installTestHooks, shouldExposeTestHooks } from '@app/testHooks';
+import type { RenderContext } from '@render/RenderContext';
+import { debugOverlayEnabled } from '@app/debug/DebugOverlay';
 import { buildInfo } from '@platform/buildInfo';
 import { Sim } from '@sim/core/Sim';
 import { IdbAdapter } from '@persistence/idbAdapter';
@@ -20,6 +26,9 @@ export interface GameContainer {
   readonly sim: Sim;
   readonly loop: GameLoop;
   readonly saves: SaveService;
+  readonly renderContext: RenderContext;
+  readonly renderMode: RenderMode;
+  readonly frames: FrameMeter;
 }
 
 /**
@@ -69,13 +78,45 @@ function shouldStartPaused(search: string): boolean {
 }
 
 export function createContainer(win: Window, seed: number, storage: StorageAdapter): GameContainer {
-  const sim = new Sim({ seed, startPaused: shouldStartPaused(win.location.search) });
+  const search = win.location.search;
+  const renderMode = parseRenderMode(search);
+
+  // A frozen clock starts paused: the loop must not advance a single tick past
+  // the target before the screenshot is taken.
+  const startPaused = shouldStartPaused(search) || renderMode.freezeAt !== null;
+
+  const sim = new Sim({ seed, startPaused });
   const loop = new GameLoop(sim, browserScheduler(win));
   const saves = new SaveService(sim, new SaveManager(storage), buildInfo.buildSha, () => Date.now());
 
-  if (shouldExposeTestHooks(win.location.search)) {
-    installTestHooks(win, sim, loop, saves);
+  // Staged before the first tick, so the world hash of a staged scene is a
+  // function of the scene alone.
+  stageScene(sim, renderMode.sceneId);
+  if (renderMode.freezeAt !== null && renderMode.freezeAt > 0) {
+    sim.advance(renderMode.freezeAt);
   }
 
-  return { sim, loop, saves };
+  const renderContext: RenderContext = {
+    readView: () => sim.readView(),
+    interpolationAlpha: () => (renderMode.freezeAt !== null ? 0 : loop.interpolationAlpha),
+    reducedMotion: prefersReducedMotion(win),
+    sceneId: renderMode.sceneId,
+    showDevOverlays: debugOverlayEnabled() && !renderMode.visualDeterminism,
+    ...(renderMode.lockedCamera !== null ? { lockedCamera: renderMode.lockedCamera } : {}),
+  };
+
+  // Always constructed, only wired when asked for: an always-on observer would
+  // add a call to the hottest path in the program for a number nobody is reading.
+  const frames = new FrameMeter();
+  if (new URLSearchParams(search).get('bench') === '1') {
+    loop.observeFrames((deltaMs) => {
+      frames.record(deltaMs);
+    });
+  }
+
+  if (shouldExposeTestHooks(search)) {
+    installTestHooks(win, sim, loop, saves, frames);
+  }
+
+  return { sim, loop, saves, renderContext, renderMode, frames };
 }
