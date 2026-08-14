@@ -1,0 +1,10 @@
+# Fast feedback only. The full gate is CI (docs/WORKING_DISCIPLINE.md §4).
+pnpm exec lint-staged
+
+# Secrets must never reach a commit. This is a coarse tripwire, not a substitute
+# for the CI secret scan — but it catches the common accidents locally where
+# they are cheap to fix.
+if git diff --cached --name-only | grep -qE '^\.env(\..*)?$' && ! git diff --cached --name-only | grep -qE '^\.env\.example$'; then
+  echo "BLOCKED: refusing to commit a .env file. Real values belong in Vercel project settings." >&2
+  exit 1
+fi
