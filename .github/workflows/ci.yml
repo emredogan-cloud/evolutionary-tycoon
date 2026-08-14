@@ -211,6 +211,48 @@ jobs:
             test-results/
           retention-days: 7
 
+  visual:
+    name: Visual regression
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # The same pinned image the goldens were generated in. Verified rather than
+    # assumed: generating the set on the host and in this container produced
+    # byte-identical PNGs (docs/phases/PHASE_3_REPORT.md §6).
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user root
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dist
+          path: dist
+
+      # Chromium only, under forced software rasterisation. Headless WebKit does
+      # not render canvas into screenshots and headless Firefox WebGL needs a
+      # virtual framebuffer, so a golden from either would measure the harness
+      # (ADR-011).
+      - name: Visual goldens
+        run: pnpm test:visual
+
+      - name: Upload diffs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-diffs
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
   webkit-smoke:
     name: WebKit smoke (non-blocking)
     needs: build
