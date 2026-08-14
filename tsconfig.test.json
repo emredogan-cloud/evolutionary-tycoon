@@ -8,5 +8,11 @@
   "compilerOptions": {
     "types": ["node", "vite/client"]
   },
-  "include": ["tests/unit/**/*.ts", "tests/integration/**/*.ts", "src/**/*.ts", "src/**/*.svelte"]
+  "include": [
+    "tests/unit/**/*.ts",
+    "tests/integration/**/*.ts",
+    "tests/perf/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.svelte"
+  ]
 }
