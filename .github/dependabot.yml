@@ -1,0 +1,30 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Every version change requires a written change record
+    # (docs/WORKING_DISCIPLINE.md §2.5). Dependabot surfaces updates; it never
+    # merges them. Grouping keeps the review load proportionate.
+    groups:
+      dev-tooling:
+        patterns:
+          ['eslint*', 'prettier*', '@commitlint/*', 'husky', 'lint-staged', 'knip', 'dependency-cruiser']
+        update-types: ['minor', 'patch']
+      testing:
+        patterns: ['vitest', '@vitest/*', '@playwright/*']
+        update-types: ['minor', 'patch']
+    commit-message:
+      prefix: 'chore(deps)'
+    labels: ['dependencies', 'needs-change-record']
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci(deps)'
+    labels: ['dependencies']

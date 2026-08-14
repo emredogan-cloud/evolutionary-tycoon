@@ -1,0 +1,61 @@
+name: Production smoke
+
+# Runs after a push to main has been deployed. Deliberately does NOT auto-rollback:
+# rolling back production is a human decision, and an automated rollback triggered
+# by a flaky check would be worse than the failure it responds to.
+# The rollback procedure lives in docs/RUNBOOK.md (written in Phase 23).
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Production URL to smoke test'
+        required: true
+        type: string
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Production smoke
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment_status.environment == 'Production')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user root
+    env:
+      E2E_BASE_URL: ${{ inputs.url || github.event.deployment_status.environment_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.13.1'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Health probe
+        run: |
+          set -euo pipefail
+          echo "Target: $E2E_BASE_URL"
+          curl -sfS "$E2E_BASE_URL/health.json" | tee /tmp/health.json
+          node -e "
+            const h = require('/tmp/health.json');
+            if (typeof h.buildSha !== 'string' || h.buildSha.length === 0) throw new Error('missing buildSha');
+            if (h.schemaVersion !== 1) throw new Error('unexpected schemaVersion: ' + h.schemaVersion);
+            console.log('health ok:', h.version, h.buildSha.slice(0, 7));
+          "
+
+      - name: Smoke E2E
+        run: pnpm exec playwright test --project=chromium tests/e2e/boot.spec.ts tests/e2e/health.spec.ts
+
+      - name: Report failure loudly
+        if: failure()
+        run: |
+          echo "::error::Production smoke failed for $E2E_BASE_URL."
+          echo "::error::Follow docs/RUNBOOK.md — rollback is a human decision, not automatic."

@@ -1,0 +1,76 @@
+name: Preview E2E
+
+# A green local build proves the code compiles. It does not prove the CDN serves
+# the right artefact with the right security and cache headers. This workflow
+# runs the suite against the real Vercel preview URL, which is where the
+# deployment-facing assertions (headers.spec.ts, health.spec.ts) actually carry
+# weight. See docs/GAME_EXECUTION_ROADMAP.md §23.
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-preview:
+    name: Verify deployed preview
+    # Only run once the deployment is actually live.
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --user root
+    env:
+      E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.13.1'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Show target
+        run: echo "Testing against $E2E_BASE_URL"
+
+      - name: Wait for the deployment to answer
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$E2E_BASE_URL/health.json" || true)
+            if [ "$code" = "200" ]; then echo "health.json is up"; exit 0; fi
+            echo "attempt $i: health.json returned $code"
+            sleep 5
+          done
+          echo "::error::$E2E_BASE_URL/health.json never returned 200"
+          exit 1
+
+      - name: Assert the deployment serves this commit
+        # This is the assertion that turns "Vercel accepted an upload" into
+        # "the commit CI tested is the commit that is live".
+        run: |
+          set -euo pipefail
+          DEPLOYED_SHA=$(curl -sf "$E2E_BASE_URL/health.json" | node -e "
+            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).buildSha));
+          ")
+          echo "deployed=$DEPLOYED_SHA expected=${{ github.event.deployment_status.deployment.sha || github.sha }}"
+          EXPECTED="${{ github.event.deployment_status.deployment.sha || github.sha }}"
+          if [ -n "$EXPECTED" ] && [ "$DEPLOYED_SHA" != "$EXPECTED" ]; then
+            echo "::error::Deployed buildSha ($DEPLOYED_SHA) does not match the deployment commit ($EXPECTED)"
+            exit 1
+          fi
+
+      - name: E2E against the live preview (Chromium)
+        run: pnpm exec playwright test --project=chromium
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-e2e-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
