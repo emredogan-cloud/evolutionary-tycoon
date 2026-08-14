@@ -30,7 +30,10 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --user root
     env:
-      E2E_BASE_URL: ${{ inputs.url || github.event.deployment_status.environment_url }}
+      # The STABLE production alias, not the per-deployment URL. Measured
+      # 2026-08-14: the alias is publicly reachable while immutable
+      # per-deployment URLs sit behind Vercel Authentication.
+      E2E_BASE_URL: ${{ inputs.url || vars.PRODUCTION_URL || 'https://evolutionary-tycoon.vercel.app' }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

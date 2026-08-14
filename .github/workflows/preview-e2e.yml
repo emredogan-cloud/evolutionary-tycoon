@@ -41,6 +41,26 @@ jobs:
           for i in $(seq 1 30); do
             code=$(curl -s -o /dev/null -w '%{http_code}' "$E2E_BASE_URL/health.json" || true)
             if [ "$code" = "200" ]; then echo "health.json is up"; exit 0; fi
+
+            # Distinguish "not ready yet" from "protected", because the second
+            # never resolves by waiting and produces a confusing timeout.
+            if [ "$code" = "401" ] || [ "$code" = "302" ]; then
+              loc=$(curl -s -o /dev/null -D - "$E2E_BASE_URL/health.json" | grep -i '^location:' || true)
+              case "$loc" in
+                *vercel.com/sso-api*)
+                  echo "::error::Vercel Deployment Protection is enabled for per-deployment URLs on this project."
+                  echo "::error::Measured on 2026-08-14: the stable production alias is publicly reachable (200), but"
+                  echo "::error::immutable per-deployment URLs (the ones deployment_status reports) return 302 to SSO."
+                  echo "::error::So this job cannot reach the preview it is meant to verify."
+                  echo "::error::Fix A: Vercel -> Project -> Settings -> Deployment Protection -> Vercel Authentication: Disabled."
+                  echo "::error::Fix B: generate a Protection Bypass for Automation secret, store it as the"
+                  echo "::error::        VERCEL_AUTOMATION_BYPASS_SECRET repository secret, and send it as the"
+                  echo "::error::        x-vercel-protection-bypass header from this workflow."
+                  exit 1
+                  ;;
+              esac
+            fi
+
             echo "attempt $i: health.json returned $code"
             sleep 5
           done

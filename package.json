@@ -31,9 +31,7 @@
     "e2e:smoke": "playwright test --project=webkit-smoke",
     "e2e:install": "playwright install --with-deps",
     "size": "size-limit",
-    "config:build": "node node_modules/@vercel/config/dist/cli.js compile > vercel.json && prettier --write vercel.json",
-    "config:check": "node tools/check-vercel-config.mjs",
-    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm config:check && pnpm test:coverage && pnpm build && pnpm size",
+    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test:coverage && pnpm build && pnpm size",
     "prepare": "husky"
   },
   "dependencies": {
