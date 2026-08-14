@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Evolutionary Tycoon">
+  <rect width="32" height="32" rx="7" fill="#12161d"/>
+  <!-- roadside sign on a post: the game's core identity in one mark -->
+  <path d="M15 20h2v7h-2z" fill="#6b7889"/>
+  <path d="M6 6h20v11H6z" fill="#ffb648"/>
+  <path d="M6 6h20v3.5H6z" fill="#ffd08a"/>
+  <path d="M10 12.5h12v2H10z" fill="#12161d" opacity=".55"/>
+  <path d="M2 27h28v2H2z" fill="#2f3945"/>
+</svg>
