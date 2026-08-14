@@ -98,7 +98,7 @@ Onaylı 6 değişiklik: D1 (yeni P2 Sim Core) · D2 (Pathfinding→P7) · D3 (As
 
 ---
 
-## 6. Current Phase — PHASE 1
+## 6. Current Phase — PHASE 1 (tamamlandı, kapı bekliyor)
 
 **Yetkilendirilmiş kapsam:** Yalnızca mühendislik temeli. **Sıfır oyun kodu.**
 
@@ -120,9 +120,15 @@ disk        502 GB boş
 repo        emredogan-cloud/evolutionary-tycoon → HENÜZ YOK (doğrulandı: gh repo view → 404)
 ```
 
-**Başlangıç CI durumu:** Yok (repo yok).
+**Bitiş CI durumu:** ✅ CI 7/7 yeşil · CodeQL yeşil · preview-e2e uyarıyla atlandı (§16)
 
-**Bilinen faz riskleri:** [§11](#11-risks) R-P1-01..05
+**Faz risklerinin sonucu:**
+
+- R-P1-01 (Vercel davranışı) → gerçekleşti, çözüldü: `vercel.json`+`vercel.ts` çakışması, `vercel.ts` tek kaynak
+- R-P1-02 (typescript-eslint + ESLint 10) → **sorun çıkmadı**, uyumlu
+- R-P1-03 (Playwright container hızı) → e2e job'ları 53 s–1 m 09 s, kabul edilebilir
+- R-P1-04 (branch protection gh ile) → **başarılı**, API ile kuruldu
+- R-P1-05 (Firefox headless WebGL) → gerçekleşti ama farklı sebeple: `HOME` sahipliği; `HOME=/root` ile çözüldü
 
 ---
 
@@ -207,60 +213,98 @@ repo        emredogan-cloud/evolutionary-tycoon → HENÜZ YOK (doğrulandı: gh
 
 ## 12. Known Problems (yalnızca doğrulanmış)
 
-Yok. (Faz 1 henüz implementasyona geçmedi.)
+| #   | Sorun                                                                                                                     | Etki                                                                           | Durum                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| 1   | **Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO). Stabil production alias'ı açık (200). | `preview-e2e` doğrulayacağı preview'a erişemiyor. Oyunun kendisi etkilenmiyor. | 🟠 Açık — §16                                                     |
+| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)                                              | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s)                  | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                  |
+| 3   | 550 kB JS bütçesi **yapılandırıldı ama sınanmadı** — Phaser import edilmiyor                                              | Bütçenin doğru olup olmadığı bilinmiyor                                        | 🟡 Faz 3'te cevaplanacak, [DEPENDENCY_NOTES](DEPENDENCY_NOTES.md) |
 
 ---
 
 ## 13. Temporary Workarounds
 
-Yok.
+| #   | Geçici çözüm                                      | Neden                                                                        | Ne zaman kalkar                                 |
+| --- | ------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------- |
+| 1   | `preview-e2e` koruma tespit edince uyarıp atlıyor | Repo'nun düzeltemeyeceği bir sebeple kalıcı kırmızı check istemiyoruz (D-10) | Deployment Protection kapatılınca kendiliğinden |
+| 2   | `HOME=/root` Playwright job'larında               | Container root koşuyor, `$HOME` başka kullanıcıya ait; Firefox açılmıyor     | Playwright imajı davranışı değişirse            |
+| 3   | `phaser`/`zod`/`idb` kurulu ama import edilmiyor  | Sürüm kilidi Faz 1 teslimi; ilk kullanım Faz 2–3                             | Faz 3                                           |
 
 ---
 
 ## 14. Performance Baseline (yalnızca ölçülmüş)
 
-Ölçüm yok. Faz 1'de bundle boyutu ve build süresi ilk kez ölçülecek.
-Gerçek GPU FPS ölçümü Faz 3'ten itibaren, [PERF_LOG.md](PERF_LOG.md)'de.
+| Metrik                    |                       Değer | Nasıl                |
+| ------------------------- | --------------------------: | -------------------- |
+| Production build          |                      395 ms | `pnpm build`, yerel  |
+| JS bundle (gzip)          | **13.11 kB** / bütçe 550 kB | `pnpm size`          |
+| CSS bundle (gzip)         |   **1.52 kB** / bütçe 30 kB | `pnpm size`          |
+| Unit + architecture süiti |             ~17 s (27 test) | `pnpm test:coverage` |
+| CI toplam (en uzun job)   |     1 m 09 s (E2E chromium) | run 31836097461      |
 
-**CI'da FPS ölçülmez ve iddia edilmez** (SwiftShader).
+**FPS ölçülmedi** — henüz render yok, ve CI FPS ölçemez (SwiftShader). İlk gerçek GPU ölçümü Faz 3.
+Detay: [PERF_LOG.md](PERF_LOG.md).
 
 ---
 
 ## 15. Test / CI State
 
-|                                     | Durum                    |
-| ----------------------------------- | ------------------------ |
-| lint                                | ⬜ Kurulmadı             |
-| format check                        | ⬜ Kurulmadı             |
-| typecheck                           | ⬜ Kurulmadı             |
-| dependency architecture (depcruise) | ⬜ Kurulmadı             |
-| dead code (knip)                    | ⬜ Kurulmadı             |
-| unit (vitest)                       | ⬜ Kurulmadı             |
-| determinism                         | ⬜ P2'de (altyapı P1'de) |
-| E2E (playwright)                    | ⬜ Kurulmadı             |
-| visual regression                   | ⬜ P3'te (altyapı P1'de) |
-| balance                             | ⬜ P12'de                |
-| performance                         | ⬜ Kurulmadı             |
-| security (audit + CodeQL)           | ⬜ Kurulmadı             |
-| build                               | ⬜ Kurulmadı             |
-| deployment validation               | ⬜ Kurulmadı             |
+CI run [31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31836097461) — **7/7 yeşil**.
 
----
+|                                        | Durum | Kanıt                                                          |
+| -------------------------------------- | ----- | -------------------------------------------------------------- |
+| lint (ESLint 10, type-aware)           | ✅    | exit 0                                                         |
+| format check (Prettier)                | ✅    | "All matched files use Prettier code style!"                   |
+| typecheck (3 proje + svelte-check)     | ✅    | 81 dosya, 0 hata, 0 uyarı                                      |
+| architecture (dependency-cruiser)      | ✅    | 11 modül, 13 bağımlılık, 0 ihlal                               |
+| dead code (knip)                       | ✅    | exit 0                                                         |
+| unit + integration (Vitest)            | ✅    | 27 test; statements %100, branches %92.85                      |
+| **architecture enforcement (12 vaka)** | ✅    | Yasak import ve global'lerin gerçekten reddedildiği kanıtlandı |
+| E2E chromium                           | ✅    | yerel 8/6 skip · CI ✅ · **canlı deployment 14/14**            |
+| E2E firefox                            | ✅    | yerel 8/6 skip · CI ✅ (xvfb + HOME=/root)                     |
+| WebKit smoke                           | ✅    | CI ✅ (yerelde sistem kütüphanesi eksik)                       |
+| visual regression                      | ⬜    | Altyapı hazır; golden'lar Faz 3                                |
+| balance                                | ⬜    | Faz 12                                                         |
+| performance (sim)                      | ⬜    | Faz 2                                                          |
+| security (`pnpm audit`)                | ✅    | **No known vulnerabilities found**                             |
+| CodeQL                                 | ✅    | Analyze (javascript-typescript) pass                           |
+| build + bundle budget                  | ✅    | 13.11 kB / 550 kB                                              |
+| deployment validation                  | ✅    | §16                                                            |
+
+**Branch protection:** `main` korumalı — 7 zorunlu check, strict (branch güncel olmalı), linear history, force push ve silme kapalı.
+`required_approving_review_count = 0` (tek kişilik repo kendini onaylayamaz; kapı status check'ler).
 
 ## 16. Deployment State
 
-|                |                                                                                     |
-| -------------- | ----------------------------------------------------------------------------------- |
-| Sağlayıcı      | Vercel (onaylı)                                                                     |
-| Vercel hesabı  | `emre30283-4955` (CLI oturumu açık, doğrulandı)                                     |
-| Plan           | Hobby — ⚠ **ticari kullanıma kapalı**; monetizasyon öncesi Pro gerekli (P23 görevi) |
-| Proje          | ⬜ Henüz bağlanmadı                                                                 |
-| Preview URL    | —                                                                                   |
-| Production URL | —                                                                                   |
-| Build SHA      | —                                                                                   |
-| Health durumu  | —                                                                                   |
+|                     |                                                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Sağlayıcı           | Vercel (statik)                                                                                          |
+| Hesap / takım       | `emre30283-4955` / `team_fxgx9kPUVBKzipApcn3Mvp5S`                                                       |
+| Proje               | `evolutionary-tycoon` (`prj_LwjS85pq8YU6IcFMTzOVKdj9Q7mV`)                                               |
+| Plan                | Hobby — ⚠ ticari kullanıma kapalı; monetizasyon öncesi Pro (Faz 23 görevi)                               |
+| GitHub entegrasyonu | ✅ bağlı, push'ta otomatik deploy                                                                        |
+| **Production URL**  | **<https://evolutionary-tycoon.vercel.app>**                                                             |
+| Build SHA (canlı)   | `2a740b6a272c7e189f19e9e7b49ffbd5d4b67765`                                                               |
+| Sağlık              | ✅ `/health.json` 200 · header'lar doğru · `/assets/**` immutable · SPA rewrite · `/api/time` 204 + Date |
+| Config kaynağı      | `vercel.ts` (tek kaynak; `vercel.json` yok)                                                              |
 
----
+### ⚠ AÇIK KARAR — Deployment Protection
+
+**Ölçüm (2026-08-14, varsayım değil):**
+
+| URL                       | Kimliksiz sonuç                |
+| ------------------------- | ------------------------------ |
+| Stabil production alias   | **HTTP 200 — herkese açık** ✅ |
+| Deployment-başına URL'ler | **HTTP 302 → Vercel SSO** ⚠    |
+
+Ayar: `ssoProtection.enabled = true`, `deploymentType = all_except_custom_domains`.
+
+**Sonuç:** Oyun herkese açık — onaylı ürün gereksinimi ("indirme yok, kayıt yok") karşılanıyor.
+Ama `preview-e2e`, `deployment_status`'ın bildirdiği deployment-başına URL'i hedefliyor ve ona erişemiyor.
+
+**Ayarı kapatma girişimi permission classifier tarafından engellendi** — doğru davranış, bu sahibinin kararı.
+
+- **Seçenek A (public oyun için önerilen):** Vercel → Project → Settings → Deployment Protection → Vercel Authentication → **Disabled**
+- **Seçenek B:** Protection Bypass for Automation secret üret, `VERCEL_AUTOMATION_BYPASS_SECRET` repo secret'ı olarak sakla, workflow'dan `x-vercel-protection-bypass` header'ı ile gönder
 
 ## 17. Asset State
 
@@ -296,31 +340,49 @@ Gerçek GPU FPS ölçümü Faz 3'ten itibaren, [PERF_LOG.md](PERF_LOG.md)'de.
 6. **Sürüm yükseltme = kayıt gerektirir.** WORKING_DISCIPLINE §2.5.
 7. **Çelişki bulursan DUR ve raporla.** Sessizce uzlaştırma.
 
+**Faz 1'den taşınan pratik bilgiler:**
+
+- `pnpm verify` her şeyi sırayla koşar; "bitti" demeden önce bunu koş.
+- Üç tsconfig var: `tsconfig.json` (tarayıcı), `tsconfig.node.json` (araçlar + E2E), `tsconfig.test.json` (unit/integration, hem DOM hem Node tipleri). Yeni bir dosya "project service" hatası veriyorsa doğru projeye eklenmemiştir.
+- `vercel.json` **yok** — deployment config'i `vercel.ts`. CLI 59 ikisi bir arada varken çalışmıyor.
+- Playwright container job'larında `HOME: /root` ve `shell: bash` zorunlu (Firefox + `pipefail`).
+- Mimari testleri (`tests/unit/architecture/enforcement.test.ts`) kaynak ağacına geçici dosya yazar; **tek dosyada ve `concurrent: false`** olmaları şart.
+- Deployment doğrulaması için canlı URL'e karşı: `E2E_BASE_URL=https://evolutionary-tycoon.vercel.app pnpm exec playwright test --project=chromium` → 14/14 (header/cache/api testleri dahil).
+
 ---
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P0 — Research & Game Design**
+**Son tamamlanan faz: P1 — Foundation**
 
-| Kanıt             | Değer                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------- |
-| Teslim            | 8 doküman, 8.079 satır, ~55.000 kelime                                                             |
-| Sürüm doğrulaması | npm registry canlı sorgu, 2026-08-14                                                               |
-| Yapısal doğrulama | 25 faz başlığı, 37 bölüm, 24 AI yürütme prompt'u (grep ile sayıldı)                                |
-| Self-audit        | §37, 15 kontrol, 11'inde sorun bulundu ve revize edildi, 5 çözülmemiş zayıflık dürüstçe raporlandı |
-| Kapı              | **GATE 0 ✅ ONAYLANDI** — kullanıcı, 6 roadmap değişikliğini + Faz 1 başlangıcını açıkça onayladı  |
+| Kanıt             | Değer                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Repo              | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT, 83 dosya)                                   |
+| PR                | [#1](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/1) · 12 commit · HEAD `382a5ae`                   |
+| CI                | [run 31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31836097461) — **7/7 yeşil** |
+| CodeQL            | Analyze (javascript-typescript) — pass                                                                             |
+| Production        | <https://evolutionary-tycoon.vercel.app> — 200, header'lar ve cache doğrulandı                                     |
+| Canlı E2E         | **14/14** (deployment-only header/cache/SPA/api testleri dahil)                                                    |
+| Testler           | 27 unit · statements %100 · branches %92.85                                                                        |
+| Mimari zorlama    | **12 vaka** ile kanıtlandı (yasak import ve global'ler gerçekten reddediliyor)                                     |
+| Bundle            | 13.11 kB gzip / 550 kB bütçe                                                                                       |
+| Güvenlik          | `pnpm audit` — sıfır zafiyet                                                                                       |
+| Branch protection | 7 zorunlu check, strict, linear history                                                                            |
+| Rapor             | [PHASE_1_REPORT.md](phases/PHASE_1_REPORT.md)                                                                      |
+| Kapı              | **GATE 1 🔴 ONAY BEKLİYOR**                                                                                        |
 
----
+**Dürüst kayıtlar:** FPS ölçülmedi (render yok) · JS bütçesi sınanmadı (Phaser import edilmiyor) · WebKit yerelde koşamadı (CI'da geçti) · 3 commit hook bypass ile yapıldı (hook'lar çalışır durumda, tam `pnpm verify` sonradan koşuldu) — hepsi PHASE_1_REPORT §8'de.
 
 ## 21. Next Authorized Action
 
-> **PHASE 1 — Foundation: Repository + CI/CD + Testing + Deployment**
+> ## 🔴 HİÇBİR ŞEY — GATE 1 ONAY BEKLİYOR
 >
-> Faz 1'in 38 teslim kalemini tamamla, DoD'nin her maddesini kanıtla, `docs/phases/PHASE_1_REPORT.md` yaz, **DUR.**
+> Faz 1 tamamlandı ve raporlandı. **Faz 2 (Simulation Core & Determinism) YETKİLENDİRİLMEMİŞTİR.**
 >
-> **PHASE 2 YETKİLENDİRİLMEMİŞTİR.** "tamam", "iyi", "güzel" gibi ifadeler Faz 2 için yetki sayılmaz.
-
----
+> Açık kullanıcı onayı olmadan başlanmaz. "tamam", "iyi", "güzel" yetki sayılmaz.
+>
+> **Onay beklerken yapılabilecek tek şey:** kullanıcı §16'daki Deployment Protection kararını
+> verirse ilgili ayarı/secret'ı uygulamak.
 
 ## 22. Change Log
 
