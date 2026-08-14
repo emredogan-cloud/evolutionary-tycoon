@@ -32,6 +32,8 @@
     "e2e:firefox": "playwright test --project=firefox",
     "e2e:smoke": "playwright test --project=webkit-smoke",
     "e2e:install": "playwright install --with-deps",
+    "test:visual": "playwright test --project=visual",
+    "test:visual:update": "docker run --rm --user \"$(id -u):$(id -g)\" -e HOME=/tmp -e CI=1 -v \"$PWD\":/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble bash -lc 'corepack enable --install-directory /tmp/bin && export PATH=/tmp/bin:$PATH && pnpm install --frozen-lockfile && pnpm build && pnpm exec playwright test --project=visual --update-snapshots'",
     "size": "size-limit",
     "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm test:coverage && pnpm bench:sim && pnpm build && pnpm size",
     "prepare": "husky"

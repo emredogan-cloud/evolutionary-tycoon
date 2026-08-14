@@ -22,6 +22,13 @@
     "noEmit": true,
     "types": ["node"],
 
+    /* Vite's native config loader cannot resolve an extensionless relative
+       import, and it is planned to become the default. Writing the extension
+       keeps `vite.config.ts` working through that change; this option makes
+       TypeScript accept it, and is safe here because the project emits nothing.
+       Same forward-compatibility reasoning as dropping `baseUrl` in Phase 1. */
+    "allowImportingTsExtensions": true,
+
     /* The benchmark harness under tools/ imports the simulation directly, which
        pulls src/** into this project. Without the alias map those imports fail
        to resolve here even though they resolve in the browser project. */

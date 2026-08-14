@@ -26,6 +26,13 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 10_000 },
 
+  /**
+   * Goldens live in one directory rather than beside each spec, so a visual
+   * change is a single obvious diff in review instead of files scattered
+   * through the test tree.
+   */
+  snapshotPathTemplate: '{testDir}/visual/__screenshots__/{arg}{ext}',
+
   reporter: isCI
     ? [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }], ['github']]
     : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
@@ -41,7 +48,8 @@ export default defineConfig({
     {
       name: 'chromium',
       testMatch: ['e2e/**/*.spec.ts'],
-      // smoke/ is WebKit's reduced suite; running it here would just duplicate coverage.
+      // smoke/ is WebKit's reduced suite; running it here would just duplicate
+      // coverage. visual/ is its own project with a pinned viewport and DPR.
       testIgnore: ['e2e/smoke/**'],
       use: {
         ...devices['Desktop Chrome'],
@@ -62,6 +70,31 @@ export default defineConfig({
       // NOTE: in CI this project must be invoked under `xvfb-run`. Headless
       // Firefox WebGL is unstable without a virtual framebuffer
       // (microsoft/playwright#21783).
+    },
+    {
+      name: 'visual',
+      // Chromium only, and deliberately so: headless WebKit does not render
+      // canvas into screenshots (playwright#586) and headless Firefox WebGL needs
+      // a virtual framebuffer. A golden from either would measure the harness
+      // rather than the game (ADR-011).
+      testMatch: ['visual/**/*.spec.ts'],
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        // Pinned: the same scene at DPR 1 and DPR 2 is different pixels, and a
+        // golden taken on one machine would fail on another for no reason.
+        deviceScaleFactor: 1,
+        launchOptions: {
+          args: ['--use-gl=angle', '--use-angle=swiftshader', '--disable-gpu'],
+        },
+      },
+      expect: {
+        toHaveScreenshot: {
+          // A minimal tolerance for anti-aliasing noise, not a licence to drift.
+          maxDiffPixelRatio: 0.002,
+          animations: 'disabled',
+        },
+      },
     },
     {
       name: 'webkit-smoke',

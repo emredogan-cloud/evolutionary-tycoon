@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   benchCommandProcessing,
+  benchDepthSort,
   benchEmptyTicks,
   benchEventFlush,
   benchSnapshot,
@@ -97,6 +98,13 @@ describe('simulation performance budgets', () => {
   it('spawns and despawns vehicles in constant time per entity', () => {
     const result = benchStoreChurn();
     expect(result.perOpUs, `measured ${result.perOpUs.toFixed(3)} µs/entity`).toBeLessThan(5);
+  });
+
+  it('depth-sorts a full frame of 260 objects in under 0.15 ms', () => {
+    // TECHNICAL_ARCHITECTURE §11.2 caps the depth-sorted set at 260 on desktop,
+    // and the Phase 3 budget gives the sort 0.15 ms of a 16.6 ms frame.
+    const result = benchDepthSort();
+    expect(result.p50Ms, `measured ${result.p50Ms.toFixed(4)} ms`).toBeLessThan(0.15);
   });
 
   it('serialises a save in under 8 ms', () => {
