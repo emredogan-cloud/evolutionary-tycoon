@@ -1,5 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { TICK_MS } from '../../src/config/simulation';
+import { assignAndSort } from '../../src/render/iso/DepthSorter';
+import type { DepthSortable } from '../../src/render/iso/DepthSorter';
 import { Sim } from '../../src/sim/core/Sim';
 import { snapshotWorld } from '../../src/sim/core/snapshot';
 import { World } from '../../src/sim/core/World';
@@ -195,6 +197,41 @@ export function benchSnapshot(): TimingResult {
   });
 }
 
+/**
+ * Depth sort of a full frame.
+ *
+ * 260 objects is the depth-sorted budget from TECHNICAL_ARCHITECTURE §11.2, and
+ * 0.15 ms is the Phase 3 ceiling. It benchmarks here rather than in the browser
+ * because the sorter is deliberately free of Phaser — which is what makes the
+ * measurement meaningful on a GPU-less CI runner.
+ */
+export function benchDepthSort(): TimingResult {
+  const items: DepthSortable[] = [];
+  for (let i = 0; i < 260; i++) {
+    items.push({
+      entityId: i + 1,
+      // Spread across the stage-1 lot, at heights that force real comparisons
+      // rather than an already-sorted input.
+      worldX: ((i * 7.3) % 24) + (i % 5) * 0.11,
+      worldY: ((i * 11.7) % 18) + (i % 3) * 0.17,
+      worldZ: i % 4 === 0 ? 0.9 : 0,
+      depth: 0,
+    });
+  }
+
+  return timeIt('depth sort, 260 objects', 1, () => {
+    assignAndSort(items);
+    // Re-shuffle cheaply so the next pass is not sorting an already-sorted array,
+    // which is the best case and not the one the budget is about.
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (first !== undefined && last !== undefined) {
+      items[0] = last;
+      items[items.length - 1] = first;
+    }
+  });
+}
+
 export function runSimBench(): BenchReport {
   return {
     timings: [
@@ -204,6 +241,7 @@ export function runSimBench(): BenchReport {
       benchEventFlush(),
       benchStoreChurn(),
       benchSnapshot(),
+      benchDepthSort(),
     ],
     allocation: measureAllocationPerTick(),
   };
