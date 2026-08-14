@@ -6,7 +6,7 @@ import { checksumOf } from '@persistence/checksum';
 import { LocalStorageAdapter } from '@persistence/localStorageAdapter';
 import { SaveManager, SAVE_SLOTS } from '@persistence/SaveManager';
 import type { SaveMeta } from '@persistence/SaveManager';
-import { saveFileV1Schema } from '@persistence/schema';
+import { currentSaveSchema } from '@persistence/schema';
 import { MemoryStorageAdapter } from '@persistence/StorageAdapter';
 import type { StorageAdapter } from '@persistence/StorageAdapter';
 
@@ -48,10 +48,10 @@ function fakeWebStorage(overrides: { failOnWrite?: boolean } = {}): Storage {
 }
 
 describe('SaveManager.compose', () => {
-  it('produces a file that validates against the v1 schema', () => {
+  it('produces a file that validates against the current schema', () => {
     const file = SaveManager.compose(snapshotAfter(100), META);
-    expect(saveFileV1Schema.safeParse(file).success).toBe(true);
-    expect(file.schemaVersion).toBe(1);
+    expect(currentSaveSchema.safeParse(file).success).toBe(true);
+    expect(file.schemaVersion).toBe(2);
     expect(file.buildSha).toBe('abc1234');
   });
 
@@ -101,7 +101,7 @@ describe('SaveManager round trip', () => {
       checksum,
       ...world
     } = result.save;
-    expect(schemaVersion).toBe(1);
+    expect(schemaVersion).toBe(2);
     expect(buildSha).toBe(META.buildSha);
     expect(createdAt).toBe(META.nowMs);
     expect(lastSeenAt).toBe(META.nowMs);
@@ -200,8 +200,17 @@ describe('SaveManager validation', () => {
   });
 
   it('rejects a save whose shape does not match the schema', async () => {
+    // Checksum recomputed after tampering, so the file is *intact* but *wrong*.
+    // That is the case the schema check exists for: a hand-edited save whose
+    // checksum was also fixed, or a foreign file under a colliding key. Without
+    // recomputing, the checksum would catch it first and this branch would never
+    // run.
     const file = SaveManager.compose(snapshotAfter(10), META);
-    const broken = { ...file, economy: { ...file.economy, cash: 'a lot' } };
+    const broken: Record<string, unknown> = {
+      ...file,
+      economy: { ...file.economy, cash: 'a lot' },
+    };
+    broken['checksum'] = checksumOf(broken);
 
     const result = await loadOne(JSON.stringify(broken));
 
@@ -238,7 +247,7 @@ describe('SaveManager import and export', () => {
     const file = SaveManager.compose(snapshotAfter(250), META);
     const json = SaveManager.exportJson(file);
 
-    expect(json).toContain('\n  "schemaVersion": 1');
+    expect(json).toContain('\n  "schemaVersion": 2');
 
     const imported = manager.importJson(json);
     expect(imported.ok).toBe(true);

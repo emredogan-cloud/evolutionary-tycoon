@@ -21,7 +21,11 @@ import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 z.config({ jitless: true });
 
 /**
- * The save file — schema version 1.
+ * The save file — schema version 2.
+ *
+ * v2 added `z` to placed objects. Phase 3 sorts the world by height, so an
+ * object on a counter has to draw in front of the counter, and a stored layout
+ * without a height cannot express that.
  *
  * The envelope fields and the world snapshot sit side by side at the top level
  * (TECHNICAL_ARCHITECTURE §8.1). Validation is Zod rather than a hand-written
@@ -49,8 +53,8 @@ const rngStatesSchema = z.object({
 
 const stringNumberEntries = z.array(z.tuple([z.string(), z.number()]));
 
-export const saveFileV1Schema = z.object({
-  schemaVersion: z.literal(1),
+const saveFileV2Schema = z.object({
+  schemaVersion: z.literal(2),
   buildSha: z.string(),
   createdAt: z.number(),
   lastSeenAt: z.number(),
@@ -77,7 +81,7 @@ export const saveFileV1Schema = z.object({
     prices: stringNumberEntries,
   }),
   layout: z.object({
-    placed: z.array(z.object({ objectId: z.string(), x: z.number(), y: z.number() })),
+    placed: z.array(z.object({ objectId: z.string(), x: z.number(), y: z.number(), z: z.number() })),
     upgrades: stringNumberEntries,
   }),
   staff: z.object({
@@ -101,7 +105,15 @@ export const saveFileV1Schema = z.object({
   checksum: z.string(),
 });
 
-export type SaveFileV1 = z.infer<typeof saveFileV1Schema>;
+/**
+ * The version this build reads and writes.
+ *
+ * Call sites use the version-neutral names, so bumping the schema is an edit
+ * here rather than a sweep across the codebase. The versioned schema stays
+ * private: nothing outside this module should be able to pin itself to v2.
+ */
+export const currentSaveSchema = saveFileV2Schema;
+export type CurrentSaveFile = z.infer<typeof saveFileV2Schema>;
 
 /** The version this build writes. Any stored save at a lower version is migrated first. */
 export const CURRENT_SCHEMA_VERSION = SAVE_SCHEMA_VERSION;

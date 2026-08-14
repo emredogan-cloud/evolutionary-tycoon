@@ -1,4 +1,6 @@
 import { TICK_MS } from '@config/simulation';
+import type { ActorRecord } from '../stores/actors';
+import type { SlotPool } from '../stores/pool';
 import { createDefaultSystems } from '../systems/noop';
 import { CommandLog } from './CommandLog';
 import type { Command, CommandInput } from './commands';
@@ -6,9 +8,11 @@ import { apply, stampCommand } from './commands';
 import { EventBus } from './EventBus';
 import type { SimSystem } from './SystemPipeline';
 import { SystemPipeline } from './SystemPipeline';
-import type { SimView } from './types';
+import type { ActorSnapshot, SimView } from './types';
 import { World } from './World';
 import type { WorldOptions } from './World';
+
+type MutableActorSnapshot = { -readonly [K in keyof ActorSnapshot]: ActorSnapshot[K] };
 
 export interface SimOptions extends WorldOptions {
   /** Overridden only by tests that need to observe or stub a slot. */
@@ -50,7 +54,17 @@ export class Sim {
   private readonly pending: CommandInput[] = [];
 
   /** Reused across ticks so the readonly view costs nothing per frame. */
-  private readonly view: { -readonly [K in keyof SimView]: SimView[K] };
+  private readonly view: {
+    -readonly [K in Exclude<keyof SimView, 'actors'>]: SimView[K];
+  } & { actors: MutableActorSnapshot[] };
+
+  /**
+   * Preallocated actor records, sized to the stores.
+   *
+   * Filled in place by `readView`. The renderer reads `actorCount` entries and
+   * ignores the rest, so no array is ever resized or rebuilt during play.
+   */
+  private readonly actorBuffer: MutableActorSnapshot[];
 
   constructor(options: SimOptions) {
     this.world = new World(options);
@@ -58,6 +72,12 @@ export class Sim {
     this.log = new CommandLog(options.commandLogCapacity);
 
     if (options.startPaused === true) this.world.control.paused = true;
+
+    const actorCapacity = this.world.customers.capacity + this.world.employees.capacity;
+    this.actorBuffer = new Array<MutableActorSnapshot>(actorCapacity);
+    for (let i = 0; i < actorCapacity; i++) {
+      this.actorBuffer[i] = { entityId: 0, x: 0, y: 0, z: 0, kind: 0 };
+    }
 
     this.view = {
       tick: 0,
@@ -70,6 +90,8 @@ export class Sim {
       customerCount: 0,
       employeeCount: 0,
       orderCount: 0,
+      actors: this.actorBuffer,
+      actorCount: 0,
     };
   }
 
@@ -145,7 +167,39 @@ export class Sim {
     v.customerCount = this.world.customers.activeCount;
     v.employeeCount = this.world.employees.activeCount;
     v.orderCount = this.world.orders.activeCount;
+    v.actorCount = this.fillActors();
     return v;
+  }
+
+  /**
+   * Copy live actors into the reusable buffer, customers first then employees.
+   *
+   * Ascending slot order within each pool, which is defined on every engine —
+   * unlike iterating a Set of references. The renderer depends on this order
+   * being stable so its own view pool does not thrash.
+   */
+  private fillActors(): number {
+    let count = 0;
+    count = this.copyPool(this.world.customers, count);
+    count = this.copyPool(this.world.employees, count);
+    return count;
+  }
+
+  private copyPool(pool: SlotPool<ActorRecord>, startIndex: number): number {
+    let index = startIndex;
+    for (let slot = 0; slot < pool.capacity; slot++) {
+      if (!pool.isActive(slot)) continue;
+      const target = this.actorBuffer[index];
+      if (target === undefined) break;
+      const record = pool.at(slot);
+      target.entityId = record.entityId;
+      target.x = record.x;
+      target.y = record.y;
+      target.z = record.z;
+      target.kind = record.kind;
+      index++;
+    }
+    return index;
   }
 
   get systemOrder(): readonly string[] {

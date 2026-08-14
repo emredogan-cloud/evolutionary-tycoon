@@ -56,7 +56,7 @@ describe('snapshotWorld', () => {
     const sim = new Sim({ seed: 88 });
     sim.advance(120);
     sim.world.economy.prices.set('burger', 4.5);
-    sim.world.layout.placed.push({ objectId: 'counter', x: 1.25, y: -2.5 });
+    sim.world.layout.placed.push({ objectId: 'counter', x: 1.25, y: -2.5, z: 0 });
 
     const snapshot = snapshotWorld(sim.world);
     const reparsed: unknown = JSON.parse(JSON.stringify(snapshot));

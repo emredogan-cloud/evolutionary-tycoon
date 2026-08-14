@@ -19,8 +19,10 @@ export type Stage = 1 | 2 | 3 | 4;
 
 export interface PlacedObject {
   objectId: string;
+  /** Footprint centre in world metres, plus height above ground. */
   x: number;
   y: number;
+  z: number;
 }
 
 export interface HiredEmployee {
@@ -103,6 +105,23 @@ export interface SettingsState {
  * Phase 3 adds a test that freezes this object and runs 100 ticks to prove the
  * render bridge cannot write through it.
  */
+/**
+ * One renderable entity, as the renderer sees it.
+ *
+ * Flat numbers rather than a reference into a store: the render bridge must not
+ * be able to reach simulation state through the object it was handed, and a
+ * flat record is also what the depth sorter wants as its input.
+ */
+export interface ActorSnapshot {
+  readonly entityId: EntityId;
+  /** Footprint centre in world metres. */
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  /** Which placeholder or sprite to draw — an index into the render catalogue. */
+  readonly kind: number;
+}
+
 export interface SimView {
   readonly tick: number;
   readonly simTimeMs: number;
@@ -114,4 +133,14 @@ export interface SimView {
   readonly customerCount: number;
   readonly employeeCount: number;
   readonly orderCount: number;
+
+  /**
+   * Live renderable actors, in a stable order.
+   *
+   * The **same reusable array** every call, refreshed in place — copying it per
+   * frame would put the render path on the allocator. `actorCount` says how much
+   * of it is live; entries past that are stale and must not be read.
+   */
+  readonly actors: readonly ActorSnapshot[];
+  readonly actorCount: number;
 }

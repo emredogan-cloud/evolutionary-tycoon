@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Plugin } from 'vite';
 import pkg from './package.json' with { type: 'json' };
+// Explicit extension: Vite's native config loader cannot resolve extensionless
+// relative imports, and it is planned to become the default.
+import { SAVE_SCHEMA_VERSION } from './src/config/simulation.ts';
 
 /**
  * Resolve the current commit SHA at build time.
@@ -40,8 +43,10 @@ function healthEndpointPlugin(buildSha: string, builtAt: string): Plugin {
         // rather than absent, so consumers can distinguish "no pipeline yet" from
         // "pipeline ran and produced nothing".
         assetManifestHash: null,
-        // Save schema version. Bumped by src/persistence/migrations as the schema evolves.
-        schemaVersion: 1,
+        // Read from the source of truth rather than restated here. A health
+        // endpoint that reports a schema version the build does not actually
+        // write turns the deployment assertion into theatre.
+        schemaVersion: SAVE_SCHEMA_VERSION,
       };
       this.emitFile({
         type: 'asset',
@@ -81,9 +86,14 @@ export default defineConfig(({ command }) => {
     build: {
       target: 'es2022',
       sourcemap: true,
-      // Fail the build rather than silently shipping a bundle we did not budget for.
-      // The authoritative budget lives in size-limit; this is an early tripwire.
-      chunkSizeWarningLimit: 700,
+      // Raw-size tripwire, above the ~1.5 MB Phaser legitimately contributes.
+      //
+      // The authoritative budget is size-limit on the *gzipped* bundle (550 kB),
+      // which is what a player actually downloads. Leaving this at 700 kB would
+      // warn on every single build from Phase 3 onward, and a warning that is
+      // always on is a warning nobody reads. Set just above today's measured
+      // size so real growth still trips it.
+      chunkSizeWarningLimit: 1650,
       rollupOptions: {
         output: {
           // Content hashing is what makes the immutable cache header in vercel.ts safe.

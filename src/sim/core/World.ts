@@ -1,3 +1,4 @@
+import { ACTOR_KIND_CUSTOMER, ACTOR_KIND_EMPLOYEE } from '@config/actors';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
 import type { ActorRecord, OrderRecord } from '../stores/actors';
@@ -83,8 +84,8 @@ export class World {
 
     const caps = options.capacities ?? {};
     this.vehicles = new VehicleStore(caps.vehicles ?? ENTITY_CAPACITY.vehicles);
-    this.customers = createActorPool(caps.customers ?? ENTITY_CAPACITY.customers);
-    this.employees = createActorPool(caps.employees ?? ENTITY_CAPACITY.employees);
+    this.customers = createActorPool(caps.customers ?? ENTITY_CAPACITY.customers, ACTOR_KIND_CUSTOMER);
+    this.employees = createActorPool(caps.employees ?? ENTITY_CAPACITY.employees, ACTOR_KIND_EMPLOYEE);
     this.orders = createOrderPool(caps.orders ?? ENTITY_CAPACITY.orders);
   }
 
@@ -157,6 +158,7 @@ export class World {
       h.writeString(object.objectId);
       h.writeF64(object.x);
       h.writeF64(object.y);
+      h.writeF64(object.z);
     }
     hashStringNumberMap(h, this.layout.upgrades);
 

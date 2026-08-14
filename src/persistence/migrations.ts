@@ -3,16 +3,19 @@ import { CURRENT_SCHEMA_VERSION } from './schema';
 /**
  * The migration chain.
  *
- * Empty today — version 1 is the current version — and that is exactly why it
- * exists now. Retrofitting migrations after players have saves means the first
- * schema change either breaks their progress or ships with an untested one-off
- * upgrade path. WORKING_DISCIPLINE rule 13 (backward compatibility) is enforced
- * mechanically instead: every version ships a committed fixture, and CI replays
- * the whole `v1 → current` chain on every push, forever.
+ * Built empty in Phase 2 and used for real in Phase 3, which is the whole
+ * argument for building it early: the first schema change arrived one phase
+ * later, and it landed on machinery that already had tests rather than on a
+ * one-off upgrade path written under pressure.
  *
- * The chain *algorithm* is tested against synthetic migrations rather than
- * against the (currently empty) real list, so the machinery is already proven on
- * the day the first real migration is written.
+ * WORKING_DISCIPLINE rule 13 (backward compatibility) is enforced mechanically:
+ * every version ships a committed fixture, and CI replays the whole
+ * `v1 → current` chain on every push, forever. Fixtures are historical records
+ * and are never regenerated — one rebuilt from today's code would prove only
+ * that today's code agrees with itself.
+ *
+ * The chain *algorithm* is additionally tested against synthetic migrations, so
+ * multi-step paths are covered before a second real migration exists.
  */
 
 export interface Migration {
@@ -41,7 +44,41 @@ export function assertContiguous(steps: readonly Migration[]): void {
   }
 }
 
-export const migrations: readonly Migration[] = [];
+/**
+ * v1 → v2: placed objects gain a height.
+ *
+ * The first real migration, written in Phase 3 when the renderer started sorting
+ * by height. Existing layouts sat on the ground, so 0 is not a guess — it is
+ * exactly what a v1 save meant.
+ *
+ * Note what it does *not* do: it leaves every other field alone and it does not
+ * reach for the current schema's types. A migration that imports the current
+ * shape stops being a historical transform and starts silently changing meaning
+ * whenever that shape moves.
+ */
+const v1ToV2: Migration = {
+  from: 1,
+  to: 2,
+  up: (save) => {
+    const layout = save['layout'];
+    const placed =
+      layout !== null && typeof layout === 'object' ? (layout as { placed?: unknown }).placed : undefined;
+
+    const upgraded = Array.isArray(placed)
+      ? placed.map((entry: unknown) =>
+          entry !== null && typeof entry === 'object' ? { z: 0, ...entry } : entry,
+        )
+      : placed;
+
+    return {
+      ...save,
+      schemaVersion: 2,
+      layout: { ...(typeof layout === 'object' && layout !== null ? layout : {}), placed: upgraded },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [v1ToV2];
 
 assertContiguous(migrations);
 

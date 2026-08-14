@@ -6,7 +6,7 @@ import { Sim } from '@sim/core/Sim';
 import { restoreWorld } from '@sim/core/snapshot';
 import { assertContiguous, migrateToCurrent, migrations } from '@persistence/migrations';
 import type { Migration } from '@persistence/migrations';
-import { CURRENT_SCHEMA_VERSION, saveFileV1Schema } from '@persistence/schema';
+import { CURRENT_SCHEMA_VERSION, currentSaveSchema } from '@persistence/schema';
 import { SaveManager } from '@persistence/SaveManager';
 import { MemoryStorageAdapter } from '@persistence/StorageAdapter';
 
@@ -28,16 +28,70 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 1 and has no migrations yet', () => {
+  it('the current version is 2, with one registered migration', () => {
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(1);
+    expect(CURRENT_SCHEMA_VERSION).toBe(2);
+    expect(migrations).toHaveLength(1);
   });
 
   it('a save already at the current version needs no steps', () => {
-    const outcome = migrateToCurrent({ schemaVersion: 1 }, 1);
+    const outcome = migrateToCurrent({ schemaVersion: 2 }, 2);
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
     expect(outcome.steps).toBe(0);
+  });
+
+  it('v1 → v2 gives every placed object a ground-level height', () => {
+    // Phase 3 sorts the world by height. A v1 save meant "everything sits on the
+    // ground", so 0 is what those layouts actually said, not a guess.
+    const outcome = migrateToCurrent(
+      {
+        schemaVersion: 1,
+        layout: {
+          placed: [
+            { objectId: 'counter', x: 1, y: 2 },
+            { objectId: 'awning', x: 3, y: 4 },
+          ],
+          upgrades: [],
+        },
+      },
+      1,
+    );
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(1);
+    expect(outcome.save['schemaVersion']).toBe(2);
+    expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
+      { objectId: 'counter', x: 1, y: 2, z: 0 },
+      { objectId: 'awning', x: 3, y: 4, z: 0 },
+    ]);
+  });
+
+  it('v1 → v2 leaves an explicit height alone and touches nothing else', () => {
+    const outcome = migrateToCurrent(
+      {
+        schemaVersion: 1,
+        economy: { cash: 42 },
+        layout: { placed: [{ objectId: 'shelf', x: 0, y: 0, z: 1.1 }], upgrades: [] },
+      },
+      1,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
+      { objectId: 'shelf', x: 0, y: 0, z: 1.1 },
+    ]);
+    expect(outcome.save['economy']).toEqual({ cash: 42 });
+  });
+
+  it('v1 → v2 survives a layout that is missing or malformed', () => {
+    // A migration is the last code to run before a player's progress loads. It
+    // must not throw on a shape it did not expect.
+    expect(migrateToCurrent({ schemaVersion: 1 }, 1).ok).toBe(true);
+    expect(migrateToCurrent({ schemaVersion: 1, layout: null }, 1).ok).toBe(true);
+    expect(migrateToCurrent({ schemaVersion: 1, layout: { placed: 'nope' } }, 1).ok).toBe(true);
+    expect(migrateToCurrent({ schemaVersion: 1, layout: { placed: [null, 7] } }, 1).ok).toBe(true);
   });
 
   it('refuses a save from a newer schema instead of coercing it', () => {
@@ -132,13 +186,15 @@ describe('migration chain machinery', () => {
 });
 
 describe('committed save fixtures', () => {
-  it('save-v1.json still validates against the current schema', () => {
-    const parsed: unknown = JSON.parse(readFixture('save-v1.json'));
-    const result = saveFileV1Schema.safeParse(parsed);
-    expect(result.success, JSON.stringify(result.error?.issues ?? [], null, 2)).toBe(true);
+  it('save-v1.json is still a v1 file, and is left that way', () => {
+    // Fixtures are historical records. If this ever needs regenerating to pass,
+    // the thing to fix is the migration, not the fixture.
+    const parsed = JSON.parse(readFixture('save-v1.json')) as { schemaVersion: number };
+    expect(parsed.schemaVersion).toBe(1);
+    expect(currentSaveSchema.safeParse(parsed).success).toBe(false);
   });
 
-  it('save-v1.json loads through the whole SaveManager path', async () => {
+  it('save-v1.json loads through the whole SaveManager path, migrating on the way', async () => {
     const storage = new MemoryStorageAdapter();
     await storage.write('save', readFixture('save-v1.json'));
 
@@ -146,8 +202,19 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(0);
+    expect(result.migrationSteps).toBe(1);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+  });
+
+  it('save-v2.json loads with no migration at all', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v2.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(0);
   });
 
   it('save-v1.json restores into a live world with no data loss', async () => {
@@ -171,9 +238,10 @@ describe('committed save fixtures', () => {
     expect(sim.world.economy.lifetimeRevenue).toBe(5240.25);
     expect(sim.world.economy.prices.get('burger')).toBe(4.5);
     expect(sim.world.economy.prices.get('cola')).toBe(1.75);
+    // Heights came from the migration, since the fixture predates the field.
     expect(sim.world.layout.placed).toEqual([
-      { objectId: 'counter', x: 3, y: 4 },
-      { objectId: 'awning', x: 3, y: 6 },
+      { objectId: 'counter', x: 3, y: 4, z: 0 },
+      { objectId: 'awning', x: 3, y: 6, z: 0 },
     ]);
     expect(sim.world.layout.upgrades.get('grill')).toBe(2);
     expect(sim.world.layout.upgrades.get('signage')).toBe(1);

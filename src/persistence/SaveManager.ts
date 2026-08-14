@@ -1,8 +1,8 @@
 import type { WorldSnapshot } from '@sim/core/snapshot';
 import { checksumOf } from './checksum';
 import { migrateToCurrent } from './migrations';
-import type { SaveFileV1 } from './schema';
-import { CURRENT_SCHEMA_VERSION, saveFileV1Schema, saveHeaderSchema } from './schema';
+import type { CurrentSaveFile } from './schema';
+import { CURRENT_SCHEMA_VERSION, currentSaveSchema, saveHeaderSchema } from './schema';
 import type { StorageAdapter } from './StorageAdapter';
 
 /**
@@ -36,7 +36,7 @@ export type LoadFailureReason = 'empty' | 'corrupt' | 'future-version';
 export type LoadResult =
   | {
       readonly ok: true;
-      readonly save: SaveFileV1;
+      readonly save: CurrentSaveFile;
       readonly slot: SaveSlot;
       /** True when the primary slot failed and a backup was used instead. */
       readonly recovered: boolean;
@@ -62,7 +62,7 @@ export class SaveManager {
   }
 
   /** Build a complete, checksummed save file from a world snapshot. */
-  static compose(snapshot: WorldSnapshot, meta: SaveMeta): SaveFileV1 {
+  static compose(snapshot: WorldSnapshot, meta: SaveMeta): CurrentSaveFile {
     const body = {
       schemaVersion: CURRENT_SCHEMA_VERSION,
       buildSha: meta.buildSha,
@@ -74,7 +74,7 @@ export class SaveManager {
     };
     // Zod's inferred type includes `checksum`; it is computed from everything else,
     // so the object is completed rather than built with a placeholder.
-    return { ...body, checksum: checksumOf(body) } as SaveFileV1;
+    return { ...body, checksum: checksumOf(body) } as CurrentSaveFile;
   }
 
   /**
@@ -84,7 +84,7 @@ export class SaveManager {
    * written last, so an interruption at any point leaves at least one intact
    * older save rather than two copies of a half-written one.
    */
-  async save(snapshot: WorldSnapshot, meta: SaveMeta): Promise<SaveFileV1> {
+  async save(snapshot: WorldSnapshot, meta: SaveMeta): Promise<CurrentSaveFile> {
     const file = SaveManager.compose(snapshot, meta);
 
     const primary = await this.storage.read('save');
@@ -161,7 +161,7 @@ export class SaveManager {
   }
 
   /** Pretty-printed, so a player who opens the file sees something legible. */
-  static exportJson(save: SaveFileV1): string {
+  static exportJson(save: CurrentSaveFile): string {
     return JSON.stringify(save, null, 2);
   }
 
@@ -172,7 +172,7 @@ export class SaveManager {
   private parseSlot(
     raw: string,
   ):
-    | { ok: true; save: SaveFileV1; migrationSteps: number }
+    | { ok: true; save: CurrentSaveFile; migrationSteps: number }
     | { ok: false; reason: LoadFailureReason; detail: string } {
     let decoded: unknown;
     try {
@@ -193,28 +193,37 @@ export class SaveManager {
       };
     }
 
-    const migrated = migrateToCurrent(decoded as Record<string, unknown>, header.data.schemaVersion);
+    // Checksum first, and against the *stored* form.
+    //
+    // The checksum answers exactly one question — did these bytes survive
+    // storage intact — so it has to be asked of the bytes that were stored.
+    // A migration legitimately rewrites the content, so verifying afterwards
+    // rejects every old save the moment the schema moves. It did exactly that
+    // the first time a real migration landed (v1 → v2, Phase 3).
+    const stored = decoded as Record<string, unknown>;
+    const storedChecksum = stored['checksum'];
+    const expected = checksumOf(stored);
+    if (storedChecksum !== expected) {
+      return {
+        ok: false,
+        reason: 'corrupt',
+        detail: `checksum mismatch (stored ${String(storedChecksum)}, computed ${expected})`,
+      };
+    }
+
+    const migrated = migrateToCurrent(stored, header.data.schemaVersion);
     if (!migrated.ok) {
       const reason: LoadFailureReason = migrated.reason === 'future-version' ? 'future-version' : 'corrupt';
       return { ok: false, reason, detail: migrated.detail };
     }
 
-    const validated = saveFileV1Schema.safeParse(migrated.save);
+    // Schema last: the other question — does the migrated result match what this
+    // build actually understands?
+    const validated = currentSaveSchema.safeParse(migrated.save);
     if (!validated.success) {
       const first = validated.error.issues[0];
       const where = first === undefined ? 'unknown field' : first.path.join('.');
       return { ok: false, reason: 'corrupt', detail: `schema mismatch at ${where}` };
-    }
-
-    // Checksum last: a shape that already failed validation says more about what
-    // went wrong than "the bytes changed".
-    const expected = checksumOf(validated.data);
-    if (expected !== validated.data.checksum) {
-      return {
-        ok: false,
-        reason: 'corrupt',
-        detail: `checksum mismatch (stored ${validated.data.checksum}, computed ${expected})`,
-      };
     }
 
     return { ok: true, save: validated.data, migrationSteps: migrated.steps };
