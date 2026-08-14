@@ -115,7 +115,7 @@ Kural **"bağımlılıkları asla yükseltme" değildir.** Kural şudur:
    - uyumluluk etkisi (hangi paketlerin peer aralığı etkileniyor)
    - gereken testler
 5. Her fazın sonunda o fazın nihai bağımlılık sürümleri `docs/PROJECT_MEMORY.md §4`'e yazılır.
-6. Yeniden üretilebilirlik gerektiren araçlar pinlenir: Node (`.nvmrc` + `engines`), pnpm (`packageManager`), Playwright Docker imajı (tam etiket), GitHub Actions (major etiket + SHA yorumu).
+6. Yeniden üretilebilirlik gerektiren araçlar pinlenir: Node (`.nvmrc` + `engines`), pnpm (`packageManager`), Playwright Docker imajı (tam etiket), **GitHub Actions tam commit SHA'sı + sürüm yorumu** (`uses: actions/checkout@fbc6f39… # v5`). Mutable etiket (`@v5`) kullanmak bir tedarik zinciri riskidir ve CodeQL bunu bulgu olarak raporlar; Dependabot SHA'ları güncel tutar.
 7. Lockfile her zaman commit edilir; CI `--frozen-lockfile` kullanır.
 
 ### 2.5.2 Değişiklik kaydı formatı
