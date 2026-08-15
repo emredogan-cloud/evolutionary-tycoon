@@ -46,3 +46,10 @@ assets/contact-sheets/
 # Transient fixtures written by tests/unit/architecture/enforcement.test.ts to
 # prove the architecture rules fire. Deleted immediately; never committed.
 src/**/__fixture__/
+
+# Work-in-progress art drops. The pipeline's real source directory is
+# `assets/source/` (tools/asset-pipeline/paths.ts), which stays checked in
+# because raw AI output cannot be regenerated. This one is a staging area
+# somebody is actively filling, and a blanket `git add -A` swept nine
+# half-renamed files of it into the Phase 7 commit.
+docs/assets/sources/
