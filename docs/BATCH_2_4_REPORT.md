@@ -65,24 +65,25 @@ number is claimed for it.
 
 ## 3. Defects the batch found in its own work
 
-Thirteen real defects were found by tests and measurements rather than by review. The ones that would
+Fourteen real defects were found by tests and measurements rather than by review. The ones that would
 have shipped silently:
 
-| Phase | Defect                                                                               | How it surfaced          |
-| ----- | ------------------------------------------------------------------------------------ | ------------------------ |
-| P2    | `MAX_CATCHUP_TICKS` was dead code — the frame clamp made it unreachable              | Writing a test for it    |
-| P2    | CRC-32 consumed two bytes per UTF-16 unit, so it did not match published vectors     | Published test vectors   |
-| P2    | Our own bundle called `eval()` — Zod probes `Function('')` for a JIT path            | Preview E2E under CSP    |
-| P3    | Interpolation silently collapsed; later frames blended from an already-reached pose  | A test of frame ordering |
-| P3    | The depth tie-break could outvote a real height difference                           | Arithmetic on the bound  |
-| P3    | Checksum verified after migration, so every v1 save broke the moment v2 landed       | Migration test           |
-| P3    | The stress scene measured 74 actors while claiming 100                               | Real-hardware run        |
-| P4    | **The visual gate could not see a repainted ground** — 233,365 pixels, and it passed | Changing a colour        |
-| P4    | UI success green and danger red collapsed under simulated deuteranopia               | Colour-blind test        |
-| P4    | The prompt block hash was hashing the prose that describes the markers               | Content assertion        |
-| P4    | Atlas fill reported 120.8% — above the floor it was supposed to enforce              | Impossible number        |
-| P4    | The per-tick allocation gate had been flaky since P2 — one failure in four runs      | `pnpm verify`            |
-| P4    | The 15% regression gate benchmarked twice per process and gated on the degraded run  | CI, on this PR           |
+| Phase | Defect                                                                               | How it surfaced           |
+| ----- | ------------------------------------------------------------------------------------ | ------------------------- |
+| P2    | `MAX_CATCHUP_TICKS` was dead code — the frame clamp made it unreachable              | Writing a test for it     |
+| P2    | CRC-32 consumed two bytes per UTF-16 unit, so it did not match published vectors     | Published test vectors    |
+| P2    | Our own bundle called `eval()` — Zod probes `Function('')` for a JIT path            | Preview E2E under CSP     |
+| P3    | Interpolation silently collapsed; later frames blended from an already-reached pose  | A test of frame ordering  |
+| P3    | The depth tie-break could outvote a real height difference                           | Arithmetic on the bound   |
+| P3    | Checksum verified after migration, so every v1 save broke the moment v2 landed       | Migration test            |
+| P3    | The stress scene measured 74 actors while claiming 100                               | Real-hardware run         |
+| P4    | **The visual gate could not see a repainted ground** — 233,365 pixels, and it passed | Changing a colour         |
+| P4    | UI success green and danger red collapsed under simulated deuteranopia               | Colour-blind test         |
+| P4    | The prompt block hash was hashing the prose that describes the markers               | Content assertion         |
+| P4    | Atlas fill reported 120.8% — above the floor it was supposed to enforce              | Impossible number         |
+| P4    | The per-tick allocation gate had been flaky since P2 — one failure in four runs      | `pnpm verify`             |
+| P4    | The 15% regression gate benchmarked twice per process and gated on the degraded run  | CI, on this PR            |
+| P4    | Production smoke hardcoded `schemaVersion !== 1` — red on main since the P3 merge    | Checking main after merge |
 
 The Phase 4 visual-gate defect is the one worth singling out, because it was a defect in a **gate**:
 Phase 3 set `maxDiffPixelRatio: 0.002` and left `threshold` at Playwright's default of 0.2, which
@@ -116,6 +117,15 @@ record:
 Recorded in the phase reports with commit SHAs and fetched `/health.json` output. Vercel
 Authentication remains **disabled** — it was not re-enabled, and preview E2E remained a blocking
 gate for the whole batch.
+
+Production serves `ad76943` at schema v2, verified by fetching `/health.json` and running the smoke
+E2E against the live alias (6 passed).
+
+One gate-design lesson is worth carrying forward: `Production smoke` runs _after_ a merge, so it can
+never block anything, and it had been failing on every push to main since Phase 3 without appearing
+on any PR. Phase 3's report recorded production as healthy in good faith — it was written before the
+merge, and the job that contradicted it ran afterwards. A post-merge check needs someone to look at
+it, and "someone will notice" is not a mechanism.
 
 ## 6. What the batch leaves open
 
