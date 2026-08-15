@@ -83,10 +83,16 @@ describe('simulation performance budgets', () => {
      * 580 B/s, about 2 MB an hour, which is a minor collection every few minutes
      * — far below the frame stutter this budget exists to prevent.
      *
-     * The headroom is deliberately thin. This is a ceiling that was raised once
-     * with a reason written down, not a number that moves whenever it is
-     * inconvenient: if a later phase pushes past 32, the answer is to find the
-     * allocation, not to raise it again.
+     * **Then CI measured 7.4 B/tick on the same commit.** The 29 is a property of
+     * one developer machine's V8, not of the simulation, which also explains why
+     * the source could never be isolated: there was no allocation to find. The
+     * raised ceiling stays because it makes the gate stop depending on whose
+     * laptop runs it, but the number that describes the code is CI's 7.4, and
+     * that is what `tools/bench/baseline.json` records.
+     *
+     * This is a ceiling raised once with a reason written down, not a number that
+     * moves whenever it is inconvenient: if a later phase pushes CI past 32, the
+     * answer is to find the allocation, not to raise it again.
      */
     //
     // The harness reports the minimum of several samples, because the noise it
@@ -182,7 +188,28 @@ describe('regression against the recorded baseline', () => {
     expect(report.timings.length).toBeGreaterThan(0);
   });
 
-  it.runIf(baseline !== null)('has not regressed by more than 15%', () => {
+  /**
+   * The comparison is only valid on the machine family the baseline came from.
+   *
+   * A recorded baseline is a set of wall-clock timings from one environment.
+   * Comparing a developer laptop against a GitHub runner is not a regression
+   * test, it is a hardware comparison — after the Phase 5 baseline was recorded
+   * on CI, the same unchanged commit reported "17% slower" locally purely
+   * because the laptop is slower than the runner.
+   *
+   * So the gate runs where the baseline was recorded and reports its numbers
+   * everywhere else. That is not a weaker gate: it is the only place the gate
+   * ever meant anything, and CI is where it blocks a merge.
+   */
+  const comparable = baseline !== null && process.env['CI'] === 'true';
+
+  it.runIf(baseline !== null && !comparable)('reports, but does not gate, off the baseline machine', () => {
+    // Visible rather than silent: a developer still sees the numbers, and sees
+    // why they are not being asserted on.
+    expect(baseline?.environment).toContain('github-actions');
+  });
+
+  it.runIf(comparable)('has not regressed by more than 15%', () => {
     if (baseline === null) return;
     expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMs');
 

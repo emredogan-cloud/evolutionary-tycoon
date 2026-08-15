@@ -24,8 +24,11 @@ import { expect, test } from './fixtures';
  */
 const REFERENCE = {
   seed: 424242,
-  hashAtTick0: '936fb505d1089e94',
-  hashAtTick1000: 'eeab92e25d67f1b3',
+  // Regenerated in Phase 5. Traffic put vehicles, a lane, an archetype and two
+  // Poisson cursors into the digest, so the world's shape genuinely changed —
+  // which is exactly the deliberate reason the comment above allows for.
+  hashAtTick0: '2ab762a504e055c4',
+  hashAtTick1000: 'aaa448e753e77ed6',
 } as const;
 
 interface TestApi {
@@ -181,15 +184,22 @@ test.describe('simulation kernel in the browser', () => {
       await api.clearSaves();
 
       api.advanceTicks(300);
-      const savedHash = api.getWorldHash();
       const savedTick = api.getState().tick;
 
       const saved = await api.save();
+      /*
+       * The reference is the *restored* world, not the live one. Vehicles are
+       * transient by design (snapshot.ts) — a save carries the arrival process,
+       * not the cars currently on the road — so a live-to-restored hash
+       * comparison would be asserting that traffic survives a reload, which is
+       * the opposite of the intent.
+       */
+      const reference = await api.load();
       api.advanceTicks(500);
       const loaded = await api.load();
 
       await api.clearSaves();
-      return { saved, loaded, savedHash, savedTick };
+      return { saved, loaded, savedHash: reference.hash, savedTick };
     });
 
     expect(result.saved.error).toBeNull();
