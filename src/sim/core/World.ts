@@ -1,8 +1,11 @@
-import { ACTOR_KIND_CUSTOMER, ACTOR_KIND_EMPLOYEE } from '@config/actors';
+import { ACTOR_KIND_EMPLOYEE } from '@config/actors';
+import { CONVERSION_REASONS } from '@config/conversion';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
 import type { ActorRecord, OrderRecord } from '../stores/actors';
 import { createActorPool, createOrderPool, writeActor, writeOrder } from '../stores/actors';
+import type { CustomerRecord } from '../stores/customers';
+import { createCustomerPool, writeCustomer } from '../stores/customers';
 import type { SlotPool } from '../stores/pool';
 import { VehicleStore } from '../stores/VehicleStore';
 import { Clock } from './Clock';
@@ -43,7 +46,7 @@ export class World {
   readonly rng: RngStreams;
 
   readonly vehicles: VehicleStore;
-  readonly customers: SlotPool<ActorRecord>;
+  readonly customers: SlotPool<CustomerRecord>;
   readonly employees: SlotPool<ActorRecord>;
   readonly orders: SlotPool<OrderRecord>;
 
@@ -79,9 +82,14 @@ export class World {
   readonly staff: StaffState = { hired: [] };
   readonly stats: StatsState = {
     customersServed: 0,
+    conversionsSucceeded: 0,
+    conversionsFailed: 0,
+    turnedAwayNoParking: 0,
+    customersAbandoned: 0,
     vehiclesSpawned: 0,
     convertibleSpawned: 0,
     commandsApplied: 0,
+    failureReasons: new Uint32Array(CONVERSION_REASONS.length),
   };
   readonly settings: SettingsState = {
     audio: { master: 1, music: 1, sfx: 1, muted: false },
@@ -103,7 +111,7 @@ export class World {
 
     const caps = options.capacities ?? {};
     this.vehicles = new VehicleStore(caps.vehicles ?? ENTITY_CAPACITY.vehicles);
-    this.customers = createActorPool(caps.customers ?? ENTITY_CAPACITY.customers, ACTOR_KIND_CUSTOMER);
+    this.customers = createCustomerPool(caps.customers ?? ENTITY_CAPACITY.customers);
     this.employees = createActorPool(caps.employees ?? ENTITY_CAPACITY.employees, ACTOR_KIND_EMPLOYEE);
     this.orders = createOrderPool(caps.orders ?? ENTITY_CAPACITY.orders);
   }
@@ -169,7 +177,7 @@ export class World {
      */
     h.writeF64(this.traffic.nextCandidateMs);
     h.writeF64(this.traffic.nextDecorativeMs);
-    this.customers.hashInto(h, writeActor);
+    this.customers.hashInto(h, writeCustomer);
     this.employees.hashInto(h, writeActor);
     this.orders.hashInto(h, writeOrder);
 
@@ -198,6 +206,10 @@ export class World {
     }
 
     h.writeU32(this.stats.customersServed);
+    h.writeU32(this.stats.conversionsSucceeded);
+    h.writeU32(this.stats.conversionsFailed);
+    h.writeU32(this.stats.turnedAwayNoParking);
+    h.writeU32(this.stats.customersAbandoned);
     h.writeU32(this.stats.vehiclesSpawned);
     h.writeU32(this.stats.convertibleSpawned);
     h.writeU32(this.stats.commandsApplied);
@@ -247,6 +259,11 @@ export class World {
     this.staff.hired.length = 0;
 
     this.stats.customersServed = 0;
+    this.stats.conversionsSucceeded = 0;
+    this.stats.conversionsFailed = 0;
+    this.stats.turnedAwayNoParking = 0;
+    this.stats.customersAbandoned = 0;
+    this.stats.failureReasons.fill(0);
     this.stats.vehiclesSpawned = 0;
     this.stats.convertibleSpawned = 0;
     this.stats.commandsApplied = 0;

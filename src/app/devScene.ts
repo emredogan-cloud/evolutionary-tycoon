@@ -26,16 +26,40 @@ export function stageScene(sim: Sim, sceneId: string): number {
   for (const actor of fixture.actors) {
     // Employees and customers are separate pools, so which one an actor lands in
     // follows from its kind rather than from the order it was written in.
-    const pool = actor.kind === ACTOR_KIND_EMPLOYEE ? sim.world.employees : sim.world.customers;
-    const slot = pool.acquire();
-    if (slot < 0) continue;
+    if (actor.kind === ACTOR_KIND_EMPLOYEE) {
+      const slot = sim.world.employees.acquire();
+      if (slot < 0) continue;
+      const record = sim.world.employees.at(slot);
+      record.entityId = sim.world.allocateEntityId();
+      record.x = actor.x;
+      record.y = actor.y;
+      record.z = actor.z;
+      record.kind = actor.kind;
+      placed++;
+      continue;
+    }
 
-    const record = pool.at(slot);
+    const slot = sim.world.customers.acquire();
+    if (slot < 0) continue;
+    const record = sim.world.customers.at(slot);
     record.entityId = sim.world.allocateEntityId();
     record.x = actor.x;
     record.y = actor.y;
     record.z = actor.z;
     record.kind = actor.kind;
+    /*
+     * Phase 6 made `visible` mean "out of a car and standing in the world", and
+     * a staged actor is standing in the world by definition. Without this an
+     * authored scene renders empty — which is exactly what happened, and the
+     * golden screenshots caught it.
+     */
+    record.visible = 1;
+    /*
+     * And not driven by the state machine. A staged actor has no car, no bay
+     * and nowhere to be; left unmarked, `CustomerFsmSystem` finds it in the
+     * initial state with a target of (0, 0) and walks it to the world origin.
+     */
+    record.staged = 1;
     placed++;
   }
   return placed;

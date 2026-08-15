@@ -99,6 +99,14 @@ export interface TrafficState {
 
 export interface StatsState {
   customersServed: number;
+  /** Vehicles that rolled and passed. Hashed, like every other lifetime count. */
+  conversionsSucceeded: number;
+  /** Vehicles that rolled and failed. */
+  conversionsFailed: number;
+  /** Converted vehicles that found no free bay and left. */
+  turnedAwayNoParking: number;
+  /** Customers who ran out of patience and left. */
+  customersAbandoned: number;
   vehiclesSpawned: number;
   /**
    * Of those, how many could ever become customers.
@@ -117,6 +125,19 @@ export interface StatsState {
    * effects (speed, pause) are excluded from the hash.
    */
   commandsApplied: number;
+  /**
+   * Conversion failures by `REASON_*` index — diagnostics, and **not hashed**.
+   *
+   * The same reasoning as `TrafficState.droppedSpawns`: nothing reads it back,
+   * so no future tick can behave differently because of it, and hashing it
+   * would make the world digest sensitive to something that cannot change an
+   * outcome. The aggregate counters above *are* hashed, because they sit
+   * alongside `vehiclesSpawned` and `customersServed`, which always have been.
+   *
+   * A fixed-length array rather than a Map, so its iteration order is its index
+   * order and the dev overlay can read it without allocating.
+   */
+  failureReasons: Uint32Array;
 }
 
 interface AudioSettings {

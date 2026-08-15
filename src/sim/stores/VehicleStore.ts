@@ -58,6 +58,31 @@ export class VehicleStore {
    * boundary.
    */
   readonly accel: Float32Array;
+  /**
+   * Whether this vehicle has had its one conversion roll, and how it went.
+   *
+   * `DECISION_PENDING` / `DECISION_NO` / `DECISION_YES` from `ConversionSystem`.
+   * The point of storing the *decided* state rather than a bare boolean is that
+   * "not yet asked" and "asked, answered no" must be distinguishable: a vehicle
+   * that re-rolled each tick as it crawled past the decision point would
+   * convert with probability 1, and would do it more often in heavy traffic.
+   */
+  readonly decision: Uint8Array;
+  /** Assigned parking bay, or -1. Int8 because Stage 4 has far fewer than 127. */
+  readonly parkingSlot: Int8Array;
+  /** Slot of the customer driving this vehicle, or -1. */
+  readonly customerSlot: Int32Array;
+  /** Arc-length position along the current manoeuvre spline, in metres. */
+  readonly maneuverS: Float32Array;
+  /**
+   * Milliseconds spent waiting to merge back onto the road.
+   *
+   * On the vehicle rather than on its driver because the vehicle outlives the
+   * customer record in one path — a customer whose car was recycled is released
+   * immediately — and a car left waiting with nothing counting for it never
+   * merges at all.
+   */
+  readonly waitMs: Float32Array;
 
   private readonly activeFlags: Uint8Array;
   private readonly freeStack: Int32Array;
@@ -77,6 +102,11 @@ export class VehicleStore {
     this.decorative = new Uint8Array(capacity);
     this.desiredSpeed = new Float32Array(capacity);
     this.accel = new Float32Array(capacity);
+    this.decision = new Uint8Array(capacity);
+    this.parkingSlot = new Int8Array(capacity).fill(-1);
+    this.customerSlot = new Int32Array(capacity).fill(-1);
+    this.maneuverS = new Float32Array(capacity);
+    this.waitMs = new Float32Array(capacity);
 
     this.activeFlags = new Uint8Array(capacity);
     this.freeStack = new Int32Array(capacity);
@@ -104,6 +134,11 @@ export class VehicleStore {
     this.decorative[slot] = 0;
     this.desiredSpeed[slot] = 0;
     this.accel[slot] = 0;
+    this.decision[slot] = 0;
+    this.parkingSlot[slot] = -1;
+    this.customerSlot[slot] = -1;
+    this.maneuverS[slot] = 0;
+    this.waitMs[slot] = 0;
     this.live++;
     return slot;
   }
@@ -120,6 +155,11 @@ export class VehicleStore {
     this.decorative[slot] = 0;
     this.desiredSpeed[slot] = 0;
     this.accel[slot] = 0;
+    this.decision[slot] = 0;
+    this.parkingSlot[slot] = -1;
+    this.customerSlot[slot] = -1;
+    this.maneuverS[slot] = 0;
+    this.waitMs[slot] = 0;
     this.freeStack[this.freeTop] = slot;
     this.freeTop++;
     this.live--;
@@ -135,6 +175,15 @@ export class VehicleStore {
     this.speed.fill(0);
     this.state.fill(0);
     this.archetype.fill(0);
+    this.lane.fill(0);
+    this.decorative.fill(0);
+    this.desiredSpeed.fill(0);
+    this.accel.fill(0);
+    this.decision.fill(0);
+    this.parkingSlot.fill(-1);
+    this.customerSlot.fill(-1);
+    this.maneuverS.fill(0);
+    this.waitMs.fill(0);
     this.activeFlags.fill(0);
     for (let i = 0; i < this.capacity; i++) this.freeStack[i] = this.capacity - 1 - i;
     this.freeTop = this.capacity;
@@ -155,6 +204,11 @@ export class VehicleStore {
       hasher.writeU8(at(this.lane, slot));
       hasher.writeU8(at(this.decorative, slot));
       hasher.writeF64(at(this.desiredSpeed, slot));
+      hasher.writeU8(at(this.decision, slot));
+      hasher.writeI32(at(this.parkingSlot, slot));
+      hasher.writeI32(at(this.customerSlot, slot));
+      hasher.writeF64(at(this.maneuverS, slot));
+      hasher.writeF64(at(this.waitMs, slot));
       /*
        * `accel` is deliberately NOT hashed. It is derived state — recomputed
        * from scratch every tick from position and speed — and exists only so the

@@ -12,6 +12,7 @@ import type { World } from '../core/World';
 import { at, atIn } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
 import { DAY_CURVE_PEAK, dayCurveAt } from './TimeSystem';
+import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
 
 /**
  * Deterministic inhomogeneous Poisson spawning, in two populations.
@@ -207,6 +208,12 @@ export class TrafficSpawnSystem implements SimSystem {
     const vehicles = world.vehicles;
     for (let slot = 0; slot < vehicles.capacity; slot++) {
       if (!vehicles.isActive(slot)) continue;
+      /*
+       * A car mid-manoeuvre keeps the `laneS` it had when it turned off, which
+       * is a real position on a real lane and no longer where the car is. Left
+       * unfiltered it blocks the lane entrance from the car park.
+       */
+      if (at(vehicles.state, slot) !== VEHICLE_ON_ROAD) continue;
       if (at(vehicles.lane, slot) !== laneIndex) continue;
       if (at(vehicles.laneS, slot) < required) return false;
     }

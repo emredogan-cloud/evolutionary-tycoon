@@ -50,6 +50,10 @@ export interface WorldSnapshot {
   };
   readonly stats: {
     readonly customersServed: number;
+    readonly conversionsSucceeded: number;
+    readonly conversionsFailed: number;
+    readonly turnedAwayNoParking: number;
+    readonly customersAbandoned: number;
     readonly vehiclesSpawned: number;
     readonly convertibleSpawned: number;
     readonly commandsApplied: number;
@@ -102,6 +106,10 @@ export function snapshotWorld(world: World): WorldSnapshot {
     },
     stats: {
       customersServed: world.stats.customersServed,
+      conversionsSucceeded: world.stats.conversionsSucceeded,
+      conversionsFailed: world.stats.conversionsFailed,
+      turnedAwayNoParking: world.stats.turnedAwayNoParking,
+      customersAbandoned: world.stats.customersAbandoned,
       vehiclesSpawned: world.stats.vehiclesSpawned,
       convertibleSpawned: world.stats.convertibleSpawned,
       commandsApplied: world.stats.commandsApplied,
@@ -152,9 +160,20 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.traffic.droppedDecorative = 0;
 
   world.stats.customersServed = snapshot.stats.customersServed;
+  world.stats.conversionsSucceeded = snapshot.stats.conversionsSucceeded;
+  world.stats.conversionsFailed = snapshot.stats.conversionsFailed;
+  world.stats.turnedAwayNoParking = snapshot.stats.turnedAwayNoParking;
+  world.stats.customersAbandoned = snapshot.stats.customersAbandoned;
   world.stats.vehiclesSpawned = snapshot.stats.vehiclesSpawned;
   world.stats.convertibleSpawned = snapshot.stats.convertibleSpawned;
   world.stats.commandsApplied = snapshot.stats.commandsApplied;
+  /*
+   * `failureReasons` is diagnostics and is deliberately not persisted, for the
+   * same reason `droppedSpawns` is not: nothing reads it back, so it cannot
+   * change an outcome, and the Phase 18 panel reports a rolling window of recent
+   * traffic rather than a lifetime total.
+   */
+  world.stats.failureReasons.fill(0);
 
   world.settings.audio.master = snapshot.settings.audio.master;
   world.settings.audio.music = snapshot.settings.audio.music;

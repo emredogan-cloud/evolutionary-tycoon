@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 5,
+  "buildSha": "phase6fixture",
+  "createdAt": 1700000000000,
+  "lastSeenAt": 1700000000000,
+  "lastSeenServerAt": null,
+  "playtimeMs": 600000,
+  "tick": 12000,
+  "nextEntityId": 416,
+  "clock": {
+    "simTimeMs": 600000
+  },
+  "rng": {
+    "traffic": {
+      "a": 157486656,
+      "b": -1908568392,
+      "c": 149031579,
+      "d": 179295822
+    },
+    "conversion": {
+      "a": 2139640628,
+      "b": 1230583858,
+      "c": -785578180,
+      "d": 1018226193
+    },
+    "customer": {
+      "a": 1045605125,
+      "b": -1945175716,
+      "c": 1384928012,
+      "d": 639578587
+    },
+    "tips": {
+      "a": -1900594541,
+      "b": -446101977,
+      "c": 899329291,
+      "d": -1941108807
+    },
+    "events": {
+      "a": -2028393869,
+      "b": 518688473,
+      "c": 1203038653,
+      "d": -1353633737
+    },
+    "cosmetic": {
+      "a": 1355816087,
+      "b": 269386119,
+      "c": 1485929123,
+      "d": 84360716
+    }
+  },
+  "control": {
+    "speedMultiplier": 1,
+    "paused": false
+  },
+  "progression": {
+    "stage": 1,
+    "unlocks": [],
+    "milestones": []
+  },
+  "economy": {
+    "cash": 0,
+    "reputation": 0,
+    "lifetimeRevenue": 0,
+    "prices": []
+  },
+  "layout": {
+    "placed": [],
+    "upgrades": []
+  },
+  "staff": {
+    "hired": []
+  },
+  "traffic": {
+    "nextCandidateMs": 600691.9194224507,
+    "nextDecorativeMs": 600707.6022110902
+  },
+  "stats": {
+    "customersServed": 0,
+    "conversionsSucceeded": 20,
+    "conversionsFailed": 188,
+    "turnedAwayNoParking": 0,
+    "customersAbandoned": 20,
+    "vehiclesSpawned": 395,
+    "convertibleSpawned": 208,
+    "commandsApplied": 0
+  },
+  "settings": {
+    "audio": {
+      "master": 1,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": false,
+      "highContrast": false
+    }
+  },
+  "checksum": "58d716d3"
+}

@@ -56,13 +56,81 @@ export interface VehicleDespawnedEvent {
   lane: number;
 }
 
+/**
+ * A vehicle decided to stop. The most important event in the game.
+ *
+ * Phase 17 hangs the indicator sound on it, Phase 18 counts it, and the dev
+ * overlay divides it by `VEHICLE_SPAWNED` to show a live conversion rate.
+ */
+export interface ConversionSucceededEvent {
+  readonly t: 'CONVERSION_SUCCEEDED';
+  entityId: number;
+  archetype: number;
+  /** The probability that was rolled against, for the analysis panel. */
+  probability: number;
+}
+
+/**
+ * A vehicle drove past, and **why**.
+ *
+ * The reason code is the whole point. GAME_DESIGN_DOCUMENT §14.4 makes "why
+ * didn't they stop?" the game's main UX differentiator, and that panel is built
+ * entirely from this stream — so it is collected from the first tick the system
+ * exists, when it costs nothing, rather than retrofitted in Phase 18 when it
+ * would mean re-deriving history that was never recorded.
+ */
+export interface ConversionFailedEvent {
+  readonly t: 'CONVERSION_FAILED';
+  entityId: number;
+  archetype: number;
+  /** A `REASON_*` index from `@config/conversion`. */
+  reason: number;
+  probability: number;
+}
+
+/** A converted vehicle came to rest in a bay. */
+export interface VehicleParkedEvent {
+  readonly t: 'VEHICLE_PARKED';
+  entityId: number;
+  parkingSlot: number;
+}
+
+/** A customer record was created — one per converted vehicle. */
+export interface CustomerSpawnedEvent {
+  readonly t: 'CUSTOMER_SPAWNED';
+  entityId: number;
+  archetype: number;
+}
+
+/**
+ * A customer gave up and left, and why.
+ *
+ * Separate from `CONVERSION_FAILED` because it is a different failure with a
+ * different fix: the first says the stand was not attractive enough to stop
+ * for, this one says it was, and then let them down. Conflating them would tell
+ * the player to buy a bigger sign when what they need is another bay.
+ */
+export interface CustomerLeftAngryEvent {
+  readonly t: 'CUSTOMER_LEFT_ANGRY';
+  entityId: number;
+  /** A `REASON_*` index from `@config/conversion`. */
+  reason: number;
+  /** How long they were on site, in milliseconds. */
+  dwellMs: number;
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
   | PauseChangedEvent
   | VehicleSpawnedEvent
   | VehicleBrakedEvent
-  | VehicleDespawnedEvent;
+  | VehicleDespawnedEvent
+  | ConversionSucceededEvent
+  | ConversionFailedEvent
+  | VehicleParkedEvent
+  | CustomerSpawnedEvent
+  | CustomerLeftAngryEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -80,6 +148,11 @@ export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'VEHICLE_SPAWNED',
   'VEHICLE_BRAKED',
   'VEHICLE_DESPAWNED',
+  'CONVERSION_SUCCEEDED',
+  'CONVERSION_FAILED',
+  'VEHICLE_PARKED',
+  'CUSTOMER_SPAWNED',
+  'CUSTOMER_LEFT_ANGRY',
 ];
 
 /**

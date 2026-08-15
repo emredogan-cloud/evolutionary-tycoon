@@ -14,7 +14,7 @@
  * unreachable branch if each read guards itself.
  */
 
-export type NumericArray = Float32Array | Float64Array | Int32Array | Uint8Array;
+export type NumericArray = Float32Array | Float64Array | Int8Array | Int32Array | Uint8Array | Uint32Array;
 
 /** The element at `index`, or 0 when the index is outside the array. */
 export function at(array: NumericArray, index: number): number {
@@ -22,6 +22,6 @@ export function at(array: NumericArray, index: number): number {
 }
 
 /** The element at `index`, or `fallback` when the index is outside the array. */
-export function atIn(array: readonly number[], index: number, fallback = 0): number {
+export function atIn(array: readonly number[] | NumericArray, index: number, fallback = 0): number {
   return array[index] ?? fallback;
 }

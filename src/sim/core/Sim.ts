@@ -10,8 +10,9 @@ import type { SimSystem } from './SystemPipeline';
 import { SystemPipeline } from './SystemPipeline';
 import { ACTOR_KIND_VEHICLE } from '@config/actors';
 import { BRAKE_LIGHT_DECEL } from '@config/traffic';
-import { stage1Lanes } from '../systems/noop';
-import type { LaneGraph } from '../nav/LaneGraph';
+import { stage1ManeuverSystem } from '../systems/noop';
+import type { VehicleManeuverSystem } from '../systems/VehicleManeuverSystem';
+import type { CustomerRecord } from '../stores/customers';
 import type { LaneSample } from '../nav/spline';
 import type { ActorSnapshot, SimView } from './types';
 import { World } from './World';
@@ -70,7 +71,11 @@ export class Sim {
    * ignores the rest, so no array is ever resized or rebuilt during play.
    */
   private readonly actorBuffer: MutableActorSnapshot[];
-  private readonly lanes: LaneGraph = stage1Lanes();
+  /**
+   * Asked where each vehicle is, because a vehicle mid-manoeuvre is not on a
+   * lane at all. One authority for the projection, shared with the pipeline.
+   */
+  private readonly maneuvers: VehicleManeuverSystem = stage1ManeuverSystem();
   /** Reused by `copyVehicles`; sampling allocates nothing. */
   private readonly laneSample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
 
@@ -202,7 +207,7 @@ export class Sim {
     // *stable* — the depth sorter decides what draws in front of what — but a
     // stable order keeps the renderer's view pool from thrashing its leases.
     count = this.copyVehicles(count);
-    count = this.copyPool(this.world.customers, count);
+    count = this.copyCustomers(count);
     count = this.copyPool(this.world.employees, count);
     return count;
   }
@@ -225,8 +230,7 @@ export class Sim {
       const target = this.actorBuffer[index];
       if (target === undefined) break;
 
-      const laneIndex = vehicles.lane[slot] ?? 0;
-      this.lanes.sample(laneIndex, vehicles.laneS[slot] ?? 0, this.laneSample);
+      this.maneuvers.positionOf(this.world, slot, this.laneSample);
 
       target.entityId = vehicles.entityId[slot] ?? 0;
       target.x = this.laneSample.x;
@@ -236,6 +240,38 @@ export class Sim {
       target.headingX = this.laneSample.tangentX;
       target.headingY = this.laneSample.tangentY;
       target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
+      index++;
+    }
+    return index;
+  }
+
+  /**
+   * Copy the customers who are actually outside a car.
+   *
+   * Someone still in their vehicle has a record and a position — they are
+   * genuinely `SEEKING_PARKING` — but drawing them would put a person standing
+   * on the roof of a moving car. The filter lives here rather than in the
+   * renderer because "is this actor in the world" is simulation state, and the
+   * render layer is not allowed to reach in and ask.
+   */
+  private copyCustomers(startIndex: number): number {
+    const pool = this.world.customers;
+    let index = startIndex;
+    for (let slot = 0; slot < pool.capacity; slot++) {
+      if (!pool.isActive(slot)) continue;
+      const record: CustomerRecord = pool.at(slot);
+      if (record.visible !== 1) continue;
+
+      const target = this.actorBuffer[index];
+      if (target === undefined) break;
+      target.entityId = record.entityId;
+      target.x = record.x;
+      target.y = record.y;
+      target.z = record.z;
+      target.kind = record.kind;
+      target.headingX = record.headingX;
+      target.headingY = record.headingY;
+      target.braking = false;
       index++;
     }
     return index;

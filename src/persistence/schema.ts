@@ -54,7 +54,13 @@ const rngStatesSchema = z.object({
 const stringNumberEntries = z.array(z.tuple([z.string(), z.number()]));
 
 const saveFileV4Schema = z.object({
-  schemaVersion: z.literal(4),
+  /*
+   * From the constant, never a literal. It was written out by hand until Phase 6
+   * bumped the version and the composer started emitting saves its own schema
+   * rejected — the same duplication that left the production smoke test
+   * asserting `schemaVersion !== 1` three phases after v1.
+   */
+  schemaVersion: z.literal(SAVE_SCHEMA_VERSION),
   buildSha: z.string(),
   createdAt: z.number(),
   lastSeenAt: z.number(),
@@ -89,6 +95,11 @@ const saveFileV4Schema = z.object({
   }),
   stats: z.object({
     customersServed: z.number().int().nonnegative(),
+    // Phase 6 — the conversion funnel.
+    conversionsSucceeded: z.number().int().nonnegative(),
+    conversionsFailed: z.number().int().nonnegative(),
+    turnedAwayNoParking: z.number().int().nonnegative(),
+    customersAbandoned: z.number().int().nonnegative(),
     vehiclesSpawned: z.number().int().nonnegative(),
     convertibleSpawned: z.number().int().nonnegative(),
     commandsApplied: z.number().int().nonnegative(),
