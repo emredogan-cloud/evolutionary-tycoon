@@ -202,7 +202,43 @@ const v5ToV6: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6];
+/**
+ * v6 to v7 — the Phase 10 payroll.
+ *
+ * An empty staff list, a zeroed settlement cursor, and a zeroed walkout
+ * counter. Empty is the honest value and not merely the easy one: a v6 save was
+ * written by a build where employees could not be hired, so the player genuinely
+ * had none, and inventing one would spend their money for them.
+ *
+ * `hired` is left alone. It has been in the schema since Phase 2 as an empty
+ * array and Phase 10 did not start using it — the payroll lives in
+ * `staff.employees`, next to it, because `hired` carries a `roleId` string where
+ * the simulation indexes roles by position. Reconciling the two is a change
+ * request, not a migration.
+ */
+const v6ToV7: Migration = {
+  from: 6,
+  to: 7,
+  up: (save) => {
+    const staff = save['staff'];
+    const stats = save['stats'];
+    return {
+      ...save,
+      schemaVersion: 7,
+      staff: {
+        ...(typeof staff === 'object' && staff !== null ? staff : { hired: [] }),
+        settleElapsedMs: 0,
+        employees: [],
+      },
+      stats: {
+        ...(typeof stats === 'object' && stats !== null ? stats : {}),
+        employeesLeftUnpaid: 0,
+      },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7];
 
 assertContiguous(migrations);
 

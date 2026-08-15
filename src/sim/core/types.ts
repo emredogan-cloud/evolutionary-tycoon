@@ -83,6 +83,15 @@ export interface LayoutState {
 
 export interface StaffState {
   hired: HiredEmployee[];
+  /**
+   * Milliseconds since wages were last settled — Phase 10.
+   *
+   * Accrual is per tick and exact; payment is batched, and this is the batch
+   * cursor. Simulation state because it decides *when* money moves, and a
+   * resumed session that restarted the cursor would give the player a few free
+   * seconds of labour on every load.
+   */
+  settleElapsedMs: number;
 }
 
 /**
@@ -131,6 +140,8 @@ export interface StatsState {
    * exactly like one that is simply slow, until this number separates them.
    */
   ordersWasted: number;
+  /** Employees who walked out because they were not paid — Phase 10. */
+  employeesLeftUnpaid: number;
   vehiclesSpawned: number;
   /**
    * Of those, how many could ever become customers.

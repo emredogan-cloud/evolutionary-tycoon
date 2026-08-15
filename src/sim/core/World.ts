@@ -1,12 +1,13 @@
-import { ACTOR_KIND_EMPLOYEE } from '@config/actors';
 import { CONVERSION_REASONS } from '@config/conversion';
 import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
-import type { ActorRecord } from '../stores/actors';
-import { createActorPool, writeActor } from '../stores/actors';
 import type { OrderRecord } from '../stores/OrderStore';
 import { createOrderPool, writeOrder } from '../stores/OrderStore';
+import type { EmployeeRecord } from '../stores/employees';
+import { createEmployeePool, writeEmployee } from '../stores/employees';
+import type { TaskRecord } from '../stores/TaskStore';
+import { createTaskPool, writeTask } from '../stores/TaskStore';
 import type { CustomerRecord } from '../stores/customers';
 import { createCustomerPool, writeCustomer } from '../stores/customers';
 import type { SlotPool } from '../stores/pool';
@@ -50,7 +51,15 @@ export class World {
 
   readonly vehicles: VehicleStore;
   readonly customers: SlotPool<CustomerRecord>;
-  readonly employees: SlotPool<ActorRecord>;
+  readonly employees: SlotPool<EmployeeRecord>;
+  /**
+   * Open work — Phase 10.
+   *
+   * Sized generously against the employee cap: the board holds work that has
+   * not been claimed as well as work in progress, and a board that filled would
+   * silently stop posting, which reads as employees standing around.
+   */
+  readonly tasks: SlotPool<TaskRecord>;
   readonly orders: SlotPool<OrderRecord>;
 
   /** Per-tick event queue. Empty at every tick boundary, so it is not hashed. */
@@ -87,7 +96,7 @@ export class World {
     droppedSpawns: 0,
     droppedDecorative: 0,
   };
-  readonly staff: StaffState = { hired: [] };
+  readonly staff: StaffState = { hired: [], settleElapsedMs: 0 };
   readonly stats: StatsState = {
     customersServed: 0,
     conversionsSucceeded: 0,
@@ -95,6 +104,7 @@ export class World {
     turnedAwayNoParking: 0,
     customersAbandoned: 0,
     ordersWasted: 0,
+    employeesLeftUnpaid: 0,
     vehiclesSpawned: 0,
     convertibleSpawned: 0,
     commandsApplied: 0,
@@ -121,7 +131,8 @@ export class World {
     const caps = options.capacities ?? {};
     this.vehicles = new VehicleStore(caps.vehicles ?? ENTITY_CAPACITY.vehicles);
     this.customers = createCustomerPool(caps.customers ?? ENTITY_CAPACITY.customers);
-    this.employees = createActorPool(caps.employees ?? ENTITY_CAPACITY.employees, ACTOR_KIND_EMPLOYEE);
+    this.employees = createEmployeePool(caps.employees ?? ENTITY_CAPACITY.employees);
+    this.tasks = createTaskPool((caps.employees ?? ENTITY_CAPACITY.employees) * 8);
     this.orders = createOrderPool(caps.orders ?? ENTITY_CAPACITY.orders);
   }
 
@@ -187,7 +198,8 @@ export class World {
     h.writeF64(this.traffic.nextCandidateMs);
     h.writeF64(this.traffic.nextDecorativeMs);
     this.customers.hashInto(h, writeCustomer);
-    this.employees.hashInto(h, writeActor);
+    this.employees.hashInto(h, writeEmployee);
+    this.tasks.hashInto(h, writeTask);
     this.orders.hashInto(h, writeOrder);
 
     h.writeU8(this.progression.stage);
@@ -256,6 +268,7 @@ export class World {
     this.vehicles.reset();
     this.customers.reset();
     this.employees.reset();
+    this.tasks.reset();
     this.orders.reset();
     this.eventQueue.reset();
 
@@ -285,6 +298,7 @@ export class World {
     this.traffic.droppedDecorative = 0;
 
     this.staff.hired.length = 0;
+    this.staff.settleElapsedMs = 0;
 
     this.stats.customersServed = 0;
     this.stats.conversionsSucceeded = 0;

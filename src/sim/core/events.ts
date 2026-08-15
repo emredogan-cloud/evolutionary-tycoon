@@ -188,6 +188,27 @@ export interface PriceChangedEvent {
   price: number;
 }
 
+/** Somebody was hired. */
+export interface EmployeeHiredEvent {
+  readonly t: 'EMPLOYEE_HIRED';
+  entityId: number;
+  roleId: string;
+  cost: number;
+}
+
+/**
+ * Somebody left — fired, or unpaid for too long.
+ *
+ * `reason` separates the two, because they mean opposite things to a player:
+ * one is a decision they made and one is a consequence they need to notice.
+ */
+export interface EmployeeLeftEvent {
+  readonly t: 'EMPLOYEE_LEFT';
+  entityId: number;
+  roleId: string;
+  reason: 'fired' | 'unpaid';
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
@@ -206,7 +227,9 @@ export type SimEvent =
   | OrderDeliveredEvent
   | PaymentEvent
   | UpgradeAppliedEvent
-  | PriceChangedEvent;
+  | PriceChangedEvent
+  | EmployeeHiredEvent
+  | EmployeeLeftEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -236,6 +259,8 @@ export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'PAYMENT',
   'UPGRADE_APPLIED',
   'PRICE_CHANGED',
+  'EMPLOYEE_HIRED',
+  'EMPLOYEE_LEFT',
 ];
 
 /**

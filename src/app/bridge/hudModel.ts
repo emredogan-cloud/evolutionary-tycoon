@@ -96,6 +96,28 @@ export interface PriceView {
   readonly max: number;
 }
 
+/** One employee, as the staff panel and the world icon see them. */
+export interface StaffView {
+  readonly entityId: number;
+  readonly roleId: string;
+  readonly skill: number;
+  readonly wagePerMinute: number;
+  /** `IDLE`, `MOVING`, `PERFORMING` or `BLOCKED`. */
+  readonly state: string;
+  /** What they are doing, for the icon over their head. Empty when idle. */
+  readonly taskKind: string;
+  readonly screenX: number;
+  readonly screenY: number;
+  readonly visible: boolean;
+}
+
+/** A role the player could hire into. */
+export interface RoleView {
+  readonly id: string;
+  readonly hireCost: number;
+  readonly affordable: boolean;
+}
+
 /** The HUD, once every hundred milliseconds. */
 export interface HudModel {
   readonly cash: number;
@@ -127,6 +149,15 @@ export interface HudModel {
   readonly objective: string;
   /** 0..1 toward that objective, for the bar. */
   readonly objectiveProgress: number;
+
+  /** The payroll — Phase 10. Reused, like `markers`. */
+  readonly staff: readonly StaffView[];
+  readonly staffCount: number;
+  readonly roles: readonly RoleView[];
+  /** Total wage bill per game minute. */
+  readonly payrollPerMinute: number;
+  /** True once the payroll is full, so the panel can say why it refuses. */
+  readonly payrollFull: boolean;
 }
 
 /**
@@ -152,4 +183,6 @@ export interface HudSource {
 export interface UiCommands {
   buyUpgrade(id: string): void;
   setPrice(itemId: string, price: number): void;
+  hire(roleId: string, skill: number): void;
+  fire(entityId: number): void;
 }

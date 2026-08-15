@@ -1,11 +1,14 @@
 import { MENU, PRICE_BAND, menuItem } from '@config/economy/menu';
 import { UPGRADES } from '@config/economy/upgrades';
+import { EMPLOYEE_ROLES, MAX_EMPLOYEES, TASK_KINDS, role } from '@config/employees';
 import { PASS, station } from '@config/economy/stations';
 import type { Sim } from '@sim/core/Sim';
 import type { World } from '@sim/core/World';
 import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
+import { brainStateName } from '@sim/ai/EmployeeBrain';
 import { netIncomePerMinute } from '@sim/systems/EconomySystem';
+import { payrollPerMinute } from '@sim/systems/StaffSystem';
 import { currentQuality } from '@sim/systems/KitchenSystem';
 import { nextUpgradeCost, previewNextLevel, upgradeLevel } from '@sim/systems/UpgradeSystem';
 import {
@@ -16,6 +19,8 @@ import {
   type HudModel,
   type HudSource,
   type PriceView,
+  type RoleView,
+  type StaffView,
   type UpgradeEffectView,
   type WorldMarker,
 } from './hudModel';
@@ -67,6 +72,8 @@ const ORDER_BUBBLE_HEIGHT_METRES = 1.95;
 const PREP_RING_HEIGHT_METRES = 1.4;
 /** The card's hotspot sits at head height on the object it upgrades. */
 const UPGRADE_CARD_HEIGHT_METRES = 1.7;
+/** The task icon sits over an employee's head, like a customer's bubble. */
+const STAFF_ICON_HEIGHT_METRES = 1.95;
 
 interface CoinPopup {
   entityId: number;
@@ -99,6 +106,8 @@ interface MutableUpgrade {
   visible: boolean;
 }
 type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
+type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
+type MutableRole = { -readonly [K in keyof RoleView]: RoleView[K] };
 interface MutableHud {
   cash: number;
   reputation: number;
@@ -116,6 +125,11 @@ interface MutableHud {
   prices: MutablePrice[];
   objective: string;
   objectiveProgress: number;
+  staff: MutableStaff[];
+  staffCount: number;
+  roles: MutableRole[];
+  payrollPerMinute: number;
+  payrollFull: boolean;
 }
 
 export class UiBridge implements HudSource {
@@ -186,6 +200,23 @@ export class UiBridge implements HudSource {
       max: item.basePrice * PRICE_BAND.max,
     }));
 
+    const staff: MutableStaff[] = Array.from({ length: MAX_EMPLOYEES }, () => ({
+      entityId: 0,
+      roleId: '',
+      skill: 0,
+      wagePerMinute: 0,
+      state: 'IDLE',
+      taskKind: '',
+      screenX: 0,
+      screenY: 0,
+      visible: false,
+    }));
+    const roles: MutableRole[] = EMPLOYEE_ROLES.map((spec) => ({
+      id: spec.id,
+      hireCost: spec.hireCost,
+      affordable: false,
+    }));
+
     this.model = {
       cash: 0,
       reputation: 0,
@@ -203,6 +234,11 @@ export class UiBridge implements HudSource {
       prices,
       objective: '',
       objectiveProgress: 0,
+      staff,
+      staffCount: 0,
+      roles,
+      payrollPerMinute: 0,
+      payrollFull: false,
     };
   }
 
@@ -418,6 +454,41 @@ export class UiBridge implements HudSource {
     this.refillUpgrades(world);
     this.refillPrices(world);
     this.refillObjective(world);
+    this.refillStaff(world);
+  }
+
+  private refillStaff(world: World): void {
+    let count = 0;
+    for (let slot = 0; slot < world.employees.scanLimit; slot++) {
+      if (!world.employees.isActive(slot)) continue;
+      const view = this.model.staff[count];
+      if (view === undefined) break;
+
+      const employee = world.employees.at(slot);
+      view.entityId = employee.entityId;
+      view.roleId = role(employee.role).id;
+      view.skill = employee.skill;
+      view.wagePerMinute = employee.wagePerMinute;
+      view.state = brainStateName(employee.state);
+      view.taskKind =
+        employee.taskSlot >= 0 && world.tasks.isActive(employee.taskSlot)
+          ? (TASK_KINDS[world.tasks.at(employee.taskSlot).kind] ?? '')
+          : '';
+      // The icon sits over their head, like the customer's order bubble.
+      view.visible = this.projectInto(employee.x, employee.y, STAFF_ICON_HEIGHT_METRES, view);
+      count++;
+    }
+    this.model.staffCount = count;
+
+    for (let i = 0; i < EMPLOYEE_ROLES.length; i++) {
+      const spec = EMPLOYEE_ROLES[i];
+      const view = this.model.roles[i];
+      if (spec === undefined || view === undefined) continue;
+      view.affordable = world.economy.cash >= spec.hireCost;
+    }
+
+    this.model.payrollPerMinute = payrollPerMinute(world);
+    this.model.payrollFull = count >= MAX_EMPLOYEES;
   }
 
   private refillUpgrades(world: World): void {

@@ -216,6 +216,12 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       setPrice: (itemId: string, price: number) => {
         sim.dispatch({ t: 'SET_PRICE', itemId, price });
       },
+      hire: (roleId: string, skill: number) => {
+        sim.dispatch({ t: 'HIRE', roleId, skill });
+      },
+      fire: (entityId: number) => {
+        sim.dispatch({ t: 'FIRE', entityId });
+      },
     },
     setProjector(next: ScreenProjector): void {
       projector = next;

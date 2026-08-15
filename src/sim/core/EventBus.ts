@@ -9,6 +9,8 @@ import type {
   OrderDeliveredEvent,
   OrderPlacedEvent,
   OrderReadyEvent,
+  EmployeeHiredEvent,
+  EmployeeLeftEvent,
   PaymentEvent,
   PriceChangedEvent,
   UpgradeAppliedEvent,
@@ -83,6 +85,10 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'UPGRADE_APPLIED', upgradeId: '', level: 0, cost: 0 };
     case 'PRICE_CHANGED':
       return { t: 'PRICE_CHANGED', itemId: '', price: 0 };
+    case 'EMPLOYEE_HIRED':
+      return { t: 'EMPLOYEE_HIRED', entityId: 0, roleId: '', cost: 0 };
+    case 'EMPLOYEE_LEFT':
+      return { t: 'EMPLOYEE_LEFT', entityId: 0, roleId: '', reason: 'fired' };
   }
 }
 
@@ -288,6 +294,26 @@ export class EventQueue {
     const event = record as PriceChangedEvent;
     event.itemId = itemId;
     event.price = price;
+    this.push(record);
+  }
+
+  emitEmployeeHired(entityId: number, roleId: string, cost: number): void {
+    const record = this.lease('EMPLOYEE_HIRED');
+    if (record === null) return;
+    const event = record as EmployeeHiredEvent;
+    event.entityId = entityId;
+    event.roleId = roleId;
+    event.cost = cost;
+    this.push(record);
+  }
+
+  emitEmployeeLeft(entityId: number, roleId: string, reason: 'fired' | 'unpaid'): void {
+    const record = this.lease('EMPLOYEE_LEFT');
+    if (record === null) return;
+    const event = record as EmployeeLeftEvent;
+    event.entityId = entityId;
+    event.roleId = roleId;
+    event.reason = reason;
     this.push(record);
   }
 

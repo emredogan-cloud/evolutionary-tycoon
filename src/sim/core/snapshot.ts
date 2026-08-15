@@ -57,7 +57,36 @@ export interface WorldSnapshot {
     readonly placed: readonly PlacedObject[];
     readonly upgrades: readonly (readonly [string, number])[];
   };
-  readonly staff: { readonly hired: readonly HiredEmployee[] };
+  readonly staff: {
+    readonly hired: readonly HiredEmployee[];
+    /**
+     * The wage-settlement cursor — Phase 10.
+     *
+     * Persisted because it decides *when* money moves. A resumed session that
+     * restarted it would hand the player a few free seconds of labour on every
+     * load, which is small, silent and exploitable by saving in a loop.
+     */
+    readonly settleElapsedMs: number;
+    /**
+     * The payroll itself.
+     *
+     * Employees are **not** transient state, unlike the customers and vehicles
+     * TECHNICAL_ARCHITECTURE §8.1 deliberately drops: a player who hired three
+     * cooks and reloaded to find them gone would have lost money. What is *not*
+     * saved is what they were doing — the task board is rebuilt from the world
+     * on the first tick, and an employee resumes idle beside the pass.
+     */
+    readonly employees: readonly {
+      readonly entityId: number;
+      readonly role: number;
+      readonly skill: number;
+      readonly wagePerMinute: number;
+      readonly accruedWages: number;
+      readonly unpaidMs: number;
+      readonly x: number;
+      readonly y: number;
+    }[];
+  };
   readonly traffic: {
     readonly nextCandidateMs: number;
     readonly nextDecorativeMs: number;
@@ -93,6 +122,65 @@ function copyOut(source: Float64Array): number[] {
   const out = new Array<number>(source.length);
   for (let i = 0; i < source.length; i++) out[i] = source[i] ?? 0;
   return out;
+}
+
+/** The payroll, in slot order so a save is stable across runs. */
+function snapshotEmployees(world: World): WorldSnapshot['staff']['employees'] {
+  const out: {
+    entityId: number;
+    role: number;
+    skill: number;
+    wagePerMinute: number;
+    accruedWages: number;
+    unpaidMs: number;
+    x: number;
+    y: number;
+  }[] = [];
+
+  for (let slot = 0; slot < world.employees.scanLimit; slot++) {
+    if (!world.employees.isActive(slot)) continue;
+    const employee = world.employees.at(slot);
+    out.push({
+      entityId: employee.entityId,
+      role: employee.role,
+      skill: employee.skill,
+      wagePerMinute: employee.wagePerMinute,
+      accruedWages: employee.accruedWages,
+      unpaidMs: employee.unpaidMs,
+      x: employee.x,
+      y: employee.y,
+    });
+  }
+  return out;
+}
+
+/**
+ * Put the payroll back, idle.
+ *
+ * Deliberately *not* mid-task. The task board is derived from world state and is
+ * rebuilt on the first tick after a load, so a restored task slot would point at
+ * a board that does not exist yet — the exact class of dangling reference the
+ * two-sided claim protocol exists to make impossible.
+ */
+function restoreEmployees(world: World, saved: WorldSnapshot['staff']['employees']): void {
+  for (const record of saved) {
+    const slot = world.employees.acquire();
+    if (slot < 0) break;
+    const employee = world.employees.at(slot);
+    employee.entityId = record.entityId;
+    employee.role = record.role;
+    employee.skill = record.skill;
+    employee.wagePerMinute = record.wagePerMinute;
+    employee.accruedWages = record.accruedWages;
+    employee.unpaidMs = record.unpaidMs;
+    employee.x = record.x;
+    employee.y = record.y;
+    employee.z = 0;
+    employee.state = 0;
+    employee.taskSlot = -1;
+    employee.progressMs = 0;
+    employee.blockedMs = 0;
+  }
 }
 
 export function snapshotWorld(world: World): WorldSnapshot {
@@ -131,7 +219,11 @@ export function snapshotWorld(world: World): WorldSnapshot {
       placed: world.layout.placed.map((object) => ({ ...object })),
       upgrades: sortedEntries(world.layout.upgrades),
     },
-    staff: { hired: world.staff.hired.map((employee) => ({ ...employee })) },
+    staff: {
+      hired: world.staff.hired.map((employee) => ({ ...employee })),
+      settleElapsedMs: world.staff.settleElapsedMs,
+      employees: snapshotEmployees(world),
+    },
     traffic: {
       nextCandidateMs: world.traffic.nextCandidateMs,
       nextDecorativeMs: world.traffic.nextDecorativeMs,
@@ -198,6 +290,8 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   for (const [key, value] of snapshot.layout.upgrades) world.layout.upgrades.set(key, value);
 
   for (const employee of snapshot.staff.hired) world.staff.hired.push({ ...employee });
+  world.staff.settleElapsedMs = snapshot.staff.settleElapsedMs;
+  restoreEmployees(world, snapshot.staff.employees);
 
   world.traffic.nextCandidateMs = snapshot.traffic.nextCandidateMs;
   world.traffic.nextDecorativeMs = snapshot.traffic.nextDecorativeMs;

@@ -415,6 +415,47 @@ DUR. P11+ yetkisiz.
 maddeleri **"NOT JUDGED: AWAITING EXTERNAL ART"** olarak işaretlenir; mekanik ölçütler geçtiyse faz
 **teknik PASS** sayılır.
 
+### BATCH 8–10 · CHECKPOINT U — P10 tamamlandı, BATCH BİTTİ (2026-08-15) ✅ PASS (teknik)
+
+Oyuncu artık aşçı değil, yönetici. Bir aşçı tutuluyor ve **hiç tıklamadan** para
+kazanılıyor: aynı seed'de 20 dakikada **elle 29 müşteri, aşçıyla 30**.
+
+| Kanıt         | Değer                                                                   |
+| ------------- | ----------------------------------------------------------------------- |
+| Testler       | **1 131** (P9 sonunda 1 076)                                            |
+| E2E           | **104** (chromium + firefox) — staffFlow 14, verticalSlice 6            |
+| Staffed tick  | **0.216 ms** p95 (8 çalışan + 60 yaya + 120 araç) — bütçe 3.0 ms        |
+| Ayırma        | **1.39 B/tick** — bütçe 32 B                                            |
+| Save şeması   | **v7** — v6→v7 migration + gerçek kadro taşıyan `save-v7.json`          |
+| `pnpm verify` | ✅ baştan sona temiz                                                    |
+| DoD           | 15'te 14 — 15. madde "çalışanlar niyetli görünüyor mu" **yargılanmadı** |
+
+**Işınlanma yok** — sert gereksinim, test yeşil: 4 çalışan, 4 farklı yetenek, 30
+simüle dakika, **her tick'te her pozisyon kaydediliyor**, her adım
+`walkSpeed × TICK_MS × 1.001` ile sınırlı. Varış da yürünüyor, ışınlanmıyor.
+
+**TaskBoard'da bir gate'in yakaladığı üç kusur:**
+
+1. `post()` sipariş döngüsünün _içinde_ `nextStartable` çağırıyordu → O(n²) → mevcut
+   bir birim testi milisaniyeden **153 saniyeye** çıktı.
+2. Bunu düzelten `Set`, her tick temizlenip dolduruluyordu → **123 B/tick**, bütçe 32 B.
+   Artık tick damgalı düz `Int32Array`; hiçbir şey temizlenmiyor, hiçbir şey ayrılmıyor.
+3. Ayrı raporlanan **%44 yavaşlama aynı `Set`'ti** — iş değil, çöp toplama basıncı.
+4. Ve dördüncüsü: kadro boşken bile tam tarama yapılıyordu (**populated tick'in %57'si**),
+   yani her Aşama 1 oturumunda. Artık kadro ve pano boşsa hemen dönüyor.
+
+**Dürüst bulgular:**
+
+- Aşçı vardiyanın **%98'i BLOCKED**. Kusur değil, Aşama 1 hacmi hakkında bir ifade:
+  1.8 müşteri/dk'da bir aşçının 30 saniyede ~1 saniyelik işi var. Sanat ne olursa
+  olsun %98 hareketsiz duran biri "jeton" gibi görünecek — çözüm animasyon değil,
+  daha fazla iş (Aşama 2/3).
+- **Garson ve temizlikçi implement edildi, test edildi, yapacak işleri yok.** Roadmap'in
+  kendi kapsam kararı. Temizlikçinin masası yok; garsonun taşıyacağı tabak yok çünkü
+  pass hiç dolmuyor.
+- **"Pass hiç dolmuyor" artık üç fazda üç özelliği bloke etti**: P8 pass tabağı, P9
+  soğutucu, P10 garson. Bu bir örüntü, tesadüf değil — **karar gerekiyor**.
+
 ### BATCH 8–10 · CHECKPOINT T — P9 tamamlandı (2026-08-15) ✅ PASS (mekanik) · ⚠️ SLICE KAPISI AÇIK
 
 Oyunda ilk **karar** var: para kazanılıyor ve altı yükseltmeden birine yatırılıyor.
@@ -798,6 +839,37 @@ tam da o talimatın önlemek istediği şey olurdu.
 | 6   | ~~Production smoke `schemaVersion !== 1` sabitini taşıyordu~~                                        | Faz 3'ün v2 migration'ından beri main'e her push'ta **kırmızı**; merge sonrası koştuğu için hiçbir PR'da görünmedi | ✅ **DÜZELTİLDİ** Faz 4 sonrası — sürüm artık `src/config/simulation.ts`'ten okunuyor                     |
 | 5   | ~~Visual regression kapısı `threshold` varsayılanı (0.2) yüzünden büyük renk değişimini görmüyordu~~ | Faz 3'te üç golden bir çeyrek karelik renk değişimini geçirdi                                                      | ✅ **DÜZELTİLDİ** Faz 4 — `threshold: 0`; tek birimlik değişim artık kapıyı kırıyor (PHASE_4_REPORT §4.1) |
 | 7   | ⚠ **Roadmap P8 "60 sn'de ≥3 müşteri" ile ECONOMY_DESIGN §3 dönüşüm oranı 0.09 çelişiyor**            | Tavan **1.8 müşteri/dk**; mutfak değil yol darboğaz. Roadmap metriği Aşama 1'de erişilemez                         | 🔴 **AÇIK ÇELİŞKİ — kullanıcı kararı gerekiyor** — aşağıya bak                                            |
+| 8   | ⚠ **Aşama 1'de pass hiç dolmuyor** — teslim otomatik ve aynı tick'te oluyor                          | Üç faz, üç bloke özellik: P8 pass tabağı, P9 soğutucu, P10 garson                                                  | 🔴 **KARAR GEREKİYOR** — aşağıya bak                                                                      |
+
+### 🔴 KARAR GEREKİYOR #8 — Aşama 1'de pass hiç dolmuyor (P8'de ölçüldü, P10'da örüntü oldu)
+
+**Ölçüm:** 24 000 tick'te **0 tick** pass'te tabak bekledi. `KitchenSystem` tabağı pass'e
+koyuyor, `ServiceSystem` bir yuva sonra **aynı tick'te** teslim ediyor. Aşama 1'de garson
+yok, teslim otomatik — tasarım böyle.
+
+**Sonuç: üç fazda üç özellik atıl.**
+
+| Faz | Özellik                           | Durum                                                 |
+| --- | --------------------------------- | ----------------------------------------------------- |
+| P8  | Pass tabağı + sıcaklık göstergesi | Yazıldı, test edildi, **oyuncu hiç göremiyor**        |
+| P9  | Soğutucu yükseltmesi              | Etkisi gerçek ve ölçülü, **oyunda hiç tetiklenmiyor** |
+| P10 | Garson rolü                       | Implement + test, **taşıyacak tabak yok**             |
+
+Ayrıca sıcaklık düşüşü mekaniği — GAME_EXECUTION_ROADMAP'in "bunu şimdi doğru yap"
+dediği şey — hiç ısırmıyor.
+
+**İki olası yol, karar kullanıcının:**
+
+1. **Aşama 1 teslimi anlık olmaktan çıkar.** Örneğin oyuncunun tabağı alması bir
+   `MANUAL_SERVE` gerektirir, ya da `ServiceSystem` bir tick geciktirilir. Üç özellik
+   de anında canlanır; Aşama 1'in "oyuncu aşçı" kimliğine "oyuncu garson" eklenir.
+2. **Faz 11'e kadar atıl bırakılır.** Faz 11 masaları getiriyor; masa varsa tabak
+   masaya taşınır ve üçü de kendiliğinden canlanır. Bu durumda P8/P9/P10'da yazılan
+   üç şey üç faz boyunca ölü kod olarak durur.
+
+**Bu fazda yapılan:** hiçbiri seçilmedi. Üç yerde de kod doğru, test edilmiş ve atıl
+olduğu **testle** kayıtlı — P9'un soğutucu testi pass'in boş olduğunu iddia ediyor ve
+Faz 10 masaları getirdiğinde **kırılacak**, ki bu kırılma sinyalin kendisi.
 
 ### 🔴 AÇIK ÇELİŞKİ #7 — P8 verimlilik hedefi ekonomiyle uyuşmuyor (Faz 8'de ölçüldü, 2026-08-15)
 
@@ -1091,7 +1163,27 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P9 — Economy v1 & Upgrade System v1 (MEKANİK PASS · SLICE KAPISI AÇIK)**
+**Son tamamlanan faz: P10 — Employee AI (TEKNİK PASS)**
+
+| Kanıt         | Değer                                                                         |
+| ------------- | ----------------------------------------------------------------------------- |
+| Testler       | **1 131** unit/integration · **104** E2E · **11** visual golden · **20** perf |
+| `pnpm verify` | ✅ temiz (284 dosya typecheck, depcruise temiz, knip temiz)                   |
+| Staffed tick  | **0.216 ms** p95 / bütçe 3.0 ms · ayırma **1.39 B/tick** / 32 B               |
+| Bundle        | **439.23 kB** gzip / 550 kB                                                   |
+| Save          | **v7**, v6→v7 migration + `save-v7.json` (gerçek kadro taşıyor)               |
+| Ölçüm         | 20 dk: elle **29** müşteri, bir aşçıyla **30** — tıklama yok                  |
+| Rapor         | [PHASE_10_REPORT.md](phases/PHASE_10_REPORT.md)                               |
+| Kapı          | ✅ **TEKNİK PASS** — 15 DoD maddesinin 14'ü                                   |
+
+**Dürüst kayıtlar:** aşçı vardiyanın %98'i BLOCKED · garson ve temizlikçinin yapacak işi
+yok · "pass hiç dolmuyor" üç fazda üç özelliği bloke etti (KARAR GEREKİYOR #8) ·
+"çalışanlar niyetli görünüyor mu" **yargılanmadı, sanat yok** · bir `Set` 123 B/tick'e
+mal oldu ve gate yakaladı.
+
+---
+
+**Bir önceki: P9 — Economy v1 & Upgrade System v1 (MEKANİK PASS · SLICE KAPISI AÇIK)**
 
 | Kanıt         | Değer                                                                         |
 | ------------- | ----------------------------------------------------------------------------- |
@@ -1158,59 +1250,56 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🟢 DEVAM — P8–P10 BATCH SÜRÜYOR. P8 ✅ · P9 ✅ · P10 SIRADA · SONRASI DUR.
+> ## 🔴 DUR — P8–P10 BATCH TAMAMLANDI. P11+ YETKİSİZ.
 >
-> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ · P9 ✅ (mekanik)**
+> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ · P9 ✅ · P10 ✅**
 >
-> Kullanıcı 2026-08-15 yönergesiyle P8 → P9 → P10 batch'ini onayladı ve **fazlar arasında
-> durulmamasını** açıkça istedi. P8 ve P9 kapandı; **P10'a onay beklemeden geçiliyor.** Batch
-> P10'dan sonra durur. **P11+ yetkisiz.**
+> Kullanıcı 2026-08-15 yönergesiyle P8 → P9 → P10 batch'ini onaylamış ve fazlar arasında
+> durulmamasını istemişti. Üçü de kapandı. **Batch'in sonu bir kapıdır: P11+ için açık
+> onay gerekiyor.**
 >
-> ### 🔴 En önemli açık madde: VERTICAL SLICE KAPISI
+> ### Kullanıcının bakması gereken dört şey
 >
-> P9'un kapısı sekiz ölçütten ikisini kanıtladı, **beşi insan yargısı bekliyor**, biri
-> (gerçek cihazda FPS) ölçülmedi. Yürütücü kararıyla P10'a geçildi ama **kapı geçti ilan
-> edilmedi** — GDD onu "pazarlığa kapalı" diye tanımlıyor. Bekleyen beş yargı CHECKPOINT
-> T'de tek tek yazılı; dördü üç kişi gerektiriyor, biri (ekran görüntüsü tür ortalamasının
-> üstünde mi) **üretim sanatı olmadan verilemez**.
+> **1. 🔴 VERTICAL SLICE KAPISI AÇIK.** Projenin en önemli kapısı. Sekiz ölçütten **ikisi
+> kanıtlandı** (30 dk sıfır hata + heap sabit; kaydet/yükle idempotent), **beşi insan
+> yargısı bekliyor**, biri (gerçek cihazda FPS) ölçülmedi. Yürütücü kararıyla P10'a
+> geçildi ama **kapı geçti ilan edilmedi** — GDD onu "pazarlığa kapalı" diye tanımlıyor.
+> Beş yargının dördü üç kişi gerektiriyor; biri (**ekran görüntüsü tür ortalamasının
+> üstünde mi**) üretim sanatı olmadan verilemez. → PHASE_9_REPORT §9
 >
-> ### Kullanıcının bakması gereken üç şey (batch bitince)
+> **2. 🔴 KARAR GEREKİYOR #8 — pass hiç dolmuyor.** 24 000 tick'te 0. Üç fazda üç özellik
+> atıl: P8 pass tabağı, P9 soğutucu, P10 garson. İki yol var (Aşama 1 teslimini anlık
+> olmaktan çıkarmak, ya da Faz 11'i beklemek); hiçbiri seçilmedi. → §12
 >
-> **1. 🔴 AÇIK ÇELİŞKİ #7 — verim hedefi.** Roadmap "60 sn'de ≥3 müşteri" diyor; onaylı ekonomi
-> 1.8/dk'ya izin veriyor. Mutfak değil yol darboğaz (ölçüm §12'de). Üç olası çözüm yazıldı, hiçbiri
-> seçilmedi. **P9'un tabela + yol işareti yükseltmeleri tam bu kısıta iniyor**, yani P9 bu tavanın
-> tasarım mı hata mı olduğunu ilk kez ölçebilecek yer.
+> **3. 🔴 AÇIK ÇELİŞKİ #7 — verim hedefi.** Roadmap "60 sn'de ≥3 müşteri" diyor, onaylı
+> ekonomi 1.8/dk'ya izin veriyor. P9'un tabelası tavanı ~2.3'e, tam yükseltilmiş tabela
+> ~3.2'ye çıkarıyor — yani ölçüt **yatırımdan sonra** karşılanabilir. "İlk dakikadan mı,
+> yatırımdan sonra mı" hâlâ karar. → §12
 >
-> **2. Sıcaklık düşüşü ölü.** Formül doğru, 8 testi var, ve 24 000 tick'te **sıfır** kez tetiklendi:
-> Aşama 1'de teslim otomatik olduğu için pass hiçbir tick sınırında dolu değil. Faz 10'un garsonları
-> bunu canlandırmazsa mekanik dekoratiftir ve o zaman fark edilmelidir.
->
-> **3. Sanata bağlı yargılar hâlâ verilmedi.** P6 "dönüşüm anı", P7 "yaya doğallığı", P8 "döngü
-> tatmin edici mi" — üçü de **NOT JUDGED: AWAITING EXTERNAL ART**. Kullanıcı 172 görseli dışarıda
-> üretiyor; direktif gereği hiçbir faz buna bloke edilmedi ve sahte sanat üretilmedi.
+> **4. Sanata bağlı dört yargı hâlâ verilmedi.** P6 dönüşüm anı · P7 yaya doğallığı ·
+> P8 döngü tatmini · P10 çalışan niyeti. Dördü de **NOT JUDGED: AWAITING EXTERNAL ART**.
+> Kullanıcı 172 görseli dışarıda üretiyor; direktif gereği hiçbir faz buna bloke edilmedi
+> ve sahte sanat üretilmedi.
 >
 > ### Batch'ten taşınan diğer açık maddeler
 >
+> - ECONOMY_DESIGN §6.2 tablosunun iki satırı birebir okunamıyor; bir okuma seçildi → P12
+> - Aşçı vardiyanın %98'i BLOCKED — Aşama 1 hacmi hakkında bir denge girdisi → P12
+> - `staff.hired` ile `staff.employees` iki ayrı liste; uzlaştırma bir change request
+> - Aday havuzu yok, her işe alım skill 0.5 → P13
 > - Layout invalidation `placed.length`'e bakıyor; bir **taşıma** kaçar → P11
 > - Fren lambaları aktör-karelerinin %33'ünde yanıyor → P12
-> - `globalDifficultyCurve`'ün clamp'a göre yeri: GDD §9.5 ile roadmap/ECONOMY §7 farklı yazıyor → P12
-> - `priceFit` (P12 denge geçişi), `weatherFactor` (P15) hâlâ literal 1.0 — `menuAppeal` P9'da canlandı
-> - ECONOMY_DESIGN §6.2 tablosunun iki satırı birebir okunamıyor (CHECKPOINT T, madde 1)
-> - Soğutucu atıl; pass tabağı görünmüyor — ikisi de P10'da canlanır
-> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1) — oyuncu fark eder
+> - `globalDifficultyCurve`'ün clamp'a göre yeri: GDD §9.5 ile roadmap/ECONOMY §7 farklı → P12
+> - `priceFit` (P12), `weatherFactor` (P15) hâlâ literal 1.0
 > - Memnuniyetin dört girdisi (temizlik, atmosfer, servis, erişilebilirlik) 1.0 → P11
 > - Yayaların %57 yön değiştirmesi — sanat gelince izlenerek karara bağlanmalı
-> - `kitchen_pass`, `table_<n>`, `bin_<n>`, `dt_window` hedefleri kasten yok
+> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1) — oyuncu fark eder
 > - Phaser 4 WebGL1 açıyor, dört doküman WebGL2 diyor (AÇIK ÇELİŞKİ #4) — karar bekliyor
+> - WebKit smoke bu makinede koşamıyor (`libevent-2.1-7t64`) — CI'da koşuyor
 >
 > ### Şimdi ne yapılıyor
 >
-> **FAZ 10 — EMPLOYEE AI.** Tek bir `EmployeeBrain` (IDLE/MOVING/PERFORMING/BLOCKED) + rol
-> görev tabloları, merkezî puanlamalı `TaskBoard`, **ışınlanma yok** (pozisyon deltası testi
-> build'i kırar), maaş sürekli gideri, ve staff bölümü olan save şeması + kanıtlı migration.
->
-> P10 aynı zamanda üç bekleyen maddeyi canlandırıyor: soğutucu, pass tabağı göstergesi ve
-> gelir penceresinin gider tarafı.
+> **HİÇBİR ŞEY.** P11 yetkisiz. Yukarıdaki dört maddeye kullanıcı bakana kadar durulur.
 
 ## 22. Change Log
 

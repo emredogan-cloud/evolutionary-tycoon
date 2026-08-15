@@ -1,7 +1,5 @@
 import { TICK_MS } from '@config/simulation';
 import { UPGRADES } from '@config/economy/upgrades';
-import type { ActorRecord } from '../stores/actors';
-import type { SlotPool } from '../stores/pool';
 import { createDefaultSystems } from '../systems/noop';
 import { CommandLog } from './CommandLog';
 import type { Command, CommandInput } from './commands';
@@ -231,7 +229,37 @@ export class Sim {
     // stable order keeps the renderer's view pool from thrashing its leases.
     count = this.copyVehicles(count);
     count = this.copyCustomers(count);
-    count = this.copyPool(this.world.employees, count);
+    count = this.copyEmployees(count);
+    return count;
+  }
+
+  /**
+   * Employees, straight through — they carry their own world position.
+   *
+   * Separate from `copyPool` because the pools no longer share a record type:
+   * Phase 10 gave employees a role, a state and a task, none of which a prop
+   * has any business owning.
+   */
+  private copyEmployees(start: number): number {
+    let count = start;
+    const employees = this.world.employees;
+    for (let slot = 0; slot < employees.scanLimit; slot++) {
+      if (!employees.isActive(slot)) continue;
+      const record = employees.at(slot);
+      const out = this.actorBuffer[count];
+      if (out === undefined) break;
+      out.entityId = record.entityId;
+      out.x = record.x;
+      out.y = record.y;
+      out.z = record.z;
+      out.kind = record.kind;
+      out.headingX = 1;
+      out.headingY = 0;
+      out.braking = false;
+      out.patience = 0;
+      out.moving = record.state === 1;
+      count++;
+    }
     return count;
   }
 
@@ -306,25 +334,6 @@ export class Sim {
        */
       target.moving =
         Math.hypot(record.targetX - record.x, record.targetY - record.y) > ARRIVAL_EPSILON_METRES;
-      index++;
-    }
-    return index;
-  }
-
-  private copyPool(pool: SlotPool<ActorRecord>, startIndex: number): number {
-    let index = startIndex;
-    for (let slot = 0; slot < pool.capacity; slot++) {
-      if (!pool.isActive(slot)) continue;
-      const target = this.actorBuffer[index];
-      if (target === undefined) break;
-      const record = pool.at(slot);
-      target.entityId = record.entityId;
-      target.x = record.x;
-      target.y = record.y;
-      target.z = record.z;
-      target.kind = record.kind;
-      target.patience = 0;
-      target.moving = false;
       index++;
     }
     return index;

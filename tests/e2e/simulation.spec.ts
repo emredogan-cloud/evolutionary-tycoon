@@ -45,8 +45,14 @@ const REFERENCE = {
    * because objectives will read it in Phase 11 and the dead-end gate reads it
    * already, so a divergence in it can change an outcome.
    */
-  hashAtTick0: 'a744824d48e483a4',
-  hashAtTick1000: '4635dcc52af44bdd',
+  /*
+   * A fifth time, in Phase 10. Employees stopped being generic actors and grew
+   * a role, a brain state, a task claim, a skill and a wage; the task board
+   * joined the digest beside them. All of it can change an outcome, so all of
+   * it is hashed.
+   */
+  hashAtTick0: 'a0d410cfd8310444',
+  hashAtTick1000: 'a794e05c23dbc6cd',
 } as const;
 
 interface TestApi {

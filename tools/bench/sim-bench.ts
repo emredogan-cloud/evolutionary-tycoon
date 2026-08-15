@@ -11,6 +11,8 @@ import {
   STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE,
   STATE_WALKING_TO_DOOR as CUSTOMER_WALKING_STATE,
 } from '../../src/sim/ai/fsm/customerFsm';
+import { MAX_EMPLOYEES } from '../../src/config/employees';
+import { hire } from '../../src/sim/systems/StaffSystem';
 import { FlowFieldCache } from '../../src/sim/nav/FlowFieldCache';
 import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PLACED } from '../../src/sim/stores/OrderStore';
 
@@ -573,6 +575,68 @@ export function benchServiceTick(): TimingResult {
 }
 
 /**
+ * A tick with a full staff — GAME_EXECUTION_ROADMAP Phase 10.
+ *
+ * 8 employees, 60 pedestrians and 120 vehicles, budget 3.0 ms p95. Two systems
+ * joined the pipeline this phase and one of them — the task board — scans the
+ * order pool, the task pool and the payroll every tick.
+ *
+ * The employees are hired rather than poked into the store, so their wages,
+ * skills and starting positions are the ones the game produces. A hand-built
+ * employee with a zero wage would quietly remove the settlement path from the
+ * measurement, which is the part that touches the economy.
+ */
+export function benchStaffedTick(): TimingResult {
+  const sim = buildPeakLoad(20260819);
+  const ticks = 200;
+
+  const load = (): void => {
+    populatePeakLoad(sim);
+
+    for (let i = sim.world.customers.activeCount; i < 60; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    // Orders for them to work on. Without these the board is empty and the
+    // measurement is of eight employees standing still.
+    for (let i = 0; i < 20; i++) {
+      const orderSlot = sim.world.orders.acquire();
+      if (orderSlot < 0) break;
+      const order = sim.world.orders.at(orderSlot);
+      order.entityId = sim.world.allocateEntityId();
+      order.item = i % 3;
+      order.state = ORDER_PLACED;
+      order.station = -1;
+      order.orderedAtMs = sim.world.clock.simTimeMs;
+      order.customerSlot = i % Math.max(1, sim.world.customers.activeCount);
+    }
+
+    sim.world.economy.cash = 100_000;
+    for (let i = sim.world.employees.activeCount; i < MAX_EMPLOYEES; i++) {
+      hire(sim.world, i % 3 === 0 ? 'cook' : i % 3 === 1 ? 'waiter' : 'cleaner', (i % 5) / 4);
+    }
+  };
+
+  load();
+  const label = `staffed tick (${String(sim.world.employees.activeCount)} employees, ${String(sim.world.customers.activeCount)} pedestrians, 120 vehicles)`;
+  return timeIt(label, ticks, () => {
+    load();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
  * Reset per sample, for the same reason `benchTicksFromFresh` is: the world
  * fills as it runs, so twenty-five samples of a thousand ticks each were
  * measuring an increasingly busy simulation and the samples were describing
@@ -707,6 +771,7 @@ export function runSimBench(): BenchReport {
       benchPopulatedTick(),
       benchCrowdedTick(),
       benchServiceTick(),
+      benchStaffedTick(),
       benchFlowFieldRebuild(),
       benchFlowFieldChunk(),
       benchCommandProcessing(),

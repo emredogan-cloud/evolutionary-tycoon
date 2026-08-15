@@ -1,6 +1,7 @@
 import { MENU, PRICE_BAND } from '@config/economy/menu';
 import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
+import { fire, hire } from '../systems/StaffSystem';
 import { buyUpgrade } from '../systems/UpgradeSystem';
 import type { World } from './World';
 
@@ -81,8 +82,37 @@ interface SetPriceCommand {
   readonly price: number;
 }
 
+/**
+ * Hire someone into a role — Phase 10.
+ *
+ * `skill` comes from the command rather than being rolled here, because rolling
+ * it would consume an RNG stream at command-apply time and make the world's
+ * random state depend on how many hires a player *attempted*, including the
+ * ones that were refused. The applicant pool is a Phase 13 feature; until then
+ * the caller names the skill and the simulation clamps it.
+ */
+interface HireCommand {
+  readonly t: 'HIRE';
+  readonly tick: number;
+  readonly roleId: string;
+  readonly skill: number;
+}
+
+/** Let someone go. Their task goes back on the board, not into the bin. */
+interface FireCommand {
+  readonly t: 'FIRE';
+  readonly tick: number;
+  readonly entityId: number;
+}
+
 export type Command =
-  SetSpeedCommand | SetPausedCommand | ManualPrepCommand | BuyUpgradeCommand | SetPriceCommand;
+  | SetSpeedCommand
+  | SetPausedCommand
+  | ManualPrepCommand
+  | BuyUpgradeCommand
+  | SetPriceCommand
+  | HireCommand
+  | FireCommand;
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
@@ -90,7 +120,9 @@ export type CommandInput =
   | Omit<SetPausedCommand, 'tick'>
   | Omit<ManualPrepCommand, 'tick'>
   | Omit<BuyUpgradeCommand, 'tick'>
-  | Omit<SetPriceCommand, 'tick'>;
+  | Omit<SetPriceCommand, 'tick'>
+  | Omit<HireCommand, 'tick'>
+  | Omit<FireCommand, 'tick'>;
 
 /**
  * Apply one command to the world.
@@ -141,6 +173,16 @@ export function apply(world: World, command: Command): void {
       buyUpgrade(world, command.upgradeId);
       break;
     }
+    case 'HIRE': {
+      // Validated in the simulation, like every other purchase: the staff panel
+      // greys out a role the player cannot afford, and that is a courtesy.
+      hire(world, command.roleId, command.skill);
+      break;
+    }
+    case 'FIRE': {
+      fire(world, command.entityId);
+      break;
+    }
     case 'SET_PRICE': {
       /*
        * Searched rather than looked up through `menuIndexOf`, which throws. An
@@ -176,5 +218,9 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'BUY_UPGRADE', tick, upgradeId: input.upgradeId };
     case 'SET_PRICE':
       return { t: 'SET_PRICE', tick, itemId: input.itemId, price: input.price };
+    case 'HIRE':
+      return { t: 'HIRE', tick, roleId: input.roleId, skill: input.skill };
+    case 'FIRE':
+      return { t: 'FIRE', tick, entityId: input.entityId };
   }
 }

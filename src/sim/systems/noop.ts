@@ -8,6 +8,8 @@ import { ManeuverTable } from '../nav/maneuvers';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
 import { EconomySystem } from './EconomySystem';
+import { EmployeeFsmSystem } from './EmployeeFsmSystem';
+import { TaskBoardSystem } from './TaskBoardSystem';
 import { KitchenSystem } from './KitchenSystem';
 import { NavigationSystem } from './NavigationSystem';
 import { QueueSystem } from './QueueSystem';
@@ -91,6 +93,14 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
     NavigationSystem: new NavigationSystem(stage1Fields(), world.customers.capacity),
     CustomerFsmSystem: new CustomerFsmSystem(STAGE1_LAYOUT, maneuverSystem),
     QueueSystem: new QueueSystem(STAGE1_LAYOUT),
+    /*
+     * The board posts and assigns *before* the brains run, so an employee
+     * assigned this tick starts walking this tick. The reverse order costs 50 ms
+     * of standing still at every transition — the same reasoning that puts
+     * navigation before the customer FSM and the kitchen before the service.
+     */
+    TaskBoardSystem: new TaskBoardSystem(),
+    EmployeeFsmSystem: new EmployeeFsmSystem(),
     /*
      * The kitchen runs before the service, so a plate that finishes this tick is
      * handed over on the same tick rather than the next. The reverse order costs

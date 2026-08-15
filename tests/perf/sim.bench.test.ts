@@ -11,6 +11,7 @@ import {
   benchFlowFieldRebuild,
   benchPopulatedTick,
   benchServiceTick,
+  benchStaffedTick,
   benchSnapshot,
   buildPeakLoad,
   benchStoreChurn,
@@ -222,6 +223,27 @@ describe('simulation performance budgets', () => {
     const result = benchServiceTick();
     expect(result.name, `the load is named in the label: ${result.name}`).toContain('20 orders');
     expect(result.name).toContain('40 pedestrians');
+  });
+
+  it('runs a fully staffed tick inside the Phase 10 budget', () => {
+    /*
+     * 3.0 ms p95 at 8 employees, 60 pedestrians and 120 vehicles —
+     * GAME_EXECUTION_ROADMAP Phase 10. The task board is the new cost: it scans
+     * the order pool, the task pool and the payroll every tick, and an earlier
+     * version of it recomputed `nextStartable` *inside* the order loop, which
+     * turned one unit test from milliseconds into 153 seconds.
+     */
+    const result = benchStaffedTick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(3);
+  });
+
+  it('carries eight employees for the whole staffed measurement', () => {
+    // The same failure mode as the peak-load and order checks: a payroll that
+    // walked out unpaid mid-measurement would report a comfortable figure for a
+    // load it was no longer carrying.
+    const result = benchStaffedTick();
+    expect(result.name, `the label records the load: ${result.name}`).toContain('8 employees');
   });
 
   it('never spends more than a frame on one goal', () => {

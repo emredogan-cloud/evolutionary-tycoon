@@ -28,15 +28,15 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 6, with five registered migrations', () => {
+  it('the current version is 7, with six registered migrations', () => {
     /*
      * Both halves matter. The first says the schema constant and the save layer
      * agree; the second is a deliberate speed bump — bumping the version means
      * coming here, which means noticing that a migration and a fixture are owed.
      */
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(6);
-    expect(migrations).toHaveLength(5);
+    expect(CURRENT_SCHEMA_VERSION).toBe(7);
+    expect(migrations).toHaveLength(6);
   });
 
   it('a save already at the current version needs no steps', () => {
@@ -104,15 +104,15 @@ describe('migration chain', () => {
     });
   });
 
-  it('v1 → v6 runs every step in order', () => {
+  it('v1 → v7 runs every step in order', () => {
     const outcome = migrateToCurrent(
       { schemaVersion: 1, layout: { placed: [{ objectId: 'a', x: 0, y: 0 }] } },
       1,
     );
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(5);
-    expect(outcome.save['schemaVersion']).toBe(6);
+    expect(outcome.steps).toBe(6);
+    expect(outcome.save['schemaVersion']).toBe(7);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'a', x: 0, y: 0, z: 0 },
     ]);
@@ -123,6 +123,8 @@ describe('migration chain', () => {
       conversionsFailed: 0,
       turnedAwayNoParking: 0,
       customersAbandoned: 0,
+      // Phase 10.
+      employeesLeftUnpaid: 0,
     });
   });
 
@@ -299,7 +301,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(5);
+    expect(result.migrationSteps).toBe(6);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
@@ -314,7 +316,7 @@ describe('committed save fixtures', () => {
     // Was zero until Phase 5 added the traffic cursor. The fixture is a
     // historical record and is never regenerated, so this number grows by one
     // with every schema change — which is the point of keeping it.
-    expect(result.migrationSteps).toBe(4);
+    expect(result.migrationSteps).toBe(5);
   });
 
   it('save-v3.json migrates to the current version', async () => {
@@ -325,12 +327,23 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
+    expect(result.migrationSteps).toBe(4);
+  });
+
+  it('save-v4.json migrates three steps to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v4.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
     expect(result.migrationSteps).toBe(3);
   });
 
-  it('save-v4.json migrates two steps to the current version', async () => {
+  it('save-v5.json migrates two steps to the current version', async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v4.json'));
+    await storage.write('save', readFixture('save-v5.json'));
 
     const result = await new SaveManager(storage).load();
 
@@ -339,9 +352,9 @@ describe('committed save fixtures', () => {
     expect(result.migrationSteps).toBe(2);
   });
 
-  it('save-v5.json migrates one step to the current version', async () => {
+  it('save-v6.json migrates one step to the current version', async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v5.json'));
+    await storage.write('save', readFixture('save-v6.json'));
 
     const result = await new SaveManager(storage).load();
 
@@ -350,15 +363,40 @@ describe('committed save fixtures', () => {
     expect(result.migrationSteps).toBe(1);
   });
 
-  it('save-v6.json loads with no migration at all', async () => {
+  it('save-v7.json loads with no migration at all', async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v6.json'));
+    await storage.write('save', readFixture('save-v7.json'));
 
     const result = await new SaveManager(storage).load();
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
     expect(result.migrationSteps).toBe(0);
+  });
+
+  it('save-v7.json carries a payroll somebody actually hired', () => {
+    /*
+     * The Phase 10 fixture is a real session: ten minutes of play, a sign, then
+     * a cook hired with the proceeds and left to work for half a minute. A
+     * fixture with an empty staff list would migrate identically and prove
+     * nothing about the one section this version exists for.
+     */
+    const save = JSON.parse(readFixture('save-v7.json')) as {
+      staff: { employees: { role: number; skill: number; wagePerMinute: number }[] };
+    };
+    expect(save.staff.employees).toHaveLength(1);
+    expect(save.staff.employees[0]?.skill).toBeCloseTo(0.6, 6);
+    expect(save.staff.employees[0]?.wagePerMinute).toBeGreaterThan(0);
+  });
+
+  it('a v6 save arrives with an empty payroll rather than an invented one', () => {
+    // Zero is the honest value: a v6 save was written by a build where nobody
+    // could be hired, so the player genuinely had no staff.
+    const outcome = migrateToCurrent({ schemaVersion: 6, staff: { hired: [] } }, 6);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect((outcome.save['staff'] as { employees: unknown[] }).employees).toEqual([]);
+    expect((outcome.save['staff'] as { settleElapsedMs: number }).settleElapsedMs).toBe(0);
   });
 
   it('save-v6.json carries an upgrade the player actually bought', () => {

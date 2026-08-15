@@ -37,6 +37,9 @@ describe('EventQueue', () => {
         // Phase 9 — the economy.
         'UPGRADE_APPLIED',
         'PRICE_CHANGED',
+        // Phase 10 — employees.
+        'EMPLOYEE_HIRED',
+        'EMPLOYEE_LEFT',
       ].sort(),
     );
   });

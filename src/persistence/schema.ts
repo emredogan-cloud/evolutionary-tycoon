@@ -98,6 +98,20 @@ const saveFileV4Schema = z.object({
   }),
   staff: z.object({
     hired: z.array(z.object({ entityId: z.number().int(), roleId: z.string() })),
+    // Phase 10 — the payroll and the wage-settlement cursor.
+    settleElapsedMs: z.number().nonnegative(),
+    employees: z.array(
+      z.object({
+        entityId: z.number().int(),
+        role: z.number().int().nonnegative(),
+        skill: z.number().min(0).max(1),
+        wagePerMinute: z.number().nonnegative(),
+        accruedWages: z.number().nonnegative(),
+        unpaidMs: z.number().nonnegative(),
+        x: z.number(),
+        y: z.number(),
+      }),
+    ),
   }),
   stats: z.object({
     customersServed: z.number().int().nonnegative(),

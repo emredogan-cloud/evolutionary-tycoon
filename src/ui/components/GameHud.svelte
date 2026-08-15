@@ -1,8 +1,18 @@
 <script lang="ts">
-  import type { HudSource, PriceView, UiCommands, UpgradeView, WorldMarker } from '@app/bridge/hudModel';
+  import type {
+    HudSource,
+    PriceView,
+    RoleView,
+    StaffView,
+    UiCommands,
+    UpgradeView,
+    WorldMarker,
+  } from '@app/bridge/hudModel';
   import HudCash from './HudCash.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
+  import StaffIcons from './StaffIcons.svelte';
+  import StaffPanel from './StaffPanel.svelte';
   import UpgradeCard from './UpgradeCard.svelte';
   import UpgradeHotspots from './UpgradeHotspots.svelte';
   import WorldMarkers from './WorldMarkers.svelte';
@@ -60,6 +70,10 @@
   let prices = $state<PriceView[]>([]);
   let objective = $state('');
   let objectiveProgress = $state(0);
+  let staff = $state<StaffView[]>([]);
+  let roles = $state<RoleView[]>([]);
+  let payroll = $state(0);
+  let payrollFull = $state(false);
 
   $effect(() =>
     source.subscribe((model) => {
@@ -90,12 +104,18 @@
         effects: item.effects.map((effect) => ({ ...effect })),
       }));
       prices = model.prices.map((item): PriceView => ({ ...item }));
+      staff = model.staff.slice(0, model.staffCount).map((person): StaffView => ({ ...person }));
+      roles = model.roles.map((item): RoleView => ({ ...item }));
+      payroll = model.payrollPerMinute;
+      payrollFull = model.payrollFull;
     }),
   );
 </script>
 
 <div class="overlay" data-testid="game-hud">
   <WorldMarkers {markers} />
+
+  <StaffIcons {staff} />
 
   <UpgradeHotspots
     {upgrades}
@@ -121,6 +141,18 @@
 
   <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
   <ObjectivePanel {objective} progress={objectiveProgress} />
+  <StaffPanel
+    {staff}
+    {roles}
+    {payroll}
+    full={payrollFull}
+    onhire={(roleId: string, skill: number) => {
+      commands.hire(roleId, skill);
+    }}
+    onfire={(entityId: number) => {
+      commands.fire(entityId);
+    }}
+  />
   <PricePanel
     {prices}
     onprice={(itemId: string, price: number) => {
