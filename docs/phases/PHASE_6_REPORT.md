@@ -84,7 +84,7 @@ allocation-free `sample` that Phase 5 already tested.
 
 ---
 
-## 3. Six defects found by measurement
+## 3. Seven defects found by measurement
 
 Each of these was found by a test or a measurement, not by review.
 
