@@ -123,11 +123,36 @@ describe('simulation performance budgets', () => {
   });
 });
 
+/**
+ * One benchmark run, shared by the two tests below.
+ *
+ * They used to call `runSimBench()` each. Two runs in one process are not two
+ * independent measurements: the second starts on a heap full of the first's
+ * garbage, so it pays collection costs the first did not, and the gate was
+ * reading that inflated second run.
+ *
+ * The evidence is in a single CI job's own log — the reporting run recorded
+ * `world snapshot + JSON serialise` at **0.431 ms** and the gate run at
+ * **0.492 ms**, 14% apart, on the same runner in the same process. The baseline
+ * was recorded from the reporting output at 0.425, so the gate was effectively
+ * comparing a degraded run against a clean one and firing at 16%. That is a bug
+ * in the harness, not a regression in the simulation: on this machine `main` and
+ * this branch measure 0.335 and 0.331 ms.
+ *
+ * Sharing one run removes the asymmetry and halves the job's wall clock. The 15%
+ * threshold is untouched.
+ */
+let sharedReport: ReturnType<typeof runSimBench> | null = null;
+function benchOnce(): ReturnType<typeof runSimBench> {
+  sharedReport ??= runSimBench();
+  return sharedReport;
+}
+
 describe('regression against the recorded baseline', () => {
   const baseline = readBaseline();
 
   it('reports the current numbers', () => {
-    const report = runSimBench();
+    const report = benchOnce();
     // Printed so the CI log carries the measurement, not just a pass/fail, and
     // so a baseline can be recorded from a CI run rather than a local one.
     console.log(`\n${formatReport(report)}\n`);
@@ -145,7 +170,7 @@ describe('regression against the recorded baseline', () => {
     if (baseline === null) return;
     expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMs');
 
-    const report = runSimBench();
+    const report = benchOnce();
     const regressions: string[] = [];
 
     for (const timing of report.timings) {

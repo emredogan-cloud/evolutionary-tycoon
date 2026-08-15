@@ -107,7 +107,7 @@ number is not from the documents.
 
 ---
 
-## 4. Five defects found and fixed
+## 4. Six defects found and fixed
 
 Each was found by a test or a measurement, not by inspection.
 
@@ -184,7 +184,36 @@ between 2 and 10. Eight consecutive `pnpm bench:sim` runs now pass.
 methodology. It is left as recorded rather than hand-edited, because it is evidence from a real run —
 and it is not asserted against; only the timings are.
 
-### 4.5 Atlas fill was reported as 120.8%
+### 4.5 The 15% regression gate was comparing a degraded run against a clean one
+
+CI failed with `world snapshot + JSON serialise: 0.492 ms vs baseline 0.425 ms (16% slower)`.
+Phase 4 touched neither `src/sim` nor `src/persistence`, and measuring `main` and this branch on the
+same machine gave **0.335 ms and 0.331 ms** — no regression.
+
+The cause is in the failing job's own log. `runSimBench()` was called **twice in one process**, once
+by the test that prints the numbers and again by the test that gates on them, and the same job
+recorded:
+
+```
+world snapshot + JSON serialise   min 0.431 ms   <- the reporting run
+world snapshot + JSON serialise   min 0.492 ms   <- the gating run, same process
+```
+
+14% apart, same runner, same process. The second run starts on a heap full of the first's garbage and
+pays collection costs the first did not — and since the baseline was recorded from the _reporting_
+output (0.425), the gate was structurally comparing a degraded run against a clean one. It was going
+to fire eventually on any allocation-heavy benchmark, regardless of the code.
+
+Fixed by running the benchmark once and sharing the result. The 15% threshold is untouched, and the
+job's wall clock halves.
+
+**A fix that was tried and rejected**, recorded because it looks obviously right: forcing a
+collection before each sample, to normalise heap state. It made the measurement worse — emptying the
+young generation means the timed region then pays for fresh nursery pages a warm heap would not, and
+`world snapshot` moved from 0.331 ms to 0.440 ms, 3% _above_ the baseline. That is a measurement of
+the collector, not of the code. The rejection is left as a comment in `timeIt` so nobody re-tries it.
+
+### 4.6 Atlas fill was reported as 120.8%
 
 `detectIdentical` makes duplicate art share one rect, so summing every frame's area counts shared
 pixels once per frame. Fixed to count distinct rects. Worth noting because the wrong number was

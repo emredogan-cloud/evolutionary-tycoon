@@ -78,6 +78,15 @@ export function timeIt(
 
   const durations: number[] = [];
   for (let i = 0; i < samples; i++) {
+    /*
+     * No forced collection between samples, though it looks like it should
+     * help. Tried and rejected: forcing a full GC before each sample empties
+     * the young generation, so the timed region then pays for fresh nursery
+     * pages that a warm heap would not. It moved `world snapshot + JSON
+     * serialise` from 0.331 ms to 0.440 ms — a measurement of the collector's
+     * state rather than of the code, and 3% *above* the recorded baseline.
+     * Warm-up samples plus the minimum statistic handle this better.
+     */
     const start = performance.now();
     run();
     durations.push(performance.now() - start);

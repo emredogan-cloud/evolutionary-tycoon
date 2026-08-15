@@ -65,7 +65,7 @@ number is claimed for it.
 
 ## 3. Defects the batch found in its own work
 
-Twelve real defects were found by tests and measurements rather than by review. The ones that would
+Thirteen real defects were found by tests and measurements rather than by review. The ones that would
 have shipped silently:
 
 | Phase | Defect                                                                               | How it surfaced          |
@@ -82,6 +82,7 @@ have shipped silently:
 | P4    | The prompt block hash was hashing the prose that describes the markers               | Content assertion        |
 | P4    | Atlas fill reported 120.8% — above the floor it was supposed to enforce              | Impossible number        |
 | P4    | The per-tick allocation gate had been flaky since P2 — one failure in four runs      | `pnpm verify`            |
+| P4    | The 15% regression gate benchmarked twice per process and gated on the degraded run  | CI, on this PR           |
 
 The Phase 4 visual-gate defect is the one worth singling out, because it was a defect in a **gate**:
 Phase 3 set `maxDiffPixelRatio: 0.002` and left `threshold` at Playwright's default of 0.2, which

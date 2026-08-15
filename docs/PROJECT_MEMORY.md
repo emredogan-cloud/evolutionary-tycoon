@@ -298,7 +298,7 @@ dizinler aynı pinlenmiş container içinden silinip host store'undan temiz kuru
 | **Üretim asset'i**  | **0** — START CONDITION kapanmadı                                                                 |
 | Rapor               | [PHASE_4_REPORT.md](phases/PHASE_4_REPORT.md)                                                     |
 
-**Faz 4'ün bulduğu beş gerçek hata:**
+**Faz 4'ün bulduğu altı gerçek hata:**
 
 1. **Visual regression kapısı bir çeyrek karelik renk değişimini göremiyordu.** Faz 3
    `maxDiffPixelRatio: 0.002` koymuş ama `threshold`'u Playwright varsayılanında (**0.2**)
@@ -318,7 +318,15 @@ dizinler aynı pinlenmiş container içinden silinip host store'undan temiz kuru
    ölçüyor. Beş örneğin **minimumu**na geçildi (gürültü tek yönlü: yığına yalnızca ekler). Bütçe
    değişmedi; ölçüm **0.02 B/tick (en kötü örnek 0.09)** çıktı — iki kat büyüklük derece altında ve
    kararlı. Ardışık 8 koşu yeşil.
-5. **Atlas doluluk oranı %120.8 raporlanıyordu** — `detectIdentical` aynı rect'i paylaştırıyor,
+5. **%15 regresyon kapısı, aynı süreçte bozulmuş bir koşuyu temiz bir baseline'a karşı ölçüyordu** —
+   CI `world snapshot + JSON serialise: 0.492 ms vs baseline 0.425 ms (%16 yavaş)` ile düştü. Faz 4
+   `src/sim`'e dokunmadı; aynı makinede `main` 0.335 ms, dal 0.331 ms. Sebep, düşen job'ın kendi
+   log'unda: `runSimBench()` süreç başına **iki kez** çağrılıyordu (bir kez raporlamak, bir kez
+   kapı için) ve aynı job aynı ölçümü **0.431** ve **0.492** olarak kaydetti. İkinci koşu birincinin
+   çöpüyle dolu bir yığında başlıyor. Tek koşu paylaşıldı; eşik değişmedi. **Denenip reddedilen
+   çözüm:** her örnekten önce GC zorlamak — genç kuşağı boşalttığı için ölçüm 0.331'den 0.440'a
+   çıktı, yani baseline'ın %3 _üstüne_; `timeIt` içine gerekçesiyle yorum olarak bırakıldı.
+6. **Atlas doluluk oranı %120.8 raporlanıyordu** — `detectIdentical` aynı rect'i paylaştırıyor,
    frame başına toplamak aynı pikselleri birden çok sayıyordu. Yanlış sayı §7 tabanının
    **üstündeydi**; düzeltilmeseydi bu rapora "geçti" diye yazılacaktı.
 
