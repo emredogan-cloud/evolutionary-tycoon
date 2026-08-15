@@ -2,35 +2,29 @@
 
 **Phase:** 5 — the road comes alive
 **Date:** 2026-08-15
-**Result:** 🟡 **PARTIAL** — the traffic system is built, deterministic and tested; **two of the phase's own definition-of-done items are not met**, and one of them needs a decision that is not the agent's to make
-**Branch:** `phase/05-traffic` (not merged)
+**Result:** ✅ **PASS** — both blocking items resolved by executive decision on 2026-08-15 and implemented; 15/15 CI checks green
+**Branch:** `phase/05-traffic`
 
 ---
 
 ## 1. Result, stated plainly
 
-The simulation half of Phase 5 is complete and behaves correctly: lanes, a
-deterministic inhomogeneous Poisson arrival process, IDM-lite car following,
-despawn and pool return, four archetypes, the day curve, and vehicles drawn on
-screen with procedural body motion. 723 tests pass, coverage is above its floor,
-and eight of the ten absolute performance budgets pass comfortably.
+The traffic system is complete, deterministic and tested: lanes, a deterministic
+inhomogeneous Poisson arrival process, IDM-lite car following, despawn and pool
+return, four archetypes, the day curve, and vehicles drawn on screen with
+procedural body motion. **727 tests pass and all 15 CI checks are green.**
 
-Two DoD items do not pass, and neither is fixed by more implementation:
+This report was first written as **PARTIAL** with two unmet definition-of-done
+items. Both were resolved by executive decision on 2026-08-15 and are recorded as
+such — overridden and then implemented, not quietly satisfied:
 
-| #   | Item                                                  | Status                                                                                                        |
-| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| 1   | **"The road reads as alive rather than mechanical"**  | ❌ It does not. Measured: **one vehicle on the road on average, and completely empty 41% of the time.** §4    |
-| 2   | **Zero steady-state allocation / no perf regression** | ❌ 29 B/tick against a budget of 8, and the recorded baseline predates the pipeline doing any work at all. §7 |
+| #   | Item                                                                             | Resolution                                                                                                                                                    |
+| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | The road did not read as alive — 1.05 vehicles on average, empty 41% of the time | **Decision: option B.** Decorative traffic added on top of unchanged demand. Occupancy doubled, empty time cut to 15%, followers now present 37% of ticks. §4 |
+| 2   | Allocation 29 B/tick against a budget of 8                                       | **Decision: budget raised to 32.** Then CI measured **7.4 B/tick** on the same commit — the 29 was one machine's V8, not the code. §7                         |
 
-Item 1 is a conflict between three separately-approved numbers and needs a
-product decision (§4.3). Item 2 is partly a stale baseline and partly an
-unexplained measurement I could not resolve (§7.2) — reported rather than tuned
-away.
-
-**Phases 6 and 7 were not started.** Carrying a phase with two unmet DoD items
-into the next one is exactly what the batch instruction forbids.
-
----
+Everything below the line in §4 and §7 is the original measurement and reasoning,
+kept because the numbers are what the decisions were made on.
 
 ## 2. What was built
 
@@ -121,9 +115,9 @@ so **the car-following model never runs against a leader in normal play** — th
 accordion wave that Phase 5 exists to produce cannot be seen, and the risk table's
 "traffic looks like a conveyor belt" is beaten only by there being no belt.
 
-### 4.3 This needs a decision, not a fix
+### 4.3 The decision, and what it produced
 
-Every remedy changes an approved contract, so none was applied:
+**Approved 2026-08-15: option B.** The four options as originally presented:
 
 | Option                                                                                      | Cost                                                                                              |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -132,10 +126,60 @@ Every remedy changes an approved contract, so none was applied:
 | **C.** Slow vehicles to ~25 km/h                                                            | Doubles occupancy to ~2. Not enough alone, and 25 km/h on an open road is not credible            |
 | **D.** Lengthen the road and pull the camera back                                           | Visible density is set by the camera, not the lane; changes framing and every golden              |
 
-**Recommendation: B.** It is the only one that leaves the economy's calibration
-untouched — 24 converting-eligible vehicles per minute stays exactly as designed,
-and the road gets the density the fantasy needs. It is still a design change and
-belongs to the user.
+**Option B was chosen** — the only one that leaves the economy's calibration
+untouched.
+
+### 4.4 What decorative traffic actually did
+
+Two independent Poisson processes rather than one with marked arrivals. Marking
+is mathematically exact and needs only one cursor, but a shared process shares
+its refusals, and congestion — the entire point of the decorative layer — starved
+convertible arrivals from 24/min down to a measured **7.3/min**. Convertible now
+runs first and claims lane space first.
+
+That alone was not enough: a decorative vehicle admitted two seconds ago already
+occupies the lane head. Decorative traffic therefore needs a much larger entry
+gap (28 m against 12 m), reserving the space between the two for the traffic the
+economy depends on.
+
+Tuned by measuring a full game day at each setting:
+
+| decorative | entry gap | mean on road | ticks with a follower | delivered convertible |
+| ---------- | --------: | -----------: | --------------------: | --------------------: |
+| none       |         — |         1.05 |                   ~0% |              21.2/min |
+| ×3         |      34 m |         1.76 |                 26.6% |              20.3/min |
+| **×4**     |  **28 m** |     **2.05** |             **36.6%** |          **19.5/min** |
+| ×4         |      22 m |         2.26 |                 47.5% |              18.3/min |
+| ×6         |      24 m |         2.34 |                 50.1% |              18.0/min |
+
+Result against the original problem:
+
+|                               | before |     after |
+| ----------------------------- | -----: | --------: |
+| mean vehicles on the road     |   1.05 |  **2.05** |
+| road completely empty         |  40.9% | **14.6%** |
+| ticks with a follower present |    ~0% | **36.6%** |
+
+**Honest judgement on "does the road read as alive":** materially better, not
+transformed. Car following now happens more than a third of the time, so the
+accordion wave the model exists for actually runs in normal play, and the road is
+rarely empty. But at peak hour it shows two to three vehicles, not a stream. A
+36 m lane at 13.9 m/s carries about 45 vehicles a minute in total, and 24 of
+those must stay convertible, so ~2 average occupancy is the ceiling this road
+allows. Reading it as _busy_ traffic would need a longer road or a slower speed
+limit, both outside this decision.
+
+### 4.5 A finding that changes what 24/min means
+
+**The road never delivered 24 convertible vehicles a minute, and never had.**
+Even with no decorative traffic at all it delivered **21.2/min**, because ~12% of
+arrivals are refused when a lane head is occupied. Decorative traffic takes that
+to 19.5/min.
+
+The economy is calibrated on 24. The road supplies 19.5. That gap is not
+introduced by this phase — it was there from the first measurement — but it is
+recorded here because Phase 9 will calibrate revenue against a demand figure that
+the road does not actually deliver.
 
 ---
 
@@ -192,66 +236,75 @@ edge paths — the same treatment Phase 2 applied, and **not** by moving the flo
 | Spawn/despawn per entity < 5 µs    | pass        |
 | Save serialise < 8 ms              | pass        |
 
-### 7.2 Failing
+### 7.2 Resolved — and the resolution found something better
 
-**Allocation: 29 B/tick against a budget of 8.** Both numbers are real. The
-budget was set in Phase 2 when every one of the eighteen system slots was a
-no-op, so "essentially nothing per tick" was measured against a pipeline that did
-nothing. Bisected as far as: the spawn system contributes ~6 B/tick and the
-motion system ~16 B/tick, but **each of the motion system's three passes measures
-0.17 B/tick in isolation while the three together measure 16** — and no
-individual operation inside them allocates when measured alone. Empty class
-instances in the same pipeline position allocate nothing, so it is not the call
-site's shape.
+**Allocation.** Measured 29 B/tick locally against a budget of 8. The budget was
+set in Phase 2 when all eighteen system slots were no-ops, so "essentially
+nothing per tick" had been calibrated against a pipeline that did nothing. Three
+bisection passes could not isolate the source: each of the motion system's three
+passes measured 0.17 B/tick alone while the three together measured 16, and no
+individual operation inside them allocated on its own.
 
-I could not explain this and stopped rather than guess. In practical terms 29
-B/tick is 580 B/s at 20 Hz, about 2 MB per hour — a minor collection every few
-minutes, well below anything that produces the frame stutter the budget exists to
-prevent. That is an argument for revisiting the budget consciously, **not** for
-quietly editing the number, so the test is left failing.
+The owner raised the budget to 32 B/tick on the arithmetic — 580 B/s, about 2 MB
+an hour, far below anything that causes the stutter the budget exists to prevent.
 
-**Regression gate: "1000 empty ticks" 1.53 ms vs a 0.27 ms baseline.** The
-baseline was recorded on the empty pipeline. Three systems now do real work every
-tick, so this is a genuine and expected workload change rather than a regression —
-and the absolute budget for the same measurement (5 ms) passes with 3× headroom.
-Re-recording the baseline from CI is the correct action and is a deliberate act
-that should be visible, so it has not been done unilaterally.
+**Then CI measured 7.4 B/tick on the same commit.** The 29 is a property of one
+developer machine's V8, not of the simulation — which is also why the source
+could never be found: there was nothing to find. The raised ceiling stays,
+because it stops the gate depending on whose machine runs it, but the number that
+describes the code is CI's 7.4 and that is what the baseline records.
+
+**The regression gate.** Re-recording the baseline from CI exposed a deeper
+problem: the identical commit re-ran on GitHub Actions six minutes later and
+reported itself **47–68% slower**. Taking the minimum of 25 samples removes
+scheduler contention but cannot remove a different CPU, and the runner fleet is
+heterogeneous.
+
+Every timing is now divided by a calibration workload run in the same process, so
+machine speed cancels and the comparison is a ratio. The 15% threshold is
+untouched; only the quantity compared changed. The validation is that a baseline
+recorded on a laptop now passes on CI — which is what a regression gate has to be
+able to do to be worth having.
+
+An earlier attempt gated the comparison to CI only. That was the wrong fix: it
+made the gate silent for developers and would still have failed, because the
+variance is between runs rather than between machine classes.
 
 ### 7.3 Not measured
 
 **No real-GPU frame rate.** The Phase 3 measurement stands and was not re-run.
-The 120-vehicle render target cannot be measured meaningfully at stage 1 anyway,
-because the road never holds more than five vehicles (§4.1) — measuring it needs
-either the §4.3 decision or an artificial stress scene, and inventing one to
-produce a number would be measuring the harness rather than the game.
+The 120-vehicle render target still cannot be measured meaningfully at stage 1:
+even with decorative traffic the road peaks at about seven vehicles, because
+that is what a 36 m lane holds. Measuring 120 needs an artificial stress scene,
+and inventing one to produce a number would be measuring the harness rather than
+the game.
 
 ---
 
-## 8. The time-scale decision — not made
+## 8. The time-scale decision — still open, and honestly so
 
 GDD §25 S1 asks how many real minutes make one game day, with 12 as the
-candidate, to be decided **by playing**. It is not decided here, and the reason is
-§4: at one vehicle on screen and an empty road 41% of the time, there is nothing
-to judge a day's rhythm against. Comparing 8, 12 and 18 minutes would be
-comparing three versions of an empty road, and recording a decision from that
-would be fabricating the judgement the roadmap explicitly asks a human to make by
-playing.
+candidate, to be decided **by playing**. `MS_PER_GAME_DAY` remains at 12 real
+minutes and is still marked provisional.
 
-`MS_PER_GAME_DAY` remains at 12 real minutes, still marked provisional. The
-decision is deferred until the traffic density question is settled, and it should
-be cheap then — the machinery to compare is all in place.
+The density blocker is gone, so the comparison is now possible — but it is a
+judgement the roadmap explicitly asks a _human_ to make by playing, about whether
+a peak hour feels like a peak and whether a six-minute session shows the rhythm
+change. An agent reporting a verdict on that would be fabricating the one thing
+the instruction was careful to assign to a person. The machinery is in place:
+`?seed=&freezeAt=` and the day curve make an 8/12/18 comparison a few minutes of
+play.
 
 ---
 
 ## 9. What Phase 5 leaves open
 
-1. **Traffic density** — §4.3, a product decision.
-2. **The allocation budget** — §7.2, an unexplained 29 B/tick and a budget set
-   against an empty pipeline.
-3. **The perf baseline** — stale by construction; re-record from CI.
-4. **The time-scale decision** — blocked on 1.
-5. **Real-GPU FPS with traffic** — blocked on 1.
-6. **Phaser WebGL1/WebGL2** — untouched, still open from Phase 3, still not
+1. **The time-scale decision** — a human judgement, made by playing (§8).
+2. **Delivered demand is 19.5/min against a calibrated 24** (§4.5). Not
+   introduced here, but Phase 9 will calibrate revenue against it.
+3. **Real-GPU FPS with traffic** — the road holds ~7 vehicles, so the
+   120-vehicle target needs a stress scene rather than gameplay (§7.3).
+4. **Phaser WebGL1/WebGL2** — untouched, still open from Phase 3, still not
    blocking.
 
 ---
@@ -268,6 +321,12 @@ and an empty road four ticks in ten. That is not something the phase can fix fro
 inside its own scope, because the three numbers producing it were each approved
 separately and each is correct on its own.
 
-**Phase 5: PARTIAL.** Reporting it as a pass would require either ignoring its
-own DoD or quietly changing an approved economic constant, and both are worse
-than saying it plainly.
+**Phase 5: PASS**, with both blocking items resolved by recorded executive
+decision rather than by quietly moving a number.
+
+Worth keeping visible: reporting this phase as PARTIAL first is what produced the
+two most useful findings in it. The density measurement led to a design decision
+that doubled the road's occupancy, and re-recording the "stale" baseline exposed
+a regression gate that had never been able to work on shared runners — and, along
+the way, showed that the 29 B/tick allocation problem did not exist outside one
+laptop.

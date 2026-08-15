@@ -458,65 +458,61 @@ Dal `phase/05-traffic`, `e7a997e`'ten. Mevcut mimari incelendi; yeniden yazılma
 `VehicleStore` zaten `laneS/speed/state/archetype` taşıyordu (Faz 2'de "Faz 5 dolduracak" diye
 bırakılmış), `SYSTEM_ORDER`'da dört trafik yuvası zaten ayrılmıştı.
 
-### BATCH 5–7 · CHECKPOINT O — P5 tamamlandı (2026-08-15) 🟡 KISMİ
+### BATCH 5–7 · CHECKPOINT O — P5 tamamlandı (2026-08-15) ✅ PASS
 
-| Kanıt                                        | Değer                                                                                  |
-| -------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Testler                                      | **723** (Faz 4 sonu 709 → +14 net; trafik için 95 yeni test)                           |
-| Coverage                                     | statements %97.51 · branches %89.09 · functions %97.13 · lines %98.64                  |
-| Bundle                                       | **414.22 kB** gzip / 550 kB                                                            |
-| depcruise / knip / typecheck / lint / format | hepsi temiz                                                                            |
-| Perf                                         | 10 bütçeden **8'i geçti**; ikisi düştü (§7)                                            |
-| Save şeması                                  | **v2 → v3** — Poisson imleci kalıcı duruma girdi, migration + `save-v3.json` fixture'ı |
-| Rapor                                        | [PHASE_5_REPORT.md](phases/PHASE_5_REPORT.md)                                          |
+Önce KISMİ raporlandı; iki DoD maddesi **kullanıcı kararıyla** çözüldü ve uygulandı.
+Kayıt "geçersiz kılındı ve uygulandı" diyor, "sessizce sağlandı" demiyor.
 
-**İki DoD maddesi karşılanmadı — ve ikisi de "daha çok kod yazarak" çözülmüyor:**
+| Kanıt       | Değer                                                        |
+| ----------- | ------------------------------------------------------------ |
+| Testler     | **727** · branches %89+                                      |
+| CI          | **15/15 yeşil** — PR #13                                     |
+| Bundle      | 414 kB gzip / 550 kB                                         |
+| Save şeması | **v2 → v3 → v4**, her biri migration + commit'li fixture ile |
+| Rapor       | [PHASE_5_REPORT.md](phases/PHASE_5_REPORT.md)                |
 
-**1. Yol canlı görünmüyor.** Ölçüldü (tam bir oyun günü, seed 424242, aşama 1):
+**Karar 1 — dekoratif trafik (seçenek B).** Ekonominin 24 araç/dk dönüşebilir talebi
+değişmedi; yola dönüşemeyen ama süren, frenleyen, dalga yayan araçlar eklendi.
 
-```
-şerit 36 m · 1 oyun günü = 12 gerçek dk
-yolda ortalama araç      1.05     p50 1   p95 3   tepe 5
-yol TAMAMEN BOŞ          zamanın %40.9'u
-ortalama hız             11.9 m/s
-254 spawn, 29 reddedildi (%10.2)
-```
+|                            |  önce |     sonra |
+| -------------------------- | ----: | --------: |
+| yolda ortalama araç        |  1.05 |  **2.05** |
+| yol tamamen boş            | %40.9 | **%14.6** |
+| takipçi bulunan tick oranı |   ~%0 | **%36.6** |
 
-Gerçek tarayıcıda günün en yoğun saatinde (18:00, eğrinin en büyük tepesi) **ekranda bir araç**.
+Tek işaretlenmiş süreç yerine **iki bağımsız Poisson süreci**: paylaşılan süreç
+reddedilenleri de paylaşıyor ve tıkanıklık — dekoratif katmanın bütün amacı —
+dönüşebilir talebi 24'ten **7.3/dk**'ya düşürdü. Ayrıca dekoratif trafiğe daha
+büyük giriş boşluğu (28 m / 12 m) verildi; yoksa iki saniye önce giren dekoratif
+araç zaten şerit başını tutuyor.
 
-Sebep, ayrı ayrı onaylanmış üç sayının birbiriyle uyuşmaması: şerit 36 m (Faz 3 layout'u) · ~13.9 m/s
-(gerçek araç hızı) · 24 araç/gerçek dk (ECONOMY_DESIGN §3). Geçiş süresi 2.6 s, varış 0.4/s →
-beklenen doluluk 1.04. **Uygulama doğru çalışıyor; sayılar trafik üretmiyor.** Üstelik tek araçla
-hiçbir zaman takip eden bir araç olmuyor, yani IDM'in var oluş sebebi olan akordeon dalgası normal
-oyunda hiç görünmüyor.
+**Dürüst yargı:** belirgin biçimde daha iyi ama "yoğun trafik" değil. Tepe saatte
+2–3 araç. 36 m şerit 13.9 m/s'de toplam ~45 araç/dk taşıyor ve bunun 24'ü
+dönüşebilir kalmak zorunda, yani ~2 ortalama doluluk bu yolun tavanı.
 
-Dört çözüm seçeneğinin dördü de onaylı bir sözleşmeyi değiştiriyor → **karar kullanıcının**,
-sessizce uygulanmadı. Öneri: seçenek B (24/dk "dönüşebilir talep" olarak kalsın, üstüne dekoratif
-trafik) — ekonominin kalibrasyonuna dokunmayan tek seçenek. Ayrıntı: PHASE_5_REPORT §4.3.
+**Ve ortaya çıkan asıl bulgu:** yol 24 araç/dk'yı **hiçbir zaman teslim etmedi.**
+Dekoratif trafik yokken bile 21.2/dk idi (varışların ~%12'si şerit başı doluyken
+reddediliyor); şimdi 19.5/dk. Ekonomi 24'e göre kalibre; yol 19.5 veriyor. Faz 9
+bunu bilerek kalibre etmeli.
 
-**2. Tahsis bütçesi.** 29 B/tick, bütçe 8. İkisi de gerçek: bütçe Faz 2'de **18 yuvanın hepsi
-no-op'ken** ölçülmüştü. Bisect edildi — spawn ~6, motion ~16 B/tick, ama motion'ın üç geçişinin
-**her biri tek başına 0.17 B/tick**, üçü birlikte 16. İçlerindeki hiçbir tekil işlem tek başına
-tahsis etmiyor; aynı boru hattı konumundaki boş sınıflar da etmiyor. **Açıklayamadım ve tahmin
-yürütmek yerine durdurdum.** Pratikte 29 B/tick = 20 Hz'de 580 B/s ≈ saatte 2 MB — bütçenin
-engellemek için var olduğu kare takılmasının çok altında. Bu, bütçeyi **bilinçli olarak** gözden
-geçirmek için bir argüman; sayıyı sessizce düzenlemek için değil. **Test düşük bırakıldı.**
+**Karar 2 — tahsis bütçesi 8 → 32 B/tick.** Uygulandı. **Sonra CI aynı commit'te
+7.4 B/tick ölçtü.** 29 B/tick tek bir geliştirici makinesinin V8'inin özelliğiymiş,
+kodun değil — üç bisect turunun kaynağı bulamamasının sebebi de buymuş: bulunacak
+bir tahsis yoktu. Tavan yerinde kaldı (kapının kimin makinesinde koştuğuna bağlı
+olmasını engelliyor), ama kodu tanımlayan sayı CI'ın 7.4'ü.
 
-Regresyon kapısı da düştü (1.53 ms / 0.27 ms baseline) ama aynı sebepten: baseline boş boru hattında
-kaydedilmişti. Aynı ölçümün mutlak bütçesi (5 ms) 3× payla geçiyor. Baseline'ın CI'dan yeniden
-kaydedilmesi doğru adım ve **görünür bir eylem olmalı**, tek taraflı yapılmadı.
+**Bunu düzeltirken çok daha önemli bir kusur çıktı:** regresyon kapısı paylaşılan
+CI runner'larında **hiç çalışamıyordu.** CI'da kaydedilen baseline, aynı commit
+altı dakika sonra CI'da tekrar koştuğunda kendini **%47–68 yavaş** raporladı.
+25 örneğin minimumu scheduler gürültüsünü siliyor ama farklı bir CPU'yu silemiyor.
+Artık her ölçüm aynı süreçte koşan bir **kalibrasyon iş yüküne bölünüyor** — makine
+hızı sadeleşiyor. %15 eşiği değişmedi; yalnızca karşılaştırılan büyüklük
+karşılaştırılabilir olacak şekilde seçildi. Doğrulaması: dizüstünde kaydedilen
+baseline artık CI'da geçiyor.
 
-**Zaman ölçeği kararı verilmedi** — GDD §25 S1. Sebep: boş bir yolun 8/12/18 dakikalık üç versiyonunu
-karşılaştırmak, roadmap'in insandan _oynayarak_ vermesini istediği yargıyı uydurmak olurdu.
-`MS_PER_GAME_DAY` 12 dakikada, hâlâ provizyonel.
-
-**Faz 5'in bulduğu altı gerçek hata** — hepsi düzeltildi, ayrıntısı raporda §5. En dikkate değeri:
-şerit meşgulse varış **tamamen düşüyordu — tüm talebin %23'ü**, koddan görünmeyen, ekonominin asla
-göremeyeceği sessiz bir kayıp. İlk davranış ölçümünde yakalandı.
-
-**P6 ve P7 BAŞLATILMADI.** İki DoD maddesi açıkken bir sonraki faza geçmek, batch talimatının
-açıkça yasakladığı şey ("no unresolved blocking problem" / "never carry a known failure into the
-next phase").
+**Zaman ölçeği kararı hâlâ açık** — yoğunluk engeli kalktı, ama bu roadmap'in
+açıkça _insana_ bıraktığı, oynayarak verilecek bir yargı. Ajanın hüküm vermesi
+tam da o talimatın önlemek istediği şey olurdu.
 
 ---
 
