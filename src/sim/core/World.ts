@@ -2,8 +2,10 @@ import { ACTOR_KIND_EMPLOYEE } from '@config/actors';
 import { CONVERSION_REASONS } from '@config/conversion';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
-import type { ActorRecord, OrderRecord } from '../stores/actors';
-import { createActorPool, createOrderPool, writeActor, writeOrder } from '../stores/actors';
+import type { ActorRecord } from '../stores/actors';
+import { createActorPool, writeActor } from '../stores/actors';
+import type { OrderRecord } from '../stores/OrderStore';
+import { createOrderPool, writeOrder } from '../stores/OrderStore';
 import type { CustomerRecord } from '../stores/customers';
 import { createCustomerPool, writeCustomer } from '../stores/customers';
 import type { SlotPool } from '../stores/pool';
@@ -86,6 +88,7 @@ export class World {
     conversionsFailed: 0,
     turnedAwayNoParking: 0,
     customersAbandoned: 0,
+    ordersWasted: 0,
     vehiclesSpawned: 0,
     convertibleSpawned: 0,
     commandsApplied: 0,
@@ -210,6 +213,7 @@ export class World {
     h.writeU32(this.stats.conversionsFailed);
     h.writeU32(this.stats.turnedAwayNoParking);
     h.writeU32(this.stats.customersAbandoned);
+    h.writeU32(this.stats.ordersWasted);
     h.writeU32(this.stats.vehiclesSpawned);
     h.writeU32(this.stats.convertibleSpawned);
     h.writeU32(this.stats.commandsApplied);
@@ -263,6 +267,7 @@ export class World {
     this.stats.conversionsFailed = 0;
     this.stats.turnedAwayNoParking = 0;
     this.stats.customersAbandoned = 0;
+    this.stats.ordersWasted = 0;
     this.stats.failureReasons.fill(0);
     this.stats.vehiclesSpawned = 0;
     this.stats.convertibleSpawned = 0;

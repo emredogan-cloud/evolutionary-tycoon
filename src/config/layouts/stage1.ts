@@ -95,6 +95,16 @@ export interface StageLayout {
   /** Index 0 is at the counter; a customer joins at the highest free index. */
   readonly queue: readonly QueueSlot[];
   /**
+   * Where somebody stands after ordering, while their food is made.
+   *
+   * A separate list from the queue, because they are a separate thing: the queue
+   * is people waiting for *attention* and this is people waiting for *food*, and
+   * they must not be in each other's way. Without it, a customer who ordered
+   * simply stopped where they stood — on the queue — and the next person walked
+   * into them. Measured before it existed: closest approach 7.9 cm.
+   */
+  readonly waitingArea: readonly QueueSlot[];
+  /**
    * Queue slots beyond this count as spilled onto the road.
    *
    * Below `queue.length` on purpose: the last authored slots exist so that an
@@ -203,6 +213,34 @@ export const STAGE1_LAYOUT: StageLayout = {
     { x: 13.4, y: 6.7 },
   ],
   queueCapacity: 4,
+
+  /*
+   * All on **one** side of the counter, and that is the point rather than a
+   * shortcut. Spots on both sides were tried first: two people assigned to
+   * opposite sides walk straight across the front of the counter, meet in the
+   * middle, and the non-overlap correction cannot separate them because the only
+   * way apart is into the counter itself. Measured at 5.4 cm closest approach.
+   *
+   * Two rows, 1.8 m apart, with the gap between them used as the approach. The
+   * rows started 0.9 m apart and that was too close: somebody assigned a spot at
+   * the far end had to walk *along* an occupied row to reach it, passing every
+   * standing person at half the spacing — 15 cm closest approach. The aisle
+   * keeps a passer-by 0.9 m from both rows, which is the same distance the rows
+   * themselves are spaced at.
+   *
+   * Eight spots so a busy stand has somewhere to put everyone. Clear of the
+   * queue, which runs down the x = 12 corridor towards the road.
+   */
+  waitingArea: [
+    { x: 14.6, y: 10.0 },
+    { x: 15.5, y: 10.0 },
+    { x: 16.4, y: 10.0 },
+    { x: 17.3, y: 10.0 },
+    { x: 14.6, y: 11.8 },
+    { x: 15.5, y: 11.8 },
+    { x: 16.4, y: 11.8 },
+    { x: 17.3, y: 11.8 },
+  ],
 
   statics: [
     { objectId: 'ph-prop-short', x: 12, y: 11, z: 0 }, // the counter itself

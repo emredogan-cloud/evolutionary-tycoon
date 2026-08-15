@@ -28,6 +28,12 @@ describe('EventQueue', () => {
         'VEHICLE_PARKED',
         'CUSTOMER_SPAWNED',
         'CUSTOMER_LEFT_ANGRY',
+        // Phase 8 — the service loop.
+        'ORDER_PLACED',
+        'PREP_STARTED',
+        'ORDER_READY',
+        'ORDER_DELIVERED',
+        'PAYMENT',
       ].sort(),
     );
   });

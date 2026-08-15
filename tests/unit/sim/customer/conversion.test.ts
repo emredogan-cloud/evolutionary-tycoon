@@ -318,7 +318,21 @@ describe('the single roll', () => {
      * — and the seeded queue would evaporate before anyone drove past. Their
      * patience is set absurdly high so they are still standing there for the
      * whole run rather than abandoning halfway through and changing the answer.
+     *
+     * The order pool is exhausted first, which is what keeps the queue *long*.
+     * Phase 8 gave the front of the queue a way out, so without this the line
+     * drains as fast as it forms and the queue penalty never dominates. A full
+     * order pool is a real state — `ServiceSystem` sends the customer back to
+     * queueing when it cannot take their order — and it is exactly the state a
+     * stand with a hopeless backlog is in.
      */
+    const heldOrders: number[] = [];
+    for (;;) {
+      const held = sim.world.orders.acquire();
+      if (held < 0) break;
+      heldOrders.push(held);
+    }
+    expect(heldOrders.length).toBeGreaterThan(0);
     for (let i = 0; i < STAGE1_LAYOUT.queue.length; i++) {
       const slot = sim.world.customers.acquire();
       if (slot < 0) break;

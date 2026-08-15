@@ -7,8 +7,11 @@ import { FlowFieldCache } from '../nav/FlowFieldCache';
 import { ManeuverTable } from '../nav/maneuvers';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
+import { KitchenSystem } from './KitchenSystem';
 import { NavigationSystem } from './NavigationSystem';
 import { QueueSystem } from './QueueSystem';
+import { SatisfactionSystem } from './SatisfactionSystem';
+import { ServiceSystem } from './ServiceSystem';
 import { TimeSystem } from './TimeSystem';
 import { VehicleManeuverSystem } from './VehicleManeuverSystem';
 import { TrafficSpawnSystem } from './TrafficSpawnSystem';
@@ -18,8 +21,9 @@ import { VehicleMotionSystem } from './VehicleMotionSystem';
  * The eighteen reserved slots, filled in as their phases land.
  *
  * Phase 2 built the machine and left every slot a no-op; Phase 5 filled the
- * traffic slots and Phase 6 the customer ones. The rest still do nothing, and
- * each is replaced in the phase noted beside it in `SYSTEM_ORDER`.
+ * traffic slots, Phase 6 the customer ones, Phase 7 navigation, and Phase 8 the
+ * kitchen and service. The rest still do nothing, and each is replaced in the
+ * phase noted beside it in `SYSTEM_ORDER`.
  *
  * Clock advancement deliberately does *not* live in `TimeSystem`. Advancing
  * simulation time is the definition of a tick rather than the behaviour of one
@@ -86,6 +90,16 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
     NavigationSystem: new NavigationSystem(stage1Fields(), world.customers.capacity),
     CustomerFsmSystem: new CustomerFsmSystem(STAGE1_LAYOUT, maneuverSystem),
     QueueSystem: new QueueSystem(STAGE1_LAYOUT),
+    /*
+     * The kitchen runs before the service, so a plate that finishes this tick is
+     * handed over on the same tick rather than the next. The reverse order costs
+     * 50 ms of a customer standing beside their finished food, which is small
+     * and is exactly the kind of thing the fixed slot order exists to make a
+     * deliberate choice rather than an accident.
+     */
+    KitchenSystem: new KitchenSystem(),
+    ServiceSystem: new ServiceSystem(),
+    SatisfactionSystem: new SatisfactionSystem(),
   };
   return SYSTEM_ORDER.map((name) => filled[name] ?? NOOP_SYSTEMS[name]);
 }

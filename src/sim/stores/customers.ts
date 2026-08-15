@@ -39,6 +39,16 @@ export interface CustomerRecord {
   parkingSlot: number;
   /** Position in the counter queue, or -1 when not queueing. */
   queueIndex: number;
+  /**
+   * Spot in the waiting area, or -1.
+   *
+   * Held once assigned, and that is the whole point of storing it. Choosing the
+   * nearest free spot afresh each tick sounds equivalent and is not: a customer
+   * walking towards one spot passes closer to another, changes their mind, and
+   * two of them end up weaving around each other — measured at 15 cm closest
+   * approach, worse than the first-free rule it replaced.
+   */
+  waitSpot: number;
   /** Milliseconds of patience left in the current waiting state. */
   patienceMs: number;
   /** What that patience started at, so the ring can show a fraction. */
@@ -91,6 +101,7 @@ function createCustomer(): CustomerRecord {
     vehicleSlot: -1,
     parkingSlot: -1,
     queueIndex: -1,
+    waitSpot: -1,
     patienceMs: 0,
     patienceMaxMs: 0,
     timerMs: 0,
@@ -116,6 +127,7 @@ function resetCustomer(record: CustomerRecord): void {
   record.vehicleSlot = -1;
   record.parkingSlot = -1;
   record.queueIndex = -1;
+  record.waitSpot = -1;
   record.patienceMs = 0;
   record.patienceMaxMs = 0;
   record.timerMs = 0;
@@ -148,6 +160,7 @@ export function writeCustomer(hasher: Hasher, record: CustomerRecord): void {
   hasher.writeI32(record.vehicleSlot);
   hasher.writeI32(record.parkingSlot);
   hasher.writeI32(record.queueIndex);
+  hasher.writeI32(record.waitSpot);
   hasher.writeF64(record.patienceMs);
   hasher.writeF64(record.patienceMaxMs);
   hasher.writeF64(record.timerMs);

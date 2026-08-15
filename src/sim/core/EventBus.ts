@@ -6,6 +6,11 @@ import type {
   CustomerLeftAngryEvent,
   CustomerSpawnedEvent,
   DayStartedEvent,
+  OrderDeliveredEvent,
+  OrderPlacedEvent,
+  OrderReadyEvent,
+  PaymentEvent,
+  PrepStartedEvent,
   PauseChangedEvent,
   ReadonlySimEvent,
   SimEvent,
@@ -62,6 +67,16 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'CUSTOMER_SPAWNED', entityId: 0, archetype: 0 };
     case 'CUSTOMER_LEFT_ANGRY':
       return { t: 'CUSTOMER_LEFT_ANGRY', entityId: 0, reason: 0, dwellMs: 0 };
+    case 'ORDER_PLACED':
+      return { t: 'ORDER_PLACED', entityId: 0, customerId: 0, item: 0 };
+    case 'PREP_STARTED':
+      return { t: 'PREP_STARTED', entityId: 0, station: -1, durationMs: 0 };
+    case 'ORDER_READY':
+      return { t: 'ORDER_READY', entityId: 0, item: 0 };
+    case 'ORDER_DELIVERED':
+      return { t: 'ORDER_DELIVERED', entityId: 0, customerId: 0 };
+    case 'PAYMENT':
+      return { t: 'PAYMENT', customerId: 0, amount: 0, tip: 0, satisfaction: 0 };
   }
 }
 
@@ -199,6 +214,55 @@ export class EventQueue {
     event.entityId = entityId;
     event.reason = reason;
     event.dwellMs = dwellMs;
+    this.push(record);
+  }
+
+  emitOrderPlaced(entityId: number, customerId: number, item: number): void {
+    const record = this.lease('ORDER_PLACED');
+    if (record === null) return;
+    const event = record as OrderPlacedEvent;
+    event.entityId = entityId;
+    event.customerId = customerId;
+    event.item = item;
+    this.push(record);
+  }
+
+  emitPrepStarted(entityId: number, station: number, durationMs: number): void {
+    const record = this.lease('PREP_STARTED');
+    if (record === null) return;
+    const event = record as PrepStartedEvent;
+    event.entityId = entityId;
+    event.station = station;
+    event.durationMs = durationMs;
+    this.push(record);
+  }
+
+  emitOrderReady(entityId: number, item: number): void {
+    const record = this.lease('ORDER_READY');
+    if (record === null) return;
+    const event = record as OrderReadyEvent;
+    event.entityId = entityId;
+    event.item = item;
+    this.push(record);
+  }
+
+  emitOrderDelivered(entityId: number, customerId: number): void {
+    const record = this.lease('ORDER_DELIVERED');
+    if (record === null) return;
+    const event = record as OrderDeliveredEvent;
+    event.entityId = entityId;
+    event.customerId = customerId;
+    this.push(record);
+  }
+
+  emitPayment(customerId: number, amount: number, tip: number, satisfaction: number): void {
+    const record = this.lease('PAYMENT');
+    if (record === null) return;
+    const event = record as PaymentEvent;
+    event.customerId = customerId;
+    event.amount = amount;
+    event.tip = tip;
+    event.satisfaction = satisfaction;
     this.push(record);
   }
 

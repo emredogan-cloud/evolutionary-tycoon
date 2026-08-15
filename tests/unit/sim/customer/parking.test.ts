@@ -271,12 +271,21 @@ describe('the customer lifecycle end to end', () => {
         }
       }
 
+      /*
+       * `QUEUEING_AT_COUNTER` is deliberately not in this list, and its absence
+       * is the correct behaviour rather than a gap. Phase 8 lets the front of
+       * the queue order, and a customer arriving at an empty counter is the
+       * front the moment they get there — so they pass through queueing inside
+       * a single tick and it is never observable at a tick boundary. It shows
+       * up when there is an actual line, which `patience.test.ts` covers.
+       */
       for (const state of [
         'ENTERING',
         'PARKING',
         'LEAVING_VEHICLE',
         'WALKING_TO_DOOR',
-        'QUEUEING_AT_COUNTER',
+        'ORDERING',
+        'WAITING_FOR_FOOD',
         'WALKING_TO_CAR',
         'LEAVING_ANGRY',
         'EXITING',

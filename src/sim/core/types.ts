@@ -107,6 +107,13 @@ export interface StatsState {
   turnedAwayNoParking: number;
   /** Customers who ran out of patience and left. */
   customersAbandoned: number;
+  /**
+   * Food made for somebody who left before collecting it.
+   *
+   * The cost of abandonment, made countable. A stand losing money to waste looks
+   * exactly like one that is simply slow, until this number separates them.
+   */
+  ordersWasted: number;
   vehiclesSpawned: number;
   /**
    * Of those, how many could ever become customers.

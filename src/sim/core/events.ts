@@ -119,6 +119,53 @@ export interface CustomerLeftAngryEvent {
   dwellMs: number;
 }
 
+/** A customer said what they want. */
+export interface OrderPlacedEvent {
+  readonly t: 'ORDER_PLACED';
+  entityId: number;
+  customerId: number;
+  /** Index into `MENU`. */
+  item: number;
+}
+
+/** Preparation began at a station. Carries the duration so the ring can fill. */
+export interface PrepStartedEvent {
+  readonly t: 'PREP_STARTED';
+  entityId: number;
+  station: number;
+  durationMs: number;
+}
+
+/** A plate reached the pass, and started going cold. */
+export interface OrderReadyEvent {
+  readonly t: 'ORDER_READY';
+  entityId: number;
+  item: number;
+}
+
+/** A plate reached the customer who ordered it. */
+export interface OrderDeliveredEvent {
+  readonly t: 'ORDER_DELIVERED';
+  entityId: number;
+  customerId: number;
+}
+
+/**
+ * Money changed hands — the event the whole loop exists to produce.
+ *
+ * Amount, tip and satisfaction together, because they are computed from the same
+ * numbers on the same tick and separating them would give three consumers three
+ * chances to disagree about what happened. Phase 9's economy reads it, Phase 17
+ * plays a sound on it, Phase 18 charts it.
+ */
+export interface PaymentEvent {
+  readonly t: 'PAYMENT';
+  customerId: number;
+  amount: number;
+  tip: number;
+  satisfaction: number;
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
@@ -130,7 +177,12 @@ export type SimEvent =
   | ConversionFailedEvent
   | VehicleParkedEvent
   | CustomerSpawnedEvent
-  | CustomerLeftAngryEvent;
+  | CustomerLeftAngryEvent
+  | OrderPlacedEvent
+  | PrepStartedEvent
+  | OrderReadyEvent
+  | OrderDeliveredEvent
+  | PaymentEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -153,6 +205,11 @@ export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'VEHICLE_PARKED',
   'CUSTOMER_SPAWNED',
   'CUSTOMER_LEFT_ANGRY',
+  'ORDER_PLACED',
+  'PREP_STARTED',
+  'ORDER_READY',
+  'ORDER_DELIVERED',
+  'PAYMENT',
 ];
 
 /**

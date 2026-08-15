@@ -21,6 +21,7 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { atIn } from '../math/typedArray';
+import { discardOrdersFor } from './ServiceSystem';
 import { VEHICLE_EXITING } from './VehicleManeuverSystem';
 import type { VehicleManeuverSystem } from './VehicleManeuverSystem';
 
@@ -229,6 +230,13 @@ export class CustomerFsmSystem implements SimSystem {
     if (vehicleSlot >= 0 && world.vehicles.isActive(vehicleSlot)) {
       world.vehicles.customerSlot[vehicleSlot] = -1;
     }
+    /*
+     * Their order goes with them. An order left behind holds its station and its
+     * pool slot forever, and the pool fills — measured at thirty live orders
+     * against four live customers, after which nobody could order at all and the
+     * stand quietly stopped taking money.
+     */
+    discardOrdersFor(world, slot);
     world.customers.release(slot);
   }
 

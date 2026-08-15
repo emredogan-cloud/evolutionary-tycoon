@@ -40,6 +40,16 @@ import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
 /** The physical floor on deceleration, shared with the follower model. */
 const MAX_BRAKE_METRES_PER_SECOND_SQUARED = IDM.maxBrake;
 
+/**
+ * How much daylight the gap clamp leaves between two cars, in metres.
+ *
+ * Five centimetres. Clamping to exactly the leader's rear bumper is enough to
+ * stop an overlap and leaves them touching, which is both wrong on screen and
+ * makes "the gap is always positive" a claim nobody can assert. This is the
+ * smallest number that keeps it true.
+ */
+const BUMPER_GAP_METRES = 0.05;
+
 export class VehicleMotionSystem implements SimSystem {
   readonly name = 'VehicleMotionSystem' as const;
 
@@ -193,6 +203,49 @@ export class VehicleMotionSystem implements SimSystem {
   }
 
   /**
+   * Stop a follower ending the tick inside its leader.
+   *
+   * The follower model keeps a positive gap by making the acceleration sharply
+   * negative as the gap closes, and that is *almost* enough: over a simulated
+   * hour a follower closing on a car braking for the entrance overshot by 4 cm,
+   * because a tick is a finite step and the braking it computed was applied over
+   * the whole of it.
+   *
+   * Four centimetres on a 4.5 m car is invisible, and "vehicles never overlap"
+   * being *almost* true is the wrong kind of almost — it is a property the
+   * renderer, the spawn headway and every future overtaking rule all assume. So
+   * it is enforced rather than approximated: a follower is clamped to its
+   * leader's rear bumper, and its speed drops to the leader's, which is what
+   * physically happened.
+   *
+   * The pass walks each lane leader-first, so a clamp propagates backwards
+   * through a queue in the same tick rather than one car per tick.
+   */
+  private enforceGaps(world: World): void {
+    const vehicles = world.vehicles;
+    const laneCount = this.lanes.laneCount;
+
+    for (let lane = 0; lane < laneCount; lane++) {
+      const start = at(this.laneOffsets, lane);
+      const count = at(this.laneCounts, lane);
+
+      for (let i = 1; i < count; i++) {
+        const leader = at(this.ordered, start + i - 1);
+        const slot = at(this.ordered, start + i);
+        if (!this.onRoad(vehicles, leader) || !this.onRoad(vehicles, slot)) continue;
+
+        const leaderSpec = ARCHETYPE_SPECS[at(vehicles.archetype, leader)];
+        const limit = at(vehicles.laneS, leader) - (leaderSpec?.lengthMetres ?? 4.5) - BUMPER_GAP_METRES;
+        if (at(vehicles.laneS, slot) <= limit) continue;
+
+        vehicles.laneS[slot] = limit;
+        const leaderSpeed = at(vehicles.speed, leader);
+        if (at(vehicles.speed, slot) > leaderSpeed) vehicles.speed[slot] = leaderSpeed;
+      }
+    }
+  }
+
+  /**
    * Live, and still under the traffic model's control.
    *
    * A vehicle mid-manoeuvre is on a Bézier rather than a lane, so it must not be
@@ -221,6 +274,8 @@ export class VehicleMotionSystem implements SimSystem {
       vehicles.speed[slot] = speed;
       vehicles.laneS[slot] = at(vehicles.laneS, slot) + speed * seconds;
     }
+
+    this.enforceGaps(world);
 
     // Despawn in a separate pass. Freeing a slot mid-scan would let the store
     // hand it straight back out and the loop would process the same index twice.

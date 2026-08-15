@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Hasher } from '@sim/math/hash';
 import { ACTOR_KIND_CUSTOMER } from '@config/actors';
 import type { ActorRecord } from '@sim/stores/actors';
-import { createActorPool, createOrderPool, writeActor, writeOrder } from '@sim/stores/actors';
+import { createActorPool, writeActor } from '@sim/stores/actors';
+import { createOrderPool, writeOrder } from '@sim/stores/OrderStore';
 import type { SlotPool } from '@sim/stores/pool';
 import { VehicleStore } from '@sim/stores/VehicleStore';
 
