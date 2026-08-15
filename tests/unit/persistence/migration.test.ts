@@ -28,17 +28,47 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 2, with one registered migration', () => {
+  it('the current version is 3, with two registered migrations', () => {
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(2);
-    expect(migrations).toHaveLength(1);
+    expect(CURRENT_SCHEMA_VERSION).toBe(3);
+    expect(migrations).toHaveLength(2);
   });
 
   it('a save already at the current version needs no steps', () => {
-    const outcome = migrateToCurrent({ schemaVersion: 2 }, 2);
+    const outcome = migrateToCurrent({ schemaVersion: 3 }, 3);
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
     expect(outcome.steps).toBe(0);
+  });
+
+  it('v2 → v3 gives the world a traffic arrival cursor', () => {
+    // Vehicles are transient and are not saved, but the Poisson cursor decides
+    // every FUTURE arrival — a save without it resumes on a different traffic
+    // stream from the same seed. 0 means "due immediately", which is how a fresh
+    // world starts, and the spawn system snaps a past-due cursor to now.
+    const outcome = migrateToCurrent({ schemaVersion: 2, stats: { vehiclesSpawned: 7 } }, 2);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(1);
+    expect(outcome.save['schemaVersion']).toBe(3);
+    expect(outcome.save['traffic']).toEqual({ nextCandidateMs: 0 });
+    // Everything else is left exactly as it was.
+    expect(outcome.save['stats']).toEqual({ vehiclesSpawned: 7 });
+  });
+
+  it('v1 → v3 runs both steps in order', () => {
+    const outcome = migrateToCurrent(
+      { schemaVersion: 1, layout: { placed: [{ objectId: 'a', x: 0, y: 0 }] } },
+      1,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(2);
+    expect(outcome.save['schemaVersion']).toBe(3);
+    expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
+      { objectId: 'a', x: 0, y: 0, z: 0 },
+    ]);
+    expect(outcome.save['traffic']).toEqual({ nextCandidateMs: 0 });
   });
 
   it('v1 → v2 gives every placed object a ground-level height', () => {
@@ -60,8 +90,10 @@ describe('migration chain', () => {
 
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(1);
-    expect(outcome.save['schemaVersion']).toBe(2);
+    // Two steps now: v1 → v2 → v3. The z-height assertion is about what v1→v2
+    // did, and it still has to be true after the chain has run on past it.
+    expect(outcome.steps).toBe(2);
+    expect(outcome.save['schemaVersion']).toBe(3);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'counter', x: 1, y: 2, z: 0 },
       { objectId: 'awning', x: 3, y: 4, z: 0 },
@@ -202,13 +234,27 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(1);
+    expect(result.migrationSteps).toBe(2);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
-  it('save-v2.json loads with no migration at all', async () => {
+  it('save-v2.json migrates one step to the current version', async () => {
     const storage = new MemoryStorageAdapter();
     await storage.write('save', readFixture('save-v2.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    // Was zero until Phase 5 added the traffic cursor. The fixture is a
+    // historical record and is never regenerated, so this number grows by one
+    // with every schema change — which is the point of keeping it.
+    expect(result.migrationSteps).toBe(1);
+  });
+
+  it('save-v3.json loads with no migration at all', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v3.json'));
 
     const result = await new SaveManager(storage).load();
 

@@ -17,6 +17,7 @@ import type {
   SettingsState,
   StaffState,
   StatsState,
+  TrafficState,
 } from './types';
 
 export interface WorldOptions {
@@ -62,6 +63,14 @@ export class World {
     prices: new Map<string, number>(),
   };
   readonly layout: LayoutState = { placed: [], upgrades: new Map<string, number>() };
+  /**
+   * Traffic process state — Phase 5.
+   *
+   * Only `nextCandidateMs` affects an outcome, and it must survive a save: a
+   * game resumed mid-day that re-rolled its next arrival would produce different
+   * traffic from the same seed, which breaks Day Replay.
+   */
+  readonly traffic: TrafficState = { nextCandidateMs: 0, droppedSpawns: 0 };
   readonly staff: StaffState = { hired: [] };
   readonly stats: StatsState = { customersServed: 0, vehiclesSpawned: 0, commandsApplied: 0 };
   readonly settings: SettingsState = {
@@ -140,6 +149,15 @@ export class World {
     }
 
     this.vehicles.hashInto(h);
+
+    /*
+     * The Poisson cursor is hashed because it decides every future arrival: two
+     * worlds identical in every other respect but differing here will diverge on
+     * the next tick. `droppedSpawns` is NOT hashed — it is a diagnostic counter
+     * that nothing reads back, and hashing it would make the digest sensitive to
+     * something that cannot change an outcome.
+     */
+    h.writeF64(this.traffic.nextCandidateMs);
     this.customers.hashInto(h, writeActor);
     this.employees.hashInto(h, writeActor);
     this.orders.hashInto(h, writeOrder);
@@ -208,6 +226,9 @@ export class World {
 
     this.layout.placed.length = 0;
     this.layout.upgrades.clear();
+
+    this.traffic.nextCandidateMs = 0;
+    this.traffic.droppedSpawns = 0;
 
     this.staff.hired.length = 0;
 

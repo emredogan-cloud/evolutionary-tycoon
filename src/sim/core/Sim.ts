@@ -8,6 +8,11 @@ import { apply, stampCommand } from './commands';
 import { EventBus } from './EventBus';
 import type { SimSystem } from './SystemPipeline';
 import { SystemPipeline } from './SystemPipeline';
+import { ACTOR_KIND_VEHICLE } from '@config/actors';
+import { BRAKE_LIGHT_DECEL } from '@config/traffic';
+import { stage1Lanes } from '../systems/noop';
+import type { LaneGraph } from '../nav/LaneGraph';
+import type { LaneSample } from '../nav/spline';
 import type { ActorSnapshot, SimView } from './types';
 import { World } from './World';
 import type { WorldOptions } from './World';
@@ -65,18 +70,31 @@ export class Sim {
    * ignores the rest, so no array is ever resized or rebuilt during play.
    */
   private readonly actorBuffer: MutableActorSnapshot[];
+  private readonly lanes: LaneGraph = stage1Lanes();
+  /** Reused by `copyVehicles`; sampling allocates nothing. */
+  private readonly laneSample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
 
   constructor(options: SimOptions) {
     this.world = new World(options);
-    this.pipeline = new SystemPipeline(options.systems ?? createDefaultSystems());
+    this.pipeline = new SystemPipeline(options.systems ?? createDefaultSystems(this.world));
     this.log = new CommandLog(options.commandLogCapacity);
 
     if (options.startPaused === true) this.world.control.paused = true;
 
-    const actorCapacity = this.world.customers.capacity + this.world.employees.capacity;
+    const actorCapacity =
+      this.world.vehicles.capacity + this.world.customers.capacity + this.world.employees.capacity;
     this.actorBuffer = new Array<MutableActorSnapshot>(actorCapacity);
     for (let i = 0; i < actorCapacity; i++) {
-      this.actorBuffer[i] = { entityId: 0, x: 0, y: 0, z: 0, kind: 0 };
+      this.actorBuffer[i] = {
+        entityId: 0,
+        x: 0,
+        y: 0,
+        z: 0,
+        kind: 0,
+        headingX: 1,
+        headingY: 0,
+        braking: false,
+      };
     }
 
     this.view = {
@@ -180,9 +198,47 @@ export class Sim {
    */
   private fillActors(): number {
     let count = 0;
+    // Vehicles first, then customers, then employees. The order only has to be
+    // *stable* — the depth sorter decides what draws in front of what — but a
+    // stable order keeps the renderer's view pool from thrashing its leases.
+    count = this.copyVehicles(count);
     count = this.copyPool(this.world.customers, count);
     count = this.copyPool(this.world.employees, count);
     return count;
+  }
+
+  /**
+   * Project each vehicle from lane-space into world space for the renderer.
+   *
+   * The simulation stores a vehicle as a distance along a lane, which is all the
+   * traffic model needs. The renderer needs a position and a facing, and this is
+   * the one place that conversion happens — doing it in the render layer would
+   * put lane geometry on the wrong side of the boundary and would mean the
+   * renderer could disagree with the simulation about where a car is.
+   */
+  private copyVehicles(startIndex: number): number {
+    const vehicles = this.world.vehicles;
+    let index = startIndex;
+
+    for (let slot = 0; slot < vehicles.capacity; slot++) {
+      if (!vehicles.isActive(slot)) continue;
+      const target = this.actorBuffer[index];
+      if (target === undefined) break;
+
+      const laneIndex = vehicles.lane[slot] ?? 0;
+      this.lanes.sample(laneIndex, vehicles.laneS[slot] ?? 0, this.laneSample);
+
+      target.entityId = vehicles.entityId[slot] ?? 0;
+      target.x = this.laneSample.x;
+      target.y = this.laneSample.y;
+      target.z = 0;
+      target.kind = ACTOR_KIND_VEHICLE;
+      target.headingX = this.laneSample.tangentX;
+      target.headingY = this.laneSample.tangentY;
+      target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
+      index++;
+    }
+    return index;
   }
 
   private copyPool(pool: SlotPool<ActorRecord>, startIndex: number): number {

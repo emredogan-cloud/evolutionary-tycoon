@@ -68,6 +68,21 @@ export interface StaffState {
   hired: HiredEmployee[];
 }
 
+/**
+ * Traffic process state — Phase 5.
+ *
+ * Lives here rather than in `TrafficSpawnSystem` because `World` owns it, and a
+ * system importing `World` while `World` imports the system is a cycle that
+ * `dependency-cruiser` rejects. State shapes belong to the core; the systems
+ * that advance them do not.
+ */
+export interface TrafficState {
+  /** Sim time of the next Poisson candidate, in ms. */
+  nextCandidateMs: number;
+  /** Spawns refused because the lane head was occupied. Diagnostics only. */
+  droppedSpawns: number;
+}
+
 export interface StatsState {
   customersServed: number;
   vehiclesSpawned: number;
@@ -120,6 +135,18 @@ export interface ActorSnapshot {
   readonly z: number;
   /** Which placeholder or sprite to draw — an index into the render catalogue. */
   readonly kind: number;
+  /**
+   * Unit facing vector in world space, added in Phase 5.
+   *
+   * The renderer turns it into one of eight sprite directions. Supplied by the
+   * simulation rather than derived from successive positions, because a
+   * difference between frames is zero whenever an actor is stopped — and a
+   * stopped vehicle still faces somewhere.
+   */
+  readonly headingX: number;
+  readonly headingY: number;
+  /** Decelerating hard enough to light the brakes. Phase 5. */
+  readonly braking: boolean;
 }
 
 export interface SimView {

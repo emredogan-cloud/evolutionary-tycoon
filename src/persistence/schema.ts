@@ -21,7 +21,7 @@ import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 z.config({ jitless: true });
 
 /**
- * The save file — schema version 2.
+ * The save file — schema version 3.
  *
  * v2 added `z` to placed objects. Phase 3 sorts the world by height, so an
  * object on a counter has to draw in front of the counter, and a stored layout
@@ -53,8 +53,8 @@ const rngStatesSchema = z.object({
 
 const stringNumberEntries = z.array(z.tuple([z.string(), z.number()]));
 
-const saveFileV2Schema = z.object({
-  schemaVersion: z.literal(2),
+const saveFileV3Schema = z.object({
+  schemaVersion: z.literal(3),
   buildSha: z.string(),
   createdAt: z.number(),
   lastSeenAt: z.number(),
@@ -92,6 +92,17 @@ const saveFileV2Schema = z.object({
     vehiclesSpawned: z.number().int().nonnegative(),
     commandsApplied: z.number().int().nonnegative(),
   }),
+  /*
+   * The arrival process, added in Phase 5.
+   *
+   * Vehicles themselves are transient and deliberately not saved, but the
+   * Poisson cursor is not a vehicle — it decides every future arrival. A save
+   * that dropped it would resume with a different traffic stream from the same
+   * seed, which is precisely what Day Replay depends on not happening.
+   */
+  traffic: z.object({
+    nextCandidateMs: z.number().nonnegative(),
+  }),
   settings: z.object({
     audio: z.object({
       master: z.number().min(0).max(1),
@@ -110,10 +121,10 @@ const saveFileV2Schema = z.object({
  *
  * Call sites use the version-neutral names, so bumping the schema is an edit
  * here rather than a sweep across the codebase. The versioned schema stays
- * private: nothing outside this module should be able to pin itself to v2.
+ * private: nothing outside this module should be able to pin itself to v3.
  */
-export const currentSaveSchema = saveFileV2Schema;
-export type CurrentSaveFile = z.infer<typeof saveFileV2Schema>;
+export const currentSaveSchema = saveFileV3Schema;
+export type CurrentSaveFile = z.infer<typeof saveFileV3Schema>;
 
 /** The version this build writes. Any stored save at a lower version is migrated first. */
 export const CURRENT_SCHEMA_VERSION = SAVE_SCHEMA_VERSION;

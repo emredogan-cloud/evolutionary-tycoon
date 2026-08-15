@@ -78,7 +78,27 @@ const v1ToV2: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2];
+/**
+ * v2 → v3: the traffic arrival cursor becomes part of the save.
+ *
+ * Phase 5 gave the world a Poisson process whose next-candidate time decides
+ * every future arrival. A v2 save has no such field, and 0 is the correct value
+ * rather than a placeholder: it means "the next candidate is due immediately",
+ * which is exactly how a fresh world starts. The spawn system snaps a cursor
+ * that lies in the past up to the current time, so an old save resumes with
+ * traffic arriving normally instead of replaying an entire day of backlog.
+ */
+const v2ToV3: Migration = {
+  from: 2,
+  to: 3,
+  up: (save) => ({
+    ...save,
+    schemaVersion: 3,
+    traffic: { nextCandidateMs: 0 },
+  }),
+};
+
+export const migrations: readonly Migration[] = [v1ToV2, v2ToV3];
 
 assertContiguous(migrations);
 

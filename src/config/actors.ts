@@ -20,6 +20,7 @@ type ActorKindName = 'customer' | 'employee' | 'vehicle' | 'propShort' | 'propTa
 
 export const ACTOR_KIND_CUSTOMER = 0;
 export const ACTOR_KIND_EMPLOYEE = 1;
+export const ACTOR_KIND_VEHICLE = 2;
 export const ACTOR_KIND_PROP_SHORT = 3;
 export const ACTOR_KIND_PROP_TALL = 4;
 export const ACTOR_KIND_SCALE_REFERENCE = 5;

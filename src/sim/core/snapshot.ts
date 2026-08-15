@@ -44,6 +44,9 @@ export interface WorldSnapshot {
     readonly upgrades: readonly (readonly [string, number])[];
   };
   readonly staff: { readonly hired: readonly HiredEmployee[] };
+  readonly traffic: {
+    readonly nextCandidateMs: number;
+  };
   readonly stats: {
     readonly customersServed: number;
     readonly vehiclesSpawned: number;
@@ -91,6 +94,7 @@ export function snapshotWorld(world: World): WorldSnapshot {
       upgrades: sortedEntries(world.layout.upgrades),
     },
     staff: { hired: world.staff.hired.map((employee) => ({ ...employee })) },
+    traffic: { nextCandidateMs: world.traffic.nextCandidateMs },
     stats: {
       customersServed: world.stats.customersServed,
       vehiclesSpawned: world.stats.vehiclesSpawned,
@@ -134,6 +138,10 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   for (const [key, value] of snapshot.layout.upgrades) world.layout.upgrades.set(key, value);
 
   for (const employee of snapshot.staff.hired) world.staff.hired.push({ ...employee });
+
+  world.traffic.nextCandidateMs = snapshot.traffic.nextCandidateMs;
+  // Diagnostics only, never persisted: a resumed session counts its own drops.
+  world.traffic.droppedSpawns = 0;
 
   world.stats.customersServed = snapshot.stats.customersServed;
   world.stats.vehiclesSpawned = snapshot.stats.vehiclesSpawned;

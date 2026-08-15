@@ -13,7 +13,17 @@ describe('EventQueue', () => {
   it('declares every member of the union in its type list', () => {
     // Guards against adding an event type and forgetting the pool entry, which
     // would show up much later as a silently dropped event.
-    expect([...SIM_EVENT_TYPES].sort()).toEqual(['DAY_STARTED', 'PAUSE_CHANGED', 'SPEED_CHANGED'].sort());
+    expect([...SIM_EVENT_TYPES].sort()).toEqual(
+      [
+        'DAY_STARTED',
+        'PAUSE_CHANGED',
+        'SPEED_CHANGED',
+        // Phase 5 — traffic.
+        'VEHICLE_SPAWNED',
+        'VEHICLE_BRAKED',
+        'VEHICLE_DESPAWNED',
+      ].sort(),
+    );
   });
 
   it('collects events in emission order', () => {
