@@ -72,11 +72,19 @@ describe('simulation performance budgets', () => {
     // Budget is 0 B/tick. The tolerance absorbs V8 bookkeeping that is not the
     // simulation's doing; a real per-tick allocation is orders of magnitude
     // above it — a single object literal per tick is ~50 B.
+    //
+    // The harness reports the minimum of several samples, because the noise it
+    // is separating out is one-sided: runtime bookkeeping only ever adds to a
+    // heap delta. Phase 2 took a single sample and this gate was flaky as a
+    // result — see `measureAllocationPerTick`. **The 8 B budget below has not
+    // moved**; only how the number is arrived at.
     const result = measureAllocationPerTick();
     expect(result.gcForced, 'run this suite with --expose-gc (see vitest.bench.config.ts)').toBe(true);
+    expect(result.samples).toBeGreaterThan(1);
     expect(
       result.bytesPerTick,
-      `measured ${result.bytesPerTick.toFixed(2)} B/tick over ${result.ticks} ticks`,
+      `measured ${result.bytesPerTick.toFixed(2)} B/tick (worst sample ` +
+        `${result.worstBytesPerTick.toFixed(2)}) over ${result.ticks} ticks x ${result.samples} samples`,
     ).toBeLessThan(8);
   });
 

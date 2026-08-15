@@ -34,7 +34,11 @@ export interface TimingResult {
 export interface AllocationResult {
   readonly name: string;
   readonly ticks: number;
+  /** The minimum across `samples` runs — see `measureAllocationPerTick`. */
   readonly bytesPerTick: number;
+  /** The worst sample, so the spread is visible rather than hidden by the min. */
+  readonly worstBytesPerTick: number;
+  readonly samples: number;
   /**
    * False when the runtime did not expose `gc`, in which case the figure
    * includes whatever the collector had not yet reclaimed and is an upper bound
@@ -112,20 +116,52 @@ function forceGc(): boolean {
  * allocates per tick produces GC pauses that show up as frame stutter at exactly
  * the moments the game is busiest, and no amount of render optimisation fixes it.
  */
-export function measureAllocationPerTick(ticks = 200_000): AllocationResult {
+/**
+ * Steady-state allocation per tick, as the **minimum of several samples**.
+ *
+ * A single `heapUsed` delta is not a measurement of what the simulation
+ * allocates; it is that plus whatever else the runtime did in the same window —
+ * incremental marking, background compilation, the harness's own bookkeeping.
+ * Phase 2 took one sample and the gate was consequently flaky: against a budget
+ * of 8 B/tick it usually read ~2 but landed at 8.87 and 9.84 in two of seven
+ * consecutive runs, on an unchanged simulation. A gate that fails one run in
+ * four teaches people to re-run it, which is worse than not having it.
+ *
+ * The minimum is the right statistic because the noise is one-sided: runtime
+ * bookkeeping can only *add* to the heap delta, never subtract. So the smallest
+ * sample is the closest estimate of the simulation's own allocation, and the
+ * budget it is compared against is unchanged. A genuine regression is not hidden
+ * by this — one object literal per tick is ~50 B, six times the budget, and it
+ * would appear in every sample including the smallest.
+ *
+ * `worstBytesPerTick` is reported alongside so the spread stays visible.
+ */
+export function measureAllocationPerTick(ticks = 200_000, samples = 5): AllocationResult {
   const sim = new Sim({ seed: 20260814 });
   // Warm up so lazily-created hidden classes and inline caches are not counted.
   sim.advance(20_000);
 
-  const gcForced = forceGc();
-  const before = process.memoryUsage().heapUsed;
-  sim.advance(ticks);
-  const after = process.memoryUsage().heapUsed;
+  let gcForced = true;
+  let best = Number.POSITIVE_INFINITY;
+  let worst = 0;
+
+  for (let sample = 0; sample < samples; sample++) {
+    gcForced = forceGc() && gcForced;
+    const before = process.memoryUsage().heapUsed;
+    sim.advance(ticks);
+    const after = process.memoryUsage().heapUsed;
+
+    const perTick = Math.max(0, after - before) / ticks;
+    if (perTick < best) best = perTick;
+    if (perTick > worst) worst = perTick;
+  }
 
   return {
     name: 'steady-state tick',
     ticks,
-    bytesPerTick: Math.max(0, after - before) / ticks,
+    bytesPerTick: best,
+    worstBytesPerTick: worst,
+    samples,
     gcForced,
   };
 }
@@ -263,7 +299,9 @@ export function formatReport(report: BenchReport): string {
   }
   lines.push('');
   lines.push(
-    `allocation: ${report.allocation.bytesPerTick.toFixed(2)} B/tick over ${report.allocation.ticks} ticks` +
+    `allocation: ${report.allocation.bytesPerTick.toFixed(2)} B/tick ` +
+      `(worst sample ${report.allocation.worstBytesPerTick.toFixed(2)}) ` +
+      `over ${report.allocation.ticks} ticks x ${report.allocation.samples} samples` +
       (report.allocation.gcForced ? '' : '  (gc NOT forced — upper bound only)'),
   );
   return lines.join('\n');
