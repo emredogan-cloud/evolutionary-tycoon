@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { ASSET_CATEGORIES, ATLASES, SHARED_BUDGETS, assetCategory, atlasSpec } from '@config/assets';
 import { DIRECTIONS, parseAssetName } from '../../../tools/asset-pipeline/naming.ts';
 import { readPromptBlock } from '../../../tools/asset-pipeline/promptBlock.ts';
-import { loadReferenceHeights, resolveReference } from '../../../tools/asset-pipeline/referenceHeights.ts';
+import {
+  loadSubjectDimensions,
+  resolveExpectation,
+} from '../../../tools/asset-pipeline/subjectDimensions.ts';
 
 /**
  * The filename contract of ASSET_PIPELINE §3.
@@ -177,32 +180,64 @@ describe('the immutable prompt block', () => {
   });
 });
 
-describe('reference heights', () => {
-  const table = loadReferenceHeights();
+describe('subject dimensions', () => {
+  const table = loadSubjectDimensions();
 
   it('is authored at the production scale', () => {
     expect(table.scale).toBe(2);
   });
 
-  it('cites a source for every declared height', () => {
-    for (const entry of table.entries) {
-      expect(entry.source, entry.match).toMatch(/ASSET_PIPELINE/);
+  it('cites a source for every declared subject', () => {
+    for (const [key, subject] of Object.entries(table.worldObjects.subjects)) {
+      expect(subject.source.length, key).toBeGreaterThan(0);
     }
   });
 
-  it('prefers an exact subject over the category wildcard', () => {
-    expect(resolveReference('veh/sedan', table)?.match).toBe('veh/sedan');
-    expect(resolveReference('char/head', table)?.match).toBe('char/*');
-  });
-
-  it('returns nothing for a subject with no declared height', () => {
-    expect(resolveReference('nature/tree', table)).toBeNull();
-  });
-
-  it('lists undeclared subjects rather than guessing them', () => {
-    expect(table.pending.subjects.length).toBeGreaterThan(0);
-    for (const subject of table.pending.subjects) {
-      expect(resolveReference(subject.replace('/*', '/anything'), table), subject).toBeNull();
+  it('declares subjects in metres, never in pixels', () => {
+    // The distinction the whole file exists for: metres are facts about objects
+    // and are checkable against the world; a pixel height would be an art
+    // decision smuggled in as data.
+    for (const [key, subject] of Object.entries(table.worldObjects.subjects)) {
+      expect(subject.heightMetres, key).toBeGreaterThan(0);
+      expect(subject.footprintX, key).toBeGreaterThan(0);
+      expect(subject.footprintY, key).toBeGreaterThan(0);
+      expect(subject, key).not.toHaveProperty('height');
     }
+  });
+
+  it('derives a sprite height that is taller than the world height', () => {
+    // The trap that made v1 of this table wrong. A drawn isometric sprite
+    // carries the projected ground diamond as well as the body, so it is always
+    // taller than metres x 64 — dramatically so for wide objects.
+    const sedan = resolveExpectation('veh/sedan', table);
+    expect(sedan?.mode).toBe('reference');
+    if (sedan?.mode !== 'reference') return;
+    expect(sedan.bodyHeight).toBe(96); // 1.5 m x 32 x 2 — what §1.2 tabulates
+    expect(sedan.height).toBe(301); // what is actually drawn
+  });
+
+  it('decides the split rule on body height, not sprite height', () => {
+    // §1.4's 160 px is 2.5 m of object (src/config/actors.ts states this).
+    // Measured against the sprite instead, every car would need splitting.
+    const sedan = resolveExpectation('veh/sedan', table);
+    const tree = resolveExpectation('nature/tree', table);
+    expect(sedan?.mode === 'reference' && sedan.splitExpected).toBe(false);
+    expect(tree?.mode === 'reference' && tree.splitExpected).toBe(true);
+  });
+
+  it('checks character parts against the assembled adult', () => {
+    const head = resolveExpectation('char/head', table);
+    expect(head?.mode).toBe('envelope');
+    // 144, not §1.2's 128: an adult's drawn sprite includes the ground diamond.
+    expect(head?.height).toBe(144);
+  });
+
+  it('checks icons against a fixed canvas instead of a projection', () => {
+    const icon = resolveExpectation('ui/icon', table);
+    expect(icon).toMatchObject({ mode: 'canvas', width: 128, height: 128 });
+  });
+
+  it('returns nothing for a subject nobody has declared', () => {
+    expect(resolveExpectation('prop/umbrella', table)).toBeNull();
   });
 });

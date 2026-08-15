@@ -29,6 +29,7 @@
     "assets:manifest": "node tools/asset-pipeline/cli.ts manifest",
     "assets:report": "node tools/asset-pipeline/cli.ts report",
     "assets:contact-sheet": "node tools/asset-pipeline/cli.ts contact-sheet",
+    "assets:prompts": "node tools/asset-pipeline/cli.ts prompts",
     "assets:build": "node tools/asset-pipeline/cli.ts build",
     "placeholders:build": "node tools/placeholders/cli.ts",
     "test": "vitest run",

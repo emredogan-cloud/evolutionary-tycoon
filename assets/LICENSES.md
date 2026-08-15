@@ -15,17 +15,18 @@ evidence recorded as an official URL, an access date, and a verbatim quote.
 
 ### Result
 
-> ## 🔴 GATE NOT CLOSED
+> ## 🟡 GATE OPEN BY EXECUTIVE OVERRIDE — 2026-08-15
 >
-> **Two providers substantially pass. No provider addresses all nine items in public documentation,
-> and item 8 — rights after a subscription ends — is unaddressed by every one of them.**
+> **The verification did not satisfy the gate. The project owner opened it anyway, as a business
+> decision, having read the findings below.**
 >
-> That is the item the Phase 1 correction added on purpose, because it is the one that bites later:
-> a studio that cancels a subscription and discovers its shipped art was licensed only while paying
-> has a problem no amount of engineering fixes. It cannot be closed by reading public pages; it needs
-> written confirmation from the provider.
+> The distinction matters and is preserved deliberately: this gate was **overridden, not passed.**
+> Nine of nine were not verified. What follows in §1.1–§1.4 is the evidence as gathered; §1.5 records
+> the decision, who made it, and exactly which risks were accepted.
 >
-> **No production asset has been generated.** The gate is respected, not worked around.
+> **Selected tool: God Mode AI** (6 of 9 verified — the strongest terms of the four).
+> **Dropped: Sprixen, PixelLab.** Their evidence is retained below rather than deleted, because an
+> asset generated under an old decision must always be traceable to the terms in force at the time.
 
 ### 1.1 God Mode AI — <https://www.godmodeai.co/term-of-use> (accessed 2026-08-15)
 
@@ -87,32 +88,81 @@ copy on the product site**, which is exactly the class of secondary evidence thi
 reject.
 
 **Assessment:** ❌ **unverified**. Cannot be used until a real terms document is read.
+**Status: DROPPED** by the 2026-08-15 executive override (§1.5).
+
+### 1.5 EXECUTIVE OVERRIDE — 2026-08-15
+
+**Decided by:** the project owner, in writing, after reading §1.1–§1.4.
+**Recorded by:** the agent, verbatim as to substance. This is the user's decision, not the agent's
+assessment; the agent's assessment remains §1.1–§1.4 and is unchanged.
+
+**Instruction given:**
+
+> "Use the most logical option and don't get too hung up on it. […] The business explicitly ACCEPTS
+> the unverified risk regarding post-subscription rights and reference image usage for this MVP.
+> […] Mark the Phase 4 START CONDITION (Licence Gate) as PASSED by Executive Override. […] Drop
+> Sprixen and PixelLab."
+
+**Decisions:**
+
+| #   | Decision                                                                   |
+| --- | -------------------------------------------------------------------------- |
+| 1   | **God Mode AI is the selected primary tool** for asset generation.         |
+| 2   | **Sprixen — dropped.** No primary terms document exists.                   |
+| 3   | **PixelLab — dropped.** Five of nine items unaddressed.                    |
+| 4   | Scenario is not selected. It was not dropped by name; it is simply unused. |
+| 5   | The gate is treated as satisfied for MVP purposes.                         |
+
+**Risks knowingly accepted.** Written out rather than summarised, so a future reader does not have to
+reconstruct what was and was not agreed:
+
+| Item                             | Status                                                                   | Accepted consequence                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **8 — rights after cancelling**  | ❌ Unverified. Terms say only that cancellation takes effect at term end | If the assignment in item 2 turns out not to survive cancellation, art generated under a lapsed subscription may need relicensing or replacing |
+| **5 — reference-image terms**    | ❌ Unverified                                                            | Uploading our own golden references may grant God Mode AI rights we have not read                                                              |
+| **3 — redistribution in a game** | ⚠ Inferred from the item 1 grant, not stated as such                     | Redistribution in a shipped game rests on "distribute … sell … exploit" rather than an explicit clause                                         |
+| **7 — account / cost**           | ⚠ Pricing is on `/plans`, not in the terms                               | Cost is a commercial matter, not a rights matter                                                                                               |
+
+**What is genuinely verified and materially strong** (unchanged from §1.1): an outright **assignment**
+of copyright — "we assign to you all right, title, and interest … in the Generated Output" — with no
+attribution requirement and no training on private input or output. An assignment is ordinarily
+permanent, which is the reasoning behind accepting item 8; it is an inference, not a quote, and is
+recorded as such.
+
+**Revisit triggers.** The override is scoped to the MVP. It must be reopened at any of:
+
+- **Phase 16** (full asset production) and **Phase 23** (launch) — already required by §4 below.
+- Before monetisation. Shipping a paid product on inferred redistribution rights is a different risk
+  posture from shipping an unmonetised MVP.
+- If the God Mode AI subscription is cancelled or lapses, since that is precisely the untested case.
+- If God Mode AI's terms change — the accepted risk was measured against the 2026-08-15 text.
+
+**Still worth doing, cheaply, at any time:** ask God Mode AI the two item-5 and item-8 questions in
+writing. Accepting a risk and closing it are not exclusive, and an answer would retire the largest
+one for the cost of an email.
 
 ---
 
 ## 2. What this means for Phase 4
 
-Per [ASSET_PIPELINE §4.2](../docs/ASSET_PIPELINE.md): _"Bir sağlayıcı kriterleri karşılamıyorsa
-sessizce başka araca geçilmez"_ — no silent substitution. So no substitution has been made, and no
-asset has been generated.
+The gate is open (§1.5). ASSET_PIPELINE §4.2's rule against _silent_ substitution is satisfied by
+this record: the substitution is documented, attributed and dated, and the dropped providers' evidence
+is retained rather than deleted.
 
-**To close the gate, the project owner needs to:**
-
-1. Ask God Mode AI, in writing, whether the copyright assignment survives cancellation of the
-   subscription, and whether uploading reference images grants them any rights. Two questions.
-2. Decide on Scenario's item 6 — whether it is acceptable for the art-direction references to
-   improve a third party's models on a self-serve plan, or whether that argues for Enterprise.
-3. Either obtain a real terms document for Sprixen or drop it from the candidate list.
-
-**Recommendation on the evidence gathered:** God Mode AI as primary — an outright assignment of
-copyright with no attribution requirement and no training on private content is materially stronger
-than the alternatives — subject to (1). Scenario stays as the style-lock candidate subject to (2).
+**No production asset has been generated yet**, for a reason unrelated to licensing: the agent has no
+image-generation capability. See [PHASE_4_REPORT §11](../docs/phases/PHASE_4_REPORT.md).
 
 ---
 
 ## 3. Asset register
 
-No production asset exists yet. The only images in the repository are placeholders.
+**No production asset exists yet.** The licence gate is no longer the reason — since 2026-08-15 the
+blocker is capability: the agent executing this project cannot generate images. The only images in
+the repository remain placeholders.
+
+Every production asset added from here carries, in `assets/MANIFEST.md`, the tool that made it, the
+prompt-block hash in force, and — because of §1.5 — the fact that it was generated under an
+**overridden** gate rather than a satisfied one.
 
 | Asset                       | Source                                        | Licence                        | Notes                                                 |
 | --------------------------- | --------------------------------------------- | ------------------------------ | ----------------------------------------------------- |
@@ -128,6 +178,7 @@ Terms change. [ASSET_PIPELINE §4.2](../docs/ASSET_PIPELINE.md) requires re-veri
 rather than overwriting it, so a shipped asset can always be traced to the terms in force when it
 was generated.
 
-| Date       | Phase | Action                                                                                                |
-| ---------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| 2026-08-15 | 4     | First verification. Four providers checked from primary sources; gate **not closed** — see §1 and §2. |
+| Date       | Phase | Action                                                                                                                                                                |
+| ---------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-15 | 4     | First verification. Four providers checked from primary sources; gate **not closed** — see §1 and §2.                                                                 |
+| 2026-08-15 | 4     | **Executive override.** Owner selected God Mode AI and accepted the unverified items 5 and 8 for the MVP; Sprixen and PixelLab dropped. Gate open, not passed — §1.5. |

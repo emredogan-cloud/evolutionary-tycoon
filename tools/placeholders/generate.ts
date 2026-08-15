@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ACTOR_KIND_SPECS } from '../../src/config/actors.ts';
-import { ART_SCALE, TILE_H, TILE_W, TILE_Z } from '../../src/config/world.ts';
+import { isoSpriteMetrics } from '../shared/spriteMetrics.ts';
 import { drawText, measureText } from './font.ts';
 import { PixelCanvas } from './png.ts';
 import type { Rgba } from './png.ts';
@@ -44,30 +44,20 @@ export interface PlaceholderSpec {
 /**
  * Sprite dimensions for a world-space box.
  *
- * The footprint of an axis-aligned world box projects to a diamond
- * `(fx + fy) * TILE_W/2` across and `(fx + fy) * TILE_H/2` tall; the body adds
- * `height * TILE_Z` above it. Everything is then multiplied by ART_SCALE,
- * because art is authored at 2x and downscaled.
+ * The arithmetic lives in `tools/shared/spriteMetrics.ts`, shared with the asset
+ * validator and the prompt emitter. It used to be inlined here, and the copy in
+ * the validator disagreed with it — which is exactly the kind of divergence that
+ * only surfaces when real art arrives.
  */
 export function placeholderSpecs(): PlaceholderSpec[] {
   return ACTOR_KIND_SPECS.map((kind) => {
-    const footprintSpan = kind.footprintX + kind.footprintY;
-    const diamondWidth = footprintSpan * (TILE_W / 2);
-    const diamondHeight = footprintSpan * (TILE_H / 2);
-    const bodyHeight = kind.heightMetres * TILE_Z;
-
-    const width = Math.max(4, Math.round(diamondWidth * ART_SCALE));
-    const height = Math.max(4, Math.round((diamondHeight + bodyHeight) * ART_SCALE));
-
+    const metrics = isoSpriteMetrics(kind);
     return {
       key: kind.textureKey,
-      width,
-      height,
-      // The anchor is the footprint centre: horizontally the middle, vertically
-      // the centre of the ground diamond at the bottom. Depth sorting anchors
-      // here, so a wrong value here is a wrong sort everywhere.
-      anchorX: Math.round(width / 2),
-      anchorY: Math.round(height - (diamondHeight * ART_SCALE) / 2),
+      width: metrics.width,
+      height: metrics.height,
+      anchorX: metrics.anchorX,
+      anchorY: metrics.anchorY,
       label: kind.name,
     };
   });
