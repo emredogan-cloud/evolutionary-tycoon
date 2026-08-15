@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { ACTOR_KIND_SPECS, actorKindSpec } from '@config/actors';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { sceneFixture } from '@config/scenes';
+import { SURFACE_COLORS } from '@config/surfaces';
 import { CameraController } from '../camera/CameraController';
 import type { CameraBounds } from '../camera/cameraMath';
 import { DevOverlays } from '../debug/DevOverlays';
@@ -166,9 +167,9 @@ export class WorldScene extends Phaser.Scene {
   private drawGround(): void {
     const lot = STAGE1_LAYOUT.lot;
     const ground = this.add.graphics();
-    ground.fillStyle(0x4a5d3a, 1);
+    ground.fillStyle(SURFACE_COLORS.ground, 1);
     ground.fillPoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
-    ground.lineStyle(2, 0x3a4a2c, 1);
+    ground.lineStyle(2, SURFACE_COLORS.groundGrid, 1);
     ground.strokePoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
     this.graph.layer('ground').add(ground);
   }
@@ -185,12 +186,12 @@ export class WorldScene extends Phaser.Scene {
     const halfWidth = STAGE1_LAYOUT.road.widthMetres / 2;
     const centreY = ((first.points[0]?.y ?? 0) + (second.points[0]?.y ?? 0)) / 2;
 
-    road.fillStyle(0x3b3b40, 1);
+    road.fillStyle(SURFACE_COLORS.road, 1);
     road.fillPoints(this.worldQuad(startX, centreY - halfWidth, endX, centreY + halfWidth), true);
 
     // Dashed centre line: a solid one would read as a barrier, and Stage 4 adds
     // a left turn across it.
-    road.fillStyle(0xd8d2b4, 1);
+    road.fillStyle(SURFACE_COLORS.roadMarking, 1);
     for (let x = startX; x < endX; x += 4) {
       road.fillPoints(this.worldQuad(x, centreY - 0.08, x + 2, centreY + 0.08), true);
     }

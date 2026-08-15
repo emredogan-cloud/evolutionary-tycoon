@@ -61,6 +61,24 @@ test.describe('renderer', () => {
     );
   });
 
+  test('the loading screen says out loud that it is running on placeholders', async ({ page }) => {
+    /*
+     * Phase 4 built the loader and the manifest format; it did not produce art,
+     * because the AI-tool licence gate is open (assets/LICENSES.md). So there is
+     * no asset manifest to fetch, and LoadScene falls back to the generated
+     * placeholder textures.
+     *
+     * The fallback is asserted rather than tolerated. A loader that quietly
+     * substitutes placeholders is how a build ships with magenta checkers in it
+     * (WORKING_DISCIPLINE §7) — this attribute is the thing that makes
+     * "we are not running on real art" a fact a test can see. When production
+     * art lands, this expectation flips to 'loaded' and the flip is the proof.
+     */
+    await page.goto(FROZEN);
+    await expect(page.locator('html')).toHaveAttribute('data-asset-state', 'placeholder');
+    await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  });
+
   test('places the canvas behind the overlay and lets clicks through', async ({ page }) => {
     // TECHNICAL_ARCHITECTURE §7: the DOM overlay is above the canvas but
     // transparent to pointer events except on interactive elements, so a click
