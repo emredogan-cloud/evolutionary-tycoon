@@ -49,6 +49,20 @@ interface TestApi {
     customerCount: number;
     employeeCount: number;
     orderCount: number;
+    /*
+     * Enough of `ActorSnapshot` for the Phase 7 tests to read positions. Not
+     * imported from `src/sim`: this interface describes what the *page* exposes,
+     * and typing it from the source would make a test that runs in a browser
+     * silently depend on the build being in step with it.
+     */
+    actorCount: number;
+    actors: readonly {
+      entityId: number;
+      x: number;
+      y: number;
+      kind: number;
+      moving: boolean;
+    }[];
   };
   getWorldHash(): string;
   dispatch(command: { t: 'SET_SPEED'; mult: 1 | 2 | 4 } | { t: 'SET_PAUSED'; paused: boolean }): void;
@@ -308,5 +322,86 @@ test.describe('the loop closes — Phase 6', () => {
         { timeout: 15_000, message: 'no vehicle reached the decision point in fifteen seconds' },
       )
       .toBeGreaterThan(0);
+  });
+});
+
+test.describe('people walk — Phase 7', () => {
+  test('a customer crosses the car park on foot', async ({ page }) => {
+    /*
+     * The Phase 7 deployment note is one line: "walking people in the preview".
+     * This is that, in a real browser — and it is worth checking here rather
+     * than only in Node, because the flow field is built at startup from the
+     * layout and a bundling mistake that dropped it would leave everyone
+     * walking in straight lines, which looks almost right.
+     */
+    await bootSimulation(page);
+
+    const walk = await page.evaluate(() => {
+      const api = window.__EVOTYCOON__;
+      api.advanceTicks(6000);
+
+      /** Track every visible customer's position over a few hundred ticks. */
+      const first = new Map<number, { x: number; y: number }>();
+      const last = new Map<number, { x: number; y: number }>();
+      let sawMoving = false;
+
+      for (let tick = 0; tick < 400; tick++) {
+        api.advanceTicks(1);
+        const state = api.getState();
+        for (let i = 0; i < state.actorCount; i++) {
+          const actor = state.actors[i];
+          // Customers are actor kind 0 — see src/config/actors.ts.
+          if (actor?.kind !== 0) continue;
+          if (!first.has(actor.entityId)) first.set(actor.entityId, { x: actor.x, y: actor.y });
+          last.set(actor.entityId, { x: actor.x, y: actor.y });
+          if (actor.moving) sawMoving = true;
+        }
+      }
+
+      let walked = 0;
+      for (const [id, start] of first) {
+        const end = last.get(id);
+        if (end === undefined) continue;
+        if (Math.hypot(end.x - start.x, end.y - start.y) > 0.5) walked++;
+      }
+      return { seen: first.size, walked, sawMoving };
+    });
+
+    expect(walk.seen, 'no customer was ever on foot').toBeGreaterThan(0);
+    expect(walk.walked, 'every customer stood still').toBeGreaterThan(0);
+    expect(walk.sawMoving, 'nobody was ever reported as moving').toBe(true);
+  });
+
+  test('nobody walks onto the road', async ({ page }) => {
+    /*
+     * The grid refuses it and the flow field routes around it, but this is the
+     * assertion a player would make by looking — and it is the one that would
+     * catch a steering change that let separation push somebody through a wall.
+     */
+    await bootSimulation(page);
+
+    const trespass = await page.evaluate(() => {
+      const api = window.__EVOTYCOON__;
+      api.advanceTicks(6000);
+
+      let worst = 99;
+      for (let tick = 0; tick < 600; tick++) {
+        api.advanceTicks(1);
+        const state = api.getState();
+        for (let i = 0; i < state.actorCount; i++) {
+          const actor = state.actors[i];
+          if (actor?.kind !== 0) continue;
+          worst = Math.min(worst, actor.y);
+        }
+      }
+      return worst;
+    });
+
+    /*
+     * The carriageway runs to y = 8.5 and the queue is authored to spill down to
+     * y = 6.7 on purpose, so the bound is the last authored queue slot rather
+     * than the kerb. Anything below that is somebody in the traffic.
+     */
+    expect(trespass, `a customer reached y = ${String(trespass)}`).toBeGreaterThan(6.4);
   });
 });

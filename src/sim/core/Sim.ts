@@ -9,6 +9,7 @@ import { EventBus } from './EventBus';
 import type { SimSystem } from './SystemPipeline';
 import { SystemPipeline } from './SystemPipeline';
 import { ACTOR_KIND_VEHICLE } from '@config/actors';
+import { ARRIVAL_EPSILON_METRES } from '@config/customer';
 import { BRAKE_LIGHT_DECEL } from '@config/traffic';
 import { stage1ManeuverSystem } from '../systems/noop';
 import type { VehicleManeuverSystem } from '../systems/VehicleManeuverSystem';
@@ -277,7 +278,14 @@ export class Sim {
       target.headingY = record.headingY;
       target.braking = false;
       target.patience = record.patienceMaxMs > 0 ? record.patienceMs / record.patienceMaxMs : 0;
-      target.moving = record.targetX !== record.x || record.targetY !== record.y;
+      /*
+       * Against the same epsilon navigation arrives on, not exact equality. A
+       * customer standing in a queue is nudged by their neighbours every tick,
+       * so they never land on the target coordinate exactly — and the walk cycle
+       * would have played forever on someone standing perfectly still.
+       */
+      target.moving =
+        Math.hypot(record.targetX - record.x, record.targetY - record.y) > ARRIVAL_EPSILON_METRES;
       index++;
     }
     return index;

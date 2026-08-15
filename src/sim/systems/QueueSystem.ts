@@ -79,12 +79,35 @@ export class QueueSystem implements SimSystem {
       const free = this.firstFreeIndex();
       if (free < 0) {
         /*
-         * Every authored slot is taken, including the ones that count as spilled
-         * onto the road. The customer keeps walking towards the counter and
-         * stands wherever they got to; the conversion penalty from the visible
-         * queue is already doing the work of discouraging more arrivals.
+         * Every authored slot is taken. They hold position rather than
+         * continuing towards the counter — you see the queue is full and you
+         * hang back.
+         *
+         * Two alternatives were measured and rejected, both worse:
+         *
+         * Sending them on had every unplaced customer walk at the *same point*.
+         * With thirty pedestrians at the entrance — this phase's own naturalness
+         * scenario — fifteen converged on one spot: closest approach 2.2 cm and
+         * 5.5% of pair-ticks inside 30 cm, which is people standing inside each
+         * other. No amount of steering fixes a crowd told to stand in one place.
+         *
+         * **Extending the line** past the last slot, at the same spacing and on
+         * the same heading, is what a real queue does and is wrong *here*: Stage
+         * 1's queue is authored pointing at the road, because an overflowing
+         * queue spilling towards the traffic is the whole spillover mechanic
+         * (ECONOMY_DESIGN §7, Fren 4). Extending it walks people into the
+         * carriageway, the grid refuses them, and they pile up against the kerb
+         * instead — closest approach 0.9 cm and 11% of pair-ticks too close,
+         * forty times worse than holding.
+         *
+         * Holding is not the prettiest of the three; it is the one that measures
+         * best on this layout. A layout whose queue ran along the counter rather
+         * than towards the road could extend, and this is the note that will say
+         * so when one does.
          */
         customer.queueIndex = -1;
+        customer.targetX = customer.x;
+        customer.targetY = customer.y;
         continue;
       }
       this.occupants[free] = slot;

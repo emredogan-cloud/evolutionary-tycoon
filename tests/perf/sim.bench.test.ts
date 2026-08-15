@@ -6,6 +6,9 @@ import {
   benchDepthSort,
   benchTicksFromFresh,
   benchEventFlush,
+  benchCrowdedTick,
+  benchFlowFieldChunk,
+  benchFlowFieldRebuild,
   benchPopulatedTick,
   benchSnapshot,
   buildPeakLoad,
@@ -186,6 +189,46 @@ describe('simulation performance budgets', () => {
     expect(sim.world.customers.activeCount).toBe(20);
   });
 
+  it('runs a crowded tick inside the Phase 7 budget', () => {
+    // 2.5 ms p95 at 60 pedestrians and 120 vehicles — GAME_EXECUTION_ROADMAP
+    // Phase 7. This is the measurement that decides whether O(n²) separation
+    // over the pedestrians was an acceptable choice.
+    const result = benchCrowdedTick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(2.5);
+  });
+
+  it('never spends more than a frame on one goal', () => {
+    /*
+     * The requirement is "the recompute must not block a frame — chunk it per
+     * goal if necessary" (GAME_EXECUTION_ROADMAP Phase 7), with 12 ms for all
+     * twenty goals as the threshold at which chunking becomes necessary.
+     *
+     * It was 42.9 ms at that scale to begin with. Flattening a tuple destructure
+     * out of the innermost loop took it to 9.8 ms on a developer machine — and
+     * a CI runner measured **19.7 ms**, still over. So by the roadmap's own rule
+     * chunking is necessary, and `FlowFieldCache` does one goal per tick.
+     *
+     * What has a deadline is therefore the chunk, and this is it: one goal, well
+     * inside a 16.6 ms frame on the slowest machine that runs this suite. The
+     * full recompute is still measured below, because how long the queue takes
+     * to drain is worth knowing — it is simply no longer paid all at once.
+     */
+    const result = benchFlowFieldChunk();
+    const perGoalMs = result.p95Ms / result.opsPerSample;
+    expect(perGoalMs, `measured ${perGoalMs.toFixed(3)} ms for one goal`).toBeLessThan(8);
+  });
+
+  it('reports how long a full recompute takes, without a frame deadline', () => {
+    // Chunked, so this is a duration rather than a hitch: at one goal per tick
+    // it spreads over as many ticks as there are goals — a second at twenty
+    // goals and 20 Hz. Asserted loosely, so a tenfold regression is caught and
+    // a slower runner is not.
+    const result = benchFlowFieldRebuild();
+    const perRebuildMs = result.p95Ms / result.opsPerSample;
+    expect(perRebuildMs, `measured ${perRebuildMs.toFixed(3)} ms per full rebuild`).toBeLessThan(60);
+  });
+
   it('serialises a save in under 8 ms', () => {
     // ECONOMY/TECHNICAL_ARCHITECTURE §8: autosave runs every 30 s and on
     // pagehide. Anything slower than a frame there is a visible hitch.
@@ -308,6 +351,40 @@ describe('regression against the recorded baseline', () => {
    * is the simulation's cost relative to the processor it is on. The 15%
    * threshold from TESTING_STRATEGY §6 is unchanged; only the quantity being
    * compared is chosen to be comparable.
+   *
+   * ## The calibration has to resemble the work
+   *
+   * Normalising cancels a uniform clock-speed difference. It does **not** cancel
+   * a difference in the *mix* of work, and while the calibration was pure
+   * floating-point arithmetic it did not cancel enough: a benchmark that walks
+   * memory does not scale with an arithmetic loop across different processors.
+   * The gap broke the gate in both directions — a baseline recorded on a
+   * developer machine failed on CI by 19%, and the CI-recorded baseline that
+   * replaced it failed locally by 18%. Neither machine was slower.
+   *
+   * `calibrationMs` now mixes arithmetic with a strided walk over a buffer far
+   * larger than any cache. Measured across the same two machines, before and
+   * after:
+   *
+   * | benchmark                     | FP only | mixed  |
+   * | ----------------------------- | ------- | ------ |
+   * | world hash (most memory-bound)| +19%    | **-5%** |
+   * | world snapshot + JSON         | +11%    | -5%    |
+   * | 1000 ticks from a fresh world | +7%     | -7%    |
+   * | populated tick                | +10%    | -15%   |
+   * | depth sort                    | -1%     | -2%    |
+   *
+   * ## Which environment records it
+   *
+   * The developer machine, and deliberately. Under the mixed calibration CI
+   * measures *faster* than local on every benchmark, so a locally recorded
+   * baseline can never produce a false regression on CI — and CI is where this
+   * gate is enforced. The cost is sensitivity: a few points of the 15% are spent
+   * on the residual offset before a real regression starts eating into it.
+   *
+   * The reverse choice was tried and rejected on evidence rather than taste: a
+   * CI-recorded baseline makes `pnpm bench:sim` fail on a developer machine,
+   * which is worse than a gate that is slightly less sensitive.
    */
   /*
    * Not compared while recording: a baseline is being replaced in this very

@@ -6,7 +6,12 @@ import { Sim } from '../../src/sim/core/Sim';
 import { snapshotWorld } from '../../src/sim/core/snapshot';
 import { World } from '../../src/sim/core/World';
 import { STAGE1_LAYOUT } from '../../src/config/layouts/stage1';
-import { STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE } from '../../src/sim/ai/fsm/customerFsm';
+import type { StageLayout } from '../../src/config/layouts/stage1';
+import {
+  STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE,
+  STATE_WALKING_TO_DOOR as CUSTOMER_WALKING_STATE,
+} from '../../src/sim/ai/fsm/customerFsm';
+import { FlowFieldCache } from '../../src/sim/nav/FlowFieldCache';
 
 /**
  * Headless simulation benchmark.
@@ -52,23 +57,67 @@ export interface AllocationResult {
 /**
  * A fixed workload used to measure how fast *this machine* is right now.
  *
- * The regression gate compares wall-clock timings against a recorded baseline,
- * and on GitHub's shared runners that comparison was worthless: a baseline
- * recorded on CI was 47-68% "slower" when the identical commit re-ran on CI six
- * minutes later. The runner fleet is heterogeneous and noisy, and taking the
- * minimum of 25 samples removes scheduler contention but not a different CPU.
+ * The regression gate compares timings against a recorded baseline, and on
+ * GitHub's shared runners a raw comparison was worthless: a baseline recorded on
+ * CI reported the identical commit as 47-68% "slower" when it re-ran six minutes
+ * later. Dividing every measurement by this one turns milliseconds into a ratio,
+ * and machine speed cancels.
  *
- * Dividing every measurement by this one turns absolute milliseconds into a
- * ratio, and machine speed cancels. It is deliberately dull arithmetic with no
- * allocation and no I/O, so it measures processor throughput and nothing else.
+ * ## Why it is a mixture
+ *
+ * It was pure floating-point arithmetic to begin with, and that cancelled a
+ * uniform clock-speed difference but not a difference in the *mix* of work. A
+ * benchmark that walks memory does not scale with an arithmetic loop across
+ * different processors, and the gap was large enough to break the gate in both
+ * directions: a baseline recorded on a developer machine failed on CI by 19%,
+ * and the CI-recorded baseline that replaced it failed locally by 18%. Neither
+ * machine was slower than the other. The 15% threshold was measuring the
+ * difference between an FP-bound denominator and a memory-bound numerator.
+ *
+ * So the calibration now does both, in the same proportion the simulation does:
+ * arithmetic, and a strided walk over a buffer far larger than any cache. The
+ * stride is 8 doubles — one cache line — so every read misses, which is what
+ * makes it measure the memory subsystem rather than the prefetcher.
+ *
+ * Still deliberately dull: no allocation inside the timed region, no I/O, and
+ * the buffer is filled once and reused.
  */
+
+/** 4 MB of doubles — past any L2, and past most L3 slices. */
+const CALIBRATION_BUFFER_LENGTH = 1 << 19;
+/** One 64-byte cache line, so consecutive reads never share one. */
+const CALIBRATION_STRIDE = 8;
+const CALIBRATION_PASSES = 6;
+const CALIBRATION_ARITHMETIC_STEPS = 200_000;
+
+let calibrationBuffer: Float64Array | undefined;
+
+function calibrationData(): Float64Array {
+  if (calibrationBuffer === undefined) {
+    const buffer = new Float64Array(CALIBRATION_BUFFER_LENGTH);
+    // Deterministic and non-constant, so nothing can be folded away.
+    for (let i = 0; i < buffer.length; i++) buffer[i] = (i % 1013) * 0.5 + 1;
+    calibrationBuffer = buffer;
+  }
+  return calibrationBuffer;
+}
+
 export function calibrationMs(): number {
+  const buffer = calibrationData();
+
   return timeIt('calibration', 1, () => {
     let total = 0;
-    for (let i = 1; i < 400_000; i++) {
+    for (let i = 1; i < CALIBRATION_ARITHMETIC_STEPS; i++) {
       total += Math.sqrt(i) / (i % 97 === 0 ? 3 : 7);
     }
-    // Consumed so the loop cannot be optimised away entirely.
+
+    for (let pass = 0; pass < CALIBRATION_PASSES; pass++) {
+      for (let i = 0; i < buffer.length; i += CALIBRATION_STRIDE) {
+        total += buffer[i] ?? 0;
+      }
+    }
+
+    // Consumed so neither loop can be optimised away entirely.
     if (total < 0) throw new Error('unreachable');
   }).minMs;
 }
@@ -259,6 +308,22 @@ export function benchWorldHash(): TimingResult {
  */
 export function buildPeakLoad(seed = 20260815): Sim {
   const sim = new Sim({ seed });
+  populatePeakLoad(sim);
+  return sim;
+}
+
+/**
+ * Fill a world with the peak load, on a world that may already have been used.
+ *
+ * Separate from `buildPeakLoad` so a benchmark can rebuild the load **inside**
+ * each sample. Without that the load decays: a jam of 120 vehicles clears over a
+ * few hundred ticks, so twenty-five samples of two hundred ticks each measured a
+ * road that was emptier every time and the figure swung 16% between runs. The
+ * setup is a few hundred store writes against two hundred ticks of simulation,
+ * so its cost is constant and small.
+ */
+export function populatePeakLoad(sim: Sim): void {
+  sim.world.reset();
   const vehicles = sim.world.vehicles;
 
   const perLane = 60;
@@ -292,8 +357,6 @@ export function buildPeakLoad(seed = 20260815): Sim {
     customer.x = STAGE1_LAYOUT.counter.x;
     customer.y = STAGE1_LAYOUT.counter.y - 1 - i * 0.1;
   }
-
-  return sim;
 }
 
 export function benchPopulatedTick(): TimingResult {
@@ -309,9 +372,145 @@ export function benchPopulatedTick(): TimingResult {
   );
 }
 
+/**
+ * A full flow-field recompute — GAME_EXECUTION_ROADMAP Phase 7, 12 ms for every
+ * goal.
+ *
+ * This is the number the whole approach rests on. Flow fields are cheap to *use*
+ * and expensive to *build*, and the trade only works because a build happens
+ * when the player places something rather than in the game loop. If it were over
+ * a frame the roadmap's fallback is to chunk it per goal across frames — "but
+ * measure first", which is what this is.
+ */
+export function benchFlowFieldRebuild(): TimingResult {
+  const cache = new FlowFieldCache(budgetScaleLayout());
+  const placed = [{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }];
+  const rebuilds = 8;
+
+  return timeIt('flow field rebuild, 64x64 x 20 goals', rebuilds, () => {
+    for (let i = 0; i < rebuilds; i++) {
+      // Alternating, so no rebuild can be skipped as a repeat of the last.
+      cache.rebuild(i % 2 === 0 ? placed : []);
+      cache.finish();
+    }
+  });
+}
+
+/**
+ * One goal's share of a recompute — the piece that has to fit in a frame.
+ *
+ * This is the number the roadmap's requirement actually turns on. "The recompute
+ * must not block a frame, chunk it per goal if necessary" makes the *chunk* the
+ * thing with a deadline, and the full recompute merely the thing with a
+ * duration. The full figure is still measured above, because how long the whole
+ * queue takes to drain is worth knowing — but it is no longer paid all at once.
+ */
+export function benchFlowFieldChunk(): TimingResult {
+  const cache = new FlowFieldCache(budgetScaleLayout());
+  const placed = [{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }];
+  const chunks = 40;
+
+  return timeIt('flow field, one goal', chunks, () => {
+    let done = 0;
+    let flip = 0;
+    while (done < chunks) {
+      if (!cache.rebuilding) {
+        cache.rebuild(flip % 2 === 0 ? placed : []);
+        flip++;
+      }
+      done += cache.step(1);
+    }
+  });
+}
+
+/**
+ * A synthetic layout at the size the budget is written against.
+ *
+ * The roadmap's figure is "64×64 grid, 20 goals, full recompute ≤ 12 ms".
+ * Stage 1 is 48×36 cells with six goals, so measuring it and reporting the
+ * result against that budget would be comparing two different questions — and
+ * the answer would look four times better than the requirement asked for.
+ *
+ * 32 by 32 metres is 64 by 64 cells at the authored resolution, and eighteen
+ * bays plus the counter and the exit make twenty goals. The road is removed so
+ * the whole grid is reachable, which is the worst case for a Dijkstra: nothing
+ * prunes the frontier.
+ */
+function budgetScaleLayout(): StageLayout {
+  const bays = [];
+  for (let i = 0; i < 18; i++) {
+    const x = 2 + (i % 6) * 5;
+    const y = 4 + Math.floor(i / 6) * 9;
+    bays.push({
+      id: `p${String(i)}`,
+      x,
+      y,
+      heading: { x: 1, y: 0 },
+      door: { x, y: y + 1.5 },
+    });
+  }
+
+  return {
+    ...STAGE1_LAYOUT,
+    lot: { minX: 0, minY: 0, maxX: 32, maxY: 32 },
+    road: { ...STAGE1_LAYOUT.road, lanes: [] },
+    statics: [],
+    parking: bays,
+    counter: { x: 16, y: 30 },
+    pullIn: { x: 16, y: 28 },
+  };
+}
+
+/**
+ * A tick with the Phase 7 stress target on it — 60 pedestrians and 120 vehicles.
+ *
+ * Separation is O(n²) over the pedestrians, so this is the measurement that
+ * decides whether that was an acceptable choice. Sixty is the roadmap's figure
+ * and is far past what Stage 1 produces on its own, which is why the crowd is
+ * imposed rather than waited for.
+ */
+export function benchCrowdedTick(): TimingResult {
+  const sim = buildPeakLoad(20260816);
+  const ticks = 200;
+
+  const crowd = (): void => {
+    populatePeakLoad(sim);
+    // Twenty more on foot than the peak load seats, up to the roadmap's sixty.
+    for (let i = sim.world.customers.activeCount; i < 60; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      // Spread across the walkable half of the lot, all heading for the counter.
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+  };
+
+  crowd();
+  const label = `crowded tick (${String(sim.world.customers.activeCount)} pedestrians, 120 vehicles)`;
+  return timeIt(label, ticks, () => {
+    crowd();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
+ * Reset per sample, for the same reason `benchTicksFromFresh` is: the world
+ * fills as it runs, so twenty-five samples of a thousand ticks each were
+ * measuring an increasingly busy simulation and the samples were describing
+ * different worlds. It showed up as a 29% swing between two runs minutes apart.
+ */
 export function benchCommandProcessing(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks, one command each', 1000, () => {
+    sim.world.reset();
     for (let i = 0; i < 1000; i++) {
       sim.dispatch({ t: 'SET_SPEED', mult: i % 2 === 0 ? 2 : 4 });
       sim.tick();
@@ -327,6 +526,8 @@ export function benchEventFlush(): TimingResult {
   }
 
   return timeIt('1000 ticks, 8 events per tick, 3 subscribers', 8000, () => {
+    // Reset per sample — see `benchCommandProcessing`.
+    sim.world.reset();
     for (let i = 0; i < 1000; i++) {
       for (let e = 0; e < 8; e++) sim.world.eventQueue.emitDayStarted(e);
       sim.tick();
@@ -433,6 +634,9 @@ export function runSimBench(): BenchReport {
       benchTicksFromFresh(),
       benchWorldHash(),
       benchPopulatedTick(),
+      benchCrowdedTick(),
+      benchFlowFieldRebuild(),
+      benchFlowFieldChunk(),
       benchCommandProcessing(),
       benchEventFlush(),
       benchStoreChurn(),
