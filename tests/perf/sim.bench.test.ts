@@ -6,7 +6,9 @@ import {
   benchDepthSort,
   benchEmptyTicks,
   benchEventFlush,
+  benchPopulatedTick,
   benchSnapshot,
+  buildPeakLoad,
   benchStoreChurn,
   benchWorldHash,
   formatBaselineJson,
@@ -140,6 +142,41 @@ describe('simulation performance budgets', () => {
     const result = benchDepthSort();
     const perSortMs = result.p50Ms / result.opsPerSample;
     expect(perSortMs, `measured ${perSortMs.toFixed(4)} ms per sort`).toBeLessThan(0.15);
+  });
+
+  it('runs a fully loaded tick inside the Phase 6 budget', () => {
+    /*
+     * 2.2 ms p95 at 120 vehicles and 20 customers — GAME_EXECUTION_ROADMAP
+     * Phase 6. The p95 rather than the median, because the budget is about the
+     * frame that stutters and not the average one, and there is one tick in
+     * every twenty here that does more work than the rest: the ordering pass
+     * re-sorts, a manoeuvre hands over, a customer changes state.
+     *
+     * A per-tick figure, so it stays comparable as later phases add systems to
+     * the same eighteen slots. The measured cost is reported in the message
+     * either way, which is what `docs/PERF_LOG.md` records.
+     */
+    const result = benchPopulatedTick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(2.2);
+  });
+
+  it('carries the load the budget is written against, for the whole measurement', () => {
+    /*
+     * The failure mode of every performance test that builds its own fixture:
+     * the world drains, the benchmark reports the cost of an ordinary tick, and
+     * the budget passes because nothing is happening. An earlier version of this
+     * benchmark did exactly that — 120 vehicles spawned, and a 36 m lane at
+     * 13.9 m/s is empty 52 ticks later.
+     */
+    const sim = buildPeakLoad();
+    expect(sim.world.vehicles.activeCount, 'the load was never built').toBe(120);
+    expect(sim.world.customers.activeCount).toBe(20);
+
+    // 200 ticks is one timed sample; the load has to survive all of them.
+    sim.advance(200);
+    expect(sim.world.vehicles.activeCount, 'the road drained mid-measurement').toBeGreaterThanOrEqual(100);
+    expect(sim.world.customers.activeCount).toBe(20);
   });
 
   it('serialises a save in under 8 ms', () => {

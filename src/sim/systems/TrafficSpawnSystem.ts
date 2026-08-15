@@ -206,7 +206,7 @@ export class TrafficSpawnSystem implements SimSystem {
   private laneHeadClear(world: World, laneIndex: number, decorative: boolean): boolean {
     const required = decorative ? DECORATIVE_MIN_HEADWAY_METRES : SPAWN_MIN_HEADWAY_METRES;
     const vehicles = world.vehicles;
-    for (let slot = 0; slot < vehicles.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!vehicles.isActive(slot)) continue;
       /*
        * A car mid-manoeuvre keeps the `laneS` it had when it turned off, which

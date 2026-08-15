@@ -225,3 +225,104 @@ describe('VehicleStore', () => {
     expect(hashOf(b)).not.toBe(hashOf(a));
   });
 });
+
+/**
+ * The scan bound — one past the highest live slot.
+ *
+ * Every per-tick system sweeps a store looking for live entities. With a
+ * capacity of 160 and a dozen cars on the road, an unbounded sweep spends 90% of
+ * its work finding nothing, which is where a third of the empty-tick budget went
+ * once Phase 6 added two more sweeps.
+ *
+ * The property that makes it safe is one-sided: it may lag high after a burst of
+ * despawns, costing a few wasted iterations, but it must never be too low — a
+ * bound below a live slot hides an entity from every system at once, and the
+ * symptom is a car that stops moving rather than an error.
+ */
+describe('scan bounds', () => {
+  it('starts at zero and follows the highest live slot up', () => {
+    const store = new VehicleStore(8);
+    expect(store.scanLimit).toBe(0);
+
+    const first = store.spawn(1);
+    expect(store.scanLimit).toBe(first + 1);
+
+    const slots = [store.spawn(2), store.spawn(3), store.spawn(4)];
+    expect(store.scanLimit).toBe(Math.max(first, ...slots) + 1);
+  });
+
+  it('pulls back down as the top empties', () => {
+    const store = new VehicleStore(8);
+    const slots = [store.spawn(1), store.spawn(2), store.spawn(3)];
+    const highest = Math.max(...slots);
+
+    store.despawn(highest);
+    expect(store.scanLimit).toBeLessThan(highest + 1);
+
+    for (const slot of slots) store.despawn(slot);
+    expect(store.scanLimit).toBe(0);
+  });
+
+  it('never excludes a live slot, whatever order things are despawned in', () => {
+    /*
+     * The invariant, exhaustively. A bound that is merely usually right is worse
+     * than none: it fails only under a despawn order nobody reproduces.
+     */
+    const store = new VehicleStore(12);
+    const live = new Set<number>();
+    for (let i = 0; i < 12; i++) live.add(store.spawn(i + 1));
+
+    // Despawn in an awkward order — middle out, then the ends.
+    for (const slot of [5, 4, 6, 3, 7, 0, 11, 1, 10, 2, 9, 8]) {
+      store.despawn(slot);
+      live.delete(slot);
+      for (const remaining of live) {
+        expect(remaining, `slot ${remaining} is live but outside the scan bound`).toBeLessThan(
+          store.scanLimit,
+        );
+      }
+    }
+    expect(store.scanLimit).toBe(0);
+  });
+
+  it('survives a reset', () => {
+    const store = new VehicleStore(4);
+    store.spawn(1);
+    store.spawn(2);
+    store.reset();
+    expect(store.scanLimit).toBe(0);
+    expect(store.spawn(3)).toBeGreaterThanOrEqual(0);
+    expect(store.scanLimit).toBeGreaterThan(0);
+  });
+
+  it('holds for the pooled stores too', () => {
+    const pool = createActorPool(6, 0);
+    expect(pool.scanLimit).toBe(0);
+    const a = pool.acquire();
+    const b = pool.acquire();
+    expect(pool.scanLimit).toBe(Math.max(a, b) + 1);
+    pool.release(a);
+    pool.release(b);
+    expect(pool.scanLimit).toBe(0);
+  });
+
+  it('leaves the world hash unchanged, because dead slots were never in it', () => {
+    // The bound narrows what is *iterated*, not what is digested. If it changed
+    // a hash, it would have changed an outcome.
+    const digest = (store: VehicleStore): string => {
+      const hasher = new Hasher().reset();
+      store.hashInto(hasher);
+      return hasher.digest();
+    };
+
+    const store = new VehicleStore(16);
+    const slots = [store.spawn(1), store.spawn(2), store.spawn(3)];
+    store.laneS[slots[1] ?? 0] = 12.5;
+    const before = digest(store);
+
+    const spare = store.spawn(9);
+    store.despawn(spare);
+
+    expect(digest(store)).toBe(before);
+  });
+});

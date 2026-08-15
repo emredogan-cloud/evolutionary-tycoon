@@ -60,7 +60,10 @@ export class CustomerFsmSystem implements SimSystem {
     if (seconds <= 0) return;
 
     const customers = world.customers;
-    for (let slot = 0; slot < customers.capacity; slot++) {
+    // See `ConversionSystem.run` for why the empty case is short-circuited.
+    if (customers.activeCount === 0) return;
+
+    for (let slot = 0; slot < customers.scanLimit; slot++) {
       if (!customers.isActive(slot)) continue;
       const customer = customers.at(slot);
       // Authored scene actors are scenery in a gameplay pool — see `staged`.

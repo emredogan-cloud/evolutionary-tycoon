@@ -101,7 +101,17 @@ export class ConversionSystem implements SimSystem {
   run(world: World): void {
     const vehicles = world.vehicles;
 
-    for (let slot = 0; slot < vehicles.capacity; slot++) {
+    /*
+     * Nothing to look at. A provable no-op rather than the conditional skipping
+     * `SYSTEM_ORDER` warns against: the loop below cannot execute with an empty
+     * store, so the tick behaves identically either way. It is worth the line
+     * because an empty scan is not free at these capacities — the Phase 6
+     * systems together added 1.4 us to a tick with nothing in the world, which
+     * is a third of the whole empty-tick budget spent on finding nothing.
+     */
+    if (vehicles.activeCount === 0) return;
+
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!vehicles.isActive(slot)) continue;
       if (at(vehicles.decision, slot) !== DECISION_PENDING) continue;
 
@@ -275,7 +285,7 @@ export class ConversionSystem implements SimSystem {
   private visibleQueueLength(world: World): number {
     let count = 0;
     const customers = world.customers;
-    for (let slot = 0; slot < customers.capacity; slot++) {
+    for (let slot = 0; slot < customers.scanLimit; slot++) {
       if (!customers.isActive(slot)) continue;
       if (customers.at(slot).queueIndex >= 0) count++;
     }
@@ -322,7 +332,7 @@ export function timeOfDayFit(hour: number): number {
 export function noveltyDecay(world: World, archetype: number): number {
   let sameArchetype = 0;
   const customers = world.customers;
-  for (let slot = 0; slot < customers.capacity; slot++) {
+  for (let slot = 0; slot < customers.scanLimit; slot++) {
     if (!customers.isActive(slot)) continue;
     if (customers.at(slot).archetype === archetype) sameArchetype++;
   }

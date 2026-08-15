@@ -88,6 +88,7 @@ export class VehicleStore {
   private readonly freeStack: Int32Array;
   private freeTop: number;
   private live = 0;
+  private highWater = 0;
 
   constructor(capacity: number) {
     if (capacity <= 0) throw new RangeError('VehicleStore capacity must be positive');
@@ -118,6 +119,24 @@ export class VehicleStore {
     return this.live;
   }
 
+  /**
+   * One past the highest live slot — the only range a scan has to cover.
+   *
+   * Every per-tick system sweeps this store looking for live entities, and with
+   * a capacity of 160 and a dozen cars on the road that is 90% of the work spent
+   * finding nothing. The free list hands out low slots first, so the live set
+   * stays clustered near zero and this bound is tight in practice.
+   *
+   * Maintained rather than recomputed: `spawn` pushes it up, `despawn` pulls it
+   * back down past whatever is now dead at the top. Both are O(1) amortised, and
+   * the value is never wrong in the direction that matters — it can lag high
+   * after a burst of despawns, which costs a few wasted iterations, but it can
+   * never be too low and hide a live entity.
+   */
+  get scanLimit(): number {
+    return this.highWater;
+  }
+
   /** Slot index, or -1 when full. A full store drops the spawn; it never grows. */
   spawn(entityId: number): number {
     if (this.freeTop === 0) return -1;
@@ -140,6 +159,7 @@ export class VehicleStore {
     this.maneuverS[slot] = 0;
     this.waitMs[slot] = 0;
     this.live++;
+    if (slot >= this.highWater) this.highWater = slot + 1;
     return slot;
   }
 
@@ -163,6 +183,7 @@ export class VehicleStore {
     this.freeStack[this.freeTop] = slot;
     this.freeTop++;
     this.live--;
+    while (this.highWater > 0 && this.activeFlags[this.highWater - 1] !== 1) this.highWater--;
   }
 
   isActive(slot: number): boolean {
@@ -188,12 +209,13 @@ export class VehicleStore {
     for (let i = 0; i < this.capacity; i++) this.freeStack[i] = this.capacity - 1 - i;
     this.freeTop = this.capacity;
     this.live = 0;
+    this.highWater = 0;
   }
 
   /** Live slots in ascending order; dead slots and the free list are not state. */
   hashInto(hasher: Hasher): void {
     hasher.writeU32(this.live);
-    for (let slot = 0; slot < this.capacity; slot++) {
+    for (let slot = 0; slot < this.highWater; slot++) {
       if (this.activeFlags[slot] !== 1) continue;
       hasher.writeU32(slot);
       hasher.writeI32(at(this.entityId, slot));

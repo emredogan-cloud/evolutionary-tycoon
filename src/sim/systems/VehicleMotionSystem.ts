@@ -50,13 +50,13 @@ export class VehicleMotionSystem implements SimSystem {
   /** Write cursor for the bucketing pass. Separate from `laneCounts`, which
    *  `accelerate` still needs afterwards. */
   private readonly laneCursor: Int32Array;
-  private readonly capacity: number;
 
   constructor(
     private readonly lanes: LaneGraph,
     capacity: number,
   ) {
-    this.capacity = capacity;
+    // Sized to the store's full capacity, but only ever filled up to its scan
+    // limit — the buffer has to survive a moment when every slot is live.
     this.ordered = new Int32Array(capacity);
     this.laneCounts = new Int32Array(lanes.laneCount);
     this.laneOffsets = new Int32Array(lanes.laneCount);
@@ -87,7 +87,7 @@ export class VehicleMotionSystem implements SimSystem {
     const laneCount = this.lanes.laneCount;
     this.laneCounts.fill(0);
 
-    for (let slot = 0; slot < this.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!this.onRoad(vehicles, slot)) continue;
       const lane = at(vehicles.lane, slot);
       if (lane < laneCount) this.laneCounts[lane] = at(this.laneCounts, lane) + 1;
@@ -103,7 +103,7 @@ export class VehicleMotionSystem implements SimSystem {
     const cursor = this.laneCursor;
     const starts = this.laneOffsets;
     cursor.fill(0);
-    for (let slot = 0; slot < this.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!this.onRoad(vehicles, slot)) continue;
       const lane = at(vehicles.lane, slot);
       if (lane >= laneCount) continue;
@@ -206,7 +206,7 @@ export class VehicleMotionSystem implements SimSystem {
   private integrate(world: World, seconds: number): void {
     const vehicles = world.vehicles;
 
-    for (let slot = 0; slot < this.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!this.onRoad(vehicles, slot)) continue;
 
       const accel = at(vehicles.accel, slot);
@@ -224,7 +224,7 @@ export class VehicleMotionSystem implements SimSystem {
 
     // Despawn in a separate pass. Freeing a slot mid-scan would let the store
     // hand it straight back out and the loop would process the same index twice.
-    for (let slot = 0; slot < this.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!this.onRoad(vehicles, slot)) continue;
 
       /*

@@ -43,6 +43,12 @@ export class QueueSystem implements SimSystem {
     this.occupants.fill(-1);
 
     const customers = world.customers;
+    /*
+     * After the clear, not before it: an empty queue still has to *become*
+     * empty, or a place held by a customer who has since left stays held.
+     * See `ConversionSystem.run` for the rest of the reasoning.
+     */
+    if (customers.activeCount === 0) return;
 
     /*
      * Existing places are honoured before new ones are handed out. Rebuilding
@@ -51,7 +57,7 @@ export class QueueSystem implements SimSystem {
      * — so a customer could overtake someone who had been waiting longer,
      * purely because a pool slot was recycled.
      */
-    for (let slot = 0; slot < customers.capacity; slot++) {
+    for (let slot = 0; slot < customers.scanLimit; slot++) {
       if (!customers.isActive(slot)) continue;
       const customer = customers.at(slot);
       if (!this.wantsQueue(customer)) {
@@ -64,7 +70,7 @@ export class QueueSystem implements SimSystem {
       }
     }
 
-    for (let slot = 0; slot < customers.capacity; slot++) {
+    for (let slot = 0; slot < customers.scanLimit; slot++) {
       if (!customers.isActive(slot)) continue;
       const customer = customers.at(slot);
       if (!this.wantsQueue(customer)) continue;
@@ -144,7 +150,7 @@ export class QueueSystem implements SimSystem {
   /** How many customers are standing past the authored capacity. */
   static overflowOf(world: World, layout: StageLayout): number {
     let queued = 0;
-    for (let slot = 0; slot < world.customers.capacity; slot++) {
+    for (let slot = 0; slot < world.customers.scanLimit; slot++) {
       if (!world.customers.isActive(slot)) continue;
       if (world.customers.at(slot).queueIndex >= 0) queued++;
     }

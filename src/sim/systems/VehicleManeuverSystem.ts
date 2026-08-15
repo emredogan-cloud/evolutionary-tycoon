@@ -78,7 +78,10 @@ export class VehicleManeuverSystem implements SimSystem {
     if (seconds <= 0) return;
 
     const vehicles = world.vehicles;
-    for (let slot = 0; slot < vehicles.capacity; slot++) {
+    // See `ConversionSystem.run` for why the empty case is short-circuited.
+    if (vehicles.activeCount === 0) return;
+
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!vehicles.isActive(slot)) continue;
 
       switch (at(vehicles.state, slot)) {
@@ -347,7 +350,7 @@ export class VehicleManeuverSystem implements SimSystem {
    */
   private bayOccupied(world: World, bay: number): boolean {
     const vehicles = world.vehicles;
-    for (let slot = 0; slot < vehicles.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!vehicles.isActive(slot)) continue;
       const state = at(vehicles.state, slot);
       if (state === VEHICLE_ON_ROAD) continue;
@@ -384,7 +387,7 @@ export class VehicleManeuverSystem implements SimSystem {
    */
   private rejoinClear(world: World, laneIndex: number, rejoinS: number, comfort: number): boolean {
     const vehicles = world.vehicles;
-    for (let slot = 0; slot < vehicles.capacity; slot++) {
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!vehicles.isActive(slot)) continue;
       if (at(vehicles.state, slot) !== VEHICLE_ON_ROAD) continue;
       if (at(vehicles.lane, slot) !== laneIndex) continue;

@@ -5,6 +5,8 @@ import type { DepthSortable } from '../../src/render/iso/DepthSorter';
 import { Sim } from '../../src/sim/core/Sim';
 import { snapshotWorld } from '../../src/sim/core/snapshot';
 import { World } from '../../src/sim/core/World';
+import { STAGE1_LAYOUT } from '../../src/config/layouts/stage1';
+import { STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE } from '../../src/sim/ai/fsm/customerFsm';
 
 /**
  * Headless simulation benchmark.
@@ -220,6 +222,76 @@ export function benchWorldHash(): TimingResult {
   });
 }
 
+/**
+ * A tick under the Phase 6 stress target — GAME_EXECUTION_ROADMAP Phase 6.
+ *
+ * 120 vehicles and 20 customers is the desktop cap from
+ * TECHNICAL_ARCHITECTURE §11.2, and **Stage 1's road cannot hold it at realistic
+ * spacing**: two 36 m lanes are 72 m of tarmac against 540 m of car. So the
+ * vehicles are packed far tighter than any real run produces. That is deliberate
+ * and it is what the budget is written against — the figure is a ceiling for a
+ * later stage's longer road, and the work it is measuring (ordering 120 slots,
+ * 120 follower solves, 120 integrations) is the same work either way.
+ *
+ * Packing them also makes the load *persist*. An earlier version spawned 120 and
+ * let them drive: at 13.9 m/s a lane empties in 52 ticks, so by the time the
+ * measurement started the world was back to a dozen cars and the benchmark was
+ * quietly reporting the cost of an ordinary tick. `tests/perf` asserts the
+ * population is still there, because that is the failure mode of every
+ * performance test that builds its own fixture.
+ */
+export function buildPeakLoad(seed = 20260815): Sim {
+  const sim = new Sim({ seed });
+  const vehicles = sim.world.vehicles;
+
+  const perLane = 60;
+  for (let i = 0; i < 120; i++) {
+    const slot = vehicles.spawn(sim.world.allocateEntityId());
+    if (slot < 0) break;
+    vehicles.lane[slot] = i % 2;
+    // Denser than the road can hold; see above.
+    vehicles.laneS[slot] = (Math.floor(i / 2) * 34) / perLane;
+    vehicles.desiredSpeed[slot] = 13.9;
+    vehicles.speed[slot] = 4;
+    vehicles.decision[slot] = 1;
+  }
+
+  /*
+   * Twenty customers standing in the queue with a patience that will not run
+   * out inside the measurement, so the state machine and the queue both do
+   * their full per-tick work for every sample rather than draining halfway
+   * through and flattering the result.
+   */
+  for (let i = 0; i < 20; i++) {
+    const slot = sim.world.customers.acquire();
+    if (slot < 0) break;
+    const customer = sim.world.customers.at(slot);
+    customer.entityId = sim.world.allocateEntityId();
+    customer.state = CUSTOMER_QUEUEING_STATE;
+    customer.visible = 1;
+    customer.vehicleSlot = -1;
+    customer.patienceMs = Number.MAX_SAFE_INTEGER;
+    customer.patienceMaxMs = Number.MAX_SAFE_INTEGER;
+    customer.x = STAGE1_LAYOUT.counter.x;
+    customer.y = STAGE1_LAYOUT.counter.y - 1 - i * 0.1;
+  }
+
+  return sim;
+}
+
+export function benchPopulatedTick(): TimingResult {
+  const sim = buildPeakLoad();
+  const ticks = 200;
+
+  return timeIt(
+    `populated tick (${String(sim.world.vehicles.activeCount)} vehicles, 20 customers)`,
+    ticks,
+    () => {
+      for (let i = 0; i < ticks; i++) sim.tick();
+    },
+  );
+}
+
 export function benchCommandProcessing(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks, one command each', 1000, () => {
@@ -336,6 +408,7 @@ export function runSimBench(): BenchReport {
     timings: [
       benchEmptyTicks(),
       benchWorldHash(),
+      benchPopulatedTick(),
       benchCommandProcessing(),
       benchEventFlush(),
       benchStoreChurn(),
