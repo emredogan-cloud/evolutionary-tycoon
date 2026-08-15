@@ -54,8 +54,25 @@ export interface EconomyState {
   cash: number;
   reputation: number;
   lifetimeRevenue: number;
+  /** Everything ever spent on upgrades. Lifetime, so it never goes down. */
+  lifetimeSpend: number;
   /** itemId → price. Balance values arrive in Phase 9; the container is Phase 2. */
   prices: Map<string, number>;
+  /**
+   * A sixty-second sliding window of takings and costs — Phase 9.
+   *
+   * Twelve five-second buckets each, written by `EconomySystem`. Simulation
+   * state rather than a display statistic, because ECONOMY_DESIGN §8's
+   * dead-end rule is merge-blocking and phrased in terms of net income per
+   * minute — a number computed in the UI could not be asserted headlessly and
+   * would read differently at 1x and 4x.
+   */
+  revenueWindow: Float64Array;
+  expenseWindow: Float64Array;
+  /** Which bucket is currently being written to. */
+  bucketIndex: number;
+  /** Simulation milliseconds accumulated into the current bucket. */
+  bucketElapsedMs: number;
 }
 
 export interface LayoutState {
@@ -239,4 +256,20 @@ export interface SimView {
    */
   readonly actors: readonly ActorSnapshot[];
   readonly actorCount: number;
+
+  /**
+   * Upgrade levels, aligned to `UPGRADES` — Phase 9.
+   *
+   * The renderer needs them to draw the objects a purchase puts in the world,
+   * and it cannot read `world.layout.upgrades` (it never touches the world). A
+   * reused array, like `actors`.
+   */
+  readonly upgradeLevels: readonly number[];
+  /**
+   * Changes whenever any level does. The renderer rebuilds its statics on a
+   * change rather than diffing the array every frame — a purchase happens a
+   * handful of times a session and the comparison would run sixty times a second
+   * forever.
+   */
+  readonly upgradeRevision: number;
 }

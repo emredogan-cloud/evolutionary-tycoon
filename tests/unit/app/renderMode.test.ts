@@ -49,6 +49,15 @@ describe('parseRenderMode', () => {
      */
     expect(parseRenderMode('?cook=1').visualDeterminism).toBe(false);
     expect(parseRenderMode('?cook=1').cook).toBe(true);
+
+    // `buy` is the same kind of parameter and equally not a pinning one.
+    expect(parseRenderMode('?buy=a,b').visualDeterminism).toBe(false);
+    expect(parseRenderMode('?buy=a,b').buy).toEqual(['a', 'b']);
+    expect(parseRenderMode('?buy=').buy).toEqual([]);
+    expect(parseRenderMode('').buy).toEqual([]);
+    // Whitespace and empty entries are dropped rather than becoming an unknown
+    // upgrade id that silently buys nothing.
+    expect(parseRenderMode('?buy= a , ,b ').buy).toEqual(['a', 'b']);
     expect(parseRenderMode('?scene=stress').visualDeterminism).toBe(false);
   });
 

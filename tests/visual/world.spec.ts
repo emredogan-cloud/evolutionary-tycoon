@@ -137,6 +137,38 @@ test.describe('visual goldens', () => {
     await openFrozen(page, 'empty', 8280, '&cook=1');
     await expect(page).toHaveScreenshot('stage1-serving.png');
   });
+
+  /**
+   * Before and after — GAME_EXECUTION_ROADMAP Phase 9.
+   *
+   * The same seed, the same tick, the same camera; the only difference is that
+   * the second one owns three upgrades. The pair is the visual half of "visual
+   * feedback is not optional": if a purchase changed nothing on screen, these
+   * two images would be identical and the diff would say so.
+   *
+   * Three rather than one, chosen to land in different places — the sign on the
+   * stand, the marker out at the roadside, the second prep bench behind the
+   * counter — so a regression that dropped one of them still shows.
+   *
+   * What appears is a registered placeholder, not art. That is stated in
+   * PLACEHOLDER_REGISTER and in the phase report; the golden proves the object
+   * is drawn, sorted and in the right place, which is the part that can be true
+   * before the art exists.
+   */
+  test('upgrades-before — the stand with nothing bought', async ({ page }) => {
+    await openFrozen(page, 'empty', 8280, '&cook=1');
+    await expect(page).toHaveScreenshot('upgrades-before.png');
+  });
+
+  test('upgrades-after — the same moment, three upgrades in', async ({ page }) => {
+    await openFrozen(
+      page,
+      'empty',
+      8280,
+      '&cook=1&buy=hand-painted-sign,roadside-marker,second-prep-station',
+    );
+    await expect(page).toHaveScreenshot('upgrades-after.png');
+  });
 });
 
 test.describe('visual determinism', () => {

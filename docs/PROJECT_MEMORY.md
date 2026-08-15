@@ -415,6 +415,54 @@ DUR. P11+ yetkisiz.
 maddeleri **"NOT JUDGED: AWAITING EXTERNAL ART"** olarak işaretlenir; mekanik ölçütler geçtiyse faz
 **teknik PASS** sayılır.
 
+### BATCH 8–10 · CHECKPOINT T — P9 tamamlandı (2026-08-15) ✅ PASS (mekanik) · ⚠️ SLICE KAPISI AÇIK
+
+Oyunda ilk **karar** var: para kazanılıyor ve altı yükseltmeden birine yatırılıyor.
+Her biri simülasyonun okuduğu bir sayıyı değiştiriyor, dünyaya bir nesne koyuyor ve
+sonraki yirmi dakikayı değiştiriyor.
+
+| Kanıt         | Değer                                                                       |
+| ------------- | --------------------------------------------------------------------------- |
+| Testler       | **1 076** (P8 sonunda 1 008)                                                |
+| E2E           | **90** (chromium + firefox) — upgradeFlow 16, verticalSlice 6               |
+| Visual golden | **11** — `upgrades-before` / `upgrades-after` çifti eklendi                 |
+| Service tick  | **0.238 ms** p95 — bütçe 2.8 ms                                             |
+| Save şeması   | **v6** — v5→v6 migration + gerçek satın alma taşıyan `save-v6.json` fixture |
+| `pnpm verify` | ✅ baştan sona temiz                                                        |
+| DoD           | 15'te 14 — 15. madde kapının kendisi                                        |
+
+**★ VERTICAL SLICE KAPISI: 8 ölçütün 2'si kanıtlandı, 5'i İNSAN YARGISI BEKLİYOR.**
+
+| #          | Ölçüt                                      | Durum                                                                                            |
+| ---------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 6          | 30 dk sıfır hata, sızıntı yok              | ✅ 30 simüle dk: **0 konsol hatası**, heap **21.7 → 21.7 MB (%0.0)**                             |
+| 7          | Kaydet → yenile → geri yükle               | ✅ idempotent; **kapsam notu**: geçici trafik kasten kaydedilmiyor (TECHNICAL_ARCHITECTURE §8.1) |
+| 5          | Gerçek cihazda FPS                         | ⚠️ **ÖLÇÜLMEDİ** — CI FPS ölçemez, gerçek cihaz koşusu yapılmadı, iddia edilmiyor                |
+| 1, 2, 3, 8 | Oturum, anlaşılırlık, karar, tekrar oynama | ⚠️ **PENDING HUMAN REVIEW** — 3 kişi gerekiyor                                                   |
+| 4          | Ekran görüntüsü tür üstünde                | ⚠️ **BUGÜN İMKÂNSIZ** — ekrandaki her aktör magenta dama tahtası                                 |
+
+Kullanıcının yürütücü kararıyla mekanik ölçütler geçtikten sonra P10'a geçildi.
+**Kapı "geçti" ilan edilmiyor** — GDD onu "pazarlığa kapalı" diye tanımlıyor; ertelendi
+ve bekleyen beş yargı yukarıda tek tek yazılı.
+
+**Üç açık madde:**
+
+1. **ECONOMY_DESIGN §6.2 tablosu birebir okunamıyor.** Görünürlük satırı `L1 = 1.30`
+   (L = satın alma sayısı), hız satırı `0.80^(L−1)` ile `L1 = 1.00` (yani ilk satın
+   alma hiçbir şey yapmıyor — §6.3 bunu yasaklıyor). `0.80^level` seçildi, %20 kesinti.
+   **Hangi satırın değişeceği bir tasarım kararı.**
+2. **Soğutucu atıl.** Etkisi gerçek ve test edilmiş; Aşama 1'de hiçbir oyuncunun
+   hissedemeyeceği bir etki, çünkü pass hiç dolmuyor (P8 §6). Faz 10'da canlanır ve
+   bunu bir test bekliyor.
+3. **P8'in verim çelişkisi hâlâ açık.** Tabela tavanı 1.8 → ~2.3/dk'ya çıkarıyor,
+   tam yükseltilmiş tabela ~3.2'ye. Roadmap'in "3/dk" ölçütü **ilk dakikadan mı**
+   yoksa **yatırımdan sonra mı** kastediliyor — karar hâlâ kullanıcının.
+
+**Kaydetme kapsamı, kapının görmesi gereken:** geçici durum (yoldaki araçlar, yürüyen
+müşteriler, yarım siparişler) kasten kaydedilmiyor. Oyuncu servis ortasında kaydedip
+yeniden yüklerse yol boşalıp birkaç saniyede doluyor. Tasarım böyle; kusur değil ama
+oyuncunun fark edeceği bir şey.
+
 ### BATCH 8–10 · CHECKPOINT S — P8 tamamlandı (2026-08-15) ✅ PASS (teknik)
 
 Döngü kapandı. Araba yavaşlar → park eder → yürür → sipariş verir → oyuncu pişirir → teslim →
@@ -1043,7 +1091,25 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P8 — Food / Order / Service Loop (TEKNİK PASS)**
+**Son tamamlanan faz: P9 — Economy v1 & Upgrade System v1 (MEKANİK PASS · SLICE KAPISI AÇIK)**
+
+| Kanıt         | Değer                                                                         |
+| ------------- | ----------------------------------------------------------------------------- |
+| Testler       | **1 076** unit/integration · **90** E2E · **11** visual golden · **18** perf  |
+| `pnpm verify` | ✅ temiz (274 dosya typecheck, 126 modül depcruise, knip temiz)               |
+| Service tick  | **0.238 ms** p95 / bütçe 2.8 ms · bundle **434.73 kB** / 550 kB               |
+| Save          | **v6**, v5→v6 migration + `save-v6.json` fixture (gerçek satın alma taşıyor)  |
+| Slice kapısı  | **2 kanıtlandı · 5 insan yargısı bekliyor · 1 ölçülmedi** — PHASE_9_REPORT §9 |
+| Rapor         | [PHASE_9_REPORT.md](phases/PHASE_9_REPORT.md)                                 |
+| Kapı          | ⚠️ **MEKANİK PASS** — slice kapısı ertelendi, geçti ilan edilmedi             |
+
+**Dürüst kayıtlar:** ECONOMY_DESIGN §6.2'nin iki satırı birebir okunamıyor ve bir okuma
+seçildi · soğutucu doğru ama atıl · P8'in verim çelişkisi hâlâ açık · gerçek cihazda FPS
+ölçülmedi ve iddia edilmedi · kaydetme geçici trafiği tutmuyor.
+
+---
+
+**Bir önceki: P8 — Food / Order / Service Loop (TEKNİK PASS)**
 
 | Kanıt         | Değer                                                                                                              |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -1092,13 +1158,21 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🟢 DEVAM — P8–P10 BATCH SÜRÜYOR. P8 ✅ · P9 SIRADA · P10 SONRASI DUR.
+> ## 🟢 DEVAM — P8–P10 BATCH SÜRÜYOR. P8 ✅ · P9 ✅ · P10 SIRADA · SONRASI DUR.
 >
-> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ (teknik)**
+> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ · P9 ✅ (mekanik)**
 >
 > Kullanıcı 2026-08-15 yönergesiyle P8 → P9 → P10 batch'ini onayladı ve **fazlar arasında
-> durulmamasını** açıkça istedi. P8 kapandı; **P9'a onay beklemeden geçiliyor.** Batch P10'dan
-> sonra durur. **P11+ yetkisiz.**
+> durulmamasını** açıkça istedi. P8 ve P9 kapandı; **P10'a onay beklemeden geçiliyor.** Batch
+> P10'dan sonra durur. **P11+ yetkisiz.**
+>
+> ### 🔴 En önemli açık madde: VERTICAL SLICE KAPISI
+>
+> P9'un kapısı sekiz ölçütten ikisini kanıtladı, **beşi insan yargısı bekliyor**, biri
+> (gerçek cihazda FPS) ölçülmedi. Yürütücü kararıyla P10'a geçildi ama **kapı geçti ilan
+> edilmedi** — GDD onu "pazarlığa kapalı" diye tanımlıyor. Bekleyen beş yargı CHECKPOINT
+> T'de tek tek yazılı; dördü üç kişi gerektiriyor, biri (ekran görüntüsü tür ortalamasının
+> üstünde mi) **üretim sanatı olmadan verilemez**.
 >
 > ### Kullanıcının bakması gereken üç şey (batch bitince)
 >
@@ -1120,7 +1194,10 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 > - Layout invalidation `placed.length`'e bakıyor; bir **taşıma** kaçar → P11
 > - Fren lambaları aktör-karelerinin %33'ünde yanıyor → P12
 > - `globalDifficultyCurve`'ün clamp'a göre yeri: GDD §9.5 ile roadmap/ECONOMY §7 farklı yazıyor → P12
-> - `menuAppeal` (P9), `priceFit` (P9), `weatherFactor` (P15) literal 1.0
+> - `priceFit` (P12 denge geçişi), `weatherFactor` (P15) hâlâ literal 1.0 — `menuAppeal` P9'da canlandı
+> - ECONOMY_DESIGN §6.2 tablosunun iki satırı birebir okunamıyor (CHECKPOINT T, madde 1)
+> - Soğutucu atıl; pass tabağı görünmüyor — ikisi de P10'da canlanır
+> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1) — oyuncu fark eder
 > - Memnuniyetin dört girdisi (temizlik, atmosfer, servis, erişilebilirlik) 1.0 → P11
 > - Yayaların %57 yön değiştirmesi — sanat gelince izlenerek karara bağlanmalı
 > - `kitchen_pass`, `table_<n>`, `bin_<n>`, `dt_window` hedefleri kasten yok
@@ -1128,9 +1205,12 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 >
 > ### Şimdi ne yapılıyor
 >
-> **FAZ 9 — ECONOMY v1 & UPGRADE SYSTEM v1 (VERTICAL SLICE).** Yürütücü karar gereği Vertical Slice
-> kapısının **5 mekanik ölçütü** değerlendirilecek, **3 insan ölçütü "PENDING HUMAN REVIEW"**
-> işaretlenecek, ve mekanik ölçütler geçer geçmez **P10'a durulmadan geçilecek**.
+> **FAZ 10 — EMPLOYEE AI.** Tek bir `EmployeeBrain` (IDLE/MOVING/PERFORMING/BLOCKED) + rol
+> görev tabloları, merkezî puanlamalı `TaskBoard`, **ışınlanma yok** (pozisyon deltası testi
+> build'i kırar), maaş sürekli gideri, ve staff bölümü olan save şeması + kanıtlı migration.
+>
+> P10 aynı zamanda üç bekleyen maddeyi canlandırıyor: soğutucu, pass tabağı göstergesi ve
+> gelir penceresinin gider tarafı.
 
 ## 22. Change Log
 

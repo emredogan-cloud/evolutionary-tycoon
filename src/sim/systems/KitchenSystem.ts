@@ -1,5 +1,6 @@
 import { holdTemperature, menuItem } from '@config/economy/menu';
 import { PASS_CAPACITY, station, STATIONS } from '@config/economy/stations';
+import { effectValue } from './UpgradeSystem';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { OrderRecord } from '../stores/OrderStore';
@@ -155,15 +156,24 @@ export function passLoad(world: World): number {
 
 /** True when every station of every type is busy. */
 export function stationsAllBusy(world: World): boolean {
+  const unlocked = effectValue(world, 'prepStations');
   for (let index = 0; index < STATIONS.length; index++) {
+    if (station(index).requiresPrepStations > unlocked) continue;
     if (!stationBusy(world, index)) return false;
   }
   return true;
 }
 
 function freeStationOfType(world: World, type: string): number {
+  const unlocked = effectValue(world, 'prepStations');
   for (let index = 0; index < STATIONS.length; index++) {
-    if (station(index).type !== type) continue;
+    const candidate = station(index);
+    if (candidate.type !== type) continue;
+    // A station the player has not bought is not there. Checked here rather
+    // than filtered into a cached list, because the list would have to be
+    // invalidated on purchase and a stale one hands out a bench that does not
+    // exist — an order cooking on nothing, forever.
+    if (candidate.requiresPrepStations > unlocked) continue;
     if (!stationBusy(world, index)) return index;
   }
   return -1;
@@ -186,7 +196,7 @@ function stationBusy(world: World, index: number): boolean {
  * something only read at delivery — and the world hash would then depend on a
  * number nothing acts on.
  */
-export function currentQuality(order: OrderRecord, nowMs: number): number {
+export function currentQuality(order: OrderRecord, nowMs: number, holdBonusMs = 0): number {
   if (order.state !== ORDER_ON_PASS && order.deliveredAtMs === 0) return order.quality;
   const until = order.deliveredAtMs > 0 ? order.deliveredAtMs : nowMs;
   const heldMs = Math.max(0, until - order.readyAtMs);
@@ -195,5 +205,5 @@ export function currentQuality(order: OrderRecord, nowMs: number): number {
   // station modified it, so a better grill still produces better food after a
   // wait than a worse one does.
   const stationFactor = item.qualityBase > 0 ? order.quality / item.qualityBase : 1;
-  return holdTemperature(item, heldMs) * stationFactor;
+  return holdTemperature(item, heldMs, holdBonusMs) * stationFactor;
 }

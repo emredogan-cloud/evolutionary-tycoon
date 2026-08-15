@@ -1,5 +1,6 @@
 import { ACTOR_KIND_EMPLOYEE } from '@config/actors';
 import { CONVERSION_REASONS } from '@config/conversion';
+import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
 import type { ActorRecord } from '../stores/actors';
@@ -65,7 +66,12 @@ export class World {
     cash: 0,
     reputation: 0,
     lifetimeRevenue: 0,
+    lifetimeSpend: 0,
     prices: new Map<string, number>(),
+    revenueWindow: new Float64Array(ECONOMY_BUCKET_COUNT),
+    expenseWindow: new Float64Array(ECONOMY_BUCKET_COUNT),
+    bucketIndex: 0,
+    bucketElapsedMs: 0,
   };
   readonly layout: LayoutState = { placed: [], upgrades: new Map<string, number>() };
   /**
@@ -191,7 +197,20 @@ export class World {
     h.writeF64(this.economy.cash);
     h.writeF64(this.economy.reputation);
     h.writeF64(this.economy.lifetimeRevenue);
+    h.writeF64(this.economy.lifetimeSpend);
     hashStringNumberMap(h, this.economy.prices);
+    /*
+     * The income window is hashed. It is derived from payments that are already
+     * in the digest, so it cannot diverge on its own — but it is *read* by the
+     * dead-end rule and will be read by objectives in Phase 11, so a divergence
+     * in it would change an outcome, and anything that can change an outcome
+     * belongs in the digest (the same test that justifies the three deliberate
+     * exclusions applies here in reverse).
+     */
+    for (const value of this.economy.revenueWindow) h.writeF64(value);
+    for (const value of this.economy.expenseWindow) h.writeF64(value);
+    h.writeU32(this.economy.bucketIndex);
+    h.writeF64(this.economy.bucketElapsedMs);
 
     h.writeU32(this.layout.placed.length);
     for (const object of this.layout.placed) {
@@ -250,7 +269,12 @@ export class World {
     this.economy.cash = 0;
     this.economy.reputation = 0;
     this.economy.lifetimeRevenue = 0;
+    this.economy.lifetimeSpend = 0;
     this.economy.prices.clear();
+    this.economy.revenueWindow.fill(0);
+    this.economy.expenseWindow.fill(0);
+    this.economy.bucketIndex = 0;
+    this.economy.bucketElapsedMs = 0;
 
     this.layout.placed.length = 0;
     this.layout.upgrades.clear();

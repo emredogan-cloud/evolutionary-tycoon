@@ -37,7 +37,21 @@ export interface WorldSnapshot {
     readonly cash: number;
     readonly reputation: number;
     readonly lifetimeRevenue: number;
+    readonly lifetimeSpend: number;
     readonly prices: readonly (readonly [string, number])[];
+    /**
+     * The sixty-second income window — Phase 9.
+     *
+     * Saved rather than recomputed, because it cannot be recomputed: it is a
+     * window over the last minute of *play*, and a resumed session has no
+     * record of the payments inside it. Dropping it would make the rate on the
+     * HUD read zero for a minute after every load, which looks exactly like a
+     * stand that has stopped earning.
+     */
+    readonly revenueWindow: readonly number[];
+    readonly expenseWindow: readonly number[];
+    readonly bucketIndex: number;
+    readonly bucketElapsedMs: number;
   };
   readonly layout: {
     readonly placed: readonly PlacedObject[];
@@ -74,6 +88,13 @@ function sortedEntries(map: ReadonlyMap<string, number>): (readonly [string, num
   return [...map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
 }
 
+/** A plain array from a typed one, without the iterator protocol. */
+function copyOut(source: Float64Array): number[] {
+  const out = new Array<number>(source.length);
+  for (let i = 0; i < source.length; i++) out[i] = source[i] ?? 0;
+  return out;
+}
+
 export function snapshotWorld(world: World): WorldSnapshot {
   return {
     tick: world.tick,
@@ -93,7 +114,18 @@ export function snapshotWorld(world: World): WorldSnapshot {
       cash: world.economy.cash,
       reputation: world.economy.reputation,
       lifetimeRevenue: world.economy.lifetimeRevenue,
+      lifetimeSpend: world.economy.lifetimeSpend,
       prices: sortedEntries(world.economy.prices),
+      /*
+       * Copied with a loop rather than spread. `[...typedArray]` goes through
+       * the iterator protocol and it is not free: spreading the two twelve-entry
+       * windows made the save benchmark 36% slower than the whole rest of the
+       * snapshot cost put together, which for twenty-four numbers is absurd.
+       */
+      revenueWindow: copyOut(world.economy.revenueWindow),
+      expenseWindow: copyOut(world.economy.expenseWindow),
+      bucketIndex: world.economy.bucketIndex,
+      bucketElapsedMs: world.economy.bucketElapsedMs,
     },
     layout: {
       placed: world.layout.placed.map((object) => ({ ...object })),
@@ -146,7 +178,21 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.economy.cash = snapshot.economy.cash;
   world.economy.reputation = snapshot.economy.reputation;
   world.economy.lifetimeRevenue = snapshot.economy.lifetimeRevenue;
+  world.economy.lifetimeSpend = snapshot.economy.lifetimeSpend;
   for (const [key, value] of snapshot.economy.prices) world.economy.prices.set(key, value);
+
+  /*
+   * Copied by index rather than by `set`, and only as far as the current window
+   * length. A save written by a build with a different bucket count must not
+   * resize the array — the world's shape comes from this build's config, and a
+   * short save leaves the remaining buckets at the zero `reset` put there.
+   */
+  for (let i = 0; i < world.economy.revenueWindow.length; i++) {
+    world.economy.revenueWindow[i] = snapshot.economy.revenueWindow[i] ?? 0;
+    world.economy.expenseWindow[i] = snapshot.economy.expenseWindow[i] ?? 0;
+  }
+  world.economy.bucketIndex = snapshot.economy.bucketIndex % world.economy.revenueWindow.length;
+  world.economy.bucketElapsedMs = snapshot.economy.bucketElapsedMs;
 
   for (const object of snapshot.layout.placed) world.layout.placed.push({ ...object });
   for (const [key, value] of snapshot.layout.upgrades) world.layout.upgrades.set(key, value);

@@ -22,6 +22,8 @@ import {
 } from '@config/conversion';
 import type { StageLayout } from '@config/layouts/stage1';
 import type { SimSystem } from '../core/SystemPipeline';
+import { queueCapacityOf } from './QueueSystem';
+import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
 import { at, atIn } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
@@ -131,7 +133,15 @@ export class ConversionSystem implements SimSystem {
       const laneIndex = at(vehicles.lane, slot);
       if (laneIndex >= this.lanes.laneCount) continue;
       const lane = this.lanes.lane(laneIndex);
-      if (at(vehicles.laneS, slot) < lane.decisionS) continue;
+      /*
+       * A roadside marker moves the decision *earlier* — further back up the
+       * road — which is why the bonus is subtracted. Clamped at zero: a marker
+       * cannot make a driver decide before they have entered the world, and
+       * beyond that point further levels stop buying anything. That ceiling is
+       * measured rather than assumed, in `tests/integration/upgradeEffect.test.ts`.
+       */
+      const decisionS = Math.max(0, lane.decisionS - effectValue(world, 'decisionPointMetres'));
+      if (at(vehicles.laneS, slot) < decisionS) continue;
 
       this.decide(world, slot);
     }
@@ -217,11 +227,14 @@ export class ConversionSystem implements SimSystem {
     const queueLength = this.visibleQueueLength(world);
 
     this.set(0, spec.baseAffinity, REASON_JUST_PASSING, false);
-    this.set(1, visibilityAt(hour), REASON_NOT_VISIBLE);
-    this.set(2, MENU_APPEAL_PLACEHOLDER, REASON_NO_DESIRED_ITEM);
+    // A sign does not make the stand visible at 3 a.m.; it multiplies whatever
+    // the hour already allows. Applied as a factor rather than added, so the
+    // time-of-day curve keeps its shape and a dark hour stays dark.
+    this.set(1, visibilityAt(hour) * effectValue(world, 'visibility'), REASON_NOT_VISIBLE);
+    this.set(2, MENU_APPEAL_PLACEHOLDER * effectValue(world, 'menuAppeal'), REASON_NO_DESIRED_ITEM);
     this.set(3, PRICE_FIT_PLACEHOLDER, REASON_PRICE_TOO_HIGH);
     this.set(4, queuePenalty(queueLength), REASON_QUEUE_TOO_LONG);
-    this.set(5, spilloverPenalty(queueLength, this.layout.queueCapacity), REASON_QUEUE_TOO_LONG);
+    this.set(5, spilloverPenalty(queueLength, queueCapacityOf(world, this.layout)), REASON_QUEUE_TOO_LONG);
     this.set(6, reputationFactor(world.economy.reputation), REASON_REPUTATION_LOW);
     this.set(7, timeOfDayFit(hour), REASON_WRONG_TIME);
     this.set(8, WEATHER_FACTOR_PLACEHOLDER, REASON_WEATHER);

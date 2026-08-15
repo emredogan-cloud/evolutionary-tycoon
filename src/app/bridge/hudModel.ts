@@ -59,6 +59,43 @@ export interface WorldMarker {
   readonly age: number;
 }
 
+/** One effect of an upgrade, before and after the next level. */
+export interface UpgradeEffectView {
+  readonly kind: string;
+  readonly before: number;
+  readonly after: number;
+}
+
+/**
+ * An upgrade as the player sees it — one card's worth.
+ *
+ * Screen coordinates are the card's anchor, already projected, so the overlay
+ * positions a `div` and does no maths. `cost` is -1 when the upgrade is maxed,
+ * which is the same convention the simulation uses.
+ */
+export interface UpgradeView {
+  readonly id: string;
+  readonly level: number;
+  readonly maxLevel: number;
+  readonly cost: number;
+  readonly affordable: boolean;
+  readonly worldChange: string;
+  readonly consequence: string;
+  readonly effects: readonly UpgradeEffectView[];
+  readonly screenX: number;
+  readonly screenY: number;
+  readonly visible: boolean;
+}
+
+/** One menu item's price, with the band the player may move it inside. */
+export interface PriceView {
+  readonly itemId: string;
+  readonly price: number;
+  readonly base: number;
+  readonly min: number;
+  readonly max: number;
+}
+
 /** The HUD, once every hundred milliseconds. */
 export interface HudModel {
   readonly cash: number;
@@ -76,6 +113,20 @@ export interface HudModel {
    */
   readonly markers: readonly WorldMarker[];
   readonly markerCount: number;
+
+  /** Takings less costs over the last sixty seconds, per minute — Phase 9. */
+  readonly incomePerMinute: number;
+  /** Every upgrade, in config order. Reused, like `markers`. */
+  readonly upgrades: readonly UpgradeView[];
+  readonly prices: readonly PriceView[];
+  /**
+   * The one thing to aim at next, in words — GAME_EXECUTION_ROADMAP Phase 9,
+   * "tek aktif hedef göstergesi". A single target, deliberately: a list of six
+   * is a list, and a list is not a goal.
+   */
+  readonly objective: string;
+  /** 0..1 toward that objective, for the bar. */
+  readonly objectiveProgress: number;
 }
 
 /**
@@ -87,4 +138,18 @@ export interface HudModel {
  */
 export interface HudSource {
   subscribe(run: (model: HudModel) => void): () => void;
+}
+
+/**
+ * The other direction: what the overlay is allowed to ask for.
+ *
+ * Intents, not commands. `src/ui` names a thing the player did — "buy this",
+ * "set that price" — and `src/app` turns it into a stamped `Command`. The
+ * distinction is what keeps the command union out of the UI's reach: a
+ * component cannot construct a command it was not given a verb for, and the
+ * simulation validates every one of them again regardless.
+ */
+export interface UiCommands {
+  buyUpgrade(id: string): void;
+  setPrice(itemId: string, price: number): void;
 }

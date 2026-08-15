@@ -136,8 +136,17 @@ export function menuIndexOf(id: string): number {
 export const HOLD_DECAY_MS = 60_000;
 export const HOLD_DECAY_MAX_LOSS = 0.6;
 
-export function holdTemperature(item: MenuItem, heldMs: number): number {
-  const over = Math.max(0, heldMs - item.holdToleranceMs);
+/**
+ * `toleranceBonusMs` is what a cooler buys — Phase 9.
+ *
+ * Added to the item's own tolerance rather than multiplying it, so the upgrade
+ * is worth the same number of seconds on chips as on a hot dog. A multiplier
+ * would give five minutes to the thing that already kept for five and thirty
+ * seconds to the thing that did not, which is backwards: the upgrade exists to
+ * rescue the item that goes cold fastest.
+ */
+export function holdTemperature(item: MenuItem, heldMs: number, toleranceBonusMs = 0): number {
+  const over = Math.max(0, heldMs - (item.holdToleranceMs + toleranceBonusMs));
   const decay = Math.min(1, over / HOLD_DECAY_MS) * HOLD_DECAY_MAX_LOSS;
   return item.qualityBase * (1 - decay);
 }

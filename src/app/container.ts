@@ -1,4 +1,5 @@
 import { UiBridge } from '@app/bridge/UiBridge';
+import type { UiCommands } from '@app/bridge/hudModel';
 import type { ScreenProjector } from '@app/bridge/ScreenProjector';
 import { NULL_PROJECTOR } from '@app/bridge/ScreenProjector';
 import { stageScene } from '@app/devScene';
@@ -12,6 +13,7 @@ import type { RenderContext } from '@render/RenderContext';
 import { debugOverlayEnabled } from '@app/debug/DebugOverlay';
 import { buildInfo } from '@platform/buildInfo';
 import { Sim } from '@sim/core/Sim';
+import { buyUpgrade, nextUpgradeCost } from '@sim/systems/UpgradeSystem';
 import { IdbAdapter } from '@persistence/idbAdapter';
 import { LocalStorageAdapter } from '@persistence/localStorageAdapter';
 import { SaveManager } from '@persistence/SaveManager';
@@ -39,6 +41,8 @@ export interface GameContainer {
    * overlay receives a subscribe function and the loop receives a `sample` call.
    */
   readonly ui: UiBridge;
+  /** What the overlay may ask the simulation to do. */
+  readonly commands: UiCommands;
   /** Swapped for the real projection once Phaser has a camera. */
   setProjector(project: ScreenProjector): void;
 }
@@ -120,6 +124,18 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
   // Staged before the first tick, so the world hash of a staged scene is a
   // function of the scene alone.
   stageScene(sim, renderMode.sceneId);
+  /*
+   * Granted before the fast-forward, so the world runs the whole way with them
+   * in place. Buying at the end would photograph a stand that had just acquired
+   * a sign rather than one that had been trading with it.
+   */
+  for (const id of renderMode.buy) {
+    const cost = nextUpgradeCost(sim.world, id);
+    if (cost < 0) continue;
+    sim.world.economy.cash += cost;
+    buyUpgrade(sim.world, id);
+  }
+
   if (renderMode.freezeAt !== null && renderMode.freezeAt > 0) {
     if (renderMode.cook) {
       // Ticked one at a time so a command can be queued before each. `advance`
@@ -181,6 +197,26 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     renderMode,
     frames,
     ui,
+    /*
+     * Intents in, commands out. The overlay never builds a `Command`; it says
+     * what the player did and this turns it into one, which is also the single
+     * place a click becomes something the command log will replay.
+     */
+    commands: {
+      /*
+       * No refresh after dispatching. It would publish *before* the command
+       * applies — commands land at the start of the next tick, deliberately, so
+       * that wall-clock arrival time cannot change an outcome — and the card
+       * would redraw with the state it already had. The next sample carries it,
+       * within one tick plus one sample: 150 ms at worst.
+       */
+      buyUpgrade: (id: string) => {
+        sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: id });
+      },
+      setPrice: (itemId: string, price: number) => {
+        sim.dispatch({ t: 'SET_PRICE', itemId, price });
+      },
+    },
     setProjector(next: ScreenProjector): void {
       projector = next;
       ui.refresh();

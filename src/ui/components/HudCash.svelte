@@ -18,9 +18,12 @@
     customersWaiting: number;
     gameDay: number;
     gameHour: number;
+    /** Net, over the last sixty seconds. Phase 9. */
+    incomePerMinute: number;
   }
 
-  const { cash, reputation, customersServed, customersWaiting, gameDay, gameHour }: Props = $props();
+  const { cash, reputation, customersServed, customersWaiting, gameDay, gameHour, incomePerMinute }: Props =
+    $props();
 
   // `tr-TR` to match the interface language. Fixed digits either side so the
   // panel does not resize every time the total crosses a power of ten — a HUD
@@ -43,6 +46,17 @@
   <div class="cash" data-testid="hud-cash" data-cash={cash.toFixed(2)}>
     <span class="symbol" aria-hidden="true">₡</span>
     <span class="amount">{money.format(cash)}</span>
+    <!-- The rate, beside the total. A tycoon player reads the derivative, not
+         the value: "am I earning" is the question, and a total answers it only
+         by being watched. -->
+    <span
+      class="rate"
+      class:negative={incomePerMinute < 0}
+      data-testid="hud-income"
+      data-income={incomePerMinute.toFixed(2)}
+    >
+      {incomePerMinute >= 0 ? '+' : '−'}₡{money.format(Math.abs(incomePerMinute))}/dk
+    </span>
   </div>
 
   <dl class="stats">
@@ -100,6 +114,16 @@
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--c-accent);
+  }
+
+  .rate {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--c-ok);
+  }
+
+  .rate.negative {
+    color: var(--c-error);
   }
 
   .stats {

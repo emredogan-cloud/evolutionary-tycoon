@@ -1,5 +1,7 @@
+import { MENU, PRICE_BAND } from '@config/economy/menu';
 import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
+import { buyUpgrade } from '../systems/UpgradeSystem';
 import type { World } from './World';
 
 /**
@@ -49,11 +51,46 @@ interface ManualPrepCommand {
   readonly orderSlot: number;
 }
 
-export type Command = SetSpeedCommand | SetPausedCommand | ManualPrepCommand;
+/**
+ * Buy one level of an upgrade — Phase 9.
+ *
+ * Carries only the id. Not the cost: a command that named its own price would
+ * be a command the UI could lie about, and this one is replayed from logs and
+ * loaded from saves written by builds this one has never seen. The price is
+ * looked up from config at the tick it lands on, which is also what makes a
+ * replay of a session survive a balance change intact — it re-derives.
+ */
+interface BuyUpgradeCommand {
+  readonly t: 'BUY_UPGRADE';
+  readonly tick: number;
+  readonly upgradeId: string;
+}
+
+/**
+ * Move an item's price inside the ±50% band — ECONOMY_DESIGN §4.
+ *
+ * Clamped here rather than trusted, for the same reason `priceOf` clamps at the
+ * point of sale: the band is exploit E2's only defence, and a command arriving
+ * from a log written by a build with a wider band must not be able to carry a
+ * price through this one.
+ */
+interface SetPriceCommand {
+  readonly t: 'SET_PRICE';
+  readonly tick: number;
+  readonly itemId: string;
+  readonly price: number;
+}
+
+export type Command =
+  SetSpeedCommand | SetPausedCommand | ManualPrepCommand | BuyUpgradeCommand | SetPriceCommand;
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
-  Omit<SetSpeedCommand, 'tick'> | Omit<SetPausedCommand, 'tick'> | Omit<ManualPrepCommand, 'tick'>;
+  | Omit<SetSpeedCommand, 'tick'>
+  | Omit<SetPausedCommand, 'tick'>
+  | Omit<ManualPrepCommand, 'tick'>
+  | Omit<BuyUpgradeCommand, 'tick'>
+  | Omit<SetPriceCommand, 'tick'>;
 
 /**
  * Apply one command to the world.
@@ -94,6 +131,34 @@ export function apply(world: World, command: Command): void {
       if (target >= 0) startPrep(world, target);
       break;
     }
+    case 'BUY_UPGRADE': {
+      /*
+       * The simulation decides, and refusing is a normal outcome. `buyUpgrade`
+       * returns why — unknown id, already maxed, or not enough money — and the
+       * command discards it: a command cannot report back, by construction.
+       * The player learns from the card, which reads the same world state.
+       */
+      buyUpgrade(world, command.upgradeId);
+      break;
+    }
+    case 'SET_PRICE': {
+      /*
+       * Searched rather than looked up through `menuIndexOf`, which throws. An
+       * unknown item is a normal outcome here — a replayed log written when the
+       * menu had an item this build does not — and exception control flow for a
+       * normal outcome is how a command handler ends up able to kill a tick.
+       */
+      const item = MENU.find((entry) => entry.id === command.itemId);
+      if (item === undefined) break;
+      const clamped = Math.min(
+        item.basePrice * PRICE_BAND.max,
+        Math.max(item.basePrice * PRICE_BAND.min, command.price),
+      );
+      if (world.economy.prices.get(item.id) === clamped) break;
+      world.economy.prices.set(item.id, clamped);
+      world.eventQueue.emitPriceChanged(item.id, clamped);
+      break;
+    }
   }
   world.stats.commandsApplied++;
 }
@@ -107,5 +172,9 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'SET_PAUSED', tick, paused: input.paused };
     case 'MANUAL_PREP':
       return { t: 'MANUAL_PREP', tick, orderSlot: input.orderSlot };
+    case 'BUY_UPGRADE':
+      return { t: 'BUY_UPGRADE', tick, upgradeId: input.upgradeId };
+    case 'SET_PRICE':
+      return { t: 'SET_PRICE', tick, itemId: input.itemId, price: input.price };
   }
 }

@@ -1,9 +1,13 @@
-import { menuItem } from '@config/economy/menu';
+import { MENU, PRICE_BAND, menuItem } from '@config/economy/menu';
+import { UPGRADES } from '@config/economy/upgrades';
 import { PASS, station } from '@config/economy/stations';
 import type { Sim } from '@sim/core/Sim';
+import type { World } from '@sim/core/World';
 import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
+import { netIncomePerMinute } from '@sim/systems/EconomySystem';
 import { currentQuality } from '@sim/systems/KitchenSystem';
+import { nextUpgradeCost, previewNextLevel, upgradeLevel } from '@sim/systems/UpgradeSystem';
 import {
   MARKER_COIN,
   MARKER_ORDER,
@@ -11,6 +15,8 @@ import {
   MARKER_PREP,
   type HudModel,
   type HudSource,
+  type PriceView,
+  type UpgradeEffectView,
   type WorldMarker,
 } from './hudModel';
 import type { ScreenProjector } from './ScreenProjector';
@@ -59,6 +65,8 @@ const PASS_PLATE_HEIGHT_METRES = 1.15;
 /** Bubbles and rings sit above the thing they describe. */
 const ORDER_BUBBLE_HEIGHT_METRES = 1.95;
 const PREP_RING_HEIGHT_METRES = 1.4;
+/** The card's hotspot sits at head height on the object it upgrades. */
+const UPGRADE_CARD_HEIGHT_METRES = 1.7;
 
 interface CoinPopup {
   entityId: number;
@@ -76,6 +84,21 @@ interface CoinPopup {
  * becomes unwritable again.
  */
 type MutableMarker = { -readonly [K in keyof WorldMarker]: WorldMarker[K] };
+type MutableEffect = { -readonly [K in keyof UpgradeEffectView]: UpgradeEffectView[K] };
+interface MutableUpgrade {
+  id: string;
+  level: number;
+  maxLevel: number;
+  cost: number;
+  affordable: boolean;
+  worldChange: string;
+  consequence: string;
+  effects: MutableEffect[];
+  screenX: number;
+  screenY: number;
+  visible: boolean;
+}
+type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
 interface MutableHud {
   cash: number;
   reputation: number;
@@ -88,6 +111,11 @@ interface MutableHud {
   speedMultiplier: number;
   markers: MutableMarker[];
   markerCount: number;
+  incomePerMinute: number;
+  upgrades: MutableUpgrade[];
+  prices: MutablePrice[];
+  objective: string;
+  objectiveProgress: number;
 }
 
 export class UiBridge implements HudSource {
@@ -132,6 +160,32 @@ export class UiBridge implements HudSource {
       };
     }
 
+    /*
+     * Six upgrades and three menu items, allocated once with their effect rows
+     * already in place. The card list is rebuilt ten times a second and every
+     * one of these objects would otherwise be garbage.
+     */
+    const upgrades: MutableUpgrade[] = UPGRADES.map((item) => ({
+      id: item.id,
+      level: 0,
+      maxLevel: item.maxLevel,
+      cost: 0,
+      affordable: false,
+      worldChange: item.worldChange,
+      consequence: item.consequence,
+      effects: item.effects.map((effect) => ({ kind: effect.kind, before: 0, after: 0 })),
+      screenX: 0,
+      screenY: 0,
+      visible: false,
+    }));
+    const prices: MutablePrice[] = MENU.map((item) => ({
+      itemId: item.id,
+      price: item.basePrice,
+      base: item.basePrice,
+      min: item.basePrice * PRICE_BAND.min,
+      max: item.basePrice * PRICE_BAND.max,
+    }));
+
     this.model = {
       cash: 0,
       reputation: 0,
@@ -144,6 +198,11 @@ export class UiBridge implements HudSource {
       speedMultiplier: 1,
       markers,
       markerCount: 0,
+      incomePerMinute: 0,
+      upgrades,
+      prices,
+      objective: '',
+      objectiveProgress: 0,
     };
   }
 
@@ -354,9 +413,79 @@ export class UiBridge implements HudSource {
 
     model.customersWaiting = waiting;
     model.markerCount = count;
+
+    model.incomePerMinute = netIncomePerMinute(world);
+    this.refillUpgrades(world);
+    this.refillPrices(world);
+    this.refillObjective(world);
   }
 
-  private projectInto(x: number, y: number, z: number, marker: MutableMarker): boolean {
+  private refillUpgrades(world: World): void {
+    for (let i = 0; i < UPGRADES.length; i++) {
+      const item = UPGRADES[i];
+      const view = this.model.upgrades[i];
+      if (item === undefined || view === undefined) continue;
+
+      view.level = upgradeLevel(world, item.id);
+      view.cost = nextUpgradeCost(world, item.id);
+      view.affordable = view.cost >= 0 && world.economy.cash >= view.cost;
+      view.visible = this.projectInto(item.anchor.x, item.anchor.y, UPGRADE_CARD_HEIGHT_METRES, view);
+
+      const preview = previewNextLevel(world, item.id);
+      for (let e = 0; e < view.effects.length; e++) {
+        const row = view.effects[e];
+        const source = preview[e];
+        if (row === undefined) continue;
+        // A maxed upgrade previews nothing; the card shows the level instead.
+        row.before = source?.before ?? 0;
+        row.after = source?.after ?? 0;
+      }
+    }
+  }
+
+  private refillPrices(world: World): void {
+    for (let i = 0; i < MENU.length; i++) {
+      const item = MENU[i];
+      const view = this.model.prices[i];
+      if (item === undefined || view === undefined) continue;
+      view.price = world.economy.prices.get(item.id) ?? item.basePrice;
+    }
+  }
+
+  /**
+   * One target, in words — GAME_EXECUTION_ROADMAP Phase 9.
+   *
+   * The cheapest upgrade the player does not yet own, and how close they are to
+   * affording it. Deliberately derived rather than stored: real objectives are
+   * `ProgressionSystem`'s job in Phase 11, and inventing a persistent objective
+   * here would be state that has to be hashed, saved and migrated for something
+   * Phase 11 is going to replace.
+   */
+  private refillObjective(world: World): void {
+    let target: { id: string; cost: number } | null = null;
+    for (const item of UPGRADES) {
+      const cost = nextUpgradeCost(world, item.id);
+      if (cost < 0) continue;
+      if (target === null || cost < target.cost) target = { id: item.id, cost };
+    }
+
+    if (target === null) {
+      this.model.objective = '';
+      this.model.objectiveProgress = 1;
+      return;
+    }
+
+    this.model.objective = target.id;
+    this.model.objectiveProgress =
+      target.cost > 0 ? Math.min(1, Math.max(0, world.economy.cash / target.cost)) : 1;
+  }
+
+  private projectInto(
+    x: number,
+    y: number,
+    z: number,
+    marker: { screenX: number; screenY: number },
+  ): boolean {
     const visible = this.project(x, y, z, this.scratch);
     marker.screenX = this.scratch.x;
     marker.screenY = this.scratch.y;

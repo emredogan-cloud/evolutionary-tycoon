@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ACTOR_KIND_CUSTOMER, ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE, actorKindSpec } from '@config/actors';
+import { UPGRADES } from '@config/economy/upgrades';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { sceneFixture } from '@config/scenes';
 import { SURFACE_COLORS } from '@config/surfaces';
@@ -67,6 +68,8 @@ function kindIndexForTexture(textureKey: string): number {
  */
 export class WorldScene extends Phaser.Scene {
   private context!: RenderContext;
+  /** Last seen upgrade revision, so statics are rebuilt only on a purchase. */
+  private upgradeRevision = -1;
   private graph!: SceneGraph;
   private bridge!: RenderBridge;
   private camera!: CameraController;
@@ -105,7 +108,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.drawGround();
     this.drawRoad();
-    this.registerStatics();
+    // Nothing is owned at scene creation; `update` rebuilds on the first frame
+    // and on every purchase after that.
+    this.registerStatics([]);
 
     const bounds = this.cameraBounds();
     this.camera = new CameraController(this, {
@@ -135,7 +140,13 @@ export class WorldScene extends Phaser.Scene {
   override update(_time: number, delta: number): void {
     this.camera.update(delta);
 
-    this.bridge.sync(this.context.readView(), this.context.interpolationAlpha());
+    const view = this.context.readView();
+    if (view.upgradeRevision !== this.upgradeRevision) {
+      this.upgradeRevision = view.upgradeRevision;
+      this.registerStatics(view.upgradeLevels);
+    }
+
+    this.bridge.sync(view, this.context.interpolationAlpha());
     this.syncSprites();
     this.context.onFrame?.();
 
@@ -298,17 +309,42 @@ export class WorldScene extends Phaser.Scene {
    *
    * Negative entity ids: real entities start at 1 and count up, so a static can
    * never collide with one, and the tie-break stays stable across a reload.
+   *
+   * Called again whenever an upgrade is bought — see `upgradeRevision`. The
+   * roadmap's rule for Phase 9 is that every purchase changes the world visibly
+   * within a second, and an object that appears in the scene graph is the
+   * strongest form of that: it sorts against the crowd, casts into the depth
+   * order, and is there when the player looks back.
    */
-  private registerStatics(): void {
-    this.bridge.setStatics(
-      STAGE1_LAYOUT.statics.map((object, index) => ({
-        entityId: -(index + 1),
-        x: object.x,
-        y: object.y,
-        z: object.z,
-        kind: kindIndexForTexture(object.objectId),
-      })),
-    );
+  private registerStatics(levels: readonly number[]): void {
+    const statics = STAGE1_LAYOUT.statics.map((object, index) => ({
+      entityId: -(index + 1),
+      x: object.x,
+      y: object.y,
+      z: object.z,
+      kind: kindIndexForTexture(object.objectId),
+    }));
+
+    /*
+     * One object per owned upgrade, at its card's anchor — the same point the
+     * card opens beside, so the thing and the control for it are in one place.
+     * Ids continue below the layout's, so an upgrade object can never collide
+     * with a layout static or with a real entity.
+     */
+    for (let i = 0; i < UPGRADES.length; i++) {
+      const item = UPGRADES[i];
+      if (item === undefined) continue;
+      if ((levels[i] ?? 0) <= 0) continue;
+      statics.push({
+        entityId: -(STAGE1_LAYOUT.statics.length + i + 1),
+        x: item.anchor.x,
+        y: item.anchor.y,
+        z: 0,
+        kind: kindIndexForTexture(item.placeholder),
+      });
+    }
+
+    this.bridge.setStatics(statics);
   }
 
   /**

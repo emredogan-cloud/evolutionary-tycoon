@@ -1,4 +1,5 @@
 import { TICK_MS } from '@config/simulation';
+import { UPGRADES } from '@config/economy/upgrades';
 import type { ActorRecord } from '../stores/actors';
 import type { SlotPool } from '../stores/pool';
 import { createDefaultSystems } from '../systems/noop';
@@ -77,6 +78,8 @@ export class Sim {
    * lane at all. One authority for the projection, shared with the pipeline.
    */
   private readonly maneuvers: VehicleManeuverSystem = stage1ManeuverSystem();
+  /** Reused by `readView`, aligned to `UPGRADES`. */
+  private readonly upgradeLevelBuffer: number[] = new Array<number>(UPGRADES.length).fill(0);
   /** Reused by `copyVehicles`; sampling allocates nothing. */
   private readonly laneSample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
 
@@ -118,6 +121,8 @@ export class Sim {
       orderCount: 0,
       actors: this.actorBuffer,
       actorCount: 0,
+      upgradeLevels: this.upgradeLevelBuffer,
+      upgradeRevision: 0,
     };
   }
 
@@ -194,6 +199,21 @@ export class Sim {
     v.employeeCount = this.world.employees.activeCount;
     v.orderCount = this.world.orders.activeCount;
     v.actorCount = this.fillActors();
+
+    /*
+     * Levels and a revision. Summing six numbers per call is cheaper than the
+     * alternative — a dirty flag on the world, which would be state that has to
+     * be hashed, saved and migrated to describe something already derivable.
+     */
+    let revision = 0;
+    for (let i = 0; i < UPGRADES.length; i++) {
+      const level = this.world.layout.upgrades.get(UPGRADES[i]?.id ?? '') ?? 0;
+      this.upgradeLevelBuffer[i] = level;
+      // Weighted by position so two different purchases cannot cancel out.
+      revision += level * (i + 1) * 31;
+    }
+    v.upgradeRevision = revision;
+
     return v;
   }
 

@@ -298,15 +298,47 @@ describe('the pass', () => {
 });
 
 describe('the stations themselves', () => {
-  it('has one of each type the Stage 1 menu needs', () => {
-    // Deliberately not two of anything: the first thing a player feels in Phase
-    // 9 is buying a second prep station, and that only exists if the first one
-    // is a genuine bottleneck now.
-    const types = STATIONS.map((entry) => entry.type);
+  it('starts with one of each type and not two of anything', () => {
+    /*
+     * The stand *starts* with exactly one of each. Phase 9 added two more prep
+     * benches to the array, locked behind `second-prep-station` — so the check
+     * is now on the unlocked set rather than on the array, which is the honest
+     * version of the same claim: the first thing a player feels in Phase 9 is
+     * buying a second station, and that only exists if the first is a genuine
+     * bottleneck to begin with.
+     */
+    const owned = STATIONS.filter((entry) => entry.requiresPrepStations === 0);
+    const types = owned.map((entry) => entry.type);
     expect(new Set(types).size).toBe(types.length);
     expect(types).toContain('DRINK');
     expect(types).toContain('GRILL');
     expect(types).toContain('PREP');
+  });
+
+  it('keeps every locked station out of the kitchen until it is bought', () => {
+    // A locked bench that could be reserved would be an order cooking on
+    // equipment that is not there — invisible, and free.
+    const sim = new Sim({ seed: 1 });
+    const locked = STATIONS.filter((entry) => entry.requiresPrepStations > 0);
+    expect(locked.length, 'nothing is unlockable, so this proves nothing').toBeGreaterThan(0);
+
+    for (let i = 0; i < 20; i++) {
+      const slot = sim.world.orders.acquire();
+      const order = sim.world.orders.at(slot);
+      order.entityId = sim.world.allocateEntityId();
+      order.item = menuIndexOf('chips');
+      order.state = ORDER_PLACED;
+      order.orderedAtMs = i;
+      startPrep(sim.world, slot);
+    }
+
+    let cooking = 0;
+    for (let slot = 0; slot < sim.world.orders.scanLimit; slot++) {
+      if (!sim.world.orders.isActive(slot)) continue;
+      if (sim.world.orders.at(slot).state === ORDER_COOKING) cooking++;
+    }
+    // One PREP station is owned, so exactly one chips order can be cooking.
+    expect(cooking).toBe(1);
   });
 
   it('has a station for every Stage 1 item', () => {

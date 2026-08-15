@@ -1,21 +1,21 @@
 {
-  "recordedAt": "964705e59c6e251e9b0a497d3252a79e6d6de567",
+  "recordedAt": "phase9-46e7431",
   "environment": "local (mixed calibration; see calibrationMs)",
   "statistic": "minMsPerCalibration",
-  "calibrationMs": 0.9458,
+  "calibrationMs": 0.9092,
   "timings": {
-    "1000 ticks from a fresh world": 1.70571,
-    "world hash (120 vehicles, 60 customers)": 11.20505,
-    "populated tick (120 vehicles, 20 customers)": 3.45973,
-    "crowded tick (60 pedestrians, 120 vehicles)": 56.52862,
-    "service tick (120 vehicles, 40 pedestrians, 20 orders)": 48.50931,
-    "flow field rebuild, 64x64 x 20 goals": 76.68101,
-    "flow field, one goal": 19.02445,
-    "1000 ticks, one command each": 1.63256,
-    "1000 ticks, 8 events per tick, 3 subscribers": 1.79763,
-    "vehicle spawn + despawn cycles": 1.87597,
-    "world snapshot + JSON serialise": 2.00265,
-    "depth sort, 260 objects": 1.35106
+    "1000 ticks from a fresh world": 1.71437,
+    "world hash (120 vehicles, 60 customers)": 12.7319,
+    "populated tick (120 vehicles, 20 customers)": 3.7177,
+    "crowded tick (60 pedestrians, 120 vehicles)": 56.40098,
+    "service tick (120 vehicles, 40 pedestrians, 20 orders)": 49.33858,
+    "flow field rebuild, 64x64 x 20 goals": 80.60298,
+    "flow field, one goal": 19.99674,
+    "1000 ticks, one command each": 1.79635,
+    "1000 ticks, 8 events per tick, 3 subscribers": 1.98026,
+    "vehicle spawn + despawn cycles": 1.92437,
+    "world snapshot + JSON serialise": 2.35002,
+    "depth sort, 260 objects": 1.39682
   },
-  "bytesPerTick": 2.435
+  "bytesPerTick": 22.47
 }

@@ -1,3 +1,4 @@
+import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { CURRENT_SCHEMA_VERSION } from './schema';
 
 /**
@@ -166,7 +167,42 @@ const v4ToV5: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5];
+/**
+ * v5 to v6 — the Phase 9 economy.
+ *
+ * A v5 save has cash and a lifetime revenue total but no record of what was
+ * spent and no income window, because neither existed. Both are filled with
+ * zeroes, and zero is the honest value for the same reason it was in v4→v5: a
+ * save written before the window existed genuinely has no last-sixty-seconds,
+ * and reconstructing a plausible rate from `lifetimeRevenue` would put a
+ * fabricated number on the HUD the moment the player resumed.
+ *
+ * The window is written at the length **this build** uses. A save is data; the
+ * shape of the world is config, and a migration that guessed a length from the
+ * save would hand `applySnapshot` an array of the wrong size.
+ */
+const v5ToV6: Migration = {
+  from: 5,
+  to: 6,
+  up: (save) => {
+    const economy = save['economy'];
+    const buckets = new Array<number>(ECONOMY_BUCKET_COUNT).fill(0);
+    return {
+      ...save,
+      schemaVersion: 6,
+      economy: {
+        ...(typeof economy === 'object' && economy !== null ? economy : {}),
+        lifetimeSpend: 0,
+        revenueWindow: buckets,
+        expenseWindow: [...buckets],
+        bucketIndex: 0,
+        bucketElapsedMs: 0,
+      },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6];
 
 assertContiguous(migrations);
 

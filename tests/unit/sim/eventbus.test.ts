@@ -34,6 +34,9 @@ describe('EventQueue', () => {
         'ORDER_READY',
         'ORDER_DELIVERED',
         'PAYMENT',
+        // Phase 9 — the economy.
+        'UPGRADE_APPLIED',
+        'PRICE_CHANGED',
       ].sort(),
     );
   });

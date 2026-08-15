@@ -155,7 +155,10 @@ async function startSimulation(win: Window): Promise<void> {
      * "hidden" that is provably byte-identical to the old goldens.
      */
     if (!container.renderMode.hideHud) {
-      mount(GameHud, { target: hudHost(win.document), props: { source: container.ui } });
+      mount(GameHud, {
+        target: hudHost(win.document),
+        props: { source: container.ui, commands: container.commands },
+      });
     }
 
     // A frozen scene must not advance: the loop would tick past the target while

@@ -10,6 +10,8 @@ import type {
   OrderPlacedEvent,
   OrderReadyEvent,
   PaymentEvent,
+  PriceChangedEvent,
+  UpgradeAppliedEvent,
   PrepStartedEvent,
   PauseChangedEvent,
   ReadonlySimEvent,
@@ -77,6 +79,10 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'ORDER_DELIVERED', entityId: 0, customerId: 0 };
     case 'PAYMENT':
       return { t: 'PAYMENT', customerId: 0, amount: 0, tip: 0, satisfaction: 0 };
+    case 'UPGRADE_APPLIED':
+      return { t: 'UPGRADE_APPLIED', upgradeId: '', level: 0, cost: 0 };
+    case 'PRICE_CHANGED':
+      return { t: 'PRICE_CHANGED', itemId: '', price: 0 };
   }
 }
 
@@ -263,6 +269,25 @@ export class EventQueue {
     event.amount = amount;
     event.tip = tip;
     event.satisfaction = satisfaction;
+    this.push(record);
+  }
+
+  emitUpgradeApplied(upgradeId: string, level: number, cost: number): void {
+    const record = this.lease('UPGRADE_APPLIED');
+    if (record === null) return;
+    const event = record as UpgradeAppliedEvent;
+    event.upgradeId = upgradeId;
+    event.level = level;
+    event.cost = cost;
+    this.push(record);
+  }
+
+  emitPriceChanged(itemId: string, price: number): void {
+    const record = this.lease('PRICE_CHANGED');
+    if (record === null) return;
+    const event = record as PriceChangedEvent;
+    event.itemId = itemId;
+    event.price = price;
     this.push(record);
   }
 

@@ -7,6 +7,7 @@ import { FlowFieldCache } from '../nav/FlowFieldCache';
 import { ManeuverTable } from '../nav/maneuvers';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
+import { EconomySystem } from './EconomySystem';
 import { KitchenSystem } from './KitchenSystem';
 import { NavigationSystem } from './NavigationSystem';
 import { QueueSystem } from './QueueSystem';
@@ -100,6 +101,14 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
     KitchenSystem: new KitchenSystem(),
     ServiceSystem: new ServiceSystem(),
     SatisfactionSystem: new SatisfactionSystem(),
+    /*
+     * The economy runs *after* satisfaction and payment, in its declared slot.
+     * It advances the sixty-second income window, and doing that before the
+     * tick's payments were booked would put each payment in the bucket after
+     * the one it happened in — invisible in a total, and a systematic one-bucket
+     * lag in the rate the player is watching.
+     */
+    EconomySystem: new EconomySystem(),
   };
   return SYSTEM_ORDER.map((name) => filled[name] ?? NOOP_SYSTEMS[name]);
 }

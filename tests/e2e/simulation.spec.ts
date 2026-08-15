@@ -39,8 +39,14 @@ const REFERENCE = {
    * shape genuinely changed again. Computed by the Node suite for seed 424242
    * and asserted here to prove the browser agrees.
    */
-  hashAtTick0: '014685f90bd083b4',
-  hashAtTick1000: '103b12495de932fb',
+  /*
+   * And a fourth time, in Phase 9. The economy grew a lifetime spend total and
+   * a twenty-four-slot income window, all of which are hashed — the window
+   * because objectives will read it in Phase 11 and the dead-end gate reads it
+   * already, so a divergence in it can change an outcome.
+   */
+  hashAtTick0: 'a744824d48e483a4',
+  hashAtTick1000: '4635dcc52af44bdd',
 } as const;
 
 interface TestApi {

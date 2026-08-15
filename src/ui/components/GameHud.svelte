@@ -1,6 +1,10 @@
 <script lang="ts">
-  import type { HudSource, WorldMarker } from '@app/bridge/hudModel';
+  import type { HudSource, PriceView, UiCommands, UpgradeView, WorldMarker } from '@app/bridge/hudModel';
   import HudCash from './HudCash.svelte';
+  import ObjectivePanel from './ObjectivePanel.svelte';
+  import PricePanel from './PricePanel.svelte';
+  import UpgradeCard from './UpgradeCard.svelte';
+  import UpgradeHotspots from './UpgradeHotspots.svelte';
   import WorldMarkers from './WorldMarkers.svelte';
 
   /**
@@ -27,9 +31,19 @@
    */
   interface Props {
     source: HudSource;
+    commands: UiCommands;
   }
 
-  const { source }: Props = $props();
+  const { source, commands }: Props = $props();
+
+  /**
+   * Which upgrade card is open, or null.
+   *
+   * Component state rather than simulation state, and that is the right place
+   * for it: which panel a player has open changes nothing about the world, must
+   * not be hashed, must not be saved, and must not survive a replay.
+   */
+  let openUpgrade = $state<string | null>(null);
 
   let cash = $state(0);
   let reputation = $state(0);
@@ -41,6 +55,11 @@
   // re-key. This is the one allocation the overlay makes, and it is bounded by
   // the number of visible markers rather than by the pool size.
   let markers = $state<WorldMarker[]>([]);
+  let incomePerMinute = $state(0);
+  let upgrades = $state<UpgradeView[]>([]);
+  let prices = $state<PriceView[]>([]);
+  let objective = $state('');
+  let objectiveProgress = $state(0);
 
   $effect(() =>
     source.subscribe((model) => {
@@ -60,13 +79,54 @@
         if (marker?.visible === true) live.push({ ...marker });
       }
       markers = live;
+
+      incomePerMinute = model.incomePerMinute;
+      objective = model.objective;
+      objectiveProgress = model.objectiveProgress;
+      // Copied for the same reason the markers are: the bridge rewrites these
+      // records in place on the next sample.
+      upgrades = model.upgrades.map((item): UpgradeView => ({
+        ...item,
+        effects: item.effects.map((effect) => ({ ...effect })),
+      }));
+      prices = model.prices.map((item): PriceView => ({ ...item }));
     }),
   );
 </script>
 
 <div class="overlay" data-testid="game-hud">
   <WorldMarkers {markers} />
-  <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} />
+
+  <UpgradeHotspots
+    {upgrades}
+    open={openUpgrade}
+    ontoggle={(id: string) => {
+      openUpgrade = openUpgrade === id ? null : id;
+    }}
+  />
+
+  {#each upgrades as upgrade (upgrade.id)}
+    {#if upgrade.id === openUpgrade && upgrade.visible}
+      <UpgradeCard
+        {upgrade}
+        onbuy={(id: string) => {
+          commands.buyUpgrade(id);
+        }}
+        onclose={() => {
+          openUpgrade = null;
+        }}
+      />
+    {/if}
+  {/each}
+
+  <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
+  <ObjectivePanel {objective} progress={objectiveProgress} />
+  <PricePanel
+    {prices}
+    onprice={(itemId: string, price: number) => {
+      commands.setPrice(itemId, price);
+    }}
+  />
 </div>
 
 <style>

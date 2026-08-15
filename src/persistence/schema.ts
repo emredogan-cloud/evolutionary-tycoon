@@ -84,7 +84,13 @@ const saveFileV4Schema = z.object({
     cash: z.number(),
     reputation: z.number(),
     lifetimeRevenue: z.number(),
+    // Phase 9 — spend and the sixty-second income window.
+    lifetimeSpend: z.number(),
     prices: stringNumberEntries,
+    revenueWindow: z.array(z.number()),
+    expenseWindow: z.array(z.number()),
+    bucketIndex: z.number().int().nonnegative(),
+    bucketElapsedMs: z.number().nonnegative(),
   }),
   layout: z.object({
     placed: z.array(z.object({ objectId: z.string(), x: z.number(), y: z.number(), z: z.number() })),

@@ -6,6 +6,7 @@ import {
   STATE_WALKING_TO_DOOR,
 } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
+import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 
@@ -277,13 +278,31 @@ export class QueueSystem implements SimSystem {
     );
   }
 
-  /** How many customers are standing past the authored capacity. */
+  /** How many customers are standing past the current capacity. */
   static overflowOf(world: World, layout: StageLayout): number {
     let queued = 0;
     for (let slot = 0; slot < world.customers.scanLimit; slot++) {
       if (!world.customers.isActive(slot)) continue;
       if (world.customers.at(slot).queueIndex >= 0) queued++;
     }
-    return Math.max(0, queued - layout.queueCapacity);
+    return Math.max(0, queued - queueCapacityOf(world, layout));
   }
+}
+
+/**
+ * How many people can queue before the stand starts turning traffic away.
+ *
+ * The authored capacity plus whatever a bigger counter has bought, **clamped to
+ * the number of queue positions the layout actually authors**. That clamp is not
+ * defensive tidiness: capacity beyond the last authored slot would tell
+ * `spilloverPenalty` the queue is fine while there is physically nowhere for the
+ * fifth person to stand, and the negative feedback loop that ECONOMY_DESIGN §7
+ * calls the economy's only self-correction would quietly stop working.
+ *
+ * It is also why `bigger-counter` is a single level in Stage 1: six authored
+ * slots minus a capacity of four is exactly one +2, and a second level would be
+ * an upgrade that costs money and does nothing.
+ */
+export function queueCapacityOf(world: World, layout: StageLayout): number {
+  return Math.min(layout.queue.length, layout.queueCapacity + effectValue(world, 'queueCapacity'));
 }

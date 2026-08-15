@@ -6,7 +6,7 @@ import { worldToScreen } from '@render/iso/IsoProjection';
  * Visual determinism mode — a first-class engine feature, not a test hack.
  *
  * ```
- * ?seed=42&freezeAt=600&scene=depth-testcard&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&cook=1
+ * ?seed=42&freezeAt=600&scene=depth-testcard&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&cook=1&buy=
  * ```
  *
  * Screenshot-diffing a WebGL canvas is impossible without it. Two runs of the
@@ -41,6 +41,20 @@ export interface RenderMode {
    * different world hash from a run without, because the player did something.
    */
   readonly cook: boolean;
+  /**
+   * Upgrades to grant before the fast-forward — visual regression only.
+   *
+   * `?buy=hand-painted-sign,cooler`. Each is bought at tick 0, with exactly its
+   * cost credited first, so the world can be photographed in a state a long
+   * session would reach without photographing the session.
+   *
+   * That credit is a cheat and it is named as one. The golden it exists for is
+   * about *how the world looks with a sign on it* — the purchase path is proved
+   * by `tests/e2e/upgradeFlow.spec.ts`, which earns the money — and a golden
+   * that had to play for twenty minutes first would be a golden nobody reruns.
+   * Nothing happens without the parameter.
+   */
+  readonly buy: readonly string[];
   readonly sceneId: string;
   /** True when any pinning parameter is present. */
   readonly visualDeterminism: boolean;
@@ -63,6 +77,10 @@ export function parseRenderMode(search: string): RenderMode {
   const fixedViewport = params.get('fixedViewport') === '1';
   const hideHud = params.get('hideHud') === '1';
   const cook = params.get('cook') === '1';
+  const buy = (params.get('buy') ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
   const sceneId = params.get('scene') ?? 'empty';
 
   // The camera is locked whenever the clock is frozen. A golden taken through a
@@ -86,6 +104,7 @@ export function parseRenderMode(search: string): RenderMode {
     fixedViewport,
     hideHud,
     cook,
+    buy,
     sceneId,
     visualDeterminism: freezeAt !== null || noParticles || fixedViewport || hideHud,
     lockedCamera,

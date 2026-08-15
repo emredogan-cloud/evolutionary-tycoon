@@ -166,6 +166,28 @@ export interface PaymentEvent {
   satisfaction: number;
 }
 
+/**
+ * A purchase that went through — Phase 9.
+ *
+ * Carries the level *bought* rather than the new total, and the price actually
+ * paid rather than the list price, because both are what the renderer's
+ * construction burst and the analysis panel need and neither can be recovered
+ * afterwards: the level advances and the next cost is different.
+ */
+export interface UpgradeAppliedEvent {
+  readonly t: 'UPGRADE_APPLIED';
+  upgradeId: string;
+  level: number;
+  cost: number;
+}
+
+/** The player moved a price. Emitted only when it actually changed. */
+export interface PriceChangedEvent {
+  readonly t: 'PRICE_CHANGED';
+  itemId: string;
+  price: number;
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
@@ -182,7 +204,9 @@ export type SimEvent =
   | PrepStartedEvent
   | OrderReadyEvent
   | OrderDeliveredEvent
-  | PaymentEvent;
+  | PaymentEvent
+  | UpgradeAppliedEvent
+  | PriceChangedEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -210,6 +234,8 @@ export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'ORDER_READY',
   'ORDER_DELIVERED',
   'PAYMENT',
+  'UPGRADE_APPLIED',
+  'PRICE_CHANGED',
 ];
 
 /**

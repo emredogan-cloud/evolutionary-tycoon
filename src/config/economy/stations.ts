@@ -23,6 +23,15 @@ const stationSchema = z.object({
   speed: z.number().positive(),
   /** Multiplies the recipe's `qualityBase`. An upgrade moves this too. */
   quality: z.number().positive(),
+  /**
+   * How many levels of the `prepStations` effect this station needs to exist.
+   *
+   * Zero for the stations the stand starts with. A locked station is declared
+   * here rather than created at purchase time, so its index — which an order
+   * stores and the world hash includes — is fixed from the first build that
+   * knows about it, whether or not anybody ever buys it.
+   */
+  requiresPrepStations: z.number().int().min(0),
 });
 
 export type Station = z.infer<typeof stationSchema>;
@@ -38,9 +47,19 @@ export type Station = z.infer<typeof stationSchema>;
  * can point at, and so Phase 10's cooks have somewhere to walk to.
  */
 const STAGE1_STATIONS: Station[] = [
-  { id: 'drink-1', type: 'DRINK', x: 10.4, y: 12.2, speed: 1, quality: 1 },
-  { id: 'grill-1', type: 'GRILL', x: 12, y: 12.2, speed: 1, quality: 1 },
-  { id: 'prep-1', type: 'PREP', x: 13.6, y: 12.2, speed: 1, quality: 1 },
+  { id: 'drink-1', type: 'DRINK', x: 10.4, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'grill-1', type: 'GRILL', x: 12, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'prep-1', type: 'PREP', x: 13.6, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  /*
+   * The two benches the `second-prep-station` upgrade unlocks — Phase 9.
+   *
+   * Present in the array from the moment the upgrade exists, and inert until
+   * bought. The alternative, pushing a station onto `STATIONS` at purchase
+   * time, would make an order's station index mean different things in two
+   * saves of the same build, which is precisely what "append only" forbids.
+   */
+  { id: 'prep-2', type: 'PREP', x: 15.2, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 1 },
+  { id: 'prep-3', type: 'PREP', x: 8.8, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 2 },
 ];
 
 /**

@@ -12,8 +12,10 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../stores/OrderStore';
+import { recordExpense, recordRevenue } from './EconomySystem';
 import { currentQuality } from './KitchenSystem';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
+import { effectValue } from './UpgradeSystem';
 
 /**
  * Ordering, delivery, eating, payment — the half of the loop that earns money.
@@ -90,7 +92,9 @@ export class ServiceSystem implements SimSystem {
     // A beat at the counter. Without it the transaction takes zero ticks and the
     // player never sees the moment they built the whole stand for.
     customer.timerMs += deltaMs;
-    if (customer.timerMs < ORDERING_MS) return;
+    // A menu board means people know what they want before they reach the
+    // front — the upgrade's effect is a straight scale on this beat.
+    if (customer.timerMs < ORDERING_MS * effectValue(world, 'orderSpeed')) return;
     customer.timerMs = 0;
 
     const orderSlot = world.orders.acquire();
@@ -171,12 +175,16 @@ export class ServiceSystem implements SimSystem {
 
     const order = world.orders.at(orderSlot);
     const item = menuItem(order.item);
-    const quality = currentQuality(order, world.clock.simTimeMs);
+    const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
     const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs);
     const tip = order.price * tipFraction(satisfaction);
 
     world.economy.cash += order.price + tip - item.baseCost;
     world.economy.lifetimeRevenue += order.price + tip;
+    // Both sides of the transaction go into the sixty-second window, so the
+    // rate on the HUD is net of what the food cost to make.
+    recordRevenue(world, order.price + tip);
+    recordExpense(world, item.baseCost);
     world.economy.reputation = Math.min(
       REPUTATION.max,
       Math.max(REPUTATION.min, world.economy.reputation + reputationDelta(satisfaction) * 100),
