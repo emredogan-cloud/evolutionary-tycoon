@@ -4,7 +4,7 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { FlowFieldCache } from '../nav/FlowFieldCache';
 import { GOAL_COUNTER, parkingGoal } from '../nav/FlowFieldCache';
-import { arrivalSpeed, blendSteering, separationFrom } from '../nav/steering';
+import { arrivalSpeed, blendSteering, MIN_PERSONAL_SPACE_METRES, separationFrom } from '../nav/steering';
 import type { SteerOutput } from '../nav/steering';
 import type { CustomerRecord } from '../stores/customers';
 
@@ -64,6 +64,100 @@ export class NavigationSystem implements SimSystem {
 
       this.move(world, customer, slot, seconds);
     }
+
+    this.resolveOverlaps(world);
+  }
+
+  /**
+   * Push apart anyone who ended the tick inside somebody else.
+   *
+   * Separation is a *force* and forces can be outvoted. When many agents
+   * converge on one point — everyone heading for the counter while the queue is
+   * full — the pull towards the target overwhelms it and they stack up. Measured
+   * before this pass existed: thirty agents at a crowded entrance closed to
+   * **2.2 cm** apart, and 5.5% of all pair-ticks were under 30 cm. A person is
+   * 50 cm across, so that is people standing inside each other.
+   *
+   * A constraint rather than a stronger force, deliberately. Raising the
+   * separation weight would have produced the other failure this phase is afraid
+   * of — two agents orbiting one another in a doorway, each knocked off course
+   * by the other, neither making progress.
+   *
+   * One pass, not to convergence. A tick moves an agent 6.75 cm, so a single
+   * correction is far more than enough to keep up, and iterating to a fixed
+   * point would trade a guaranteed cost for a rare one.
+   */
+  private resolveOverlaps(world: World): void {
+    const customers = world.customers;
+    const limit = customers.scanLimit;
+
+    for (let slot = 0; slot < limit; slot++) {
+      if (!customers.isActive(slot)) continue;
+      const customer = customers.at(slot);
+      if (customer.visible !== 1 || customer.staged === 1) continue;
+
+      for (let other = slot + 1; other < limit; other++) {
+        if (!customers.isActive(other)) continue;
+        const neighbour = customers.at(other);
+        if (neighbour.visible !== 1 || neighbour.staged === 1) continue;
+
+        const dx = neighbour.x - customer.x;
+        const dy = neighbour.y - customer.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance >= MIN_PERSONAL_SPACE_METRES) continue;
+
+        /*
+         * Exactly co-located: there is no direction to separate along, so the
+         * higher slot steps aside along +x. Arbitrary, fixed, and the same on
+         * every engine — an unbroken tie leaves them stacked forever.
+         */
+        if (distance < 1e-6) {
+          neighbour.x += MIN_PERSONAL_SPACE_METRES;
+          continue;
+        }
+
+        /*
+         * Half the overlap each, so neither is privileged and the pair's centre
+         * of mass does not drift — but if one of them cannot move, the other
+         * takes the whole correction.
+         *
+         * That second clause is what makes this work at all. Measured without
+         * it: a pair pressed against the counter separated at half rate because
+         * one push landed in the counter's own footprint and was refused, and
+         * the flow pulled them back together faster than the survivor could
+         * open the gap. Closest approach stayed at 4 cm.
+         */
+        const overlap = MIN_PERSONAL_SPACE_METRES - distance;
+        const nx = dx / distance;
+        const ny = dy / distance;
+
+        const movedFirst = this.nudge(customer, -nx * overlap * 0.5, -ny * overlap * 0.5);
+        const movedSecond = this.nudge(neighbour, nx * overlap * 0.5, ny * overlap * 0.5);
+
+        if (!movedFirst && movedSecond) this.nudge(neighbour, nx * overlap * 0.5, ny * overlap * 0.5);
+        else if (movedFirst && !movedSecond) {
+          this.nudge(customer, -nx * overlap * 0.5, -ny * overlap * 0.5);
+        }
+      }
+    }
+  }
+
+  /**
+   * Move an agent, unless that would put them somewhere they cannot stand.
+   *
+   * A correction that pushed somebody into the counter or onto the road would
+   * fix an overlap by creating a worse problem, and the flow field cannot route
+   * them out of a solid cell. Returns whether the move happened, so the caller
+   * can give the whole correction to whichever of the pair can take it.
+   */
+  private nudge(customer: CustomerRecord, dx: number, dy: number): boolean {
+    const grid = this.fields.grid;
+    const x = customer.x + dx;
+    const y = customer.y + dy;
+    if (grid.isBlocked(grid.cellXAt(x), grid.cellYAt(y))) return false;
+    customer.x = x;
+    customer.y = y;
+    return true;
   }
 
   /**

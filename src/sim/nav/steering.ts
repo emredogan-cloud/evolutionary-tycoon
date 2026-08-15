@@ -47,6 +47,18 @@ export const SEPARATION_WEIGHT = 0.6;
 export const ARRIVAL_SLOWING_METRES = 1.2;
 
 /**
+ * Centre-to-centre distance below which two people are inside each other.
+ *
+ * A person is 0.5 m across (`src/config/actors.ts`), so 0.45 m is shoulders
+ * touching. Below that they are drawn overlapping, and Phase 7's testing
+ * requirements name "agents do not pass through each other" explicitly.
+ *
+ * Comfortably under the 0.8 m the queue slots are spaced at, so a formed queue
+ * never triggers the correction.
+ */
+export const MIN_PERSONAL_SPACE_METRES = 0.45;
+
+/**
  * Blend the flow direction with a separation push.
  *
  * `separationX/Y` is the accumulated push from neighbours — see

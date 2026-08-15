@@ -80,11 +80,24 @@ export class QueueSystem implements SimSystem {
       if (free < 0) {
         /*
          * Every authored slot is taken, including the ones that count as spilled
-         * onto the road. The customer keeps walking towards the counter and
-         * stands wherever they got to; the conversion penalty from the visible
-         * queue is already doing the work of discouraging more arrivals.
+         * onto the road. They hold position rather than continuing towards the
+         * counter — you see the queue is full and you hang back.
+         *
+         * This is a behavioural fix for a physical problem. Sending them all on
+         * meant every unplaced customer walked at the *same point*, and with
+         * thirty pedestrians at the entrance — the roadmap's own naturalness
+         * scenario — fifteen of them converged on one spot and stacked up.
+         * Steering cannot resolve that: separation is outvoted by fifteen agents
+         * all pulled the same way, and no number of position corrections fixes a
+         * crowd that has been told to stand in one place.
+         *
+         * The conversion penalty from the visible queue is already discouraging
+         * further arrivals, so this is not the mechanism that limits the crowd —
+         * it is only where the crowd stands while it waits.
          */
         customer.queueIndex = -1;
+        customer.targetX = customer.x;
+        customer.targetY = customer.y;
         continue;
       }
       this.occupants[free] = slot;

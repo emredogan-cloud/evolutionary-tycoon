@@ -308,6 +308,22 @@ export function benchWorldHash(): TimingResult {
  */
 export function buildPeakLoad(seed = 20260815): Sim {
   const sim = new Sim({ seed });
+  populatePeakLoad(sim);
+  return sim;
+}
+
+/**
+ * Fill a world with the peak load, on a world that may already have been used.
+ *
+ * Separate from `buildPeakLoad` so a benchmark can rebuild the load **inside**
+ * each sample. Without that the load decays: a jam of 120 vehicles clears over a
+ * few hundred ticks, so twenty-five samples of two hundred ticks each measured a
+ * road that was emptier every time and the figure swung 16% between runs. The
+ * setup is a few hundred store writes against two hundred ticks of simulation,
+ * so its cost is constant and small.
+ */
+export function populatePeakLoad(sim: Sim): void {
+  sim.world.reset();
   const vehicles = sim.world.vehicles;
 
   const perLane = 60;
@@ -341,8 +357,6 @@ export function buildPeakLoad(seed = 20260815): Sim {
     customer.x = STAGE1_LAYOUT.counter.x;
     customer.y = STAGE1_LAYOUT.counter.y - 1 - i * 0.1;
   }
-
-  return sim;
 }
 
 export function benchPopulatedTick(): TimingResult {
@@ -431,32 +445,44 @@ export function benchCrowdedTick(): TimingResult {
   const sim = buildPeakLoad(20260816);
   const ticks = 200;
 
-  // Twenty more on foot than `buildPeakLoad` seats, up to the roadmap's sixty.
-  for (let i = sim.world.customers.activeCount; i < 60; i++) {
-    const slot = sim.world.customers.acquire();
-    if (slot < 0) break;
-    const customer = sim.world.customers.at(slot);
-    customer.entityId = sim.world.allocateEntityId();
-    customer.state = CUSTOMER_WALKING_STATE;
-    customer.visible = 1;
-    customer.vehicleSlot = -1;
-    customer.parkingSlot = -1;
-    // Spread across the walkable half of the lot, all heading for the counter.
-    customer.x = 2 + (i % 10) * 2;
-    customer.y = 11 + Math.floor(i / 10) * 1.2;
-    customer.targetX = STAGE1_LAYOUT.counter.x;
-    customer.targetY = STAGE1_LAYOUT.counter.y - 1;
-  }
+  const crowd = (): void => {
+    populatePeakLoad(sim);
+    // Twenty more on foot than the peak load seats, up to the roadmap's sixty.
+    for (let i = sim.world.customers.activeCount; i < 60; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      // Spread across the walkable half of the lot, all heading for the counter.
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+  };
 
-  const pedestrians = sim.world.customers.activeCount;
-  return timeIt(`crowded tick (${String(pedestrians)} pedestrians, 120 vehicles)`, ticks, () => {
+  crowd();
+  const label = `crowded tick (${String(sim.world.customers.activeCount)} pedestrians, 120 vehicles)`;
+  return timeIt(label, ticks, () => {
+    crowd();
     for (let i = 0; i < ticks; i++) sim.tick();
   });
 }
 
+/**
+ * Reset per sample, for the same reason `benchTicksFromFresh` is: the world
+ * fills as it runs, so twenty-five samples of a thousand ticks each were
+ * measuring an increasingly busy simulation and the samples were describing
+ * different worlds. It showed up as a 29% swing between two runs minutes apart.
+ */
 export function benchCommandProcessing(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks, one command each', 1000, () => {
+    sim.world.reset();
     for (let i = 0; i < 1000; i++) {
       sim.dispatch({ t: 'SET_SPEED', mult: i % 2 === 0 ? 2 : 4 });
       sim.tick();
@@ -472,6 +498,8 @@ export function benchEventFlush(): TimingResult {
   }
 
   return timeIt('1000 ticks, 8 events per tick, 3 subscribers', 8000, () => {
+    // Reset per sample — see `benchCommandProcessing`.
+    sim.world.reset();
     for (let i = 0; i < 1000; i++) {
       for (let e = 0; e < 8; e++) sim.world.eventQueue.emitDayStarted(e);
       sim.tick();

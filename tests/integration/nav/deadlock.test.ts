@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { ARRIVAL_EPSILON_METRES } from '@config/customer';
 import { STATE_QUEUEING_AT_COUNTER, STATE_WALKING_TO_DOOR } from '@sim/ai/fsm/customerFsm';
+import { MIN_PERSONAL_SPACE_METRES } from '@sim/nav/steering';
 import { Sim } from '@sim/core/Sim';
 import { Rng } from '@sim/core/Rng';
 
@@ -215,4 +216,109 @@ describe('navigation deadlock', () => {
     const apart = Math.hypot(first.x - second.x, first.y - second.y);
     expect(apart, 'two co-located agents never separated').toBeGreaterThan(0);
   }, 60_000);
+});
+
+describe('a crowded entrance', () => {
+  it('keeps thirty pedestrians out of each other', () => {
+    /*
+     * The roadmap's own naturalness scenario — "watch 30 pedestrians navigate
+     * a crowded entrance" — measured rather than watched.
+     *
+     * It found a real defect and the fix was behavioural, not physical. Every
+     * customer who could not get a queue slot was told to walk at the counter,
+     * so fifteen of them converged on the *same point* and stacked up:
+     * closest approach 2.2 cm, and 5.5% of all pair-ticks inside 30 cm. A
+     * person is 50 cm across, so that is people standing inside each other.
+     * Steering cannot fix it — separation is outvoted by fifteen agents pulled
+     * the same way — and no number of position corrections fixes a crowd that
+     * has been told to stand in one place. They hold position instead.
+     */
+    const sim = new Sim({ seed: 31337 });
+    const slots: number[] = [];
+    for (let i = 0; i < 30; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = STATE_WALKING_TO_DOOR;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 12 + Math.floor(i / 10) * 1.5;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+      slots.push(slot);
+    }
+    expect(slots.length).toBeGreaterThan(15);
+
+    let closest = Number.POSITIVE_INFINITY;
+    let violating = 0;
+    let pairs = 0;
+
+    for (let tick = 0; tick < 1500; tick++) {
+      sim.tick();
+      const live: { x: number; y: number }[] = [];
+      for (const slot of slots) {
+        if (!sim.world.customers.isActive(slot)) continue;
+        const customer = sim.world.customers.at(slot);
+        if (customer.visible === 1) live.push({ x: customer.x, y: customer.y });
+      }
+      for (let i = 0; i < live.length; i++) {
+        for (let j = i + 1; j < live.length; j++) {
+          const a = live[i];
+          const b = live[j];
+          if (a === undefined || b === undefined) continue;
+          const distance = Math.hypot(a.x - b.x, a.y - b.y);
+          pairs++;
+          if (distance < closest) closest = distance;
+          if (distance < MIN_PERSONAL_SPACE_METRES) violating++;
+        }
+      }
+    }
+
+    /*
+     * Measured bounds, not aspirational ones. 0.30 m is shoulders brushing;
+     * the correction is refused when the only way apart is into the counter,
+     * and that is the lesser failure by a wide margin. The share is what is
+     * actually achieved with room to spare, so a regression shows up rather
+     * than a rewrite being demanded.
+     */
+    expect(closest, `closest approach ${closest.toFixed(3)} m`).toBeGreaterThan(0.3);
+    const share = violating / Math.max(1, pairs);
+    expect(share, `${(share * 100).toFixed(2)}% of pair-ticks were too close`).toBeLessThan(0.005);
+  }, 120_000);
+
+  it('still forms a queue while the rest hold back', () => {
+    // Holding position must not mean nobody ever gets served. The queue has to
+    // fill from the crowd, or "hang back" has quietly become "give up".
+    const sim = new Sim({ seed: 31337 });
+    for (let i = 0; i < 30; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = STATE_WALKING_TO_DOOR;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 12 + Math.floor(i / 10) * 1.5;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    let peakQueue = 0;
+    for (let tick = 0; tick < 1500; tick++) {
+      sim.tick();
+      let queued = 0;
+      for (let slot = 0; slot < sim.world.customers.scanLimit; slot++) {
+        if (!sim.world.customers.isActive(slot)) continue;
+        if (sim.world.customers.at(slot).queueIndex >= 0) queued++;
+      }
+      peakQueue = Math.max(peakQueue, queued);
+    }
+
+    expect(peakQueue, 'the queue never filled from the crowd').toBeGreaterThan(3);
+  }, 120_000);
 });

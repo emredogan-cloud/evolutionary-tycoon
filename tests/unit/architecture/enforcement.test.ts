@@ -3,6 +3,18 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
 /**
+ * These spawn ESLint and dependency-cruiser as child processes against fixture
+ * files, so each one is seconds rather than milliseconds — and the whole file is
+ * about 25 s on its own, more when the rest of the suite is competing for cores.
+ * Past Vitest's 5 s default, which is what it started failing on.
+ *
+ * The subprocess is the point: the test proves the *real* configuration rejects
+ * a violation, not that a copy of the rule does. So the timeout moves rather
+ * than the mechanism.
+ */
+const ENFORCEMENT_TIMEOUT_MS = 120_000;
+
+/**
  * Proof that the architecture and determinism guards actually fire.
  *
  * docs/WORKING_DISCIPLINE.md §2.1–2.2 declare that `src/sim` is pure,
@@ -74,41 +86,53 @@ describe('architecture enforcement', { concurrent: false }, () => {
       "import { buildInfo } from '../../platform/buildInfo';\nexport const x = buildInfo;\n",
       'sim-no-persistence-or-platform',
     ],
-  ])('dependency-cruiser rejects a %s from src/sim', (_label, source, rule) => {
-    writeFixture('src/sim/__fixture__/illegal.ts', source);
+  ])(
+    'dependency-cruiser rejects a %s from src/sim',
+    (_label, source, rule) => {
+      writeFixture('src/sim/__fixture__/illegal.ts', source);
 
-    const { exitCode, output } = depcruise();
+      const { exitCode, output } = depcruise();
 
-    expect(exitCode).not.toBe(0);
-    expect(output).toContain(rule);
-  });
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain(rule);
+    },
+    ENFORCEMENT_TIMEOUT_MS,
+  );
 
-  it('dependency-cruiser rejects a direct simulation import from src/ui', () => {
-    // The UI must read a throttled view model through src/app/bridge. Importing
-    // the simulation directly is how a UI ends up running per frame.
-    writeFixture('src/sim/__fixture__/thing.ts', 'export const thing = 1;\n');
-    writeFixture(
-      'src/ui/__fixture__/illegal.ts',
-      "import { thing } from '../../sim/__fixture__/thing';\nexport const x = thing;\n",
-    );
+  it(
+    'dependency-cruiser rejects a direct simulation import from src/ui',
+    () => {
+      // The UI must read a throttled view model through src/app/bridge. Importing
+      // the simulation directly is how a UI ends up running per frame.
+      writeFixture('src/sim/__fixture__/thing.ts', 'export const thing = 1;\n');
+      writeFixture(
+        'src/ui/__fixture__/illegal.ts',
+        "import { thing } from '../../sim/__fixture__/thing';\nexport const x = thing;\n",
+      );
 
-    const { exitCode, output } = depcruise();
+      const { exitCode, output } = depcruise();
 
-    expect(exitCode).not.toBe(0);
-    expect(output).toContain('ui-no-sim');
-  });
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain('ui-no-sim');
+    },
+    ENFORCEMENT_TIMEOUT_MS,
+  );
 
-  it('dependency-cruiser rejects a non-data import from src/config', () => {
-    writeFixture(
-      'src/config/__fixture__/illegal.ts',
-      "import { buildInfo } from '../../platform/buildInfo';\nexport const x = buildInfo;\n",
-    );
+  it(
+    'dependency-cruiser rejects a non-data import from src/config',
+    () => {
+      writeFixture(
+        'src/config/__fixture__/illegal.ts',
+        "import { buildInfo } from '../../platform/buildInfo';\nexport const x = buildInfo;\n",
+      );
 
-    const { exitCode, output } = depcruise();
+      const { exitCode, output } = depcruise();
 
-    expect(exitCode).not.toBe(0);
-    expect(output).toContain('config-is-data-only');
-  });
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain('config-is-data-only');
+    },
+    ENFORCEMENT_TIMEOUT_MS,
+  );
 });
 
 describe('src/sim determinism guards', { concurrent: false }, () => {
@@ -141,20 +165,28 @@ describe('src/sim determinism guards', { concurrent: false }, () => {
   it.each([
     ['phaser', "import Phaser from 'phaser';\nexport const v = Phaser;\n"],
     ['svelte', "import { mount } from 'svelte';\nexport const v = mount;\n"],
-  ])('ESLint rejects an import of %s from src/sim', (_label, source) => {
-    writeFixture(FIXTURE, source);
+  ])(
+    'ESLint rejects an import of %s from src/sim',
+    (_label, source) => {
+      writeFixture(FIXTURE, source);
 
-    const { exitCode, output } = lint(FIXTURE);
+      const { exitCode, output } = lint(FIXTURE);
 
-    expect(exitCode).not.toBe(0);
-    expect(output).toContain('no-restricted-imports');
-  });
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain('no-restricted-imports');
+    },
+    ENFORCEMENT_TIMEOUT_MS,
+  );
 
-  it('ESLint accepts deterministic code', () => {
-    writeFixture(FIXTURE, 'export function add(a: number, b: number): number {\n  return a + b;\n}\n');
+  it(
+    'ESLint accepts deterministic code',
+    () => {
+      writeFixture(FIXTURE, 'export function add(a: number, b: number): number {\n  return a + b;\n}\n');
 
-    const { exitCode } = lint(FIXTURE);
+      const { exitCode } = lint(FIXTURE);
 
-    expect(exitCode).toBe(0);
-  });
+      expect(exitCode).toBe(0);
+    },
+    ENFORCEMENT_TIMEOUT_MS,
+  );
 });
