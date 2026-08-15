@@ -135,8 +135,11 @@ describe('simulation performance budgets', () => {
   it('depth-sorts a full frame of 260 objects in under 0.15 ms', () => {
     // TECHNICAL_ARCHITECTURE §11.2 caps the depth-sorted set at 260 on desktop,
     // and the Phase 3 budget gives the sort 0.15 ms of a 16.6 ms frame.
+    // Per sort, not per sample: the harness batches 100 sorts so the timing is
+    // large enough to measure precisely (see benchDepthSort).
     const result = benchDepthSort();
-    expect(result.p50Ms, `measured ${result.p50Ms.toFixed(4)} ms`).toBeLessThan(0.15);
+    const perSortMs = result.p50Ms / result.opsPerSample;
+    expect(perSortMs, `measured ${perSortMs.toFixed(4)} ms per sort`).toBeLessThan(0.15);
   });
 
   it('serialises a save in under 8 ms', () => {

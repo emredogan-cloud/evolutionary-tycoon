@@ -290,15 +290,31 @@ export function benchDepthSort(): TimingResult {
     });
   }
 
-  return timeIt('depth sort, 260 objects', 1, () => {
-    assignAndSort(items);
-    // Re-shuffle cheaply so the next pass is not sorting an already-sorted array,
-    // which is the best case and not the one the budget is about.
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (first !== undefined && last !== undefined) {
-      items[0] = last;
-      items[items.length - 1] = first;
+  /*
+   * A hundred sorts per sample, not one.
+   *
+   * One sort takes about 12 microseconds, which is close enough to timer
+   * resolution that the *ratio* used by the regression gate swings ~28% between
+   * runs on identical code — measured on CI, and it was the only benchmark still
+   * failing after the timings were normalised. Everything else in this file
+   * already samples a thousand ticks or a hundred hashes for the same reason.
+   *
+   * `perOpUs` still divides by the sort count, so the reported per-sort figure
+   * and the 0.15 ms budget are unchanged.
+   */
+  const SORTS_PER_SAMPLE = 100;
+
+  return timeIt('depth sort, 260 objects', SORTS_PER_SAMPLE, () => {
+    for (let pass = 0; pass < SORTS_PER_SAMPLE; pass++) {
+      assignAndSort(items);
+      // Re-shuffle cheaply so the next pass is not sorting an already-sorted
+      // array, which is the best case and not the one the budget is about.
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (first !== undefined && last !== undefined) {
+        items[0] = last;
+        items[items.length - 1] = first;
+      }
     }
   });
 }
