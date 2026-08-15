@@ -308,6 +308,40 @@ describe('regression against the recorded baseline', () => {
    * is the simulation's cost relative to the processor it is on. The 15%
    * threshold from TESTING_STRATEGY §6 is unchanged; only the quantity being
    * compared is chosen to be comparable.
+   *
+   * ## The calibration has to resemble the work
+   *
+   * Normalising cancels a uniform clock-speed difference. It does **not** cancel
+   * a difference in the *mix* of work, and while the calibration was pure
+   * floating-point arithmetic it did not cancel enough: a benchmark that walks
+   * memory does not scale with an arithmetic loop across different processors.
+   * The gap broke the gate in both directions — a baseline recorded on a
+   * developer machine failed on CI by 19%, and the CI-recorded baseline that
+   * replaced it failed locally by 18%. Neither machine was slower.
+   *
+   * `calibrationMs` now mixes arithmetic with a strided walk over a buffer far
+   * larger than any cache. Measured across the same two machines, before and
+   * after:
+   *
+   * | benchmark                     | FP only | mixed  |
+   * | ----------------------------- | ------- | ------ |
+   * | world hash (most memory-bound)| +19%    | **-5%** |
+   * | world snapshot + JSON         | +11%    | -5%    |
+   * | 1000 ticks from a fresh world | +7%     | -7%    |
+   * | populated tick                | +10%    | -15%   |
+   * | depth sort                    | -1%     | -2%    |
+   *
+   * ## Which environment records it
+   *
+   * The developer machine, and deliberately. Under the mixed calibration CI
+   * measures *faster* than local on every benchmark, so a locally recorded
+   * baseline can never produce a false regression on CI — and CI is where this
+   * gate is enforced. The cost is sensitivity: a few points of the 15% are spent
+   * on the residual offset before a real regression starts eating into it.
+   *
+   * The reverse choice was tried and rejected on evidence rather than taste: a
+   * CI-recorded baseline makes `pnpm bench:sim` fail on a developer machine,
+   * which is worse than a gate that is slightly less sensitive.
    */
   /*
    * Not compared while recording: a baseline is being replaced in this very

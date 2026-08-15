@@ -52,23 +52,67 @@ export interface AllocationResult {
 /**
  * A fixed workload used to measure how fast *this machine* is right now.
  *
- * The regression gate compares wall-clock timings against a recorded baseline,
- * and on GitHub's shared runners that comparison was worthless: a baseline
- * recorded on CI was 47-68% "slower" when the identical commit re-ran on CI six
- * minutes later. The runner fleet is heterogeneous and noisy, and taking the
- * minimum of 25 samples removes scheduler contention but not a different CPU.
+ * The regression gate compares timings against a recorded baseline, and on
+ * GitHub's shared runners a raw comparison was worthless: a baseline recorded on
+ * CI reported the identical commit as 47-68% "slower" when it re-ran six minutes
+ * later. Dividing every measurement by this one turns milliseconds into a ratio,
+ * and machine speed cancels.
  *
- * Dividing every measurement by this one turns absolute milliseconds into a
- * ratio, and machine speed cancels. It is deliberately dull arithmetic with no
- * allocation and no I/O, so it measures processor throughput and nothing else.
+ * ## Why it is a mixture
+ *
+ * It was pure floating-point arithmetic to begin with, and that cancelled a
+ * uniform clock-speed difference but not a difference in the *mix* of work. A
+ * benchmark that walks memory does not scale with an arithmetic loop across
+ * different processors, and the gap was large enough to break the gate in both
+ * directions: a baseline recorded on a developer machine failed on CI by 19%,
+ * and the CI-recorded baseline that replaced it failed locally by 18%. Neither
+ * machine was slower than the other. The 15% threshold was measuring the
+ * difference between an FP-bound denominator and a memory-bound numerator.
+ *
+ * So the calibration now does both, in the same proportion the simulation does:
+ * arithmetic, and a strided walk over a buffer far larger than any cache. The
+ * stride is 8 doubles — one cache line — so every read misses, which is what
+ * makes it measure the memory subsystem rather than the prefetcher.
+ *
+ * Still deliberately dull: no allocation inside the timed region, no I/O, and
+ * the buffer is filled once and reused.
  */
+
+/** 4 MB of doubles — past any L2, and past most L3 slices. */
+const CALIBRATION_BUFFER_LENGTH = 1 << 19;
+/** One 64-byte cache line, so consecutive reads never share one. */
+const CALIBRATION_STRIDE = 8;
+const CALIBRATION_PASSES = 6;
+const CALIBRATION_ARITHMETIC_STEPS = 200_000;
+
+let calibrationBuffer: Float64Array | undefined;
+
+function calibrationData(): Float64Array {
+  if (calibrationBuffer === undefined) {
+    const buffer = new Float64Array(CALIBRATION_BUFFER_LENGTH);
+    // Deterministic and non-constant, so nothing can be folded away.
+    for (let i = 0; i < buffer.length; i++) buffer[i] = (i % 1013) * 0.5 + 1;
+    calibrationBuffer = buffer;
+  }
+  return calibrationBuffer;
+}
+
 export function calibrationMs(): number {
+  const buffer = calibrationData();
+
   return timeIt('calibration', 1, () => {
     let total = 0;
-    for (let i = 1; i < 400_000; i++) {
+    for (let i = 1; i < CALIBRATION_ARITHMETIC_STEPS; i++) {
       total += Math.sqrt(i) / (i % 97 === 0 ? 3 : 7);
     }
-    // Consumed so the loop cannot be optimised away entirely.
+
+    for (let pass = 0; pass < CALIBRATION_PASSES; pass++) {
+      for (let i = 0; i < buffer.length; i += CALIBRATION_STRIDE) {
+        total += buffer[i] ?? 0;
+      }
+    }
+
+    // Consumed so neither loop can be optimised away entirely.
     if (total < 0) throw new Error('unreachable');
   }).minMs;
 }
