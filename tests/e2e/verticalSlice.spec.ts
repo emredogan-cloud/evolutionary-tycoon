@@ -19,6 +19,25 @@ import type { Page } from '@playwright/test';
 
 const TICKS_PER_MINUTE = 1200;
 
+/**
+ * Hosts whose injected scripts our own CSP blocks, correctly.
+ *
+ * Vercel adds a preview-toolbar script to every preview deployment. Our
+ * `script-src 'self'` refuses it, the browser logs a CSP violation, and that
+ * violation is **the policy working** — it is not the game failing.
+ *
+ * Filtered by host rather than by message shape, and only for CSP violations, so
+ * a real error from our own code cannot hide behind it. Narrow on purpose: the
+ * criterion this test serves is "zero critical console errors", and quietly
+ * widening the filter until it passes would empty the criterion out.
+ */
+const FOREIGN_SCRIPT_HOSTS = ['vercel.live'];
+
+function isForeignCspViolation(text: string): boolean {
+  if (!text.includes('Content Security Policy')) return false;
+  return FOREIGN_SCRIPT_HOSTS.some((host) => text.includes(host));
+}
+
 interface Api {
   dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number } | { t: 'BUY_UPGRADE'; upgradeId: string }): void;
   advanceTicks(n: number): void;
@@ -164,11 +183,15 @@ test.describe('vertical slice — criterion 6, a clean long run', () => {
      * every CI run rather than once.
      */
     const errors: string[] = [];
+    const record = (text: string): void => {
+      if (isForeignCspViolation(text)) return;
+      errors.push(text);
+    };
     page.on('console', (message) => {
-      if (message.type() === 'error') errors.push(message.text());
+      if (message.type() === 'error') record(message.text());
     });
     page.on('pageerror', (error) => {
-      errors.push(error.message);
+      record(error.message);
     });
 
     await boot(page);

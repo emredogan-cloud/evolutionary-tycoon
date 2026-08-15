@@ -282,6 +282,27 @@ Fourteen of fifteen, with the same class of blocked item as Phases 6, 7, 8 and 9
 
 ---
 
+## 10.1 One CI failure, and what it was
+
+The preview E2E failed once on `Verify deployed preview`, on the Phase 9
+criterion-6 test: **zero critical console errors**.
+
+The error was real and it was not ours. Vercel injects a preview-toolbar script
+into every preview deployment, and our own `script-src 'self'` refuses it:
+
+```
+Loading the script 'https://vercel.live/_next-live/feedback/feedback.js'
+violates the following Content Security Policy directive: "script-src 'self'"
+```
+
+That is the policy working. The test now ignores CSP violations **from a named
+list of foreign hosts only** — filtered by host and only for CSP messages, so an
+error from our own code cannot hide behind it. Widening the filter until the test
+passed would have emptied the criterion out, which is the thing that criterion is
+for.
+
+---
+
 ## 11. Open items carried forward
 
 1. **Nothing ever waits on the pass** (§6) — now blocking three built features
