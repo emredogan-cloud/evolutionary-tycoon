@@ -10,6 +10,8 @@ import { worldRectToScreenBounds, worldToScreen } from '../iso/IsoProjection';
 import type { Point2 } from '../iso/IsoProjection';
 import { placeholderTextures } from '../placeholderTextures';
 import { patienceRing } from '../views/CustomerView';
+import { createPose, poseIdle, poseWalk } from '../rig/DollRig';
+import { WALK_SPEED_METRES_PER_SECOND } from '@config/customer';
 import { RenderBridge } from '../RenderBridge';
 import { RENDER_CONTEXT_KEY } from '../RenderContext';
 import type { RenderContext } from '../RenderContext';
@@ -27,6 +29,21 @@ export const WORLD_SCENE_KEY = 'world';
  * stop seeing it.
  */
 const PATIENCE_TINTS = { calm: 0xffffff, restless: 0xffd479, angry: 0xff8080 } as const;
+
+/**
+ * The rig's resting torso height, subtracted so the bob is an offset from rest
+ * rather than an absolute position.
+ */
+const REST_TORSO_HEIGHT_METRES = 0.95;
+
+/**
+ * How much of the leg swing becomes a body lean on the collapsed sprite.
+ *
+ * Small. Until the six rig parts have art, the whole pose has to read through
+ * one quad, and a figure that leaned as far as its legs swing would look like it
+ * was falling over rather than walking.
+ */
+const WALK_LEAN = 0.25;
 
 /** Statics are declared by texture key; the render catalogue is indexed by number. */
 function kindIndexForTexture(textureKey: string): number {
@@ -57,6 +74,7 @@ export class WorldScene extends Phaser.Scene {
 
   private readonly sprites: Phaser.GameObjects.Image[] = [];
   /** Reused every frame; the body motion helper writes into it. */
+  private readonly walkPose = createPose();
   private readonly bodyMotion: VehicleBodyMotion = { bobY: 0, pitch: 0 };
   private readonly screenScratch: Point2 = { x: 0, y: 0 };
   private readonly originsByKey = new Map<string, { x: number; y: number }>();
@@ -189,9 +207,27 @@ export class WorldScene extends Phaser.Scene {
          * that looks finished is the dangerous kind. `patienceRing` is a pure
          * function and is unit-tested; this is only the application of it.
          */
-        if (sprite.rotation !== 0) sprite.setRotation(0);
         const ring = patienceRing(view.patience);
         sprite.setTint(ring.visible ? PATIENCE_TINTS[ring.band] : 0xffffff);
+
+        /*
+         * The procedural walk, applied to the one placeholder sprite there is.
+         *
+         * The rig poses six parts and the art pipeline has produced none of them
+         * (PHASE_4_REPORT §11), so what actually reaches the screen is the
+         * torso's own bob and lean — which is the part of the pose that survives
+         * being collapsed onto a single quad. `poseWalk` is unit-tested in full
+         * and the remaining five parts drop in with the art, without this code
+         * changing.
+         */
+        if (view.moving) {
+          poseWalk(view.travelled, WALK_SPEED_METRES_PER_SECOND, this.walkPose);
+          offsetY = -this.walkPose.torso.offsetY + REST_TORSO_HEIGHT_METRES;
+          sprite.setRotation(this.walkPose.legLeft.rotation * WALK_LEAN);
+        } else {
+          poseIdle(this.walkPose);
+          if (sprite.rotation !== 0) sprite.setRotation(0);
+        }
       } else if (sprite.rotation !== 0) {
         sprite.setRotation(0);
         sprite.clearTint();
