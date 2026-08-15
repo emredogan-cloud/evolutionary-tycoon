@@ -37,6 +37,15 @@ export interface ActorView extends DepthSortable {
    * rather than by time is what keeps a stopped vehicle still.
    */
   travelled: number;
+  /**
+   * Patience remaining as a fraction, or 0 for anything that does not wait.
+   *
+   * Carried through from the simulation rather than looked up, for the same
+   * reason `braking` is: the render layer may not reach into a store.
+   */
+  patience: number;
+  /** Moving under its own power this tick. Drives the walk cycle in Phase 7. */
+  moving: boolean;
 }
 
 function createActorView(): ActorView {
@@ -54,6 +63,8 @@ function createActorView(): ActorView {
     headingY: 0,
     braking: false,
     travelled: 0,
+    patience: 0,
+    moving: false,
   };
 }
 

@@ -77,31 +77,31 @@ describe('the patience ring', () => {
      * player learns to stop seeing it — which is the opposite of what a warning
      * is for.
      */
-    expect(patienceRing(1000, 1000).visible).toBe(false);
-    expect(patienceRing(RING_APPEARS_BELOW * 1000 + 1, 1000).visible).toBe(false);
-    expect(patienceRing(RING_APPEARS_BELOW * 1000 - 1, 1000).visible).toBe(true);
+    expect(patienceRing(1).visible).toBe(false);
+    expect(patienceRing(RING_APPEARS_BELOW + 0.001).visible).toBe(false);
+    expect(patienceRing(RING_APPEARS_BELOW - 0.001).visible).toBe(true);
   });
 
   it('empties rather than filling', () => {
     // A filling ring reads as progress towards something good.
-    const early = patienceRing(600, 1000);
-    const late = patienceRing(200, 1000);
+    const early = patienceRing(0.6);
+    const late = patienceRing(0.2);
     expect(late.sweep).toBeLessThan(early.sweep);
   });
 
   it('changes band as the wait gets serious', () => {
-    expect(patienceRing(600, 1000).band).toBe('restless');
-    expect(patienceRing(100, 1000).band).toBe('angry');
+    expect(patienceRing(0.6).band).toBe('restless');
+    expect(patienceRing(0.1).band).toBe('angry');
   });
 
   it('draws nothing for an actor with no patience at all', () => {
     // Vehicles and scenery share the snapshot; neither has a wait to show.
-    expect(patienceRing(0, 0)).toEqual({ sweep: 0, band: 'calm', visible: false });
-    expect(patienceRing(0, 1000).visible).toBe(false);
+    expect(patienceRing(0)).toEqual({ sweep: 0, band: 'calm', visible: false });
+    expect(patienceRing(-0.5).visible).toBe(false);
   });
 
   it('never sweeps past a full ring, even on a corrupted fraction', () => {
-    expect(patienceRing(5000, 1000).sweep).toBeLessThanOrEqual(1);
+    expect(patienceRing(5).sweep).toBeLessThanOrEqual(1);
   });
 });
 

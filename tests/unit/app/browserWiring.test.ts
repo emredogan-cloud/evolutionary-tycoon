@@ -227,6 +227,65 @@ describe('DebugOverlay', () => {
       vi.useRealTimers();
     }
   });
+  it('reports the conversion funnel, which is what Phase 6 is for', () => {
+    /*
+     * The same data the Phase 18 player-facing panel will be built from, shown
+     * raw. If these numbers are not enough to explain why conversion dropped,
+     * the panel will not be either — and finding that out now costs nothing.
+     */
+    const { sim, loop } = wire();
+    sim.advance(60 * 20 * 10);
+    const overlay = new DebugOverlay(document, sim, loop);
+    overlay.render();
+
+    const text = document.querySelector('#debug-overlay')?.textContent ?? '';
+    expect(text).toMatch(/convert\s+\d+\/\d+ \(\d+\.\d%\)/);
+    expect(text).toMatch(/parking\s+\d+\/\d+/);
+    expect(text).toMatch(/queue \d+\/\d+/);
+    expect(text).toMatch(/spill \d+/);
+    expect(text).toMatch(/left\s+\d+ bored, \d+ no space/);
+  }, 60_000);
+
+  it('reports the rate against convertible traffic, not against every car', () => {
+    /*
+     * Four out of five vehicles on the road are decorative and were never
+     * offered the restaurant. Dividing by all of them would report roughly a
+     * fifth of the real conversion rate, and the number the economy is
+     * calibrated against would look broken.
+     */
+    const { sim, loop } = wire();
+    sim.advance(60 * 20 * 10);
+    const overlay = new DebugOverlay(document, sim, loop);
+    overlay.render();
+
+    const text = document.querySelector('#debug-overlay')?.textContent ?? '';
+    const match = /convert\s+(\d+)\/(\d+)/.exec(text);
+    expect(match).not.toBeNull();
+    const offered = Number(match?.[2] ?? 0);
+    expect(offered).toBe(sim.world.stats.conversionsSucceeded + sim.world.stats.conversionsFailed);
+    expect(offered).toBeLessThan(sim.world.stats.vehiclesSpawned);
+  }, 60_000);
+
+  it('names the biggest reason first, and does not list reasons nobody hit', () => {
+    const { sim, loop } = wire();
+    sim.advance(60 * 20 * 10);
+    const overlay = new DebugOverlay(document, sim, loop);
+    overlay.render();
+
+    const text = document.querySelector('#debug-overlay')?.textContent ?? '';
+    const listed = [...text.matchAll(/^ {2}([A-Z_]+)\s+(\d+)$/gm)].map((m) => ({
+      name: m[1] ?? '',
+      count: Number(m[2] ?? 0),
+    }));
+
+    expect(listed.length).toBeGreaterThan(0);
+    for (const entry of listed) expect(entry.count).toBeGreaterThan(0);
+    for (let i = 1; i < listed.length; i++) {
+      expect(listed[i]?.count ?? 0).toBeLessThanOrEqual(listed[i - 1]?.count ?? 0);
+    }
+    // A fixed-order list of nine would be nine lines of mostly zero.
+    expect(listed.length).toBeLessThanOrEqual(4);
+  }, 60_000);
 });
 
 describe('shouldExposeTestHooks', () => {

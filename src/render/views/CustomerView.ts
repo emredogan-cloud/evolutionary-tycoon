@@ -69,6 +69,10 @@ export function directionForCustomer(headingX: number, headingY: number): Sprite
  * shape stays in the render layer and the *meaning* stays testable. The ring
  * empties clockwise, because a filling ring reads as progress towards something
  * good and this is the opposite.
+ *
+ * Takes the fraction the simulation already computed rather than the two
+ * millisecond figures, because the fraction is what crosses the boundary — a
+ * second division here would be one more place for the two to disagree.
  */
 export interface PatienceRing {
   /** 0 to 1, how much of the ring is drawn. */
@@ -79,12 +83,10 @@ export interface PatienceRing {
   readonly visible: boolean;
 }
 
-export function patienceRing(patienceMs: number, patienceMaxMs: number): PatienceRing {
-  if (patienceMaxMs <= 0 || patienceMs <= 0) {
-    return { sweep: 0, band: 'calm', visible: false };
-  }
+export function patienceRing(patienceFraction: number): PatienceRing {
+  if (patienceFraction <= 0) return { sweep: 0, band: 'calm', visible: false };
 
-  const fraction = Math.min(1, patienceMs / patienceMaxMs);
+  const fraction = Math.min(1, patienceFraction);
   /*
    * Hidden while patience is nearly full. A ring over every customer from the
    * moment they arrive is noise — the player learns to stop seeing it, which is
