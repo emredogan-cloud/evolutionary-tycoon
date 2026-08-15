@@ -12,6 +12,16 @@ import {
   STATE_WALKING_TO_DOOR as CUSTOMER_WALKING_STATE,
 } from '../../src/sim/ai/fsm/customerFsm';
 import { FlowFieldCache } from '../../src/sim/nav/FlowFieldCache';
+import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PLACED } from '../../src/sim/stores/OrderStore';
+
+/**
+ * The states a benchmark order rotates through.
+ *
+ * Not `PAID`: a paid order is released the same tick, so a pool full of them
+ * would drain during the first sample and the benchmark would go on reporting a
+ * figure for twenty orders that no longer existed.
+ */
+const ORDER_STATE_CYCLE = [ORDER_PLACED, ORDER_COOKING, ORDER_ON_PASS, ORDER_DELIVERED] as const;
 
 /**
  * Headless simulation benchmark.
@@ -502,6 +512,67 @@ export function benchCrowdedTick(): TimingResult {
 }
 
 /**
+ * A tick with the whole loop running — GAME_EXECUTION_ROADMAP Phase 8.
+ *
+ * 120 vehicles, 40 pedestrians and 20 live orders, budget 2.8 ms p95. The
+ * orders are what this measures that `benchCrowdedTick` does not: three systems
+ * were added to the pipeline this phase, and two of them scan the order pool.
+ *
+ * The orders are spread across every state deliberately. A pool of twenty
+ * `PLACED` orders would leave `KitchenSystem.advanceCooking` with nothing to do
+ * and `ServiceSystem` with nothing to deliver — the benchmark would report the
+ * cost of *scanning* twenty orders rather than of running them, which is the
+ * cheap half. Rotating the states means every branch is exercised in every
+ * sample.
+ */
+export function benchServiceTick(): TimingResult {
+  const sim = new Sim({ seed: 20260817 });
+  const ticks = 200;
+
+  const load = (): void => {
+    populatePeakLoad(sim);
+
+    // Up to forty on foot, twenty of which the peak load already queued.
+    for (let i = sim.world.customers.activeCount; i < 40; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    for (let i = 0; i < 20; i++) {
+      const orderSlot = sim.world.orders.acquire();
+      if (orderSlot < 0) break;
+      const order = sim.world.orders.at(orderSlot);
+      order.entityId = sim.world.allocateEntityId();
+      order.customerSlot = i % Math.max(1, sim.world.customers.activeCount);
+      order.item = i % 3;
+      order.state = ORDER_STATE_CYCLE[i % ORDER_STATE_CYCLE.length] ?? ORDER_PLACED;
+      order.station = order.state === ORDER_COOKING ? i % 3 : -1;
+      order.orderedAtMs = sim.world.clock.simTimeMs;
+      order.startedAtMs = sim.world.clock.simTimeMs;
+      order.price = 3;
+      order.quality = 0.7;
+    }
+  };
+
+  load();
+  const label = `service tick (120 vehicles, ${String(sim.world.customers.activeCount)} pedestrians, ${String(sim.world.orders.activeCount)} orders)`;
+  return timeIt(label, ticks, () => {
+    load();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
  * Reset per sample, for the same reason `benchTicksFromFresh` is: the world
  * fills as it runs, so twenty-five samples of a thousand ticks each were
  * measuring an increasingly busy simulation and the samples were describing
@@ -635,6 +706,7 @@ export function runSimBench(): BenchReport {
       benchWorldHash(),
       benchPopulatedTick(),
       benchCrowdedTick(),
+      benchServiceTick(),
       benchFlowFieldRebuild(),
       benchFlowFieldChunk(),
       benchCommandProcessing(),

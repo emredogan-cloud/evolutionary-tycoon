@@ -181,6 +181,47 @@ colours moved onto the locked palette and the boot scene became a loading screen
 affects frame cost. The Phase 3 measurement (200 FPS p50, 5.1 ms p95, GTX 1660 Ti) stands and was
 not re-run, so it is not restated here as if it were.
 
+### Phase 8 — 2026-08-15 · the cost of closing the loop
+
+Simulation only. **No FPS was measured in Phase 8** and none is claimed: the renderer gained nothing
+this phase, and the DOM overlay it did gain is throttled to 10 Hz precisely so it cannot show up in
+a frame time. The Phase 3 measurement (200 FPS p50, 5.1 ms p95, GTX 1660 Ti) stands and was not
+re-run.
+
+Machine: this development host, headless Node 24.13.1, `pnpm bench:sim`. Calibration 0.9124 ms.
+
+| Load                                                             | Budget | Measured p95 | Of budget |
+| ---------------------------------------------------------------- | -----: | -----------: | --------: |
+| populated tick — 120 vehicles, 20 customers (Phase 6)            | 2.2 ms | **0.113 ms** |      5.1% |
+| crowded tick — 120 vehicles, 60 pedestrians (Phase 7)            | 2.5 ms | **0.339 ms** |     13.5% |
+| service tick — 120 vehicles, 40 pedestrians, 20 orders (Phase 8) | 2.8 ms | **0.185 ms** |      6.6% |
+
+The service load costs _less_ than the crowded one despite carrying twenty orders, because
+separation is O(n²) over pedestrians and this load has forty rather than sixty. Orders are cheap by
+comparison: the whole order pool is scanned linearly by two systems.
+
+#### The baseline moved, and why
+
+`tools/bench/baseline.json` was re-recorded at `964705e`. The populated tick went from 2.7582 to
+3.3314 calibration units — **18% slower** — and the crowded tick by a similar margin. That is a
+relative regression against a baseline recorded at `82655f2`, which is _before_ the three Phase 8
+systems existed.
+
+It was attributed by substitution rather than by reasoning, after two wrong guesses:
+
+1. `enforceGaps` was disabled and the benchmark re-run — still 18% slower. Not the cause.
+2. `KitchenSystem`, `ServiceSystem` and `SatisfactionSystem` were replaced with the no-op slots they
+   had occupied until this phase — the regression **disappeared entirely**.
+
+So the cost is the three new systems, which is what adding three systems to an eighteen-slot pipeline
+costs. `ServiceSystem` is the bulk of it: it visits every live customer every tick and switches on
+their state. The absolute budgets all pass with an order of magnitude of headroom, so nothing is
+being optimised on the strength of a number that is 5% of its own ceiling.
+
+A first attempt to attribute this from a wrapped-system profiler was discarded: wrapping eighteen
+`run` methods reported 189 µs/tick against a real cost of 15 µs/tick, so the harness was 92% of what
+it was measuring and its per-system shares could not be trusted.
+
 ### Template for future entries
 
 ```

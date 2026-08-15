@@ -6,7 +6,7 @@ import { worldToScreen } from '@render/iso/IsoProjection';
  * Visual determinism mode — a first-class engine feature, not a test hack.
  *
  * ```
- * ?seed=42&freezeAt=600&scene=depth-testcard&noParticles=1&fixedViewport=1&dpr=1&hideHud=1
+ * ?seed=42&freezeAt=600&scene=depth-testcard&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&cook=1
  * ```
  *
  * Screenshot-diffing a WebGL canvas is impossible without it. Two runs of the
@@ -26,6 +26,21 @@ export interface RenderMode {
   readonly noParticles: boolean;
   readonly fixedViewport: boolean;
   readonly hideHud: boolean;
+  /**
+   * Cook while fast-forwarding to `freezeAt`.
+   *
+   * In Stage 1 the player is the cook: an order sits in `PLACED` until a
+   * `MANUAL_PREP` command starts it. A frozen advance issues no commands, so a
+   * golden of a "busy" stand would photograph a kitchen where nothing had ever
+   * been started — no progress ring, no plate on the pass, and a queue that only
+   * grows. This dispatches `MANUAL_PREP` on every tick of the fast-forward,
+   * which is precisely what an attentive player does and what the integration
+   * suite already models.
+   *
+   * It changes the world, deliberately and visibly: a run with it produces a
+   * different world hash from a run without, because the player did something.
+   */
+  readonly cook: boolean;
   readonly sceneId: string;
   /** True when any pinning parameter is present. */
   readonly visualDeterminism: boolean;
@@ -47,6 +62,7 @@ export function parseRenderMode(search: string): RenderMode {
   const noParticles = params.get('noParticles') === '1';
   const fixedViewport = params.get('fixedViewport') === '1';
   const hideHud = params.get('hideHud') === '1';
+  const cook = params.get('cook') === '1';
   const sceneId = params.get('scene') ?? 'empty';
 
   // The camera is locked whenever the clock is frozen. A golden taken through a
@@ -69,6 +85,7 @@ export function parseRenderMode(search: string): RenderMode {
     noParticles,
     fixedViewport,
     hideHud,
+    cook,
     sceneId,
     visualDeterminism: freezeAt !== null || noParticles || fixedViewport || hideHud,
     lockedCamera,

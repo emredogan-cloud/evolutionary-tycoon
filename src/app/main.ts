@@ -6,7 +6,10 @@ import { detectCapabilities, type CapabilityReport } from '@platform/capability'
 import { buildInfo } from '@platform/buildInfo';
 import { createContainer, resolveSeed, selectStorage } from '@app/container';
 import { DebugOverlay, debugOverlayEnabled } from '@app/debug/DebugOverlay';
+import { phaserProjector } from '@app/bridge/ScreenProjector';
 import { createPhaserGame } from '@render/PhaserBootstrap';
+import { WORLD_SCENE_KEY } from '@render/scenes/WorldScene';
+import GameHud from '@ui/components/GameHud.svelte';
 
 /**
  * Composition root.
@@ -55,6 +58,24 @@ function canvasHost(doc: Document): HTMLElement {
   host.id = 'game-canvas';
   host.style.cssText = 'position:fixed;inset:0;z-index:0';
   doc.body.insertBefore(host, doc.body.firstChild);
+  return host;
+}
+
+/**
+ * The overlay host, above the canvas.
+ *
+ * Its own element rather than `#app`, which still holds the Phase 2 shell and
+ * sits *beneath* the canvas because the canvas is `position: fixed`. Two hosts
+ * with an explicit stacking order beats one host whose layering depends on
+ * which element happened to be positioned.
+ */
+function hudHost(doc: Document): HTMLElement {
+  const existing = doc.getElementById('game-hud');
+  if (existing !== null) return existing;
+
+  const host = doc.createElement('div');
+  host.id = 'game-hud';
+  doc.body.appendChild(host);
   return host;
 }
 
@@ -115,7 +136,27 @@ async function startSimulation(win: Window): Promise<void> {
       new DebugOverlay(win.document, container.sim, container.loop).start(win);
     }
 
-    createPhaserGame({ parent: canvasHost(win.document), context: container.renderContext });
+    const game = createPhaserGame({
+      parent: canvasHost(win.document),
+      context: container.renderContext,
+    });
+    // The key comes from the scene itself. Spelling it out here as 'WorldScene'
+    // silently produced a projector that never found a camera, so every world
+    // marker was off-screen and none of them ever rendered — with no error
+    // anywhere, because "not on screen" is a legitimate answer.
+    container.setProjector(phaserProjector(game, WORLD_SCENE_KEY));
+
+    /*
+     * The overlay mounts after the renderer, into its own host above the canvas.
+     * `hideHud=1` skips it entirely rather than hiding it with CSS: the visual
+     * goldens taken before this phase photographed a page with nothing above the
+     * canvas, and an overlay that renders but is invisible still changes
+     * anti-aliasing at its edges. Skipping the mount is the only version of
+     * "hidden" that is provably byte-identical to the old goldens.
+     */
+    if (!container.renderMode.hideHud) {
+      mount(GameHud, { target: hudHost(win.document), props: { source: container.ui } });
+    }
 
     // A frozen scene must not advance: the loop would tick past the target while
     // the screenshot is being taken. The world is already at `freezeAt`.

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import type { StationType } from './menu';
 import { STATION_TYPES } from './menu';
 
 /**
@@ -54,18 +53,6 @@ export function station(index: number): Station {
   const found = STATIONS[index];
   if (found === undefined) throw new RangeError(`Unknown station ${index}`);
   return found;
-}
-
-/**
- * The first station of a type, or -1.
- *
- * First rather than least-loaded: Stage 1 has exactly one of each, and a
- * load-balancing rule written now would be untestable until Phase 9 adds a
- * second. `KitchenSystem` scans for a *free* one, which is the behaviour that
- * matters and which generalises without this function changing.
- */
-export function firstStationOfType(type: StationType): number {
-  return STATIONS.findIndex((entry) => entry.type === type);
 }
 
 /**

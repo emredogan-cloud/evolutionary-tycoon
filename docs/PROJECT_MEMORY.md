@@ -398,6 +398,52 @@ altın referanslar hem golden hem batch olarak iki kez çıkıyordu → tekille�
 > Eşleme: M=batch başlangıcı · N=P5 başlangıcı · O=P5 tamam · P=P6 başlangıcı · Q=P6 tamam ·
 > R=P7 başlangıcı · S=P7 tamam.
 
+### BATCH 8–10 · CHECKPOINT R — Batch başlangıcı (2026-08-15)
+
+**Yetkilendirme:** P8 → P9 → P10 tek batch, otonom, **aralarda onay beklenmeyecek**, P10 sonrası
+DUR. P11+ yetkisiz.
+
+| Ne              | Değer                                                                            |
+| --------------- | -------------------------------------------------------------------------------- |
+| main SHA        | `3d3b036` (P7 merge)                                                             |
+| Batch başlangıç | `964705e` üzerinde `phase/8-service-loop`                                        |
+| Testler         | 969 → **1 008**                                                                  |
+| Sanat           | **Kullanıcı 172 görseli dışarıda üretiyor.** Hiçbir faz/test sanata bloke değil. |
+
+**Sanat kuralı, kullanıcı direktifi:** eksik sanat hiçbir fazı bloke etmez, sahte prosedürel sanat
+"nihai" diye sunulmaz, batch sırasında yükleme istenmez. Görsel insan yargısı gerektiren DoD
+maddeleri **"NOT JUDGED: AWAITING EXTERNAL ART"** olarak işaretlenir; mekanik ölçütler geçtiyse faz
+**teknik PASS** sayılır.
+
+### BATCH 8–10 · CHECKPOINT S — P8 tamamlandı (2026-08-15) ✅ PASS (teknik)
+
+Döngü kapandı. Araba yavaşlar → park eder → yürür → sipariş verir → oyuncu pişirir → teslim →
+yer → **öder** → HUD'daki nakit artar. Oyun ilk kez oynanabilir.
+
+| Kanıt         | Değer                                                                  |
+| ------------- | ---------------------------------------------------------------------- |
+| Testler       | **1 008** (P7 sonunda 907/969)                                         |
+| E2E           | **68** (chromium + firefox) — 4 yeni servis testi                      |
+| Visual golden | **9** — `stage1-serving` yeni; `stage1-queue` **yeniden türetildi**    |
+| Service tick  | **0.185 ms** p95 (120 araç + 40 yaya + 20 sipariş) — bütçe 2.8 ms      |
+| Ayırma        | **4.83 B/tick** — bütçe 32 B                                           |
+| 10 dk ölçüm   | 195 gelen · 21 dönüşüm · 18 servis · **0 terk** · **0 israf** · ₡52.34 |
+| `pnpm verify` | ✅ baştan sona temiz                                                   |
+| DoD           | 15'te 14 — §11 "döngü tatmin edici mi?" **yargılanmadı, sanat yok**    |
+
+**Bulunan 7 gerçek kusur** (hepsi ölçümle, hiçbiri çökmeyle): sipariş sızıntısı (30 canlı sipariş /
+4 müşteri), herkesin aynı anda sipariş vermesi, bekleme alanı yokluğu (7.9 cm), araç çakışması
+(4 cm), sıfır tick süren sipariş anı, **overlay'in bir kez çizilip donması** (Svelte referans
+karşılaştırması), **projektöre var olmayan sahne adı verilmesi** (`WorldScene` ≠ `world` → hiçbir
+dünya işareti görünmüyordu, hata da vermiyordu). Ayrıntı: PHASE_8_REPORT §4.
+
+**Perf baseline yeniden kaydedildi** (`964705e`): populated tick %18 yavaşladı. **Değiştirerek
+atfedildi** — `enforceGaps` kapatıldı, fark sürdü; üç yeni sistem no-op ile değiştirildi, fark
+tamamen kayboldu. Yani üç sistemin maliyeti. Mutlak bütçelerin hepsi bir kat pay ile geçiyor.
+
+**Sarılmış-sistem profilcisi çöpe atıldı:** 189 µs/tick raporladı, gerçek 15 µs/tick. Harness
+ölçtüğünün %92'siydi. PERF_LOG'a bu da yazıldı.
+
 ### BATCH 5–7 · CHECKPOINT M — Batch başlangıcı (2026-08-15)
 
 **Context reset sonrası durum, repodan yeniden kuruldu (varsayım değil, ölçüm):**
@@ -703,6 +749,45 @@ tam da o talimatın önlemek istediği şey olurdu.
 | 4   | ⚠ **Phaser 4.2.1 WebGL2 değil, WebGL1 context'i açıyor** — dört doküman aksini söylüyor              | Faz 1 capability gate'i gereğinden **katı** — aşağıya bak                                                          | 🔴 **AÇIK ÇELİŞKİ — kullanıcı kararı gerekiyor**                                                          |
 | 6   | ~~Production smoke `schemaVersion !== 1` sabitini taşıyordu~~                                        | Faz 3'ün v2 migration'ından beri main'e her push'ta **kırmızı**; merge sonrası koştuğu için hiçbir PR'da görünmedi | ✅ **DÜZELTİLDİ** Faz 4 sonrası — sürüm artık `src/config/simulation.ts`'ten okunuyor                     |
 | 5   | ~~Visual regression kapısı `threshold` varsayılanı (0.2) yüzünden büyük renk değişimini görmüyordu~~ | Faz 3'te üç golden bir çeyrek karelik renk değişimini geçirdi                                                      | ✅ **DÜZELTİLDİ** Faz 4 — `threshold: 0`; tek birimlik değişim artık kapıyı kırıyor (PHASE_4_REPORT §4.1) |
+| 7   | ⚠ **Roadmap P8 "60 sn'de ≥3 müşteri" ile ECONOMY_DESIGN §3 dönüşüm oranı 0.09 çelişiyor**            | Tavan **1.8 müşteri/dk**; mutfak değil yol darboğaz. Roadmap metriği Aşama 1'de erişilemez                         | 🔴 **AÇIK ÇELİŞKİ — kullanıcı kararı gerekiyor** — aşağıya bak                                            |
+
+### 🔴 AÇIK ÇELİŞKİ #7 — P8 verimlilik hedefi ekonomiyle uyuşmuyor (Faz 8'de ölçüldü, 2026-08-15)
+
+**Aritmetik, varsayım değil:**
+
+```
+GAME_EXECUTION_ROADMAP Faz 8  : "60 saniyede en az 3 müşteri servis ediliyor"  → 3.0 /dk
+ECONOMY_DESIGN §3             : Aşama 1 dönüşüm oranı, sıfır yükseltme        → 0.09
+PHASE_5_REPORT §4             : yoldan geçen dönüştürülebilir araç            → ~19.5 /dk
+                                                        19.5 x 0.09 = 1.755 /dk
+```
+
+**Ölçüm (seed 424242, 10 dk, dikkatli aşçı):**
+
+| Nicelik                 | Değer      |
+| ----------------------- | ---------- |
+| Dönüştürülebilir geliş  | 195        |
+| Dönüşüm başarılı        | 21         |
+| Park yok, geri çevrilen | 2          |
+| **Servis edilen**       | **18**     |
+| Terk eden               | **0**      |
+| İsraf                   | **0**      |
+| Nakit                   | **₡52.34** |
+
+**Mutfak darboğaz değil.** Tezgâha ulaşan 19 kişinin 18'i servis edildi, kimse beklemekten
+vazgeçmedi, hiç yemek çöpe gitmedi. Kısıt tamamen yolun yukarısında.
+
+**Bu tasarımın çalışıyor olması da mümkün:** Aşama 1'in müşteri kıtlığı çekmesi kasıtlı olabilir ve
+Faz 9'un ilk iki yükseltmesi (el yapımı tabela, yol kenarı işareti) tam da dönüşümü artırıyor.
+
+**Üç olası çözüm — karar kullanıcınındır, sessizce seçilmedi:**
+
+1. Roadmap metriği "yükseltme sonrası" olarak yeniden yazılır (P9 sonrası ölçülür).
+2. ECONOMY_DESIGN §3'ün 0.09'u yükseltilir — ama bu tüm Aşama 1 dengesini kaydırır.
+3. Yol yoğunluğu artırılır — AÇIK ÇELİŞKİ (trafik yoğunluğu) ile aynı kutuya düşer.
+
+**Bu fazda yapılan:** testler ekonominin izin verdiğini iddia ediyor, çelişki testin içine kelimesi
+kelimesine yazıldı, hiçbir sabit "yeşil olsun diye" oynatılmadı. → PHASE_8_REPORT §5
 
 ### 🔴 AÇIK ÇELİŞKİ #4 — Phaser 4 WebGL2 kullanmıyor (Faz 3'te ölçüldü, 2026-08-15)
 
@@ -787,6 +872,21 @@ CLAUDE.md §2 gereği tek başıma uzlaştırılamaz.
 **JS bundle 13.11 → 41.22 kB:** çekirdek + Zod. Zod artık production'a giriyor çünkü save
 doğrulaması **güvenilmeyen girdi** üzerinde çalışıyor (elle düzenlenmiş, kotayla kesilmiş veya
 eski build'in yazdığı dosya) — dev-only bir kontrol olamaz. Bütçenin %7.5'i.
+
+### Faz 8 ölçümleri (2026-08-15, bu makine, `pnpm bench:sim`, kalibrasyon 0.9124 ms)
+
+| Yük                                                 |  Bütçe |     Ölçülen p95 | Bütçenin |
+| --------------------------------------------------- | -----: | --------------: | -------: |
+| populated tick — 120 araç + 20 müşteri (Faz 6)      | 2.2 ms |    **0.113 ms** |     %5.1 |
+| crowded tick — 120 araç + 60 yaya (Faz 7)           | 2.5 ms |    **0.339 ms** |    %13.5 |
+| service tick — 120 araç + 40 yaya + 20 sipariş (F8) | 2.8 ms |    **0.185 ms** |     %6.6 |
+| Tahsis                                              |   32 B | **4.83 B**/tick |    %15.1 |
+| JS bundle (gzip)                                    | 550 kB |   **428.97 kB** |    %78.0 |
+| CSS bundle (gzip)                                   |  30 kB |     **2.19 kB** |     %7.3 |
+
+Baseline `964705e`'de yeniden kaydedildi; populated tick %18 yavaşladı ve bu **değiştirerek**
+üç yeni Faz 8 sistemine atfedildi (PHASE_8_REPORT §7.1). Yukarıdaki tablonun üstündeki eski
+satırlar Faz 2 dönemine aittir ve tarihsel olarak bırakılmıştır.
 
 **FPS ölçülmedi** — hâlâ render yok, ve CI FPS ölçemez (SwiftShader). İlk gerçek GPU ölçümü Faz 3.
 Detay: [PERF_LOG.md](PERF_LOG.md). CI baseline'ı `tools/bench/baseline.json`'da ayrıca tutulur;
@@ -879,12 +979,18 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 18. Economy State
 
-|                        |                                                                                                                                                 |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Zarf durumu            | Tasarlandı ([ECONOMY_DESIGN §3](ECONOMY_DESIGN.md#3-aşama-zarfları--sistemin-iskeleti)), **doğrulanmadı** — sayılar tasarım hedefi, ölçüm değil |
-| Balance simülatörü     | ⬜ P12'de                                                                                                                                       |
-| **Dead-end kapısı**    | **90 sn, merge-blocking** (kanonik, D-02)                                                                                                       |
-| Bilinen ayar sorunları | Yok (henüz implementasyon yok)                                                                                                                  |
+|                        |                                                                                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Zarf durumu            | Tasarlandı ([ECONOMY_DESIGN §3](ECONOMY_DESIGN.md#3-aşama-zarfları--sistemin-iskeleti)), **kısmen ölçüldü** — Faz 8 ilk gerçek sayıları üretti |
+| Menü                   | ✅ Aşama 1 üç kalem, `src/config/economy/menu.ts`, Zod ile modül yüklenirken doğrulanıyor, **append-only** (indeks dünya digest'ine giriyor)   |
+| İstasyonlar            | ✅ üç istasyon + pass (kapasite 6), `src/config/economy/stations.ts`                                                                           |
+| Ölçülen verim          | **1.8 müşteri/dk** (Aşama 1, sıfır yükseltme) — dönüşüm sınırlı, mutfak değil. Roadmap 3/dk istiyor → **AÇIK ÇELİŞKİ #7**                      |
+| Ölçülen marj           | Nakit malzeme maliyeti düşülerek işleniyor; 10 dk'da ₡52.34, hiç zarar eden satış yok                                                          |
+| Memnuniyet             | ✅ bekleme + kalite + fiyat canlı; temizlik/atmosfer/servis/erişilebilirlik **1.0 sabit**, TODO'ları fazlarıyla yazılı                         |
+| Sıcaklık düşüşü        | ✅ formül birebir, 8 test — **ama Aşama 1'de hiç tetiklenmiyor** (24 000 tick'te 0 tabak pass'te bekledi). Faz 10'da canlanır                  |
+| Balance simülatörü     | ⬜ P12'de                                                                                                                                      |
+| **Dead-end kapısı**    | **90 sn, merge-blocking** (kanonik, D-02)                                                                                                      |
+| Bilinen ayar sorunları | AÇIK ÇELİŞKİ #7 (verim hedefi) — kullanıcı kararı bekliyor                                                                                     |
 
 ---
 
@@ -937,7 +1043,29 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P4 — Art Direction & Asset Pipeline v1 (KISMİ)**
+**Son tamamlanan faz: P8 — Food / Order / Service Loop (TEKNİK PASS)**
+
+| Kanıt         | Değer                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Dal           | `phase/8-service-loop`                                                                                             |
+| Testler       | **1 008** unit/integration · coverage eşikleri **oynatılmadı**                                                     |
+| E2E           | **68** (chromium + firefox) · WebKit yerelde koşamıyor (§12 #2), CI'da koşuyor                                     |
+| Visual        | **9 golden**, pinlenmiş container'da üretildi, host'ta bit-birebir geçti                                           |
+| `pnpm verify` | ✅ lint · format · typecheck (265 dosya) · depcruise (117 modül) · knip · assets · coverage · bench · build · size |
+| Service tick  | **0.185 ms** p95 / bütçe 2.8 ms                                                                                    |
+| Ölçülen döngü | 10 dk: 195 geliş → 21 dönüşüm → **18 servis**, 0 terk, 0 israf, ₡52.34                                             |
+| Rapor         | [PHASE_8_REPORT.md](phases/PHASE_8_REPORT.md)                                                                      |
+| Kapı          | ✅ **TEKNİK PASS** — 15 DoD maddesinin 14'ü; §15 "döngü tatmin edici mi?" **yargılanmadı**                         |
+
+**Dürüst kayıtlar:** roadmap'in "60 sn'de ≥3 müşteri" metriği onaylı ekonomiyle **erişilemez**
+(AÇIK ÇELİŞKİ #7) · sıcaklık düşüşü doğru ve test edilmiş ama Aşama 1'de **hiç tetiklenmiyor**
+(24 000 tick'te 0) · pass tabağı göstergesi oyuncuya Faz 8'de görünmüyor · overlay hiçbir golden'da
+yok, çünkü DOM metni container ile host arasında 4 283 piksel (hepsi glif) fark üretiyordu · WebKit
+smoke bu makinede koşmadı ve "geçti" diye raporlanmadı · FPS ölçülmedi ve iddia edilmedi.
+
+---
+
+**Bir önceki: P4 — Art Direction & Asset Pipeline v1 (KISMİ)**
 
 | Kanıt                         | Değer                                                                                                                                          |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -964,40 +1092,45 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🔴 DUR — P5–P7 BATCH TAMAMLANDI. P8–P10 YETKİSİZ.
+> ## 🟢 DEVAM — P8–P10 BATCH SÜRÜYOR. P8 ✅ · P9 SIRADA · P10 SONRASI DUR.
 >
-> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅**
+> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ (teknik)**
 >
-> Kullanıcı 2026-08-15 yönergesiyle P5→P7 batch'ini onaylamış ve fazlar arasında
-> durulmamasını istemişti. Üçü de kapandı. **Batch'in sonu bir kapıdır: P8–P10
-> için açık onay gerekiyor.**
+> Kullanıcı 2026-08-15 yönergesiyle P8 → P9 → P10 batch'ini onayladı ve **fazlar arasında
+> durulmamasını** açıkça istedi. P8 kapandı; **P9'a onay beklemeden geçiliyor.** Batch P10'dan
+> sonra durur. **P11+ yetkisiz.**
 >
-> ### Kullanıcının bakması gereken iki şey
+> ### Kullanıcının bakması gereken üç şey (batch bitince)
 >
-> **1. Sanata bağlı iki yargı verilmedi.** P6 "20 dönüşüm izle ve anın oturduğunu
-> doğrula", P7 "30 yayanın insan gibi göründüğünü doğrula" diyor. Üretim sanatı
-> olmadığı için (P4 START CONDITION, PHASE_4_REPORT §11) ekrandaki her aktör
-> magenta dama tahtası ve gerçek boyutunun ~3 katı. **İki yargı da verilmedi**;
-> yerine yargının dayanacağı mekanikler ölçüldü ve raporlandı.
+> **1. 🔴 AÇIK ÇELİŞKİ #7 — verim hedefi.** Roadmap "60 sn'de ≥3 müşteri" diyor; onaylı ekonomi
+> 1.8/dk'ya izin veriyor. Mutfak değil yol darboğaz (ölçüm §12'de). Üç olası çözüm yazıldı, hiçbiri
+> seçilmedi. **P9'un tabela + yol işareti yükseltmeleri tam bu kısıta iniyor**, yani P9 bu tavanın
+> tasarım mı hata mı olduğunu ilk kez ölçebilecek yer.
 >
-> **2. Yayaların %57 yön değiştirmesi.** Kalabalık girişte görünür adımların
-> yarıdan fazlası bir öncekinin tersine dönüyor. İyi bir sayı değil, öyle
-> raporlandı, ve iki mekanizma düzeltilmesine rağmen oynamadı. Metriğe de tam
-> güvenilmiyor. Sanat geldiğinde izlenerek karara bağlanmalı.
+> **2. Sıcaklık düşüşü ölü.** Formül doğru, 8 testi var, ve 24 000 tick'te **sıfır** kez tetiklendi:
+> Aşama 1'de teslim otomatik olduğu için pass hiçbir tick sınırında dolu değil. Faz 10'un garsonları
+> bunu canlandırmazsa mekanik dekoratiftir ve o zaman fark edilmelidir.
+>
+> **3. Sanata bağlı yargılar hâlâ verilmedi.** P6 "dönüşüm anı", P7 "yaya doğallığı", P8 "döngü
+> tatmin edici mi" — üçü de **NOT JUDGED: AWAITING EXTERNAL ART**. Kullanıcı 172 görseli dışarıda
+> üretiyor; direktif gereği hiçbir faz buna bloke edilmedi ve sahte sanat üretilmedi.
 >
 > ### Batch'ten taşınan diğer açık maddeler
 >
 > - Layout invalidation `placed.length`'e bakıyor; bir **taşıma** kaçar → P11
 > - Fren lambaları aktör-karelerinin %33'ünde yanıyor → P12
-> - `globalDifficultyCurve`'ün clamp'a göre yeri: GDD §9.5 ile roadmap/ECONOMY
->   §7 farklı yazıyor; eğri 1.0 olduğu sürece üç okuma da aynı → P12
-> - `menuAppeal` (P8), `priceFit` (P9), `weatherFactor` (P15) literal 1.0
-> - `kitchen_pass`, `table_<n>`, `bin_<n>`, `dt_window` hedefleri kasten yok →
->   P8/P11
-> - `AStarFallback` yazıldı ve test edildi, **çağıranı yok** — bu doğru: tek
->   seferlik dinamik hedefler için, ilki P8'in temizlikçisi
+> - `globalDifficultyCurve`'ün clamp'a göre yeri: GDD §9.5 ile roadmap/ECONOMY §7 farklı yazıyor → P12
+> - `menuAppeal` (P9), `priceFit` (P9), `weatherFactor` (P15) literal 1.0
+> - Memnuniyetin dört girdisi (temizlik, atmosfer, servis, erişilebilirlik) 1.0 → P11
+> - Yayaların %57 yön değiştirmesi — sanat gelince izlenerek karara bağlanmalı
+> - `kitchen_pass`, `table_<n>`, `bin_<n>`, `dt_window` hedefleri kasten yok
+> - Phaser 4 WebGL1 açıyor, dört doküman WebGL2 diyor (AÇIK ÇELİŞKİ #4) — karar bekliyor
 >
-> **P8–P10 yetkisiz.**
+> ### Şimdi ne yapılıyor
+>
+> **FAZ 9 — ECONOMY v1 & UPGRADE SYSTEM v1 (VERTICAL SLICE).** Yürütücü karar gereği Vertical Slice
+> kapısının **5 mekanik ölçütü** değerlendirilecek, **3 insan ölçütü "PENDING HUMAN REVIEW"**
+> işaretlenecek, ve mekanik ölçütler geçer geçmez **P10'a durulmadan geçilecek**.
 
 ## 22. Change Log
 

@@ -27,7 +27,7 @@ import { SlotPool } from './pool';
  */
 
 /** Order lifecycle. The index is stored and hashed, so this is append-only. */
-export const ORDER_STATES = ['PLACED', 'COOKING', 'ON_PASS', 'DELIVERED', 'PAID'] as const;
+const ORDER_STATES = ['PLACED', 'COOKING', 'ON_PASS', 'DELIVERED', 'PAID'] as const;
 export type OrderStateName = (typeof ORDER_STATES)[number];
 
 export const ORDER_PLACED = 0;

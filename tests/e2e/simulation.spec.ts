@@ -33,8 +33,14 @@ const REFERENCE = {
    * shape genuinely changed — the deliberate reason the comment above allows
    * for, for the second time.
    */
-  hashAtTick0: 'f2b8d1f5b4b22b04',
-  hashAtTick1000: '8373e8f91dce3dab',
+  /*
+   * Regenerated a third time, in Phase 8. Orders entered the digest — the pool,
+   * each record's state, station, timestamps, price and quality — so the world's
+   * shape genuinely changed again. Computed by the Node suite for seed 424242
+   * and asserted here to prove the browser agrees.
+   */
+  hashAtTick0: '014685f90bd083b4',
+  hashAtTick1000: '103b12495de932fb',
 } as const;
 
 interface TestApi {

@@ -1,3 +1,6 @@
+import { UiBridge } from '@app/bridge/UiBridge';
+import type { ScreenProjector } from '@app/bridge/ScreenProjector';
+import { NULL_PROJECTOR } from '@app/bridge/ScreenProjector';
 import { stageScene } from '@app/devScene';
 import { FrameMeter } from '@app/FrameMeter';
 import { browserScheduler, GameLoop } from '@app/GameLoop';
@@ -29,6 +32,15 @@ export interface GameContainer {
   readonly renderContext: RenderContext;
   readonly renderMode: RenderMode;
   readonly frames: FrameMeter;
+  /**
+   * The throttled view model the DOM overlay reads.
+   *
+   * Built here and handed to both sides, so neither knows about the other: the
+   * overlay receives a subscribe function and the loop receives a `sample` call.
+   */
+  readonly ui: UiBridge;
+  /** Swapped for the real projection once Phaser has a camera. */
+  setProjector(project: ScreenProjector): void;
 }
 
 /**
@@ -89,11 +101,37 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
   const loop = new GameLoop(sim, browserScheduler(win));
   const saves = new SaveService(sim, new SaveManager(storage), buildInfo.buildSha, () => Date.now());
 
+  /*
+   * Built before anything runs, and that ordering is load-bearing. The bridge
+   * turns `PAYMENT` events into coin popups by *listening*, so a bridge
+   * constructed after the fast-forward below would have missed every payment
+   * that happened during it — and the frozen golden of a busy stand would show
+   * no money changing hands at all.
+   *
+   * The projector is indirected for the mirror-image reason: the camera does not
+   * exist until Phaser has booted a scene, which is later still. Rather than
+   * defer the whole bridge — leaving the HUD blank for the first few frames — it
+   * starts projecting nothing and is given the real transform when there is one.
+   */
+  let projector: ScreenProjector = NULL_PROJECTOR;
+  const ui = new UiBridge(sim, (x, y, z, out) => projector(x, y, z, out));
+  ui.start();
+
   // Staged before the first tick, so the world hash of a staged scene is a
   // function of the scene alone.
   stageScene(sim, renderMode.sceneId);
   if (renderMode.freezeAt !== null && renderMode.freezeAt > 0) {
-    sim.advance(renderMode.freezeAt);
+    if (renderMode.cook) {
+      // Ticked one at a time so a command can be queued before each. `advance`
+      // would run the whole fast-forward with an empty queue, and the stand
+      // would arrive at the target tick having never cooked anything.
+      for (let i = 0; i < renderMode.freezeAt; i++) {
+        sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.tick();
+      }
+    } else {
+      sim.advance(renderMode.freezeAt);
+    }
   }
 
   const renderContext: RenderContext = {
@@ -102,21 +140,50 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     reducedMotion: prefersReducedMotion(win),
     sceneId: renderMode.sceneId,
     showDevOverlays: debugOverlayEnabled() && !renderMode.visualDeterminism,
+    onFrame: () => {
+      ui.sample(win.performance.now());
+    },
     ...(renderMode.lockedCamera !== null ? { lockedCamera: renderMode.lockedCamera } : {}),
   };
 
-  // Always constructed, only wired when asked for: an always-on observer would
-  // add a call to the hottest path in the program for a number nobody is reading.
+  // Always constructed, only recorded into when asked for: an always-on
+  // observer would add a call to the hottest path in the program for a number
+  // nobody is reading.
   const frames = new FrameMeter();
-  if (new URLSearchParams(search).get('bench') === '1') {
-    loop.observeFrames((deltaMs) => {
-      frames.record(deltaMs);
-    });
-  }
+  const benchmarking = new URLSearchParams(search).get('bench') === '1';
 
   if (shouldExposeTestHooks(search)) {
     installTestHooks(win, sim, loop, saves, frames);
   }
 
-  return { sim, loop, saves, renderContext, renderMode, frames };
+  if (benchmarking) {
+    loop.observeFrames((deltaMs) => {
+      frames.record(deltaMs);
+    });
+  }
+
+  /*
+   * Sampling hangs off the *rendered* frame — `renderContext.onFrame` above —
+   * rather than off a timer or the simulation loop. A `setInterval` would keep
+   * firing in a backgrounded tab, publishing identical models forever; the
+   * simulation loop stops entirely on a frozen scene, which still draws.
+   *
+   * One push here regardless, so the HUD has numbers before the renderer's first
+   * frame instead of a tenth of a second of zeroes.
+   */
+  ui.refresh();
+
+  return {
+    sim,
+    loop,
+    saves,
+    renderContext,
+    renderMode,
+    frames,
+    ui,
+    setProjector(next: ScreenProjector): void {
+      projector = next;
+      ui.refresh();
+    },
+  };
 }

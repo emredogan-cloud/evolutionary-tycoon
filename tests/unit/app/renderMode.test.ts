@@ -19,6 +19,7 @@ describe('parseRenderMode', () => {
     expect(mode.noParticles).toBe(true);
     expect(mode.fixedViewport).toBe(true);
     expect(mode.hideHud).toBe(true);
+    expect(mode.cook).toBe(false);
     expect(mode.sceneId).toBe('depth-testcard');
     expect(mode.visualDeterminism).toBe(true);
   });
@@ -39,6 +40,15 @@ describe('parseRenderMode', () => {
     expect(parseRenderMode('?noParticles=1').visualDeterminism).toBe(true);
     expect(parseRenderMode('?fixedViewport=1').visualDeterminism).toBe(true);
     expect(parseRenderMode('?hideHud=1').visualDeterminism).toBe(true);
+
+    /*
+     * `cook=1` is deliberately *not* in that list. It changes what the player
+     * did, not how the frame is rendered — a run with it is a different world,
+     * not the same world pinned. Treating it as a pinning parameter would let a
+     * URL that only cooks silently claim to be visually deterministic.
+     */
+    expect(parseRenderMode('?cook=1').visualDeterminism).toBe(false);
+    expect(parseRenderMode('?cook=1').cook).toBe(true);
     expect(parseRenderMode('?scene=stress').visualDeterminism).toBe(false);
   });
 

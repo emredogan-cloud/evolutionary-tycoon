@@ -241,7 +241,7 @@ export function discardOrdersFor(world: World, customerSlot: number): void {
  * written by a build with a wider band must not be able to smuggle a price
  * through this one.
  */
-export function priceOf(world: World, itemIndex: number): number {
+function priceOf(world: World, itemIndex: number): number {
   const item = menuItem(itemIndex);
   const set = world.economy.prices.get(item.id);
   if (set === undefined) return item.basePrice;

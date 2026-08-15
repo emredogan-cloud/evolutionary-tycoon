@@ -137,6 +137,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.bridge.sync(this.context.readView(), this.context.interpolationAlpha());
     this.syncSprites();
+    this.context.onFrame?.();
 
     this.overlays?.update(this.bridge.visible.length);
   }

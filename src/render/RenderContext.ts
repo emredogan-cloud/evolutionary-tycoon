@@ -26,6 +26,18 @@ export interface RenderContext {
   readView(): SimView;
   /** Fraction of a tick elapsed, from the fixed-timestep loop. */
   interpolationAlpha(): number;
+  /**
+   * Called once per *rendered* frame, after the scene has synchronised.
+   *
+   * `src/app` uses it to sample the UI bridge. Driving that from the simulation
+   * loop instead looks equivalent and is not: a frozen scene stops the loop but
+   * keeps rendering, so the overlay would be stuck on whatever it published
+   * before the camera existed — which is how the first `stage1-serving` golden
+   * came out with a HUD and no world markers at all.
+   *
+   * The renderer learns nothing from this. It is a function it was handed.
+   */
+  onFrame?(): void;
   /** `prefers-reduced-motion` — disables smoothing and shake outright. */
   readonly reducedMotion: boolean;
   /** Which authored scene to stage, from `?scene=`. */

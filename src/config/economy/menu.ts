@@ -22,11 +22,9 @@ import { z } from 'zod';
 
 /** Where an item is prepared. ECONOMY_DESIGN §4; Stage 1 uses three of them. */
 export const STATION_TYPES = ['DRINK', 'GRILL', 'PREP', 'FRYER', 'COFFEE', 'DESSERT'] as const;
-export type StationType = (typeof STATION_TYPES)[number];
 
 /** Appeal tags — GAME_DESIGN_DOCUMENT §11.1. Read by `menuAppeal` in Phase 9+. */
-export const APPEAL_TAGS = ['FAST', 'HEARTY', 'PREMIUM', 'BREAKFAST', 'SWEET', 'VEGGIE'] as const;
-export type AppealTag = (typeof APPEAL_TAGS)[number];
+const APPEAL_TAGS = ['FAST', 'HEARTY', 'PREMIUM', 'BREAKFAST', 'SWEET', 'VEGGIE'] as const;
 
 const menuItemSchema = z.object({
   id: z.string().min(1),

@@ -42,14 +42,103 @@ function hooksOn(target: Window): EvoTycoonTestApi {
  * window so the scheduler is exercised for real.
  */
 function isolatedWindow(search: string): Window {
+  let frameClock = 0;
   return {
     requestAnimationFrame: (callback: FrameRequestCallback) => window.requestAnimationFrame(callback),
     cancelAnimationFrame: (handle: number) => {
       window.cancelAnimationFrame(handle);
     },
     location: { search },
+    /*
+     * A clock that advances a whole second per read, so the UI bridge's 10 Hz
+     * throttle never suppresses a sample a test is waiting for. Testing the
+     * throttle itself is `uiBridge.test.ts`'s job; here it would only be a way
+     * for these tests to fail for an unrelated reason.
+     */
+    performance: {
+      now: () => {
+        frameClock += 1000;
+        return frameClock;
+      },
+    },
   } as unknown as Window;
 }
+
+describe('the UI bridge, as the container wires it', () => {
+  it('publishes to the overlay on every rendered frame', () => {
+    /*
+     * Sampling hangs off `renderContext.onFrame` rather than off the simulation
+     * loop, and the difference is not cosmetic: a frozen scene stops the loop
+     * and keeps drawing. Wired to the loop, the overlay on every visual golden
+     * would be stuck on whatever it published before the camera existed.
+     */
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+
+    let published = 0;
+    container.ui.subscribe(() => {
+      published++;
+    });
+    const atSubscribe = published;
+
+    container.renderContext.onFrame?.();
+    container.renderContext.onFrame?.();
+    expect(published - atSubscribe).toBe(2);
+  });
+
+  it('starts with nothing projected and republishes when the camera arrives', () => {
+    /*
+     * The camera does not exist until Phaser has booted a scene, which is after
+     * the container is built. Until then every marker is off screen — and the
+     * republish is what stops the overlay waiting a frame to notice otherwise.
+     */
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+
+    let published = 0;
+    container.ui.subscribe(() => {
+      published++;
+    });
+    const before = published;
+
+    container.setProjector((_x, _y, _z, out) => {
+      out.x = 1;
+      out.y = 2;
+      return true;
+    });
+    expect(published - before).toBe(1);
+  });
+});
+
+describe('cooking through a frozen fast-forward', () => {
+  it('earns nothing without ?cook=1, because the player is the cook', () => {
+    /*
+     * The control. In Stage 1 an order sits in `PLACED` until a `MANUAL_PREP`
+     * command starts it, so a fast-forward that issues no commands arrives at
+     * the target tick with a queue and a cold kitchen. A golden of a busy stand
+     * taken this way would be photographing a stand that is not serving.
+     */
+    const container = createContainer(
+      isolatedWindow('?freezeAt=6000&noParticles=1'),
+      424242,
+      new MemoryStorageAdapter(),
+    );
+
+    expect(container.sim.world.tick).toBe(6000);
+    expect(container.sim.world.stats.customersServed).toBe(0);
+    expect(container.sim.world.economy.cash).toBe(0);
+  });
+
+  it('cooks the whole way there with ?cook=1', () => {
+    const container = createContainer(
+      isolatedWindow('?freezeAt=6000&noParticles=1&cook=1'),
+      424242,
+      new MemoryStorageAdapter(),
+    );
+
+    expect(container.sim.world.tick).toBe(6000);
+    expect(container.sim.world.stats.customersServed).toBeGreaterThan(0);
+    expect(container.sim.world.economy.cash).toBeGreaterThan(0);
+  });
+});
 
 describe('createContainer', () => {
   it('wires the simulation, the loop and the save service together', () => {

@@ -11,19 +11,20 @@ Every temporary asset or stand-in, and when it gets replaced.
 > The build counts placeholders and reports the number. From Phase 22 onward, a production build
 > containing any placeholder is a hard error.
 
-## Current count: 7 (6 sprite files + 1 procedural)
+## Current count: 8 (6 sprite files + 1 procedural + 1 DOM)
 
 ## Register
 
-| File                                    | Stands in for                                   | Size (2x) | Introduced | Replaced in  | Status  |
-| --------------------------------------- | ----------------------------------------------- | --------- | ---------- | ------------ | ------- |
-| `ph-customer__PLACEHOLDER__.png`        | Customer character (Doll rig, 6–10 parts)       | 64×144    | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-employee__PLACEHOLDER__.png`        | Employee character                              | 64×144    | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-vehicle__PLACEHOLDER__.png`         | `SEDAN_COMMUTER` and the other 3 archetypes     | 410×301   | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-prop-short__PLACEHOLDER__.png`      | Counter, bin, low props                         | 154×134   | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-prop-tall__PLACEHOLDER__.png`       | Sign post, tree, tall props                     | 102×205   | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-scale-reference__PLACEHOLDER__.png` | A 2 m scale figure — a measuring stick, not art | 128×192   | Phase 3    | **Phase 16** | 🟠 live |
-| _(procedural)_ ground + road shapes     | Stage-1 ground **bake** and road surface        | —         | Phase 3    | **Phase 16** | 🟠 live |
+| File                                    | Stands in for                                            | Size (2x)   | Introduced | Replaced in  | Status  |
+| --------------------------------------- | -------------------------------------------------------- | ----------- | ---------- | ------------ | ------- |
+| `ph-customer__PLACEHOLDER__.png`        | Customer character (Doll rig, 6–10 parts)                | 64×144      | Phase 3    | **Phase 16** | 🟠 live |
+| `ph-employee__PLACEHOLDER__.png`        | Employee character                                       | 64×144      | Phase 3    | **Phase 16** | 🟠 live |
+| `ph-vehicle__PLACEHOLDER__.png`         | `SEDAN_COMMUTER` and the other 3 archetypes              | 410×301     | Phase 3    | **Phase 16** | 🟠 live |
+| `ph-prop-short__PLACEHOLDER__.png`      | Counter, bin, low props                                  | 154×134     | Phase 3    | **Phase 16** | 🟠 live |
+| `ph-prop-tall__PLACEHOLDER__.png`       | Sign post, tree, tall props                              | 102×205     | Phase 3    | **Phase 16** | 🟠 live |
+| `ph-scale-reference__PLACEHOLDER__.png` | A 2 m scale figure — a measuring stick, not art          | 128×192     | Phase 3    | **Phase 16** | 🟠 live |
+| `OrderBubble.svelte` text label         | Food icon in the order bubble (lemonade, hot dog, chips) | DOM, ~50×16 | Phase 8    | **Phase 16** | 🟠 live |
+| _(procedural)_ ground + road shapes     | Stage-1 ground **bake** and road surface                 | —           | Phase 3    | **Phase 16** | 🟠 live |
 
 ### Phase 4 did not replace any of these
 
@@ -51,6 +52,18 @@ Two things did change for the better:
   created, so the committed images could not actually be reproduced without calling the function by
   hand. CI now regenerates them and fails if the result differs from what is committed.
 
+### The order bubble is a placeholder that is not a file
+
+`src/ui/components/OrderBubble.svelte` draws the item's name in a magenta dashed box because the food
+icons are Phase 4 assets that do not exist. It is registered here rather than left unlisted, because
+the rule is about what the player sees and not about where the bytes live: a stand-in in the DOM is
+as capable of shipping unnoticed as one in an atlas — arguably more so, since no asset validator will
+ever look at it.
+
+It follows the same discipline as the generated PNGs. Magenta on near-black, a dashed border, all
+caps — it cannot be mistaken for a finished bubble, and `pnpm assets:validate` will not catch it, so
+looking obviously wrong is the entire safeguard.
+
 ### Notes
 
 **They are generated, not drawn.** `tools/placeholders/generate.ts` derives every size from the
@@ -75,3 +88,4 @@ registered here — but the _real_ art replacing them must be split, and the val
 | ---------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-08-14 | 1     | Register created. No placeholders exist — Phase 1 ships no game art, and the favicon and shell are real, not stand-ins.                                                                                                                                                    |
 | 2026-08-15 | 3     | Six generated sprite placeholders plus the procedural ground and road. All deliberately magenta/black checkered, labelled, with a visible anchor cross. Every one is due for replacement in Phase 4 except the scale reference, which is a measuring tool rather than art. |
+| 2026-08-15 | 8     | The order bubble's food icon added as a DOM placeholder — a magenta dashed box with the item's name in it. The first placeholder in this register that is not a file.                                                                                                      |

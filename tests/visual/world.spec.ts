@@ -31,13 +31,13 @@ const VIEWPORT = { width: 1280, height: 720 };
  * ignored, and the Phase 6 goldens would photograph tick 0 while claiming to
  * photograph tick 4264.
  */
-function frozenUrl(scene: string, freezeAt = 0): string {
-  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1`;
+function frozenUrl(scene: string, freezeAt = 0, extra = ''): string {
+  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1${extra}`;
 }
 
-async function openFrozen(page: Page, scene: string, freezeAt = 0): Promise<void> {
+async function openFrozen(page: Page, scene: string, freezeAt = 0, extra = ''): Promise<void> {
   await page.setViewportSize(VIEWPORT);
-  await page.goto(frozenUrl(scene, freezeAt));
+  await page.goto(frozenUrl(scene, freezeAt, extra));
   // Wait on a state attribute, never a timeout — the difference between a suite
   // that is stable and one that lives in docs/FLAKY.md.
   await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
@@ -84,19 +84,58 @@ test.describe('visual goldens', () => {
 
   test('stage1-queue — four people waiting, and one of them losing patience', async ({ page }) => {
     /*
-     * Tick 10417 is the busiest the counter gets on this seed. It was 7940 in
-     * Phase 6 and moved when Phase 7 replaced the straight-line walk with
-     * flow-field steering: different routes mean different arrival times, which
-     * shifts every patience clock downstream and with it the whole sequence.
-     * It moved again within Phase 7, as the steering itself was corrected.
+     * **Tick 5309, re-derived in Phase 8.** It was 7940 in Phase 6, 10417 in
+     * Phase 7, and it has moved for the third time — because the thing it
+     * photographs genuinely moved, not because the pixels drifted.
      *
-     * The tick was re-derived rather than the golden re-recorded at the old one.
-     * A screenshot named `stage1-queue` that no longer photographs the busiest
-     * queue is a golden that lies about its subject, and it would go on lying
-     * quietly for as long as the pixels happened to be stable.
+     * Phase 8 gave the counter an exit. Until this phase a customer who reached
+     * the front stood there, so the queue only ever grew and the busiest moment
+     * was late and crowded. Now they order, step aside into the waiting area and
+     * eventually leave, so the counter drains continuously and the busiest it
+     * ever gets is four people — reached far earlier, at tick 5309, with one of
+     * them down to 9.8% of their patience.
+     *
+     * Re-derived rather than re-recorded at 10417, for the same reason as last
+     * time: a screenshot named `stage1-queue` that no longer photographs a queue
+     * is a golden that lies about its subject, and it would go on lying quietly
+     * for as long as the pixels happened to be stable. The old tick now shows
+     * two people and an empty counter.
      */
-    await openFrozen(page, 'empty', 10417);
+    await openFrozen(page, 'empty', 5309);
     await expect(page).toHaveScreenshot('stage1-queue.png');
+  });
+
+  /**
+   * The loop, mid-service — GAME_EXECUTION_ROADMAP Phase 8, `stage1-serving`.
+   *
+   * Tick 8280 was found by simulating seed 424242 with an attentive cook and
+   * looking for the first frame where the stand is genuinely busy: a customer
+   * waiting on an order, a station part-way through cooking, and a payment
+   * thirty ticks old. Five customers, eight vehicles, ₡24.03 taken.
+   *
+   * `cook=1` is what makes it reachable. In Stage 1 the player is the cook, so a
+   * fast-forward that issues no commands arrives at tick 8280 with a queue of
+   * people and a kitchen that has never started anything — a golden of a stand
+   * that is not serving, filed under the name `stage1-serving`.
+   *
+   * ## Why the overlay is not in this picture
+   *
+   * It was, briefly, and it made the golden host-specific. Phase 8's order
+   * bubbles, progress rings, pass plates and coin popups are DOM, and DOM means
+   * text: with the overlay mounted, this golden differed by 4283 pixels between
+   * the pinned container and the development host, and **every one of those
+   * pixels was a glyph**. The canvas matched exactly. `system-ui` resolves to
+   * different fonts in the two images and font rasterisation is not portable
+   * even when the family is, so no amount of pinning inside the page fixes it.
+   *
+   * That is not a loss. Visual regression exists for the thing Playwright cannot
+   * otherwise inspect — pixels in a WebGL canvas. The overlay is queryable DOM,
+   * and `tests/e2e/serviceLoop.spec.ts` asserts each marker by test id, which is
+   * a stricter check than a screenshot and does not go stale when a font does.
+   */
+  test('stage1-serving — the stand mid-service, cooking and paid', async ({ page }) => {
+    await openFrozen(page, 'empty', 8280, '&cook=1');
+    await expect(page).toHaveScreenshot('stage1-serving.png');
   });
 });
 
