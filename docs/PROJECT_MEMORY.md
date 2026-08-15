@@ -19,11 +19,11 @@
 | **Proje adı**      | Evolutionary Tycoon                                                                |
 | **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)             |
 | **Sürüm**          | 0.1.0                                                                              |
-| **Mevcut faz**     | **PHASE 3 — Isometric Rendering & World** (BATCH P2→P4'ün ikinci fazı)             |
+| **Mevcut faz**     | **PHASE 4 — Art Direction & Asset Pipeline v1** (BATCH P2→P4'ün son fazı)          |
 | **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi)     |
-| **Durum**          | 🟡 Batch 2→4 yürütülüyor — P2 ✅, sırada P3                                        |
-| **Son güncelleme** | 2026-08-15 — CHECKPOINT H (P2 tamamlandı)                                          |
-| **Son commit SHA** | `4643d88de950c48313888979eb4d31f266467945` (main — P2 merge, `git rev-parse HEAD`) |
+| **Durum**          | 🔴 **BATCH BİTTİ — DURULDU.** P2 ✅ · P3 ✅ · P4 🟡 PARTIAL. P5–P7 yetkisiz.       |
+| **Son güncelleme** | 2026-08-15 — CHECKPOINT L (P4 tamamlandı, kısmi)                                   |
+| **Son commit SHA** | `a60b6418f9e475163ae969b6fa5631c41a617a24` (main — P3 merge, `git rev-parse HEAD`) |
 | **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                         |
 
 ---
@@ -92,14 +92,14 @@ Detay: [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md)
 
 ## 5. Phase State
 
-| Faz                  | Durum                | Başlangıç  | Bitiş      | Commit/PR                  | Kapı                    | Kanıt                                      |
-| -------------------- | -------------------- | ---------- | ---------- | -------------------------- | ----------------------- | ------------------------------------------ |
-| P0 Research & Design | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                 | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime                     |
-| P1 Foundation        | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`      | **GATE 1 ✅ ONAYLANDI** | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md) |
-| **P2 Sim Core**      | 🟡 **YÜRÜTÜLÜYOR**   | 2026-08-14 | —          | `phase/02-simulation-core` | Batch içi kapı          | —                                          |
-| P3 Iso Render        | 🟢 Yetkilendirildi   | —          | —          | —                          | Batch içi kapı          | —                                          |
-| P4 Asset Pipeline v1 | 🟢 Yetkilendirildi   | —          | —          | —                          | **BATCH ÇIKIŞ KAPISI**  | —                                          |
-| P5–P24               | ⬜ Yetkilendirilmedi | —          | —          | —                          | —                       | —                                          |
+| Faz                      | Durum                | Başlangıç  | Bitiş      | Commit/PR                 | Kapı                    | Kanıt                                                                                          |
+| ------------------------ | -------------------- | ---------- | ---------- | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| P0 Research & Design     | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime                                                                         |
+| P1 Foundation            | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`     | **GATE 1 ✅ ONAYLANDI** | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md)                                                     |
+| P2 Sim Core              | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-15 | PR #8, main `4643d88`     | Batch içi kapı ✅       | [PHASE_2_REPORT](phases/PHASE_2_REPORT.md)                                                     |
+| P3 Iso Render            | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | main `a60b641`            | Batch içi kapı ✅       | [PHASE_3_REPORT](phases/PHASE_3_REPORT.md)                                                     |
+| **P4 Asset Pipeline v1** | 🟡 **KISMİ**         | 2026-08-15 | 2026-08-15 | `phase/04-asset-pipeline` | **BATCH ÇIKIŞ KAPISI**  | [PHASE_4_REPORT](phases/PHASE_4_REPORT.md) — pipeline ✅, sanat üretimi lisans kapısında bloke |
+| P5–P24                   | ⬜ Yetkilendirilmedi | —          | —          | —                         | —                       | —                                                                                              |
 
 **Onaylı roadmap:** 25 faz (P0–P24). Orijinal 22 fazlık yapıya **dönülmeyecek**.
 Onaylı 6 değişiklik: D1 (yeni P2 Sim Core) · D2 (Pathfinding→P7) · D3 (Asset P4+P16) · D4 (Economy P9+P12+P13) · D5 (Employee AI, Evolution'dan önce) · D6 (P9 sonunda Vertical Slice Kapısı).
@@ -245,6 +245,87 @@ sim'e sahip olmaz.
 **Kullanıcıya havale edilen:** Phaser'ın WebGL1/WebGL2 çelişkisi (§12, AÇIK ÇELİŞKİ #4). Faz 3
 bu yüzden hiçbir şeyi değiştirmedi ve Faz 4'ü bloke etmiyor.
 
+### CHECKPOINT K — P4 başlangıcı (2026-08-15)
+
+Dal: `phase/04-asset-pipeline`, main `a60b641`'ten. P3 kapısı geçildi; production `a60b641`'i
+sunuyor (`/health.json` → `buildSha a60b6418…`, `schemaVersion 2`).
+
+**P4 START CONDITION önce koşuldu — ve KAPANMADI.** Roadmap Faz 4 START CONDITIONS: dokuz maddelik
+lisans doğrulaması, birincil kaynaktan, üretimden **önce**. Sonuç [`assets/LICENSES.md`](../assets/LICENSES.md) §1'de,
+sağlayıcı başına tablo hâlinde, URL + erişim tarihi + birebir alıntı ile:
+
+| Sağlayıcı   | Karşılanan | Sonuç                                                             |
+| ----------- | ---------- | ----------------------------------------------------------------- |
+| God Mode AI | 6 / 9      | En güçlüsü — telif **devri**, atıf yok, özel içerikle eğitim yok  |
+| Scenario    | 5 / 9      | Sahiplik/dağıtım net; madde 6 self-serve planda modelini eğitiyor |
+| PixelLab    | 3 / 9      | Beş madde hiç ele alınmamış — ancak yedek                         |
+| Sprixen     | 0 / 9      | **Birincil ToS belgesi bulunamadı** — yalnızca pazarlama metni    |
+
+**Madde 8 (abonelik bittikten sonraki haklar) dört sağlayıcının hiçbirinde yazılı değil.** Bu, kamuya
+açık sayfa okuyarak kapatılabilecek bir madde değil; sağlayıcıdan yazılı teyit gerekir. Bu yüzden:
+
+> **Faz 4'te tek bir üretim asset'i üretilmedi. Altın referanslar dâhil.** Roadmap'in kendi kuralı:
+> "Bu kapı geçilmeden Faz 4'te tek bir üretim asset'i üretilmez. Altın referans üretimi de buna dâhil."
+> Sessiz araç değişimi de yapılmadı (ASSET_PIPELINE §4.2 bunu açıkça yasaklıyor).
+
+**Bunun P4 kapsamına etkisi:** roadmap Faz 4 görevlerinden 2, 3, 9, 10, 11 (altın referans üretimi →
+insan onayı, batch üretim, placeholder değişimi, golden güncelleme, dört tutarlılık kapısı) sanat
+üretimine bağlı ve **bu fazda tamamlanamaz**. Kalan görevler — palet, değişmez prompt bloğu, dokuz
+kontrollü doğrulayıcı, işleme/atlas/manifest/rapor hattı, contact sheet üreteci, asset yükleme
+sistemi, yükleme ekranı, CI bütçeleri — sanat gerektirmez ve tam olarak yapılır. **P4 bu yüzden
+PARTIAL olarak raporlanacak**; PASS iddia edilmeyecek.
+
+**Bağımlılık değişikliği (WORKING_DISCIPLINE §2.5.2):** `sharp@0.35.3` ve
+`free-tex-packer-core@0.3.9` devDependency olarak eklendi. İkisi de **onaylı stack'te zaten adı
+geçen** sürümler ([TECHNICAL_ARCHITECTURE §3](TECHNICAL_ARCHITECTURE.md), roadmap Faz 4) — yeni
+karar değil, onaylı kararın uygulanması. Yükseltme değil, ilk kurulum.
+
+**Ortam olayı:** Faz 3'ün container'da golden üretimi `node_modules`'ü konteynerin store yoluna
+(`/work/.pnpm-store`) bağlamıştı; `pnpm add` `ERR_PNPM_UNEXPECTED_STORE` ile durdu. Root'a ait
+dizinler aynı pinlenmiş container içinden silinip host store'undan temiz kurulum yapıldı.
+`.pnpm-store/` zaten `.gitignore`'da (satır 3) — repoya hiçbir şey sızmadı.
+
+### CHECKPOINT L — P4 tamamlandı (2026-08-15) 🟡 KISMİ
+
+| Kanıt               | Değer                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| Testler             | **583** unit/integration (37 dosya) + 10 perf · lines %98.46 · branches %89.85 · functions %96.64 |
+| E2E                 | 48 geçti / 12 atlandı (chromium + firefox) · WebKit 3/3 pinlenmiş container'da                    |
+| Visual              | 3 golden yeniden üretildi, 6/6 yeşil — **artık gerçekten çalışan bir kapı altında** (bkz. aşağı)  |
+| Bundle              | **406.45 kB** gzip / 550 kB                                                                       |
+| Asset pipeline      | `assets:validate` → `assets:build` CI'da; boş ağaçta "0 assets" der ve 0 döner                    |
+| Determinizm (asset) | process ×2 → 8/8 SHA-256 aynı · atlas ×2 → webp+json aynı · manifest ×2 → aynı hash               |
+| **Üretim asset'i**  | **0** — START CONDITION kapanmadı                                                                 |
+| Rapor               | [PHASE_4_REPORT.md](phases/PHASE_4_REPORT.md)                                                     |
+
+**Faz 4'ün bulduğu beş gerçek hata:**
+
+1. **Visual regression kapısı bir çeyrek karelik renk değişimini göremiyordu.** Faz 3
+   `maxDiffPixelRatio: 0.002` koymuş ama `threshold`'u Playwright varsayılanında (**0.2**)
+   bırakmıştı. İkisi aynı şey değil: `threshold` bir pikselin "farklı" sayılıp sayılmayacağına,
+   `maxDiffPixelRatio` kaç tanesinin farklı olabileceğine karar verir. Zemin ve yol paletin
+   renklerine taşınınca **233 365 piksel** değişti ve süit **geçti**. `threshold: 0` yapıldı
+   (render bit-exact olduğu için karşılanabilir); tek kanalda tek birimlik değişimin
+   (`0x586e22`→`0x586e23`) kapıyı kırdığı ölçüldü: "233418 pixels (ratio 0.26) are different".
+2. **Paletin ilk taslağında UI başarı yeşili ile tehlike kırmızısı döteranopide çakışıyordu**
+   (22.6 birim). Eşik indirilmedi; **palet değişti** — başarı `foliage-500`'den `foliage-300`'e
+   taşındı, ayrım 74 birime çıktı. ASSET_PIPELINE §12 artık dokümanda değil testte.
+3. **Prompt bloğunun hash'i yanlış metni hash'liyordu** — `indexOf` işaretçinin _ilk_ geçtiği yeri
+   buluyordu, o da bloğu anlatan düzyazıydı. İşaretçiler kendi satırlarına sabitlendi.
+4. **Tick başına tahsis kapısı Faz 2'den beri kararsızdı** — `pnpm verify` 8.87 B/tick ile düştü
+   (bütçe 8). `src/sim` Faz 4'te hiç değişmedi; yedi koşuda iki düşüş. Sebep bütçe değil ölçüm
+   yöntemiydi: tek bir `heapUsed` deltası, hem simülasyonu hem runtime'ın aynı penceredeki işini
+   ölçüyor. Beş örneğin **minimumu**na geçildi (gürültü tek yönlü: yığına yalnızca ekler). Bütçe
+   değişmedi; ölçüm **0.02 B/tick (en kötü örnek 0.09)** çıktı — iki kat büyüklük derece altında ve
+   kararlı. Ardışık 8 koşu yeşil.
+5. **Atlas doluluk oranı %120.8 raporlanıyordu** — `detectIdentical` aynı rect'i paylaştırıyor,
+   frame başına toplamak aynı pikselleri birden çok sayıyordu. Yanlış sayı §7 tabanının
+   **üstündeydi**; düzeltilmeseydi bu rapora "geçti" diye yazılacaktı.
+
+**Yapılmayan ve neden:** altın referans üretimi, batch üretim, placeholder değişimi ve dört
+tutarlılık kapısı. Hepsi lisans kapısına bağlı; roadmap'in kendi kuralı bu durumda **tek bir üretim
+asset'i bile** üretilmemesini söylüyor ve sessiz araç değişimini yasaklıyor.
+
 ---
 
 ## 7. Completed Work (yalnızca doğrulanmış)
@@ -329,12 +410,13 @@ bu yüzden hiçbir şeyi değiştirmedi ve Faz 4'ü bloke etmiyor.
 
 ## 12. Known Problems (yalnızca doğrulanmış)
 
-| #   | Sorun                                                                                   | Etki                                                          | Durum                                                                     |
-| --- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1   | ~~**Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO)~~  | —                                                             | ✅ **ÇÖZÜLDÜ** 2026-08-14 (CHECKPOINT F) — §16                            |
-| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)            | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s) | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                          |
-| 3   | ~~550 kB JS bütçesi yapılandırıldı ama sınanmadı~~                                      | —                                                             | ✅ **CEVAPLANDI** Faz 3: Phaser ile **405.08 kB** / 550 kB, %26 pay kaldı |
-| 4   | ⚠ **Phaser 4.2.1 WebGL2 değil, WebGL1 context'i açıyor** — dört doküman aksini söylüyor | Faz 1 capability gate'i gereğinden **katı** — aşağıya bak     | 🔴 **AÇIK ÇELİŞKİ — kullanıcı kararı gerekiyor**                          |
+| #   | Sorun                                                                                                | Etki                                                          | Durum                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1   | ~~**Vercel Deployment Protection**, deployment-başına URL'leri kapatıyor (302 → SSO)~~               | —                                                             | ✅ **ÇÖZÜLDÜ** 2026-08-14 (CHECKPOINT F) — §16                                                            |
+| 2   | WebKit smoke bu geliştirme makinesinde koşamıyor (`libevent-2.1-7t64` eksik)                         | Yerel doğrulama boşluğu; CI container'ında geçiyor (1 m 08 s) | 🟡 Kabul edildi, [FLAKY.md](FLAKY.md)'de kayıtlı                                                          |
+| 3   | ~~550 kB JS bütçesi yapılandırıldı ama sınanmadı~~                                                   | —                                                             | ✅ **CEVAPLANDI** Faz 3: Phaser ile **405.08 kB** / 550 kB, %26 pay kaldı                                 |
+| 4   | ⚠ **Phaser 4.2.1 WebGL2 değil, WebGL1 context'i açıyor** — dört doküman aksini söylüyor              | Faz 1 capability gate'i gereğinden **katı** — aşağıya bak     | 🔴 **AÇIK ÇELİŞKİ — kullanıcı kararı gerekiyor**                                                          |
+| 5   | ~~Visual regression kapısı `threshold` varsayılanı (0.2) yüzünden büyük renk değişimini görmüyordu~~ | Faz 3'te üç golden bir çeyrek karelik renk değişimini geçirdi | ✅ **DÜZELTİLDİ** Faz 4 — `threshold: 0`; tek birimlik değişim artık kapıyı kırıyor (PHASE_4_REPORT §4.1) |
 
 ### 🔴 AÇIK ÇELİŞKİ #4 — Phaser 4 WebGL2 kullanmıyor (Faz 3'te ölçüldü, 2026-08-15)
 
@@ -494,12 +576,17 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 17. Asset State
 
-|                              |                                                                                                                                                                                               |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pipeline                     | ⬜ P4'te kurulacak                                                                                                                                                                            |
-| Placeholder sayısı           | 0 (henüz asset yok)                                                                                                                                                                           |
-| **Lisans durumu**            | ❌ **DOĞRULANMADI** — God Mode AI, Scenario, PixelLab, Sprixen için ticari kullanım şartları birincil kaynaktan teyit edilmedi. **P4 START CONDITION** olarak kayıtlı (9 maddelik doğrulama). |
-| Doğrulanmış asset kategorisi | Yok                                                                                                                                                                                           |
+|                              |                                                                                                                                                                                                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pipeline                     | ✅ **KURULDU** (Faz 4) — `tools/asset-pipeline/`: validate (9 kontrol) · process · atlas · audio · manifest · report · contactSheet. CI'da `assets` job'ı olarak koşuyor.                                                                                       |
+| Palet                        | ✅ `docs/assets/palette.json` — 48 renk, 12 rampa × 4 basamak. Renk körlüğü simülasyonu testte.                                                                                                                                                                 |
+| Prompt bloğu                 | ✅ `docs/assets/PROMPT_BLOCK.md` v1 — SHA-256 `1c4f4b4e…`, testle zorlanıyor.                                                                                                                                                                                   |
+| Referans yükseklikler        | 🟡 `docs/assets/referenceHeights.json` — §1.2'nin yazdığı **7 yükseklik**; kalan her konu `pending` listesinde ve doğrulayıcı onları **geçirmiyor** (verilmemiş sanat kararı sessizce kapatılmaz).                                                              |
+| **Lisans durumu**            | 🔴 **KAPI KAPANMADI** — 4 sağlayıcı birincil kaynaktan doğrulandı ([assets/LICENSES.md](../assets/LICENSES.md) §1): God Mode AI 6/9, Scenario 5/9, PixelLab 3/9, Sprixen 0/9 (ToS belgesi yok). **Madde 8 (abonelik sonrası haklar) dördünde de yazılı değil.** |
+| Üretim asset'i               | **0.** Altın referanslar dâhil hiçbir şey üretilmedi. Sessiz araç değişimi de yapılmadı.                                                                                                                                                                        |
+| Placeholder sayısı           | 7 (6 dosya + 1 prosedürel) — Faz 4'te hiçbiri değişmedi; register'da gerekçesiyle **Faz 16**'ya taşındı.                                                                                                                                                        |
+| Texture memory               | 0.79 MB (yalnızca placeholder). Gerçek kısıt: tek bir 4096² atlas sayfası RGBA8'de **64 MB** — masaüstü bütçesinin üçte biri ([PERF_LOG](PERF_LOG.md) Faz 4).                                                                                                   |
+| Doğrulanmış asset kategorisi | Yok                                                                                                                                                                                                                                                             |
 
 ---
 
@@ -586,31 +673,39 @@ koşamıyor (CI'da geçiyor) · yeni flaky test yok, `FLAKY.md` büyümedi.
 
 ## 21. Next Authorized Action
 
-> ## 🟢 PHASE 3 — Isometric Rendering & World
+> ## 🔴 DUR — BATCH P2 → P4 BİTTİ. SONRAKİ İŞ YETKİLENDİRİLMEMİŞTİR.
 >
-> Batch P2 → P3 → P4 içindeyiz. **P2 ✅ PASS**, kapı geçildi, otomatik devam.
+> **P2 ✅ PASS · P3 ✅ PASS · P4 🟡 PARTIAL** (makine tamam, sanat üretimi lisans kapısında bloke).
 >
-> **Şimdi:** Phaser 4 bootstrap · 2:1 dimetrik `IsoProjection` · `DepthSorter` (painter's, footprint
-> anchor, topolojik sıralama YOK) · 9 katmanlı `SceneGraph` · `CameraController` · `RenderBridge` +
-> `ActorView` havuzu · görsel determinizm modu · placeholder set + register · `stage1` layout ·
-> ilk 3 visual golden · **gerçek GPU perf ölçümü** (PERF_LOG'un Faz 3 borcu).
+> Kullanıcı 2026-08-14'te yalnızca P2+P3+P4'ü toplu yetkilendirdi ve "P4 bittiğinde DUR" dedi.
+> **P5 (Trafik) başlatılmaz. P5 hazırlığı "temizlik" adı altında da yapılmaz.**
 >
-> **P3'ün miras aldığı hazır parçalar:** motorlar arası deterministik hash · `?paused=1` ·
-> `Sim.readView()` (readonly, tahsissiz) · `GameLoop.interpolationAlpha`.
+> **Kullanıcıdan beklenen üç karar** (hiçbiri kod değil — [PHASE_4_REPORT §2](phases/PHASE_4_REPORT.md)):
 >
-> **Yasak:** P5 (Trafik), P6 (Müşteri), P7 (Navigasyon), P8 (Servis), P9 (Ekonomi) ve sonrası.
-> P4 bittiğinde DURULUR ve onay beklenir.
+> 1. God Mode AI'ya yazılı soru: telif devri abonelik iptalinden sonra da geçerli mi; referans görsel
+>    yüklemek onlara hak veriyor mu?
+> 2. Scenario madde 6 kararı: self-serve planda içeriğimizin modellerini eğitmesi kabul edilebilir mi,
+>    yoksa Enterprise mi?
+> 3. Sprixen için gerçek bir ToS belgesi bulunacak mı, yoksa aday listesinden çıkarılacak mı?
+>
+> Bu üçü kapanmadan **hiç kimse** — ajan da insan da — üretim asset'i üretemez; kapı sanat üretiminin
+> önünde, ajanın önünde değil.
+>
+> **Ayrıca insan kapısı:** altın referansların onayı ("STOP and get human approval") ve dört
+> tutarlılık kapısından üçü yan yana insan yargısıdır.
 
 ## 22. Change Log
 
-| Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                                                                                                                                                                                                                           |
-| 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                                                                                                                                                                                                                                         |
-| 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı.                                                                                                                                                                                                           |
-| 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                                                                                                                               |
-| 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                                                                                                                              |
-| 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                                                                                                                                             |
-| 2026-08-15 | **H**      | **P2 TAMAMLANDI ✅** — PR #8, CI 8/8, preview-e2e 23/23 (ilk kez bloke edici ve gerçekten koşan). Determinizm motorlar arası doğrulandı (Node V8 = Firefox SpiderMonkey). Perf baseline CI'dan kaydedildi, %15 regresyon kapısı canlı. Preview kapısı ilk koşuşunda iki gerçek sorun buldu: Vercel toolbar CSP bloğu (doğru davranış, tolere edildi) ve Zod'un `Function` probe'u (kaynağında `jitless` ile çözüldü, CSP'ye dokunulmadı). Sırada P3. |
-| 2026-08-14 | **G**      | P2 başladı — dal `phase/02-simulation-core`, `cbdaef4`'ten.                                                                                                                                                                                                                                                                                                                                                                                          |
-| 2026-08-14 | **F**      | **Batch P2→P4 başladı.** Context reset sonrası durum repo/CI/deployment ölçümüyle yeniden kuruldu. GATE 1 onaylandı, P2+P3+P4 toplu yetkilendirildi. Vercel Authentication kapatıldığı **doğrulandı** (API + curl) → bilinen sorun #1 ve geçici çözüm #1 kapandı, D-09 eklendi. §1/§5'teki bayat "P1 yürütülüyor" alanları düzeltildi.                                                                                                               |
+| Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı.                                                                                                                                                                                                                                                                                                               |
+| 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                                                                                                                                                                                                                                   |
+| 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                                                                                                                                                                                                                                  |
+| 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-08-15 | **L**      | **P4 PARTIAL — BATCH BİTTİ.** Pipeline kuruldu ve kanıtlandı (583 test, determinizm ölçüldü). **START CONDITION kapanmadı → 0 üretim asset'i.** Faz 3'ün visual regression kapısında ciddi bir kusur bulundu ve düzeltildi: `threshold` varsayılanda (0.2) bırakılmıştı, bu yüzden zeminin tamamen yeniden boyanması (233 365 piksel) kapıdan geçiyordu → `threshold: 0`, tek birimlik renk değişimiyle kapının kırıldığı ölçüldü. Palette'in ilk taslağında UI başarı/tehlike çifti döteranopide 22.6 birime düşüyordu → palet değişti, eşik değişmedi. |
+| 2026-08-15 | **K**      | P4 başladı — dal `phase/04-asset-pipeline`, `a60b641`'ten. START CONDITION önce koşuldu: 9 maddelik lisans doğrulaması, 4 sağlayıcı, birincil kaynak. **Kapanmadı.** `sharp@0.35.3` + `free-tex-packer-core@0.3.9` eklendi (onaylı stack'te zaten adı geçen sürümler).                                                                                                                                                                                                                                                                                   |
+| 2026-08-15 | **H**      | **P2 TAMAMLANDI ✅** — PR #8, CI 8/8, preview-e2e 23/23 (ilk kez bloke edici ve gerçekten koşan). Determinizm motorlar arası doğrulandı (Node V8 = Firefox SpiderMonkey). Perf baseline CI'dan kaydedildi, %15 regresyon kapısı canlı. Preview kapısı ilk koşuşunda iki gerçek sorun buldu: Vercel toolbar CSP bloğu (doğru davranış, tolere edildi) ve Zod'un `Function` probe'u (kaynağında `jitless` ile çözüldü, CSP'ye dokunulmadı). Sırada P3.                                                                                                     |
+| 2026-08-14 | **G**      | P2 başladı — dal `phase/02-simulation-core`, `cbdaef4`'ten.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-08-14 | **F**      | **Batch P2→P4 başladı.** Context reset sonrası durum repo/CI/deployment ölçümüyle yeniden kuruldu. GATE 1 onaylandı, P2+P3+P4 toplu yetkilendirildi. Vercel Authentication kapatıldığı **doğrulandı** (API + curl) → bilinen sorun #1 ve geçici çözüm #1 kapandı, D-09 eklendi. §1/§5'teki bayat "P1 yürütülüyor" alanları düzeltildi.                                                                                                                                                                                                                   |

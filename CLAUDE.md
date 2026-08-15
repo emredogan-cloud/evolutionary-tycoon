@@ -94,6 +94,10 @@ pnpm test:visual      # visual goldens (chromium, forced SwiftShader)
 pnpm test:visual:update  # regenerate goldens INSIDE the pinned CI container
 pnpm size             # bundle budgets
 
+pnpm assets:validate  # the nine asset checks — ASSET_PIPELINE §4.3
+pnpm assets:build     # validate → process → atlas → audio → manifest → report
+pnpm placeholders:build  # regenerate the committed placeholder set
+
 pnpm verify           # everything above, in order — run before claiming done
 ```
 
@@ -119,6 +123,14 @@ pnpm verify           # everything above, in order — run before claiming done
   fails the build if they drift.
 - **Placeholders must be registered** in `docs/PLACEHOLDER_REGISTER.md` and must look obviously
   wrong. A placeholder that looks "good enough" is the dangerous kind.
+- **No production asset may be generated until the licence gate closes.** `assets/LICENSES.md` §1
+  records nine-item verification per AI tool from primary sources. It is currently **open** — item 8,
+  rights after a subscription ends, is unaddressed by every candidate. If a provider fails, the rule
+  is a documented change request, never a silent substitution (ASSET_PIPELINE §4.2).
+- **Asset thresholds are never lowered to make a batch pass.** If real art cannot meet one, that is a
+  change request against ASSET_PIPELINE, not an edit to `tools/asset-pipeline/validate.ts`.
+- **`docs/assets/PROMPT_BLOCK.md` is hash-locked.** Editing the block fails a test until the recorded
+  hash is deliberately updated — that is the mechanism, not a formality.
 - **`World.hash()` deliberately excludes three things**, and each exclusion is itself under test:
   the `cosmetic` RNG stream, `control.speedMultiplier` / `control.paused`, and the per-tick event
   queue. They are excluded because none of them may change a simulation _outcome_ — which is
