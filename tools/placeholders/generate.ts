@@ -1,10 +1,10 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { ACTOR_KIND_SPECS } from '../../src/config/actors';
-import { ART_SCALE, TILE_H, TILE_W, TILE_Z } from '../../src/config/world';
-import { drawText, measureText } from './font';
-import { PixelCanvas } from './png';
-import type { Rgba } from './png';
+import { ACTOR_KIND_SPECS } from '../../src/config/actors.ts';
+import { ART_SCALE, TILE_H, TILE_W, TILE_Z } from '../../src/config/world.ts';
+import { drawText, measureText } from './font.ts';
+import { PixelCanvas } from './png.ts';
+import type { Rgba } from './png.ts';
 
 /**
  * Generate the placeholder sprite set.

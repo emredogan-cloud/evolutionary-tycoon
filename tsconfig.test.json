@@ -6,7 +6,15 @@
      break determinism. */
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "vite/client"]
+    "types": ["node", "vite/client"],
+
+    /* The Phase 4 asset pipeline under tools/ is run directly by Node's type
+       stripping (`node tools/asset-pipeline/cli.ts`), which cannot resolve an
+       extensionless relative import, so its modules write the extension. The
+       tests that exercise those modules pull them into this project. Same
+       reasoning and same option as tsconfig.node.json, and safe for the same
+       reason: this project emits nothing. */
+    "allowImportingTsExtensions": true
   },
   "include": [
     "tests/unit/**/*.ts",
