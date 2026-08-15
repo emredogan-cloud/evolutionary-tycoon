@@ -262,6 +262,8 @@ describe('the flow field cache', () => {
     expect(local.grid.isBlocked(cx, cy)).toBe(false);
 
     local.rebuild([spot]);
+    // The grid is rebuilt immediately; the fields are queued. See below.
+    local.finish();
     expect(local.version).toBeGreaterThan(before);
     expect(local.grid.isBlocked(cx, cy)).toBe(true);
 
@@ -286,5 +288,79 @@ describe('the flow field cache', () => {
     expect([...fieldA.cost]).toEqual([...fieldB.cost]);
     expect([...fieldA.dirX]).toEqual([...fieldB.dirX]);
     expect([...fieldA.dirY]).toEqual([...fieldB.dirY]);
+  });
+});
+
+describe('chunking the recompute', () => {
+  it('rebuilds the grid at once and the fields one at a time', () => {
+    /*
+     * GAME_EXECUTION_ROADMAP Phase 7: the recompute "must not block a frame —
+     * chunk it per goal if necessary", with 12 ms for all twenty goals as the
+     * threshold. Measured at that scale it is 9.8 ms on a developer machine and
+     * 19.7 ms on a CI runner, so it is necessary.
+     *
+     * The grid itself is cheap and is rebuilt immediately, because everything
+     * else reads it — a queued grid would have agents routing against geometry
+     * that no longer exists.
+     */
+    const local = new FlowFieldCache(STAGE1_LAYOUT);
+    expect(local.rebuilding).toBe(false);
+
+    local.rebuild([{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }]);
+    expect(local.grid.isBlocked(local.grid.cellXAt(7), local.grid.cellYAt(12))).toBe(true);
+    expect(local.rebuilding, 'nothing was queued').toBe(true);
+
+    let steps = 0;
+    while (local.rebuilding) {
+      expect(local.step(1)).toBe(1);
+      steps++;
+      expect(steps, 'the queue never drained').toBeLessThan(100);
+    }
+    expect(steps).toBe(STAGE1_LAYOUT.parking.length + 2);
+  });
+
+  it('keeps serving the previous field while the queue drains', () => {
+    /*
+     * Stale, not wrong. Each existing field routes around every obstacle that
+     * existed a moment ago; it simply does not know about the one just placed.
+     * For the fraction of a second before its turn comes, that is a far smaller
+     * error than leaving every agent with no route at all — which is what
+     * clearing the fields on `rebuild` would do.
+     */
+    const local = new FlowFieldCache(STAGE1_LAYOUT);
+    const out = { x: 0, y: 0 };
+    const door = STAGE1_LAYOUT.parking[0]?.door;
+    if (door === undefined) throw new Error('layout');
+
+    expect(local.directionAt(GOAL_COUNTER, door.x, door.y, out)).toBe(true);
+
+    local.rebuild([{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }]);
+    expect(local.directionAt(GOAL_COUNTER, door.x, door.y, out), 'no route mid-rebuild').toBe(true);
+
+    local.finish();
+    expect(local.directionAt(GOAL_COUNTER, door.x, door.y, out)).toBe(true);
+  });
+
+  it('is eager at construction, because there is no frame to protect yet', () => {
+    // And no previous field to fall back on, which is the stronger reason.
+    const local = new FlowFieldCache(STAGE1_LAYOUT);
+    expect(local.rebuilding).toBe(false);
+    expect(local.field(GOAL_COUNTER)).not.toBeNull();
+  });
+
+  it('drops a superseded queue rather than rebuilding twice', () => {
+    // Two builds in quick succession: the second invalidates the first, and
+    // draining both would spend a second of ticks on fields nobody will read.
+    const local = new FlowFieldCache(STAGE1_LAYOUT);
+    local.rebuild([{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }]);
+    local.step(1);
+    local.rebuild([]);
+
+    let steps = 0;
+    while (local.rebuilding) {
+      local.step(1);
+      steps++;
+    }
+    expect(steps).toBe(STAGE1_LAYOUT.parking.length + 2);
   });
 });

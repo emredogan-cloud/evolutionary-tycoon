@@ -182,9 +182,19 @@ export class NavigationSystem implements SimSystem {
    */
   private syncLayout(world: World): void {
     const signature = world.layout.placed.length;
-    if (signature === this.builtFor) return;
-    this.fields.rebuild(world.layout.placed);
-    this.builtFor = signature;
+    if (signature !== this.builtFor) {
+      this.fields.rebuild(world.layout.placed);
+      this.builtFor = signature;
+    }
+
+    /*
+     * One goal per tick. A full recompute is 9.8 ms on a developer machine and
+     * 19.7 ms on a CI runner at the scale the budget is written for, and the
+     * roadmap's rule is that it must not block a frame — so it does not happen
+     * in one. Agents keep using the previous field until their goal's turn
+     * comes, which routes around everything that existed a moment ago.
+     */
+    this.fields.step(1);
   }
 
   /**

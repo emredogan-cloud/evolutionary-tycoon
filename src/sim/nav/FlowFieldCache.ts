@@ -25,10 +25,26 @@ import { NavGrid } from './NavGrid';
  *
  * ## Invalidation
  *
- * `rebuild` is the only way in, and it always rebuilds the grid **and** every
- * field. Phase 7's risk table names a missed invalidation as a medium-likelihood
- * failure with medium impact; the mitigation is that a partial rebuild does not
- * exist to be got wrong.
+ * `rebuild` is the only way in, and it always rebuilds the grid and queues
+ * **every** field. Phase 7's risk table names a missed invalidation as a
+ * medium-likelihood failure; the mitigation is that a partial invalidation does
+ * not exist to be got wrong.
+ *
+ * ## Chunked across frames, per goal
+ *
+ * GAME_EXECUTION_ROADMAP Phase 7: the recompute "must not block a frame — chunk
+ * it per goal if necessary", with 12 ms for all twenty goals as the threshold at
+ * which it becomes necessary. Measured at that scale it is 9.8 ms on a developer
+ * machine and **19.7 ms on a CI runner**, so by the roadmap's own rule it is
+ * necessary.
+ *
+ * `rebuild` therefore queues the work and `step` does one goal at a time. Until a
+ * goal's turn comes, agents keep using its previous field: that field routes
+ * around every obstacle that existed a moment ago and knows nothing about the
+ * one just placed, which for the fraction of a second before it is rebuilt is a
+ * bounded and much smaller error than a frame hitch. The first build, at
+ * construction, is eager — there is no frame to protect yet and no previous
+ * field to fall back on.
  */
 
 export const GOAL_COUNTER = 'counter';
@@ -45,11 +61,16 @@ export class FlowFieldCache {
   private readonly layout: StageLayout;
   /** Bumped on every rebuild, so a caller can tell whether its lookup is stale. */
   private generation = 0;
+  /** Goals queued for rebuild, oldest first. Drained one per `step`. */
+  private readonly pending: { goal: string; x: number; y: number }[] = [];
 
   constructor(layout: StageLayout) {
     this.layout = layout;
     this.grid = new NavGrid(layout);
     this.rebuild([]);
+    // Eagerly at construction: no frame to protect, and no stale field to serve
+    // from while the queue drains.
+    this.finish();
   }
 
   get version(): number {
@@ -69,7 +90,13 @@ export class FlowFieldCache {
    */
   rebuild(placed: readonly PlacedObject[]): void {
     this.grid.rebuild(placed);
-    this.fields.clear();
+    /*
+     * The fields are *not* cleared. They are stale, not wrong — each routes
+     * around every obstacle that existed before this call — and serving a stale
+     * field for a few ticks is a far smaller error than leaving every agent with
+     * no route at all while the queue drains.
+     */
+    this.pending.length = 0;
 
     const counter = this.layout.counter;
     this.add(GOAL_COUNTER, counter.x, counter.y);
@@ -88,6 +115,35 @@ export class FlowFieldCache {
     }
 
     this.generation++;
+  }
+
+  /** True while any goal is still waiting to be rebuilt. */
+  get rebuilding(): boolean {
+    return this.pending.length > 0;
+  }
+
+  /**
+   * Rebuild up to `count` queued goals.
+   *
+   * One per tick is what `NavigationSystem` asks for, which spreads a full
+   * recompute over as many ticks as there are goals — one second at twenty
+   * goals and 20 Hz. Returns the number actually rebuilt, so a caller can tell
+   * a finished queue from an idle one.
+   */
+  step(count = 1): number {
+    let done = 0;
+    while (done < count) {
+      const next = this.pending.shift();
+      if (next === undefined) break;
+      this.fields.set(next.goal, new FlowField(this.grid, next.x, next.y));
+      done++;
+    }
+    return done;
+  }
+
+  /** Drain the whole queue now. Construction, tests, and the benchmark. */
+  finish(): void {
+    while (this.pending.length > 0) this.step(this.pending.length);
   }
 
   /**
@@ -138,7 +194,8 @@ export class FlowFieldCache {
     const cy = this.grid.cellYAt(worldY);
     const free = this.nearestFree(cx, cy);
     if (free === null) return;
-    this.fields.set(goal, new FlowField(this.grid, free.cx, free.cy));
+    // Queued, not built. `step` does the Dijkstra.
+    this.pending.push({ goal, x: free.cx, y: free.cy });
   }
 
   /**

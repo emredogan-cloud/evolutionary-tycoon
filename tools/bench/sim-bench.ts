@@ -391,6 +391,34 @@ export function benchFlowFieldRebuild(): TimingResult {
     for (let i = 0; i < rebuilds; i++) {
       // Alternating, so no rebuild can be skipped as a repeat of the last.
       cache.rebuild(i % 2 === 0 ? placed : []);
+      cache.finish();
+    }
+  });
+}
+
+/**
+ * One goal's share of a recompute — the piece that has to fit in a frame.
+ *
+ * This is the number the roadmap's requirement actually turns on. "The recompute
+ * must not block a frame, chunk it per goal if necessary" makes the *chunk* the
+ * thing with a deadline, and the full recompute merely the thing with a
+ * duration. The full figure is still measured above, because how long the whole
+ * queue takes to drain is worth knowing — but it is no longer paid all at once.
+ */
+export function benchFlowFieldChunk(): TimingResult {
+  const cache = new FlowFieldCache(budgetScaleLayout());
+  const placed = [{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }];
+  const chunks = 40;
+
+  return timeIt('flow field, one goal', chunks, () => {
+    let done = 0;
+    let flip = 0;
+    while (done < chunks) {
+      if (!cache.rebuilding) {
+        cache.rebuild(flip % 2 === 0 ? placed : []);
+        flip++;
+      }
+      done += cache.step(1);
     }
   });
 }
@@ -608,6 +636,7 @@ export function runSimBench(): BenchReport {
       benchPopulatedTick(),
       benchCrowdedTick(),
       benchFlowFieldRebuild(),
+      benchFlowFieldChunk(),
       benchCommandProcessing(),
       benchEventFlush(),
       benchStoreChurn(),

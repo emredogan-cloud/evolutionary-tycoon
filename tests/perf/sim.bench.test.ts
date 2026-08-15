@@ -7,6 +7,7 @@ import {
   benchTicksFromFresh,
   benchEventFlush,
   benchCrowdedTick,
+  benchFlowFieldChunk,
   benchFlowFieldRebuild,
   benchPopulatedTick,
   benchSnapshot,
@@ -197,25 +198,35 @@ describe('simulation performance budgets', () => {
     expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(2.5);
   });
 
-  it('recomputes every flow field in under 12 ms', () => {
+  it('never spends more than a frame on one goal', () => {
     /*
-     * The number the whole approach rests on. Flow fields are cheap to use and
-     * expensive to build, and the trade only works because a build happens when
-     * the player places something rather than in the game loop.
+     * The requirement is "the recompute must not block a frame — chunk it per
+     * goal if necessary" (GAME_EXECUTION_ROADMAP Phase 7), with 12 ms for all
+     * twenty goals as the threshold at which chunking becomes necessary.
      *
-     * Measured at the scale the budget is written for — 64×64 cells, 20 goals —
-     * which Stage 1 is not: it has 48×36 cells and six goals, so measuring it
-     * would answer a different and much easier question.
+     * It was 42.9 ms at that scale to begin with. Flattening a tuple destructure
+     * out of the innermost loop took it to 9.8 ms on a developer machine — and
+     * a CI runner measured **19.7 ms**, still over. So by the roadmap's own rule
+     * chunking is necessary, and `FlowFieldCache` does one goal per tick.
      *
-     * It failed here first, at 42.9 ms. The roadmap's stated fallback is to
-     * chunk the recompute across frames per goal, "but measure first" — and the
-     * measurement said the cost was a tuple destructure in the innermost loop,
-     * running about 650 000 times per rebuild. Flattening it to three typed
-     * arrays brought it to 9.3 ms and no chunking was needed.
+     * What has a deadline is therefore the chunk, and this is it: one goal, well
+     * inside a 16.6 ms frame on the slowest machine that runs this suite. The
+     * full recompute is still measured below, because how long the queue takes
+     * to drain is worth knowing — it is simply no longer paid all at once.
      */
+    const result = benchFlowFieldChunk();
+    const perGoalMs = result.p95Ms / result.opsPerSample;
+    expect(perGoalMs, `measured ${perGoalMs.toFixed(3)} ms for one goal`).toBeLessThan(8);
+  });
+
+  it('reports how long a full recompute takes, without a frame deadline', () => {
+    // Chunked, so this is a duration rather than a hitch: at one goal per tick
+    // it spreads over as many ticks as there are goals — a second at twenty
+    // goals and 20 Hz. Asserted loosely, so a tenfold regression is caught and
+    // a slower runner is not.
     const result = benchFlowFieldRebuild();
     const perRebuildMs = result.p95Ms / result.opsPerSample;
-    expect(perRebuildMs, `measured ${perRebuildMs.toFixed(3)} ms per full rebuild`).toBeLessThan(12);
+    expect(perRebuildMs, `measured ${perRebuildMs.toFixed(3)} ms per full rebuild`).toBeLessThan(60);
   });
 
   it('serialises a save in under 8 ms', () => {
