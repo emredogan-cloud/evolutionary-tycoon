@@ -79,13 +79,13 @@ export class VehicleMotionSystem implements SimSystem {
     for (let slot = 0; slot < this.capacity; slot++) {
       if (!vehicles.isActive(slot)) continue;
       const lane = at(vehicles.lane, slot);
-      if (lane < laneCount) this.laneCounts[lane] = (this.laneCounts[lane] ?? 0) + 1;
+      if (lane < laneCount) this.laneCounts[lane] = at(this.laneCounts, lane) + 1;
     }
 
     let offset = 0;
     for (let lane = 0; lane < laneCount; lane++) {
       this.laneOffsets[lane] = offset;
-      offset += this.laneCounts[lane] ?? 0;
+      offset += at(this.laneCounts, lane);
     }
 
     // Second pass fills each bucket; `cursor` walks the offsets as it goes.
@@ -96,14 +96,14 @@ export class VehicleMotionSystem implements SimSystem {
       if (!vehicles.isActive(slot)) continue;
       const lane = at(vehicles.lane, slot);
       if (lane >= laneCount) continue;
-      const index = (starts[lane] ?? 0) + (cursor[lane] ?? 0);
+      const index = at(starts, lane) + at(cursor, lane);
       this.ordered[index] = slot;
-      cursor[lane] = (cursor[lane] ?? 0) + 1;
+      cursor[lane] = at(cursor, lane) + 1;
     }
 
     for (let lane = 0; lane < laneCount; lane++) {
-      const start = starts[lane] ?? 0;
-      const count = this.laneCounts[lane] ?? 0;
+      const start = at(starts, lane);
+      const count = at(this.laneCounts, lane);
       insertionSortDescending(this.ordered, start, count, vehicles.laneS);
     }
   }
@@ -113,8 +113,8 @@ export class VehicleMotionSystem implements SimSystem {
     const laneCount = this.lanes.laneCount;
 
     for (let lane = 0; lane < laneCount; lane++) {
-      const start = this.laneOffsets[lane] ?? 0;
-      const count = this.laneCounts[lane] ?? 0;
+      const start = at(this.laneOffsets, lane);
+      const count = at(this.laneCounts, lane);
 
       for (let i = 0; i < count; i++) {
         const slot = at(this.ordered, start + i);
@@ -172,7 +172,22 @@ export class VehicleMotionSystem implements SimSystem {
     // hand it straight back out and the loop would process the same index twice.
     for (let slot = 0; slot < this.capacity; slot++) {
       if (!vehicles.isActive(slot)) continue;
-      const lane = this.lanes.lane(at(vehicles.lane, slot));
+
+      /*
+       * A vehicle on a lane that no longer exists is removed rather than
+       * indexed. The ordering pass already skips it, so it would otherwise sit
+       * frozen and un-despawnable forever, holding a slot — and `lane()` throws,
+       * which took the whole tick loop down with it. Reachable from a save
+       * written before a lane was removed, or from a corrupted one.
+       */
+      const laneIndex = at(vehicles.lane, slot);
+      if (laneIndex >= this.lanes.laneCount) {
+        world.eventQueue.emitVehicleDespawned(at(vehicles.entityId, slot), laneIndex);
+        vehicles.despawn(slot);
+        continue;
+      }
+
+      const lane = this.lanes.lane(laneIndex);
       if (at(vehicles.laneS, slot) < lane.length) continue;
 
       world.eventQueue.emitVehicleDespawned(at(vehicles.entityId, slot), lane.index);

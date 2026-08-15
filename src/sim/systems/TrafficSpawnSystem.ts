@@ -7,6 +7,7 @@ import {
 } from '@config/traffic';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
+import { at, atIn } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
 import { DAY_CURVE_PEAK, dayCurveAt } from './TimeSystem';
 
@@ -33,7 +34,7 @@ import { DAY_CURVE_PEAK, dayCurveAt } from './TimeSystem';
 
 /** Vehicles per real second, before thinning. */
 function peakRatePerSecond(stage: number): number {
-  const stageMultiplier = STAGE_TRAFFIC_MULTIPLIER[stage] ?? 1;
+  const stageMultiplier = atIn(STAGE_TRAFFIC_MULTIPLIER, stage, 1);
   return (BASE_SPAWN_PER_REAL_MINUTE / 60) * DAY_CURVE_PEAK * stageMultiplier;
 }
 
@@ -46,8 +47,15 @@ export class TrafficSpawnSystem implements SimSystem {
     const traffic = world.traffic;
     const now = world.clock.simTimeMs;
     const until = now + deltaMs;
+    /*
+     * Defence in depth against a configuration mistake, not a reachable state:
+     * `Stage` is typed 1-4 and every multiplier is positive. If one were ever
+     * set to zero the exponential gap draw would be `-ln(1-u) / 0` = Infinity,
+     * the cursor would never advance, and the loop below would spin forever.
+     * Cheap to guard, and the failure it prevents is a frozen tab.
+     */
     const peak = peakRatePerSecond(world.progression.stage);
-    if (peak <= 0) return;
+    if (!(peak > 0)) return;
 
     /*
      * A cursor in the past would make the loop below walk forward from it in
@@ -149,7 +157,7 @@ export class TrafficSpawnSystem implements SimSystem {
     world.vehicles.accel[slot] = 0;
     world.stats.vehiclesSpawned++;
 
-    world.eventQueue.emitVehicleSpawned(world.vehicles.entityId[slot] ?? 0, laneIndex, archetype);
+    world.eventQueue.emitVehicleSpawned(at(world.vehicles.entityId, slot), laneIndex, archetype);
   }
 
   /** True when nothing sits within the minimum headway of the lane entrance. */
@@ -157,8 +165,8 @@ export class TrafficSpawnSystem implements SimSystem {
     const vehicles = world.vehicles;
     for (let slot = 0; slot < vehicles.capacity; slot++) {
       if (!vehicles.isActive(slot)) continue;
-      if (vehicles.lane[slot] !== laneIndex) continue;
-      if ((vehicles.laneS[slot] ?? 0) < SPAWN_MIN_HEADWAY_METRES) return false;
+      if (at(vehicles.lane, slot) !== laneIndex) continue;
+      if (at(vehicles.laneS, slot) < SPAWN_MIN_HEADWAY_METRES) return false;
     }
     return true;
   }
@@ -182,14 +190,14 @@ export function pickArchetype(roll: number, hour: number): number {
   const bucket = Math.floor(((hour % 24) + 24) % 24);
   let total = 0;
   for (const spec of ARCHETYPE_SPECS) {
-    total += spec.baseShare * (spec.hourBias[bucket] ?? 1);
+    total += spec.baseShare * atIn(spec.hourBias, bucket, 1);
   }
 
   let cursor = roll * total;
   for (let i = 0; i < ARCHETYPE_SPECS.length; i++) {
     const spec = ARCHETYPE_SPECS[i];
     if (spec === undefined) continue;
-    cursor -= spec.baseShare * (spec.hourBias[bucket] ?? 1);
+    cursor -= spec.baseShare * atIn(spec.hourBias, bucket, 1);
     if (cursor <= 0) return i;
   }
   // Floating-point drift can leave a sliver at the top of the range.

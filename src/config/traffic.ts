@@ -119,10 +119,3 @@ export const BRAKE_LIGHT_DECEL = 0.6;
 
 /** Sim clamps: a vehicle may never reverse, and never exceed this. */
 export const MAX_SPEED_METRES_PER_SECOND = 30;
-
-/**
- * The candidate time scales the Phase 5 open question weighs — GDD §25 S1.
- *
- * The decision is made by playing, not by picking from this list on paper.
- */
-export const TIME_SCALE_CANDIDATE_MINUTES: readonly number[] = [8, 12, 18];

@@ -99,13 +99,11 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   },
 ];
 
-export const ARCHETYPE_SEDAN = 0;
-export const ARCHETYPE_PICKUP = 1;
-export const ARCHETYPE_VAN = 2;
-export const ARCHETYPE_MOTORCYCLE = 3;
-
-export function archetypeSpec(index: number): ArchetypeSpec {
-  const spec = ARCHETYPE_SPECS[index];
-  if (spec === undefined) throw new RangeError(`Unknown archetype ${index}`);
-  return spec;
-}
+/*
+ * No per-archetype index constants and no lookup helper.
+ *
+ * Both existed briefly and neither had a caller: the systems index
+ * `ARCHETYPE_SPECS` directly with the value already in the store, and a named
+ * constant for each would be a second place to keep the order correct. The order
+ * is asserted in `tests/unit/sim/traffic/archetypes.test.ts` instead.
+ */

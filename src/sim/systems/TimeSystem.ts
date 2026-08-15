@@ -1,4 +1,5 @@
 import { DAY_CURVE, HOURS_IN_CURVE } from '@config/traffic';
+import { atIn } from '../math/typedArray';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 
@@ -40,8 +41,8 @@ export function dayCurveAt(hour: number): number {
   const highIndex = (lowIndex + 1) % HOURS_IN_CURVE;
   const t = wrapped - lowIndex;
 
-  const low = DAY_CURVE[lowIndex] ?? 0;
-  const high = DAY_CURVE[highIndex] ?? 0;
+  const low = atIn(DAY_CURVE, lowIndex);
+  const high = atIn(DAY_CURVE, highIndex);
   return (low + (high - low) * t) / CURVE_MEAN;
 }
 

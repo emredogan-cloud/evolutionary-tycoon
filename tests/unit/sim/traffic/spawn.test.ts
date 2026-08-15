@@ -50,16 +50,21 @@ describe('Poisson determinism', () => {
     expect(a.at).not.toEqual(b.at);
   });
 
+  /*
+   * 1.15 million ticks: about a second normally, and ~45 s under v8 coverage
+   * instrumentation. The timeout is raised for this one test rather than the
+   * sample size being cut to fit — the sample size is the point of the test.
+   */
   it('holds over 10 000 spawns', () => {
-    // The roadmap asks for 10 000 samples explicitly.
-    // 420 real minutes yields ~9 100 spawns once refusals are accounted for, so
-    // the window is sized from the measured rate rather than the nominal one.
+    // The roadmap asks for 10 000 samples explicitly. 420 real minutes yields
+    // ~9 100 once refusals are accounted for, so the window is sized from the
+    // measured rate rather than the nominal one.
     const ticks = TICKS_PER_MINUTE * 480;
     const first = spawnTimeline(777, ticks);
     expect(first.at.length).toBeGreaterThanOrEqual(10_000);
     const second = spawnTimeline(777, ticks);
     expect(second.at).toEqual(first.at);
-  });
+  }, 120_000);
 
   it('advances the same way in one call or many', () => {
     // `advance(n)` must be exactly n `tick()`s — a spawn system that batched by

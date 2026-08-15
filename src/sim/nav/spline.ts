@@ -11,6 +11,8 @@
  * per vehicle per tick.
  */
 
+import { at } from '../math/typedArray';
+
 export interface Point2 {
   x: number;
   y: number;
@@ -64,8 +66,8 @@ export class Polyline {
 
     let total = 0;
     for (let i = 0; i < points.length - 1; i++) {
-      const dx = (this.xs[i + 1] ?? 0) - (this.xs[i] ?? 0);
-      const dy = (this.ys[i + 1] ?? 0) - (this.ys[i] ?? 0);
+      const dx = at(this.xs, i + 1) - at(this.xs, i);
+      const dy = at(this.ys, i + 1) - at(this.ys, i);
       const segment = Math.hypot(dx, dy);
       if (segment === 0) {
         throw new RangeError(`lane polyline has a zero-length segment at index ${i}`);
@@ -94,13 +96,13 @@ export class Polyline {
     const clamped = s <= 0 ? 0 : s >= this.length ? this.length : s;
     const segment = this.segmentAt(clamped);
 
-    const start = this.cumulative[segment] ?? 0;
-    const tx = this.tangentXs[segment] ?? 1;
-    const ty = this.tangentYs[segment] ?? 0;
+    const start = at(this.cumulative, segment);
+    const tx = at(this.tangentXs, segment);
+    const ty = at(this.tangentYs, segment);
     const along = clamped - start;
 
-    out.x = (this.xs[segment] ?? 0) + tx * along;
-    out.y = (this.ys[segment] ?? 0) + ty * along;
+    out.x = at(this.xs, segment) + tx * along;
+    out.y = at(this.ys, segment) + ty * along;
     out.tangentX = tx;
     out.tangentY = ty;
     return out;
@@ -118,7 +120,7 @@ export class Polyline {
     let high = last;
     while (low < high) {
       const mid = (low + high + 1) >> 1;
-      if ((this.cumulative[mid] ?? 0) <= s) low = mid;
+      if (at(this.cumulative, mid) <= s) low = mid;
       else high = mid - 1;
     }
     return low > last ? last : low;

@@ -24,6 +24,19 @@ export interface ActorView extends DepthSortable {
   screenY: number;
   /** False for a leased-but-unused slot. */
   active: boolean;
+  /** Unit world-space facing, from the simulation. Phase 5. */
+  headingX: number;
+  headingY: number;
+  /** Decelerating hard enough to light the brakes. Phase 5. */
+  braking: boolean;
+  /**
+   * Distance this actor has travelled, in metres.
+   *
+   * Drives the suspension bob. Accumulated by the bridge rather than taken from
+   * the simulation: it is presentation state, and a sine driven by distance
+   * rather than by time is what keeps a stopped vehicle still.
+   */
+  travelled: number;
 }
 
 function createActorView(): ActorView {
@@ -37,6 +50,10 @@ function createActorView(): ActorView {
     screenX: 0,
     screenY: 0,
     active: false,
+    headingX: 1,
+    headingY: 0,
+    braking: false,
+    travelled: 0,
   };
 }
 

@@ -42,3 +42,7 @@ public/asset-manifest.json
 
 # generated review artefacts
 assets/contact-sheets/
+
+# Transient fixtures written by tests/unit/architecture/enforcement.test.ts to
+# prove the architecture rules fire. Deleted immediately; never committed.
+src/**/__fixture__/
