@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -180,17 +180,74 @@ describe('regression against the recorded baseline', () => {
 
   it('reports the current numbers', () => {
     const report = benchOnce();
+    const candidate = formatBaselineJson(
+      report,
+      process.env['BENCH_RECORDED_AT'] ?? 'unrecorded',
+      process.env['BENCH_ENVIRONMENT'] ?? 'unrecorded',
+    );
+
     // Printed so the CI log carries the measurement, not just a pass/fail, and
     // so a baseline can be recorded from a CI run rather than a local one.
     console.log(`\n${formatReport(report)}\n`);
-    console.log(
-      `--- tools/bench/baseline.json candidate ---\n${formatBaselineJson(
-        report,
-        process.env['BENCH_RECORDED_AT'] ?? 'unrecorded',
-        process.env['BENCH_ENVIRONMENT'] ?? 'unrecorded',
-      )}\n--- end candidate ---\n`,
-    );
+    console.log(`--- tools/bench/baseline.json candidate ---\n${candidate}\n--- end candidate ---\n`);
+
+    /*
+     * `pnpm bench:record` writes the same block rather than asking a human to
+     * find it in the log and paste it. Copying it by hand is how this file
+     * ended up truncated once, and a partial baseline.json does not fail as a
+     * bad baseline — `readBaseline` throws "Unexpected end of JSON input" from
+     * a collection step, which reads as a broken checkout.
+     *
+     * Opt-in via env var, so an ordinary run can never rewrite the thing it is
+     * being measured against. Same shape as `test:visual:update`.
+     */
+    if (process.env['BENCH_RECORD'] === '1') {
+      writeFileSync(BASELINE_PATH, `${candidate}\n`, 'utf8');
+      console.log(`Recorded ${BASELINE_PATH}`);
+    }
+
     expect(report.timings.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Every benchmark must be big enough for its own ratio to mean something.
+   *
+   * Normalising by `calibrationMs` cancels machine speed, but it cannot rescue a
+   * timed region so short that scheduler jitter and cache state dominate it. Both
+   * times this gate has cried wolf, that was the cause, and the numbers are
+   * consistent enough to turn into a rule:
+   *
+   * | benchmark                       | units | observed across CI runs |
+   * | ------------------------------- | ----- | ----------------------- |
+   * | depth sort, 1 sort per sample   | 0.010 | 28% swing               |
+   * | spawn/despawn, 10 rounds        | 0.050 | 0.043-0.085, a 2x swing |
+   * | world snapshot + JSON           | 0.296 | 2.3%                    |
+   * | depth sort, 100 sorts per sample| 1.219 | 0.65%                   |
+   * | 1000 empty ticks                | 1.495 | 1.5%                    |
+   *
+   * Everything at or above a quarter of a calibration unit has held; both cases
+   * that misfired were far below it. So the floor is asserted here rather than
+   * left as a convention, because the failure it prevents does not look like a
+   * measurement bug — it looks like a regression, and it arrives on someone
+   * else's pull request.
+   *
+   * The fix for a benchmark that trips this is always to repeat the work inside
+   * the sample and divide, never to loosen the 15% threshold.
+   */
+  const MIN_STABLE_CALIBRATION_UNITS = 0.25;
+
+  it('measures each benchmark over a long enough window to be comparable', () => {
+    const report = benchOnce();
+    const tooSmall = report.timings
+      .map((timing) => ({ name: timing.name, units: timing.minMs / report.calibrationMs }))
+      .filter((entry) => entry.units < MIN_STABLE_CALIBRATION_UNITS)
+      .map((entry) => `${entry.name}: ${entry.units.toFixed(4)} calibration units`);
+
+    expect(
+      tooSmall,
+      'Too short to normalise stably — repeat the work inside the sample and ' +
+        `divide by the repeat count, as benchDepthSort and benchStoreChurn do.\n${tooSmall.join('\n')}`,
+    ).toEqual([]);
   });
 
   /**
@@ -208,7 +265,15 @@ describe('regression against the recorded baseline', () => {
    * threshold from TESTING_STRATEGY §6 is unchanged; only the quantity being
    * compared is chosen to be comparable.
    */
-  it.runIf(baseline !== null)('has not regressed by more than 15%', () => {
+  /*
+   * Not compared while recording: a baseline is being replaced in this very
+   * process, so gating against the outgoing one tests nothing and would fail
+   * `pnpm bench:record` whenever the number it is recording has moved — which
+   * is the only reason to run it.
+   */
+  const recording = process.env['BENCH_RECORD'] === '1';
+
+  it.runIf(baseline !== null && !recording)('has not regressed by more than 15%', () => {
     if (baseline === null) return;
     expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMsPerCalibration');
 

@@ -245,12 +245,23 @@ export function benchEventFlush(): TimingResult {
   });
 }
 
+/**
+ * Spawn/despawn churn through the store's free list.
+ *
+ * 250 rounds rather than the obvious 10, for measurement reasons only — see
+ * `MIN_STABLE_CALIBRATION_UNITS` in `tests/perf/sim.bench.test.ts`. At 10 rounds
+ * the timed region was ~60 µs and the normalised ratio swung between 0.043 and
+ * 0.085 across CI runs of near-identical code, which is a 2x false regression on
+ * a gate whose threshold is 15%.
+ */
+const CHURN_ROUNDS = 250;
+
 export function benchStoreChurn(): TimingResult {
   const world = new World({ seed: 1 });
   const capacity = world.vehicles.capacity;
 
-  return timeIt('vehicle spawn + despawn cycles', capacity * 10, () => {
-    for (let round = 0; round < 10; round++) {
+  return timeIt('vehicle spawn + despawn cycles', capacity * CHURN_ROUNDS, () => {
+    for (let round = 0; round < CHURN_ROUNDS; round++) {
       for (let i = 0; i < capacity; i++) world.vehicles.spawn(i + 1);
       for (let i = 0; i < capacity; i++) world.vehicles.despawn(i);
     }
