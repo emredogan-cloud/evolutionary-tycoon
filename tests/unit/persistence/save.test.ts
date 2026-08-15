@@ -51,7 +51,7 @@ describe('SaveManager.compose', () => {
   it('produces a file that validates against the current schema', () => {
     const file = SaveManager.compose(snapshotAfter(100), META);
     expect(currentSaveSchema.safeParse(file).success).toBe(true);
-    expect(file.schemaVersion).toBe(3);
+    expect(file.schemaVersion).toBe(4);
     expect(file.buildSha).toBe('abc1234');
   });
 
@@ -101,7 +101,7 @@ describe('SaveManager round trip', () => {
       checksum,
       ...world
     } = result.save;
-    expect(schemaVersion).toBe(3);
+    expect(schemaVersion).toBe(4);
     expect(buildSha).toBe(META.buildSha);
     expect(createdAt).toBe(META.nowMs);
     expect(lastSeenAt).toBe(META.nowMs);
@@ -247,7 +247,7 @@ describe('SaveManager import and export', () => {
     const file = SaveManager.compose(snapshotAfter(250), META);
     const json = SaveManager.exportJson(file);
 
-    expect(json).toContain('\n  "schemaVersion": 3');
+    expect(json).toContain('\n  "schemaVersion": 4');
 
     const imported = manager.importJson(json);
     expect(imported.ok).toBe(true);

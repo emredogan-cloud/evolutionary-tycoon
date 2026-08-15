@@ -56,6 +56,47 @@ export const HOURS_IN_CURVE = 24;
  */
 export const BASE_SPAWN_PER_REAL_MINUTE = 24;
 
+/**
+ * Decorative traffic, as a multiple of the converting-eligible rate.
+ *
+ * **Approved by executive decision, 2026-08-15 (option B of PHASE_5_REPORT §4.3).**
+ *
+ * The problem it solves, measured: at 24 arrivals per real minute over a 36 m
+ * lane at 13.9 m/s, the expected occupancy is 1.04 vehicles and the road is
+ * completely empty 41% of the time. There is never a follower, so the IDM
+ * accordion wave — the reason that model was chosen — never runs in normal play.
+ *
+ * The economy is calibrated on 24/min, so that number does not move. Instead the
+ * road carries additional vehicles that behave identically in every way except
+ * one: their conversion probability is permanently zero. They queue, brake,
+ * propagate waves and occupy road space, and Phase 6 never offers them the
+ * restaurant.
+ *
+ * The two populations are one Poisson process with each arrival independently
+ * *marked*, which is exact: marking a Poisson process of rate R with probability
+ * p yields an exact Poisson process of rate pR. So converting-eligible arrivals
+ * remain exactly Poisson(24/min) while the road sees Poisson(24 x (1 + this)).
+ */
+export const DECORATIVE_TRAFFIC_MULTIPLIER = 4;
+
+/*
+ * Tuned by measurement, not by taste. A full game day at each setting, seed
+ * 424242, reading mean occupancy / share of ticks with a follower / delivered
+ * convertible rate:
+ *
+ *   no decorative traffic   1.05  ·   ~0%  ·  21.2/min
+ *   x3, headway 34          1.76  ·  26.6% ·  20.3/min
+ *   x4, headway 28          2.05  ·  36.6% ·  19.5/min   <- chosen
+ *   x4, headway 22          2.26  ·  47.5% ·  18.3/min
+ *   x6, headway 24          2.34  ·  50.1% ·  18.0/min
+ *
+ * The trade is a hard physical ceiling rather than a tuning preference: a 36 m
+ * lane at ~13.9 m/s carries about 45 vehicles per real minute in total, so every
+ * decorative vehicle admitted is one fewer convertible vehicle the road can
+ * deliver. x4 / 28 m is the point that roughly doubles occupancy and gives
+ * followers a third of the time while costing the least convertible throughput.
+ */
+
 /** Multiplier per evolution stage. Stage 1 is the baseline. ECONOMY_DESIGN §3. */
 export const STAGE_TRAFFIC_MULTIPLIER: readonly number[] = [1, 1, 40 / 24, 60 / 24, 84 / 24];
 
@@ -67,6 +108,25 @@ export const STAGE_TRAFFIC_MULTIPLIER: readonly number[] = [1, 1, 40 / 24, 60 / 
  * what makes a jam self-limiting instead of producing a pile-up at the entrance.
  */
 export const SPAWN_MIN_HEADWAY_METRES = 12;
+
+/**
+ * The same, for decorative traffic — deliberately much larger.
+ *
+ * Decorative vehicles yield road space to convertible ones. Processing order
+ * within a tick is not enough on its own: a decorative vehicle that entered two
+ * seconds ago is already sitting on the lane head, and the convertible arrival
+ * behind it is refused regardless of who was considered first.
+ *
+ * Measured without this: at a 3x decorative multiplier the convertible rate fell
+ * from 24/min to **12.7/min**, because the road's throughput capacity (~45/min
+ * over a 36 m lane) is barely twice the economy's demand and decorative traffic
+ * was consuming the difference.
+ *
+ * A larger headway makes decorative traffic *polite* — it only joins when there
+ * is plenty of room, so the gap between 12 m and this value is reserved for the
+ * traffic the economy actually depends on.
+ */
+export const DECORATIVE_MIN_HEADWAY_METRES = 28;
 
 /** Speed a vehicle enters at, as a fraction of its desired speed. */
 export const SPAWN_SPEED_FRACTION = 0.9;

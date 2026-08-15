@@ -32,6 +32,16 @@ export class VehicleStore {
   /** Which lane of the `LaneGraph` the vehicle is travelling on. */
   readonly lane: Uint8Array;
   /**
+   * 1 when this vehicle can never convert — decorative traffic.
+   *
+   * It drives, brakes, queues and propagates waves exactly like any other
+   * vehicle; the only difference is that Phase 6's conversion system does not
+   * offer it the restaurant. Approved by executive decision as option B of
+   * PHASE_5_REPORT §4.3, so that the road can look busy without moving the
+   * 24-per-minute demand figure the economy is calibrated on.
+   */
+  readonly decorative: Uint8Array;
+  /**
    * This vehicle's own free-road speed, m/s.
    *
    * Per vehicle rather than per archetype: the spread around the archetype's
@@ -64,6 +74,7 @@ export class VehicleStore {
     this.state = new Uint8Array(capacity);
     this.archetype = new Uint8Array(capacity);
     this.lane = new Uint8Array(capacity);
+    this.decorative = new Uint8Array(capacity);
     this.desiredSpeed = new Float32Array(capacity);
     this.accel = new Float32Array(capacity);
 
@@ -90,6 +101,7 @@ export class VehicleStore {
     this.state[slot] = 0;
     this.archetype[slot] = 0;
     this.lane[slot] = 0;
+    this.decorative[slot] = 0;
     this.desiredSpeed[slot] = 0;
     this.accel[slot] = 0;
     this.live++;
@@ -105,6 +117,7 @@ export class VehicleStore {
     this.state[slot] = 0;
     this.archetype[slot] = 0;
     this.lane[slot] = 0;
+    this.decorative[slot] = 0;
     this.desiredSpeed[slot] = 0;
     this.accel[slot] = 0;
     this.freeStack[this.freeTop] = slot;
@@ -140,6 +153,7 @@ export class VehicleStore {
       hasher.writeU8(at(this.state, slot));
       hasher.writeU8(at(this.archetype, slot));
       hasher.writeU8(at(this.lane, slot));
+      hasher.writeU8(at(this.decorative, slot));
       hasher.writeF64(at(this.desiredSpeed, slot));
       /*
        * `accel` is deliberately NOT hashed. It is derived state — recomputed

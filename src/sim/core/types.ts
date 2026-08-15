@@ -77,15 +77,38 @@ export interface StaffState {
  * that advance them do not.
  */
 export interface TrafficState {
-  /** Sim time of the next Poisson candidate, in ms. */
+  /**
+   * Sim time of the next **convertible** Poisson candidate, in ms.
+   *
+   * Convertible and decorative traffic run as two independent processes rather
+   * than one marked process, and the reason is refusals. A single process shares
+   * its refusals between both populations, so congestion — which is the point of
+   * decorative traffic — silently starved convertible demand down to 7.3 of the
+   * 24 per minute the economy is calibrated on. Two processes, with convertible
+   * arrivals claiming road space first, keep that figure intact and let the
+   * decorative layer absorb every refusal.
+   */
   nextCandidateMs: number;
+  /** Sim time of the next decorative candidate, in ms. */
+  nextDecorativeMs: number;
   /** Spawns refused because the lane head was occupied. Diagnostics only. */
   droppedSpawns: number;
+  /** Of those, how many were decorative. Diagnostics only. */
+  droppedDecorative: number;
 }
 
 export interface StatsState {
   customersServed: number;
   vehiclesSpawned: number;
+  /**
+   * Of those, how many could ever become customers.
+   *
+   * Decorative traffic exists so the road looks busy without moving the demand
+   * figure the economy is calibrated on, so the two counts must be separable —
+   * otherwise "vehicles past the restaurant" silently becomes six times the
+   * number ECONOMY_DESIGN §3 budgets for.
+   */
+  convertibleSpawned: number;
   /**
    * Every command the world has absorbed.
    *

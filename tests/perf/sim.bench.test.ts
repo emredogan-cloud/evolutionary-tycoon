@@ -69,9 +69,25 @@ describe('simulation performance budgets', () => {
   });
 
   it('allocates essentially nothing per tick in steady state', () => {
-    // Budget is 0 B/tick. The tolerance absorbs V8 bookkeeping that is not the
-    // simulation's doing; a real per-tick allocation is orders of magnitude
-    // above it — a single object literal per tick is ~50 B.
+    /*
+     * **32 B/tick, raised from 8 by executive decision on 2026-08-15.**
+     *
+     * The original 8 was measured in Phase 2 when all eighteen system slots were
+     * no-ops, so "essentially nothing" was calibrated against a pipeline that did
+     * nothing. Phase 5's traffic systems measured 29 B/tick and the source could
+     * not be isolated — each of the motion system's three passes measures 0.17
+     * B/tick alone while the three together measure 16, and no individual
+     * operation inside them allocates on its own (PHASE_5_REPORT §7.2).
+     *
+     * The owner accepted it for the MVP on the arithmetic: 29 B/tick at 20 Hz is
+     * 580 B/s, about 2 MB an hour, which is a minor collection every few minutes
+     * — far below the frame stutter this budget exists to prevent.
+     *
+     * The headroom is deliberately thin. This is a ceiling that was raised once
+     * with a reason written down, not a number that moves whenever it is
+     * inconvenient: if a later phase pushes past 32, the answer is to find the
+     * allocation, not to raise it again.
+     */
     //
     // The harness reports the minimum of several samples, because the noise it
     // is separating out is one-sided: runtime bookkeeping only ever adds to a
@@ -85,7 +101,7 @@ describe('simulation performance budgets', () => {
       result.bytesPerTick,
       `measured ${result.bytesPerTick.toFixed(2)} B/tick (worst sample ` +
         `${result.worstBytesPerTick.toFixed(2)}) over ${result.ticks} ticks x ${result.samples} samples`,
-    ).toBeLessThan(8);
+    ).toBeLessThan(32);
   });
 
   it('hashes a populated world fast enough to run in a debug overlay', () => {

@@ -139,7 +139,12 @@ describe('determinism — save and resume', () => {
 
     restoreWorld(dirty.world, snapshot);
 
-    expect(dirty.world.hash()).toBe(clean.world.hash());
+    // Snapshot-to-snapshot, for the same reason as the tests above: the clean
+    // world has vehicles on the road at tick 200 and the save deliberately does
+    // not carry them, so a full-hash comparison would be asserting that
+    // transient traffic survives a reload — which is the opposite of the design.
+    expect(snapshotWorld(dirty.world)).toEqual(snapshot);
+    expect(dirty.world.vehicles.activeCount).toBe(0);
     expect(dirty.world.progression.unlocks).toEqual([]);
     expect(dirty.world.layout.placed).toEqual([]);
     expect(dirty.world.layout.upgrades.size).toBe(0);

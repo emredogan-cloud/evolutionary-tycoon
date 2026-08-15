@@ -70,9 +70,19 @@ export class World {
    * game resumed mid-day that re-rolled its next arrival would produce different
    * traffic from the same seed, which breaks Day Replay.
    */
-  readonly traffic: TrafficState = { nextCandidateMs: 0, droppedSpawns: 0 };
+  readonly traffic: TrafficState = {
+    nextCandidateMs: 0,
+    nextDecorativeMs: 0,
+    droppedSpawns: 0,
+    droppedDecorative: 0,
+  };
   readonly staff: StaffState = { hired: [] };
-  readonly stats: StatsState = { customersServed: 0, vehiclesSpawned: 0, commandsApplied: 0 };
+  readonly stats: StatsState = {
+    customersServed: 0,
+    vehiclesSpawned: 0,
+    convertibleSpawned: 0,
+    commandsApplied: 0,
+  };
   readonly settings: SettingsState = {
     audio: { master: 1, music: 1, sfx: 1, muted: false },
     a11y: { reducedMotion: false, highContrast: false },
@@ -158,6 +168,7 @@ export class World {
      * something that cannot change an outcome.
      */
     h.writeF64(this.traffic.nextCandidateMs);
+    h.writeF64(this.traffic.nextDecorativeMs);
     this.customers.hashInto(h, writeActor);
     this.employees.hashInto(h, writeActor);
     this.orders.hashInto(h, writeOrder);
@@ -188,6 +199,7 @@ export class World {
 
     h.writeU32(this.stats.customersServed);
     h.writeU32(this.stats.vehiclesSpawned);
+    h.writeU32(this.stats.convertibleSpawned);
     h.writeU32(this.stats.commandsApplied);
 
     h.writeF64(this.settings.audio.master);
@@ -228,12 +240,15 @@ export class World {
     this.layout.upgrades.clear();
 
     this.traffic.nextCandidateMs = 0;
+    this.traffic.nextDecorativeMs = 0;
     this.traffic.droppedSpawns = 0;
+    this.traffic.droppedDecorative = 0;
 
     this.staff.hired.length = 0;
 
     this.stats.customersServed = 0;
     this.stats.vehiclesSpawned = 0;
+    this.stats.convertibleSpawned = 0;
     this.stats.commandsApplied = 0;
 
     this.settings.audio.master = 1;
