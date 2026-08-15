@@ -3,7 +3,7 @@
 **Batch:** P5 Traffic · P6 Customer System · P7 Navigation & Pathfinding
 **Date:** 2026-08-15
 **Result:** ✅ **P5 PASS · P6 PASS · P7 PASS**
-**Tests:** 727 → **907**
+**Tests:** 727 → **911**
 
 ---
 
@@ -112,8 +112,11 @@ because it makes the gate stop depending on whose laptop runs it.
 
 **Flow-field recompute, 42.9 ms against 12 ms (P7).** The roadmap's stated
 fallback is to chunk it across frames, _"but measure first"_. The measurement
-said the cost was a tuple destructure running 650 000 times per rebuild. Three
-flat typed arrays later it is 9.3 ms, no chunking, nothing computed differently.
+said the cost was a tuple destructure running 650 000 times per rebuild; three
+flat typed arrays took it to 9.8 ms and it passed. **Then CI measured 19.7 ms**
+— which is not a measurement error to normalise away but the honest statement
+that on some machines it exceeds the threshold. So it is chunked, one goal per
+tick, and no frame pays more than 0.46 ms of it.
 
 ---
 

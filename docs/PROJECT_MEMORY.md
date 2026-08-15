@@ -473,12 +473,15 @@ deadlock testi temiz.**
 | Rapor          | [PHASE_7_REPORT.md](phases/PHASE_7_REPORT.md)        |
 | Batch raporu   | [BATCH_5_7_REPORT.md](phases/BATCH_5_7_REPORT.md)    |
 
-**Kaçırılan bütçe, ertelenmedi — düzeltildi.** Roadmap'in yazdığı ölçekte
-(64×64, 20 hedef) tam yeniden hesaplama **42.9 ms**'ydi, bütçe 12 ms. Roadmap'in
-kendi B planı "gerekirse kareler arasına böl, **ama önce ölç**" diyor. Ölçüm,
-maliyetin en iç döngüdeki tuple destructure olduğunu söyledi — yeniden hesaplama
-başına ~650 000 kez. Üç düz typed array: **9.3 ms**, bölme gerekmedi, hesaplanan
-hiçbir şey değişmedi.
+**Kaçırılan bütçe — üç turda çözüldü, hiçbiri bütçeyi oynatarak değil.**
+Roadmap'in yazdığı ölçekte (64×64, 20 hedef) tam yeniden hesaplama **42.9 ms**,
+bütçe 12 ms. Roadmap'in kendi B planı: "gerekirse hedef başına kareler arasına
+böl, **ama önce ölç**". (1) Ölçüm maliyeti en iç döngüdeki tuple destructure'da
+buldu (~650 000 kez/yeniden hesaplama) → düz typed array'lerle **9.8 ms**,
+yerelde geçti. (2) **CI 19.7 ms ölçtü** — bu normalize edilecek bir ölçüm hatası
+değil, "bazı makinelerde eşiği aşıyor" demenin dürüst hâli. (3) Bu yüzden
+**bölündü**: tick başına bir hedef, kare başına en fazla **0.46 ms**. Eski
+alanlar kuyruk boşalırken silinmiyor — bayat, yanlış değil.
 
 **Ölçümle bulunan beş kusur** (PHASE_7_REPORT §4). En sessiz ikisi: park
 kapıları araç merkezinden 1.2 m'ye yazılmıştı — araç 1.9 m geniş, 0.5 m grid

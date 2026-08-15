@@ -2,7 +2,7 @@
 
 **Phase:** 7 — people walk
 **Date:** 2026-08-15
-**Result:** ✅ **PASS** — 907 tests green, all budgets met, deadlock harness clean over 500 scenarios
+**Result:** ✅ **PASS** — 911 tests green, frame deadline met by chunking, deadlock harness clean over 500 scenarios
 **Branch:** `phase/7-navigation`
 
 ---
@@ -14,10 +14,10 @@ backwards from every named goal, and agents follow it, steer around each other
 and queue at the counter. The deadlock harness runs 500 randomised
 configurations for 2 000 ticks each and finds no state where nobody can move.
 
-907 tests pass. Lint, type-check, dependency-cruiser, knip and format are clean.
-Both Phase 7 budgets are met with room: the crowded tick at **0.234 ms against
-2.5 ms**, and a full flow-field recompute at **9.75 ms against 12 ms** — the
-latter measured at the scale the budget is written for, which Stage 1 is not.
+911 tests pass. Lint, type-check, dependency-cruiser, knip and format are clean.
+The crowded tick costs **0.234 ms against a 2.5 ms budget**. The flow-field
+recompute is **chunked one goal per tick**, so no frame pays for more than
+0.46 ms of it — see §3, which is the more interesting half of this phase.
 
 **One definition-of-done item is not met**, and for the same reason as Phase 6's:
 the roadmap asks the implementer to _"watch 30 pedestrians navigate a crowded
@@ -68,22 +68,45 @@ only negative feedback loop by way of a grid detail.
 
 ---
 
-## 3. The budget that was missed, and fixed rather than deferred
+## 3. The budget that was missed — measured, optimised, then chunked anyway
 
-Measured at the scale the roadmap writes it for — 64×64 cells, 20 goals — a full
-recompute took **42.9 ms against a 12 ms budget**.
+The roadmap gives a requirement, a threshold and a fallback:
 
-The roadmap's stated fallback is to chunk the recompute across frames per goal,
-_"but measure first"_. The measurement said the cost was a **tuple destructure in
-the innermost loop**: `for (const [dx, dy, step] of NEIGHBOURS)` runs about
-650 000 times per rebuild. Three flat typed arrays instead, and the same
-computation takes **9.3 ms**. No chunking was needed and nothing is computed
-differently.
+> the recompute must not block a frame … 12 ms for all 20 goals is the budget …
+> if a full recompute would exceed one frame, chunk it across frames per goal —
+> **but measure first**.
 
-Stage 1's own six goals over 48×36 cells rebuild in about 2 ms. The benchmark
-deliberately does not measure that: reporting it against a budget written for
-four times the work would have looked four times better than the requirement
-asked for.
+That instruction was followed literally, and it took three rounds.
+
+**42.9 ms.** Measured at the scale the budget is written for — 64×64 cells and
+20 goals, which Stage 1 is not: it has 48×36 cells and six goals, and reporting
+_that_ against a budget written for four times the work would have looked four
+times better than the requirement asked for.
+
+**9.8 ms.** The measurement said the cost was a **tuple destructure in the
+innermost loop** — `for (const [dx, dy, step] of NEIGHBOURS)`, about 650 000
+times per rebuild. Three flat typed arrays instead, nothing computed
+differently, and it passed.
+
+**19.7 ms on CI.** It passed on a developer machine and not on a runner. That is
+not a measurement error to be normalised away: it is the honest statement that
+on some machines this exceeds the threshold, and the roadmap's rule is that
+exceeding it means chunking.
+
+**So it is chunked.** `rebuild` queues the goals and rebuilds only the grid,
+which is cheap and which everything else reads. `NavigationSystem` drains one
+goal per tick, spreading a full recompute over as many ticks as there are goals
+— one second at twenty goals and 20 Hz. **No frame pays more than 0.46 ms.**
+
+Existing fields are deliberately not cleared while the queue drains. They are
+stale, not wrong: each routes around every obstacle that existed a moment ago
+and knows nothing about the one just placed, which for a fraction of a second is
+a far smaller error than leaving every agent with no route at all.
+
+The budget moved _with_ the requirement rather than away from it. What has a
+deadline is now the chunk; the full recompute is reported as a duration, because
+how long the queue takes to drain is worth knowing and is no longer paid at
+once.
 
 ---
 
@@ -202,7 +225,7 @@ same two machines:
 | `render/dollRig.test.ts`           | 14    | Phase from distance, amplitude from speed, limb ranges            |
 | `integration/nav/deadlock.test.ts` | 5     | 500 × 2 000 ticks, a stacked crowd, co-located agents, separation |
 
-**Total: 907 tests**, up from 834 at the end of Phase 6. Coverage 97.15%
+**Total: 911 tests**, up from 834 at the end of Phase 6. Coverage 97.15%
 statements, 87.77% branches; no threshold moved.
 
 ### 7.1 What the deadlock harness actually asserts
