@@ -6,7 +6,12 @@ import { Sim } from '../../src/sim/core/Sim';
 import { snapshotWorld } from '../../src/sim/core/snapshot';
 import { World } from '../../src/sim/core/World';
 import { STAGE1_LAYOUT } from '../../src/config/layouts/stage1';
-import { STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE } from '../../src/sim/ai/fsm/customerFsm';
+import type { StageLayout } from '../../src/config/layouts/stage1';
+import {
+  STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE,
+  STATE_WALKING_TO_DOOR as CUSTOMER_WALKING_STATE,
+} from '../../src/sim/ai/fsm/customerFsm';
+import { FlowFieldCache } from '../../src/sim/nav/FlowFieldCache';
 
 /**
  * Headless simulation benchmark.
@@ -353,6 +358,102 @@ export function benchPopulatedTick(): TimingResult {
   );
 }
 
+/**
+ * A full flow-field recompute — GAME_EXECUTION_ROADMAP Phase 7, 12 ms for every
+ * goal.
+ *
+ * This is the number the whole approach rests on. Flow fields are cheap to *use*
+ * and expensive to *build*, and the trade only works because a build happens
+ * when the player places something rather than in the game loop. If it were over
+ * a frame the roadmap's fallback is to chunk it per goal across frames — "but
+ * measure first", which is what this is.
+ */
+export function benchFlowFieldRebuild(): TimingResult {
+  const cache = new FlowFieldCache(budgetScaleLayout());
+  const placed = [{ objectId: 'ph-prop-tall', x: 7, y: 12, z: 0 }];
+  const rebuilds = 8;
+
+  return timeIt('flow field rebuild, 64x64 x 20 goals', rebuilds, () => {
+    for (let i = 0; i < rebuilds; i++) {
+      // Alternating, so no rebuild can be skipped as a repeat of the last.
+      cache.rebuild(i % 2 === 0 ? placed : []);
+    }
+  });
+}
+
+/**
+ * A synthetic layout at the size the budget is written against.
+ *
+ * The roadmap's figure is "64×64 grid, 20 goals, full recompute ≤ 12 ms".
+ * Stage 1 is 48×36 cells with six goals, so measuring it and reporting the
+ * result against that budget would be comparing two different questions — and
+ * the answer would look four times better than the requirement asked for.
+ *
+ * 32 by 32 metres is 64 by 64 cells at the authored resolution, and eighteen
+ * bays plus the counter and the exit make twenty goals. The road is removed so
+ * the whole grid is reachable, which is the worst case for a Dijkstra: nothing
+ * prunes the frontier.
+ */
+function budgetScaleLayout(): StageLayout {
+  const bays = [];
+  for (let i = 0; i < 18; i++) {
+    const x = 2 + (i % 6) * 5;
+    const y = 4 + Math.floor(i / 6) * 9;
+    bays.push({
+      id: `p${String(i)}`,
+      x,
+      y,
+      heading: { x: 1, y: 0 },
+      door: { x, y: y + 1.5 },
+    });
+  }
+
+  return {
+    ...STAGE1_LAYOUT,
+    lot: { minX: 0, minY: 0, maxX: 32, maxY: 32 },
+    road: { ...STAGE1_LAYOUT.road, lanes: [] },
+    statics: [],
+    parking: bays,
+    counter: { x: 16, y: 30 },
+    pullIn: { x: 16, y: 28 },
+  };
+}
+
+/**
+ * A tick with the Phase 7 stress target on it — 60 pedestrians and 120 vehicles.
+ *
+ * Separation is O(n²) over the pedestrians, so this is the measurement that
+ * decides whether that was an acceptable choice. Sixty is the roadmap's figure
+ * and is far past what Stage 1 produces on its own, which is why the crowd is
+ * imposed rather than waited for.
+ */
+export function benchCrowdedTick(): TimingResult {
+  const sim = buildPeakLoad(20260816);
+  const ticks = 200;
+
+  // Twenty more on foot than `buildPeakLoad` seats, up to the roadmap's sixty.
+  for (let i = sim.world.customers.activeCount; i < 60; i++) {
+    const slot = sim.world.customers.acquire();
+    if (slot < 0) break;
+    const customer = sim.world.customers.at(slot);
+    customer.entityId = sim.world.allocateEntityId();
+    customer.state = CUSTOMER_WALKING_STATE;
+    customer.visible = 1;
+    customer.vehicleSlot = -1;
+    customer.parkingSlot = -1;
+    // Spread across the walkable half of the lot, all heading for the counter.
+    customer.x = 2 + (i % 10) * 2;
+    customer.y = 11 + Math.floor(i / 10) * 1.2;
+    customer.targetX = STAGE1_LAYOUT.counter.x;
+    customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+  }
+
+  const pedestrians = sim.world.customers.activeCount;
+  return timeIt(`crowded tick (${String(pedestrians)} pedestrians, 120 vehicles)`, ticks, () => {
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
 export function benchCommandProcessing(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks, one command each', 1000, () => {
@@ -477,6 +578,8 @@ export function runSimBench(): BenchReport {
       benchTicksFromFresh(),
       benchWorldHash(),
       benchPopulatedTick(),
+      benchCrowdedTick(),
+      benchFlowFieldRebuild(),
       benchCommandProcessing(),
       benchEventFlush(),
       benchStoreChurn(),

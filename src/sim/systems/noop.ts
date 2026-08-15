@@ -3,9 +3,11 @@ import type { SimSystem, SystemName } from '../core/SystemPipeline';
 import { SYSTEM_ORDER } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { LaneGraph } from '../nav/LaneGraph';
+import { FlowFieldCache } from '../nav/FlowFieldCache';
 import { ManeuverTable } from '../nav/maneuvers';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
+import { NavigationSystem } from './NavigationSystem';
 import { QueueSystem } from './QueueSystem';
 import { TimeSystem } from './TimeSystem';
 import { VehicleManeuverSystem } from './VehicleManeuverSystem';
@@ -74,6 +76,14 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
      * is the only direction the dependency runs — the car never decides
      * anything on its own.
      */
+    /*
+     * Navigation runs one slot *before* the state machine, so a customer who
+     * arrives this tick is seen to have arrived on the same tick rather than the
+     * next. The reverse order costs a tick of latency at every transition, which
+     * at 20 Hz is 50 ms of a customer standing on their queue slot before
+     * noticing they are on it.
+     */
+    NavigationSystem: new NavigationSystem(stage1Fields()),
     CustomerFsmSystem: new CustomerFsmSystem(STAGE1_LAYOUT, maneuverSystem),
     QueueSystem: new QueueSystem(STAGE1_LAYOUT),
   };
@@ -87,6 +97,22 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
  * a second copy would mean two answers to "where is this car" — the exact class
  * of bug the lane graph's own comment warns about.
  */
+/**
+ * One flow-field cache, shared like the lane graph and for the same reason: it
+ * is a pure function of authored layout until the player builds something, and
+ * the benchmark constructs thousands of simulations.
+ *
+ * Rebuilt from `world.layout.placed` by `NavigationSystem` when that changes,
+ * so a shared instance is correct as long as one simulation is being stepped at
+ * a time — which is what the whole engine already assumes.
+ */
+let sharedFields: FlowFieldCache | undefined;
+
+function stage1Fields(): FlowFieldCache {
+  sharedFields ??= new FlowFieldCache(STAGE1_LAYOUT);
+  return sharedFields;
+}
+
 export function stage1ManeuverSystem(): VehicleManeuverSystem {
   /*
    * The manoeuvre curves are built here, once, for the same reason the lane

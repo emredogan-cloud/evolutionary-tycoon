@@ -29,9 +29,16 @@ import type { PlacedObject } from '../core/types';
 /** Cell size in metres — RESEARCH_NOTES §8. */
 export const CELL_SIZE_METRES = 0.5;
 
-/** Cell states. Kept as a Uint8Array, so these are the only two values. */
-export const CELL_FREE = 0;
-export const CELL_BLOCKED = 1;
+/**
+ * Cell states. Kept as a `Uint8Array`, so these are the only two values.
+ *
+ * Not exported: the hot loops in `FlowField` compare against the literal 0 to
+ * avoid a module read in the innermost path, and a constant that is exported but
+ * bypassed by its only real consumer is worse than no constant. `isBlocked` is
+ * the public way to ask.
+ */
+const CELL_FREE = 0;
+const CELL_BLOCKED = 1;
 
 export class NavGrid {
   readonly width: number;

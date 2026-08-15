@@ -6,6 +6,8 @@ import {
   benchDepthSort,
   benchTicksFromFresh,
   benchEventFlush,
+  benchCrowdedTick,
+  benchFlowFieldRebuild,
   benchPopulatedTick,
   benchSnapshot,
   buildPeakLoad,
@@ -184,6 +186,36 @@ describe('simulation performance budgets', () => {
     sim.advance(200);
     expect(sim.world.vehicles.activeCount, 'the road drained mid-measurement').toBeGreaterThanOrEqual(100);
     expect(sim.world.customers.activeCount).toBe(20);
+  });
+
+  it('runs a crowded tick inside the Phase 7 budget', () => {
+    // 2.5 ms p95 at 60 pedestrians and 120 vehicles — GAME_EXECUTION_ROADMAP
+    // Phase 7. This is the measurement that decides whether O(n²) separation
+    // over the pedestrians was an acceptable choice.
+    const result = benchCrowdedTick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(2.5);
+  });
+
+  it('recomputes every flow field in under 12 ms', () => {
+    /*
+     * The number the whole approach rests on. Flow fields are cheap to use and
+     * expensive to build, and the trade only works because a build happens when
+     * the player places something rather than in the game loop.
+     *
+     * Measured at the scale the budget is written for — 64×64 cells, 20 goals —
+     * which Stage 1 is not: it has 48×36 cells and six goals, so measuring it
+     * would answer a different and much easier question.
+     *
+     * It failed here first, at 42.9 ms. The roadmap's stated fallback is to
+     * chunk the recompute across frames per goal, "but measure first" — and the
+     * measurement said the cost was a tuple destructure in the innermost loop,
+     * running about 650 000 times per rebuild. Flattening it to three typed
+     * arrays brought it to 9.3 ms and no chunking was needed.
+     */
+    const result = benchFlowFieldRebuild();
+    const perRebuildMs = result.p95Ms / result.opsPerSample;
+    expect(perRebuildMs, `measured ${perRebuildMs.toFixed(3)} ms per full rebuild`).toBeLessThan(12);
   });
 
   it('serialises a save in under 8 ms', () => {

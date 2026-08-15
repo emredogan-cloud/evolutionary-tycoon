@@ -1,9 +1,4 @@
-import {
-  ARCHETYPE_PATIENCE,
-  ARRIVAL_EPSILON_METRES,
-  DOOR_OPEN_SECONDS,
-  WALK_SPEED_METRES_PER_SECOND,
-} from '@config/customer';
+import { ARCHETYPE_PATIENCE, ARRIVAL_EPSILON_METRES, DOOR_OPEN_SECONDS } from '@config/customer';
 import { REASON_NO_PARKING, REASON_QUEUE_TOO_LONG } from '@config/conversion';
 import type { StageLayout } from '@config/layouts/stage1';
 import {
@@ -38,14 +33,14 @@ import type { VehicleManeuverSystem } from './VehicleManeuverSystem';
  * an edge the graph does not declare — so the tested shape and the running
  * behaviour cannot drift apart, which is the usual way a state machine rots.
  *
- * ## Walking is a straight line, for now
+ * ## Movement is not here
  *
- * A customer moves directly towards `targetX/targetY` at walking pace. Phase 7
- * replaces the *direction* with a flow-field lookup and adds separation; the
- * speed, the arrival test and every state around it stay exactly as they are.
- * Stage 1's car park is an open rectangle with nothing to walk into, so the
- * straight line and the flow field agree on it today — which is why this is a
- * placeholder that looks right rather than one that has to look wrong.
+ * Phase 6 walked customers towards their target from inside this system. Phase 7
+ * moved that to `NavigationSystem`, which runs one pipeline slot earlier and
+ * steers by flow field. What is left here decides *where* a customer is going
+ * and *when* they have arrived; how they get there is somebody else's problem,
+ * and the split is what let the direction source change without touching a
+ * single state.
  */
 export class CustomerFsmSystem implements SimSystem {
   readonly name = 'CustomerFsmSystem' as const;
@@ -56,8 +51,7 @@ export class CustomerFsmSystem implements SimSystem {
   ) {}
 
   run(world: World, deltaMs: number): void {
-    const seconds = deltaMs / 1000;
-    if (seconds <= 0) return;
+    if (deltaMs <= 0) return;
 
     const customers = world.customers;
     // See `ConversionSystem.run` for why the empty case is short-circuited.
@@ -71,7 +65,6 @@ export class CustomerFsmSystem implements SimSystem {
 
       this.tickPatience(world, customer, deltaMs);
       this.advanceState(world, customer, slot, deltaMs);
-      if (customer.visible === 1) this.walk(customer, seconds);
     }
   }
 
@@ -260,27 +253,6 @@ export class CustomerFsmSystem implements SimSystem {
     const dx = customer.targetX - customer.x;
     const dy = customer.targetY - customer.y;
     return dx * dx + dy * dy <= ARRIVAL_EPSILON_METRES * ARRIVAL_EPSILON_METRES;
-  }
-
-  /**
-   * One step towards the target.
-   *
-   * Clamped to the remaining distance so a customer never oscillates around a
-   * target they can cross in a single tick — at 20 Hz a step is 6.75 cm, which
-   * is smaller than the arrival epsilon, but that stops being true the moment
-   * anything runs at a lower tick rate.
-   */
-  private walk(customer: CustomerRecord, seconds: number): void {
-    const dx = customer.targetX - customer.x;
-    const dy = customer.targetY - customer.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance <= 1e-6) return;
-
-    const step = Math.min(distance, WALK_SPEED_METRES_PER_SECOND * seconds);
-    customer.x += (dx / distance) * step;
-    customer.y += (dy / distance) * step;
-    customer.headingX = dx / distance;
-    customer.headingY = dy / distance;
   }
 
   /**
