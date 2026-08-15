@@ -346,8 +346,15 @@ export function benchSnapshot(): TimingResult {
   sim.world.economy.prices.set('burger', 4.5);
   sim.world.layout.upgrades.set('grill', 2);
 
-  return timeIt('world snapshot + JSON serialise', 100, () => {
-    for (let i = 0; i < 100; i++) JSON.stringify(snapshotWorld(sim.world));
+  /*
+   * 500 rather than 100. At 100 the timed region measured 0.24 calibration units
+   * on a CI runner — just under the floor `MIN_STABLE_CALIBRATION_UNITS` sets,
+   * and the floor fired on its first CI run against a real case rather than
+   * against the two it was written from. Which is what it is for.
+   */
+  const serialisations = 500;
+  return timeIt('world snapshot + JSON serialise', serialisations, () => {
+    for (let i = 0; i < serialisations; i++) JSON.stringify(snapshotWorld(sim.world));
   });
 }
 

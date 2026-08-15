@@ -1,17 +1,17 @@
 {
-  "recordedAt": "f57f249694e026fc23dcf0acbfe582e004a1e5d7",
+  "recordedAt": "9b170656d32773feda63bd20b2e5981593a3180c",
   "environment": "local (normalised by calibrationMs, so the ratio is machine-independent)",
   "statistic": "minMsPerCalibration",
-  "calibrationMs": 1.2318,
+  "calibrationMs": 1.231,
   "timings": {
-    "1000 empty ticks": 0.81122,
-    "world hash (120 vehicles, 60 customers)": 8.41055,
-    "populated tick (120 vehicles, 20 customers)": 0.78457,
-    "1000 ticks, one command each": 0.96694,
-    "1000 ticks, 8 events per tick, 3 subscribers": 1.0945,
-    "vehicle spawn + despawn cycles": 1.45676,
-    "world snapshot + JSON serialise": 0.31056,
-    "depth sort, 260 objects": 1.23075
+    "1000 empty ticks": 0.8993,
+    "world hash (120 vehicles, 60 customers)": 8.20016,
+    "populated tick (120 vehicles, 20 customers)": 0.77045,
+    "1000 ticks, one command each": 0.91298,
+    "1000 ticks, 8 events per tick, 3 subscribers": 1.0515,
+    "vehicle spawn + despawn cycles": 1.3986,
+    "world snapshot + JSON serialise": 1.53758,
+    "depth sort, 260 objects": 1.19954
   },
   "bytesPerTick": 11.118
 }
