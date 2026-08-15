@@ -87,9 +87,10 @@ export function evaluateSatisfaction(order: OrderRecord, quality: number, nowMs:
     WEIGHTS.wait * waitScore(waited) +
     WEIGHTS.quality * Math.min(1, Math.max(0, quality)) +
     WEIGHTS.price * priceScore(order.price, item.basePrice) +
-    // Dormant inputs, each named with the phase that makes it live. They are
-    // neutral rather than zero, so the live inputs cannot reach 1.0 alone and
-    // satisfaction does not quietly re-scale when the rest arrive.
+    // Dormant inputs, each named with the phase that makes it live. They score
+    // 1.0 because there is nothing yet to be dissatisfied about — no tables to
+    // be dirty, no decor to be drab, no waiter to be slow. See the note in
+    // `@config/satisfaction` for what that costs later.
     WEIGHTS.service * NEUTRAL_SCORE +
     WEIGHTS.cleanliness * NEUTRAL_SCORE +
     WEIGHTS.atmosphere * NEUTRAL_SCORE +

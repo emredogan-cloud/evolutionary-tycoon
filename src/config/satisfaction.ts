@@ -11,11 +11,22 @@ import { z } from 'zod';
  * the design document term for term, so implementing one later is a one-line
  * diff rather than an argument about what the model was supposed to be.
  *
- * A neutral input is 1.0 and its weight still counts. That matters: it means the
- * live inputs cannot reach 1.0 on their own, so a perfect wait and perfect food
- * at a fair price scores about 0.72 today and the remaining 0.28 arrives with
- * cleanliness, atmosphere and service. Zeroing the dormant weights instead would
- * have satisfaction quietly re-scale under everyone's feet in Phase 11.
+ * ## What a dormant input scores, and why it is 1.0
+ *
+ * A dormant input scores 1.0 and its weight still counts, so a perfect wait and
+ * perfect food at a fair price does reach 1.0 today. That is not an oversight
+ * and it is not neutral in the arithmetic sense — it is the claim that **there
+ * is nothing yet to be dissatisfied about**. A Stage 1 roadside stand has no
+ * tables to be dirty, no decor to be drab and no waiter to be slow, so scoring
+ * those as anything less than perfect would be inventing a complaint the player
+ * cannot act on and cannot see.
+ *
+ * The consequence, stated plainly: satisfaction will *fall* when Phase 11 makes
+ * cleanliness and atmosphere real, because a stand that has floors to mop can
+ * fail to mop them. Scoring them 0.0 instead would make it rise, which is the
+ * same shift wearing a different sign. Either way the number moves when the
+ * world gains a way to be worse — and 1.0 is the one that describes the world
+ * as it actually is right now.
  */
 
 const weightsSchema = z
