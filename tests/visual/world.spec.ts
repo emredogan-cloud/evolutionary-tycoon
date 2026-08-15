@@ -84,17 +84,18 @@ test.describe('visual goldens', () => {
 
   test('stage1-queue — four people waiting, and one of them losing patience', async ({ page }) => {
     /*
-     * Tick 10392 is the busiest the counter gets on this seed. It was 7940 in
+     * Tick 10417 is the busiest the counter gets on this seed. It was 7940 in
      * Phase 6 and moved when Phase 7 replaced the straight-line walk with
      * flow-field steering: different routes mean different arrival times, which
      * shifts every patience clock downstream and with it the whole sequence.
+     * It moved again within Phase 7, as the steering itself was corrected.
      *
      * The tick was re-derived rather than the golden re-recorded at the old one.
      * A screenshot named `stage1-queue` that no longer photographs the busiest
      * queue is a golden that lies about its subject, and it would go on lying
      * quietly for as long as the pixels happened to be stable.
      */
-    await openFrozen(page, 'empty', 10392);
+    await openFrozen(page, 'empty', 10417);
     await expect(page).toHaveScreenshot('stage1-queue.png');
   });
 });
