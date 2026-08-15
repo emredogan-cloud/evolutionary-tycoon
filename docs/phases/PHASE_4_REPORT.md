@@ -107,7 +107,7 @@ number is not from the documents.
 
 ---
 
-## 4. Six defects found and fixed
+## 4. Seven defects found and fixed
 
 Each was found by a test or a measurement, not by inspection.
 
@@ -232,8 +232,8 @@ pixels once per frame. Fixed to count distinct rects. Worth noting because the w
 | 5   | Build succeeds, within budget                | ✅     | **406.45 kB gzip / 550 kB**                                                                                      |
 | 6   | E2E green (Chromium + Firefox), WebKit smoke | ✅     | 48 passed / 12 skipped; WebKit 3/3 in the pinned container (local host lacks `libevent-2.1-7t64`)                |
 | 7   | Visual regression                            | ✅     | 3 goldens regenerated, 6/6 green **under a gate that now actually fires** (§4.1)                                 |
-| 8   | CI GREEN                                     | ⬜     | _recorded below after the run_                                                                                   |
-| 9   | Preview deployment healthy                   | ⬜     | _recorded below_                                                                                                 |
+| 8   | CI GREEN                                     | ✅     | PR #10, 16/16 checks green (run `31854915548`); main green on `ad76943` (run `31855058051`)                      |
+| 9   | Preview deployment healthy                   | ✅     | Preview E2E 31/31, blocking; `/health.json` served `e5a665b`. Production serves `ad76943` at schema v2 (§7.1)    |
 | 10  | No critical console errors                   | ✅     | Standing fixture assertion on every E2E test                                                                     |
 | 11  | No runtime errors in real use                | ✅     | Loading screen → world, `data-asset-state="placeholder"`, console clean                                          |
 | 12  | Performance within budget                    | 🟡     | Texture memory recorded (0.79 MB, placeholders only). **No FPS measured** — nothing in P4 touched the frame loop |
@@ -312,6 +312,39 @@ rather than in an edit to the source of truth.
 
 ---
 
+## 7.1 A seventh defect, found after the merge
+
+`Production smoke` failed on main — and had been failing on **every push to main since the Phase 3
+merge**, which nobody saw because that workflow runs after the merge rather than on the PR.
+
+The workflow hardcoded the expected save schema:
+
+```
+if (h.schemaVersion !== 1) throw new Error('unexpected schemaVersion: ' + h.schemaVersion);
+```
+
+Phase 3 migrated the save format to v2 and updated everything except this line. A version number
+copied into a workflow is guaranteed to go stale at the next migration, so the fix is not to change
+1 to 2 — it is to read `SAVE_SCHEMA_VERSION` from `src/config/simulation.ts`, where it already lives
+as the single source of truth.
+
+Verified against live production before pushing:
+
+```
+$ curl -sfS https://evolutionary-tycoon.vercel.app/health.json
+{ "version": "0.1.0", "buildSha": "ad76943e...", "assetManifestHash": null, "schemaVersion": 2 }
+
+health ok: 0.1.0 ad76943 schema v2
+smoke E2E against production: 6 passed
+```
+
+Worth noting where the gate design failed rather than just the line: a check that only runs
+post-merge cannot block anything, so a break in it is invisible until someone reads a workflow list.
+Phase 3's report recorded production as healthy in good faith — the report was written before the
+merge, and the job that would have contradicted it ran afterwards.
+
+---
+
 ## 8. What Phase 4 leaves open
 
 1. **The licence gate.** Three actions, all requiring the project owner (§2). Until then no art can
@@ -357,3 +390,9 @@ phase justifying itself. The half that could not be done was not faked, not work
 quietly reduced in scope.
 
 **Phase 4: PARTIAL.** The batch ends here.
+
+One last note on the shape of what was found. Three of the seven defects were in **gates** — the
+visual threshold, the allocation benchmark, the regression comparison — and a fourth, the production
+smoke probe, was in a gate that had been red for two phases without anyone seeing it. A phase spent
+building validation machinery turned out to be a good time to discover that some of the existing
+machinery was not validating anything. That is worth remembering the next time a suite is green.

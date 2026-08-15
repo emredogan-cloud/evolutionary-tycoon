@@ -48,15 +48,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Health probe
+        # The expected schema version is read from src/config, never typed here.
+        # It was hardcoded to 1, and Phase 3's migration to v2 turned this job
+        # red on every push to main — silently, because production smoke runs
+        # *after* the merge, so no PR ever showed it. A version number copied
+        # into a workflow is guaranteed to go stale at the next migration.
         run: |
           set -euo pipefail
           echo "Target: $E2E_BASE_URL"
           curl -sfS "$E2E_BASE_URL/health.json" | tee /tmp/health.json
-          node -e "
-            const h = require('/tmp/health.json');
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            import { SAVE_SCHEMA_VERSION } from './src/config/simulation.ts';
+            const h = JSON.parse(readFileSync('/tmp/health.json', 'utf8'));
             if (typeof h.buildSha !== 'string' || h.buildSha.length === 0) throw new Error('missing buildSha');
-            if (h.schemaVersion !== 1) throw new Error('unexpected schemaVersion: ' + h.schemaVersion);
-            console.log('health ok:', h.version, h.buildSha.slice(0, 7));
+            if (h.schemaVersion !== SAVE_SCHEMA_VERSION) {
+              throw new Error('deployed schemaVersion ' + h.schemaVersion + ', this commit expects ' + SAVE_SCHEMA_VERSION);
+            }
+            console.log('health ok:', h.version, h.buildSha.slice(0, 7), 'schema v' + h.schemaVersion);
           "
 
       - name: Smoke E2E
