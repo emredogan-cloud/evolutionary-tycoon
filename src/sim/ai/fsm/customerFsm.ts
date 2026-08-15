@@ -1,3 +1,5 @@
+import { PATIENCE_SECONDS } from '@config/customer';
+
 /**
  * The customer state machine — GAME_DESIGN_DOCUMENT §8.1, dine-in branch.
  *
@@ -75,14 +77,20 @@ export interface CustomerStateSpec {
   /** Every state this one may move to. Empty means terminal. */
   readonly to: readonly number[];
   /**
-   * True when the customer is waiting on something outside their control.
+   * Seconds of patience this state grants, or null when it is not a wait.
    *
-   * These are the states patience runs in, and the FSM test requires every one
-   * of them to be able to reach `ABANDONING`. Walking is not waiting: someone
-   * crossing a car park is making progress, and a patience timer there would
+   * A number rather than a `waiting: true` flag, because the flag alone was a
+   * bug waiting to happen and then was one: `SEEKING_PARKING` was marked as
+   * waiting while only the queue's patience was ever initialised, so every
+   * customer's clock started at zero and they abandoned on the tick they
+   * arrived — seventeen conversions in ten minutes and not one car ever parked.
+   *
+   * Carrying the duration here makes "a waiting state without patience"
+   * unrepresentable rather than merely tested for. Walking is not waiting:
+   * someone crossing a car park is making progress, and a countdown there would
    * strand them mid-stride.
    */
-  readonly waiting: boolean;
+  readonly patienceSeconds: number | null;
   /**
    * True only where the customer is *certainly* inside a vehicle.
    *
@@ -100,18 +108,23 @@ export interface CustomerStateSpec {
  * index is what `CustomerRecord.state` holds and what the world hash digests.
  */
 export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
-  { name: 'ENTERING', to: [STATE_SEEKING_PARKING], waiting: false, alwaysInVehicle: true },
+  { name: 'ENTERING', to: [STATE_SEEKING_PARKING], patienceSeconds: null, alwaysInVehicle: true },
   {
     name: 'SEEKING_PARKING',
     to: [STATE_PARKING, STATE_NO_SPACE, STATE_ABANDONING],
-    waiting: true,
+    patienceSeconds: PATIENCE_SECONDS.seekingParking,
     alwaysInVehicle: true,
   },
-  { name: 'PARKING', to: [STATE_LEAVING_VEHICLE], waiting: false, alwaysInVehicle: true },
-  { name: 'LEAVING_VEHICLE', to: [STATE_WALKING_TO_DOOR], waiting: false, alwaysInVehicle: true },
-  { name: 'WALKING_TO_DOOR', to: [STATE_QUEUEING_AT_COUNTER], waiting: false, alwaysInVehicle: false },
-  { name: 'QUEUEING_AT_COUNTER', to: [STATE_ABANDONING], waiting: true, alwaysInVehicle: false },
-  { name: 'NO_SPACE', to: [STATE_LEAVING_ANGRY], waiting: false, alwaysInVehicle: true },
+  { name: 'PARKING', to: [STATE_LEAVING_VEHICLE], patienceSeconds: null, alwaysInVehicle: true },
+  { name: 'LEAVING_VEHICLE', to: [STATE_WALKING_TO_DOOR], patienceSeconds: null, alwaysInVehicle: true },
+  { name: 'WALKING_TO_DOOR', to: [STATE_QUEUEING_AT_COUNTER], patienceSeconds: null, alwaysInVehicle: false },
+  {
+    name: 'QUEUEING_AT_COUNTER',
+    to: [STATE_ABANDONING],
+    patienceSeconds: PATIENCE_SECONDS.queueingAtCounter,
+    alwaysInVehicle: false,
+  },
+  { name: 'NO_SPACE', to: [STATE_LEAVING_ANGRY], patienceSeconds: null, alwaysInVehicle: true },
   {
     /*
      * ABANDONING splits on where the customer is standing. Someone who gave up
@@ -121,12 +134,12 @@ export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
      */
     name: 'ABANDONING',
     to: [STATE_WALKING_TO_CAR, STATE_LEAVING_ANGRY],
-    waiting: false,
+    patienceSeconds: null,
     alwaysInVehicle: false,
   },
-  { name: 'WALKING_TO_CAR', to: [STATE_LEAVING_ANGRY], waiting: false, alwaysInVehicle: false },
-  { name: 'LEAVING_ANGRY', to: [STATE_EXITING], waiting: false, alwaysInVehicle: true },
-  { name: 'EXITING', to: [STATE_REJOINING_ROAD], waiting: false, alwaysInVehicle: true },
+  { name: 'WALKING_TO_CAR', to: [STATE_LEAVING_ANGRY], patienceSeconds: null, alwaysInVehicle: false },
+  { name: 'LEAVING_ANGRY', to: [STATE_EXITING], patienceSeconds: null, alwaysInVehicle: true },
+  { name: 'EXITING', to: [STATE_REJOINING_ROAD], patienceSeconds: null, alwaysInVehicle: true },
   /*
    * Waiting for a gap in the traffic, but **not** a `waiting` state, and the
    * distinction is the point. `waiting` means "patience is running and this can
@@ -136,8 +149,8 @@ export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
    * clears, and it keeps the car park from silting up with cars that can never
    * leave.
    */
-  { name: 'REJOINING_ROAD', to: [STATE_GONE], waiting: false, alwaysInVehicle: true },
-  { name: 'GONE', to: [], waiting: false, alwaysInVehicle: true },
+  { name: 'REJOINING_ROAD', to: [STATE_GONE], patienceSeconds: null, alwaysInVehicle: true },
+  { name: 'GONE', to: [], patienceSeconds: null, alwaysInVehicle: true },
 ];
 
 export function customerStateSpec(state: number): CustomerStateSpec {
@@ -148,6 +161,11 @@ export function customerStateSpec(state: number): CustomerStateSpec {
 
 export function customerStateName(state: number): CustomerStateName {
   return customerStateSpec(state).name;
+}
+
+/** True when patience runs in this state and it can end in `ABANDONING`. */
+export function isWaiting(state: number): boolean {
+  return customerStateSpec(state).patienceSeconds !== null;
 }
 
 /**

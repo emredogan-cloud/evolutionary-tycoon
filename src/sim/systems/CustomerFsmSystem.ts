@@ -2,7 +2,6 @@ import {
   ARCHETYPE_PATIENCE,
   ARRIVAL_EPSILON_METRES,
   DOOR_OPEN_SECONDS,
-  PATIENCE_SECONDS,
   WALK_SPEED_METRES_PER_SECOND,
 } from '@config/customer';
 import { REASON_NO_PARKING, REASON_QUEUE_TOO_LONG } from '@config/conversion';
@@ -27,6 +26,7 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { atIn } from '../math/typedArray';
+import { VEHICLE_EXITING } from './VehicleManeuverSystem';
 import type { VehicleManeuverSystem } from './VehicleManeuverSystem';
 
 /**
@@ -82,7 +82,16 @@ export class CustomerFsmSystem implements SimSystem {
    */
   private tickPatience(world: World, customer: CustomerRecord, deltaMs: number): void {
     const spec = customerStateSpec(customer.state);
-    if (!spec.waiting) return;
+    if (spec.patienceSeconds === null) return;
+
+    /*
+     * Started here, from the state's own declaration, rather than at each site
+     * that enters a waiting state. Doing it per site is how `SEEKING_PARKING`
+     * ended up with a patience of zero and every customer abandoned on arrival;
+     * this way a waiting state added in a later phase gets its clock without
+     * anybody remembering to wire one up.
+     */
+    if (customer.patienceMaxMs <= 0) this.beginPatience(customer, spec.patienceSeconds);
 
     customer.patienceMs -= deltaMs;
     if (customer.patienceMs > 0) return;
@@ -114,10 +123,7 @@ export class CustomerFsmSystem implements SimSystem {
         break;
 
       case STATE_WALKING_TO_DOOR:
-        if (this.hasArrived(customer)) {
-          this.transition(customer, STATE_QUEUEING_AT_COUNTER);
-          this.beginPatience(customer, PATIENCE_SECONDS.queueingAtCounter);
-        }
+        if (this.hasArrived(customer)) this.transition(customer, STATE_QUEUEING_AT_COUNTER);
         break;
 
       case STATE_QUEUEING_AT_COUNTER:
@@ -204,7 +210,22 @@ export class CustomerFsmSystem implements SimSystem {
       return;
     }
 
-    this.maneuvers.beginExit(world, vehicleSlot, Math.max(0, customer.parkingSlot));
+    /*
+     * The bay is passed through as it is, including -1.
+     *
+     * It used to be clamped with `Math.max(0, ...)`, which handed bay 0 to every
+     * driver who had been turned away for having no bay at all — so bay 0 was
+     * double-booked with a car that was only driving through it, and the car
+     * park quietly lost a space. -1 already means "the pass-through route", and
+     * `ManeuverTable.setFor` is the one place that decides what that means.
+     *
+     * And only if the exit has not already started: a turned-away car is put on
+     * the exit curve by the manoeuvre system the moment it finishes crossing the
+     * apron, and beginning it a second time would snap it back to the start.
+     */
+    if (world.vehicles.state[vehicleSlot] !== VEHICLE_EXITING) {
+      this.maneuvers.beginExit(world, vehicleSlot, customer.parkingSlot);
+    }
   }
 
   private release(world: World, customer: CustomerRecord, slot: number): void {
@@ -273,6 +294,12 @@ export class CustomerFsmSystem implements SimSystem {
           `transition to ${customerStateName(to)}`,
       );
     }
+    /*
+     * Leaving a state clears its clock, so the next waiting state starts a fresh
+     * one rather than inheriting whatever was left of the last.
+     */
+    customer.patienceMs = 0;
+    customer.patienceMaxMs = 0;
     customer.state = to;
   }
 }

@@ -191,6 +191,24 @@ export interface ActorSnapshot {
   readonly headingY: number;
   /** Decelerating hard enough to light the brakes. Phase 5. */
   readonly braking: boolean;
+  /**
+   * Patience remaining as a fraction of what this actor started with, or 0.
+   *
+   * Phase 6. On the snapshot rather than looked up by the renderer for the same
+   * reason `headingX` is: the render layer may not reach into a store, and
+   * "how impatient does this person look" is a question only the simulation can
+   * answer.
+   */
+  readonly patience: number;
+  /**
+   * Moving under their own power this tick.
+   *
+   * Supplied rather than derived from successive positions, because the
+   * difference between frames is zero for an actor that is stopped *and* for one
+   * the renderer has not seen before — and a walk cycle that starts a frame late
+   * on every customer is exactly the kind of thing nobody can point at.
+   */
+  readonly moving: boolean;
 }
 
 export interface SimView {

@@ -45,6 +45,17 @@ import type { LaneSample } from '../nav/spline';
  * Phase 11 adds a drive-thru, where the customer never leaves the car at all.
  */
 
+/**
+ * Bumper clearance either side of a merging car, metres.
+ *
+ * Small: it is the difference between "merged" and "inside the car in front",
+ * not a comfort margin. That one is `REJOIN_GAP_METRES` and it is negotiable.
+ */
+const MERGE_CLEARANCE_METRES = 1;
+
+/** Longest vehicle in the game, used as the merging car's own footprint. */
+const MERGING_CAR_LENGTH_METRES = 5.4;
+
 export const VEHICLE_ON_ROAD = 0;
 export const VEHICLE_ENTERING = 1;
 export const VEHICLE_PARKED = 2;
@@ -127,6 +138,12 @@ export class VehicleManeuverSystem implements SimSystem {
        */
       customer.state = STATE_NO_SPACE;
       customer.parkingSlot = -1;
+      /*
+       * The reason is recorded, not announced. `CustomerFsmSystem` emits
+       * `CUSTOMER_LEFT_ANGRY` once, when they actually drive off, with a real
+       * dwell time — announcing it here as well produced two events for one
+       * departure and a dwell time of zero for a car that had not moved yet.
+       */
       customer.reason = REASON_NO_PARKING;
       world.stats.turnedAwayNoParking++;
       world.stats.failureReasons[REASON_NO_PARKING] =
@@ -217,9 +234,26 @@ export class VehicleManeuverSystem implements SimSystem {
      * overlap with a brake hard enough to send a shock wave back up the road —
      * a vehicle that left the car park would look like an accident.
      */
+    /*
+     * Two gaps, not one.
+     *
+     * A driver waits for a comfortable gap, and after long enough takes
+     * whatever will physically fit. Waiting indefinitely for the comfortable one
+     * is a deadlock at peak — cars accumulate at the mouth of the lot until
+     * nothing can convert — but merging regardless is worse: it put a car two
+     * metres inside the one it merged in front of, which the follower model then
+     * resolved with a shock wave up the road.
+     *
+     * So the ceiling relaxes the requirement from "comfortable" to "does not
+     * overlap", and never past it. The bay is already free by this point, so a
+     * driver still waiting is not holding a space anyone else could use.
+     */
     const lane = this.lanes.lane(laneIndex);
     const waited = at(vehicles.waitMs, slot);
-    if (!this.rejoinClear(world, laneIndex, lane.rejoinS) && waited < REJOIN_MAX_WAIT_SECONDS * 1000) {
+    const patient = waited >= REJOIN_MAX_WAIT_SECONDS * 1000;
+    const required = patient ? 0 : REJOIN_GAP_METRES;
+
+    if (!this.rejoinClear(world, laneIndex, lane.rejoinS, required)) {
       vehicles.waitMs[slot] = waited + seconds * 1000;
       vehicles.speed[slot] = 0;
       return;
@@ -315,14 +349,40 @@ export class VehicleManeuverSystem implements SimSystem {
     const vehicles = world.vehicles;
     for (let slot = 0; slot < vehicles.capacity; slot++) {
       if (!vehicles.isActive(slot)) continue;
-      if (at(vehicles.state, slot) === VEHICLE_ON_ROAD) continue;
-      if (at(vehicles.parkingSlot, slot) === bay) return true;
+      const state = at(vehicles.state, slot);
+      if (state === VEHICLE_ON_ROAD) continue;
+      if (at(vehicles.parkingSlot, slot) !== bay) continue;
+
+      /*
+       * A car sitting at the end of its exit curve waiting for a gap is at the
+       * lane edge, not in the bay — it still names the bay because that is how
+       * it remembers which curve it is on. Counting it would let one driver
+       * waiting for a gap hold a space nobody can use, which at peak is most of
+       * the car park.
+       */
+      if (state === VEHICLE_EXITING && this.exitComplete(world, slot)) continue;
+      return true;
     }
     return false;
   }
 
-  /** True when nothing on the lane is within a car's length of the merge point. */
-  private rejoinClear(world: World, laneIndex: number, rejoinS: number): boolean {
+  /** True when this vehicle has driven the whole of its exit curve. */
+  private exitComplete(world: World, slot: number): boolean {
+    const vehicles = world.vehicles;
+    const laneIndex = at(vehicles.lane, slot);
+    if (laneIndex >= this.lanes.laneCount) return true;
+    const exit = this.maneuvers.setFor(laneIndex, at(vehicles.parkingSlot, slot)).exit;
+    return at(vehicles.maneuverS, slot) >= exit.length;
+  }
+
+  /**
+   * Room to merge at `rejoinS`, with `comfort` metres of margin behind.
+   *
+   * The margin ahead is never negotiable — it is the leader's own length, and
+   * below it the two cars are inside each other. `comfort` is what a patient
+   * driver eventually gives up on.
+   */
+  private rejoinClear(world: World, laneIndex: number, rejoinS: number, comfort: number): boolean {
     const vehicles = world.vehicles;
     for (let slot = 0; slot < vehicles.capacity; slot++) {
       if (!vehicles.isActive(slot)) continue;
@@ -332,9 +392,12 @@ export class VehicleManeuverSystem implements SimSystem {
       const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
       const length = spec?.lengthMetres ?? 4.5;
       const delta = at(vehicles.laneS, slot) - rejoinS;
-      // Behind by less than the gap, or ahead by less than its own length.
-      if (delta <= 0 && delta > -REJOIN_GAP_METRES) return false;
-      if (delta > 0 && delta < length) return false;
+
+      // Ahead of the merge point: the merging car must clear its back bumper.
+      if (delta > 0 && delta < length + MERGE_CLEARANCE_METRES) return false;
+      // Behind it: its front bumper, plus whatever comfort is being demanded.
+      const behind = MERGING_CAR_LENGTH_METRES + MERGE_CLEARANCE_METRES + comfort;
+      if (delta <= 0 && delta > -behind) return false;
     }
     return true;
   }

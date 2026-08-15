@@ -58,20 +58,6 @@ export function stage1Lanes(): LaneGraph {
   return sharedLanes;
 }
 
-/**
- * Sixteen Bézier curves, built once for the same reason the lane graph is.
- *
- * They are a pure function of authored layout, hold no mutable state, and the
- * benchmark constructs thousands of simulations — flattening them per `Sim`
- * would be tens of thousands of identical polylines.
- */
-let sharedManeuvers: ManeuverTable | undefined;
-
-export function stage1Maneuvers(): ManeuverTable {
-  sharedManeuvers ??= new ManeuverTable(STAGE1_LAYOUT, stage1Lanes());
-  return sharedManeuvers;
-}
-
 export function createDefaultSystems(world: World): readonly SimSystem[] {
   const lanes = stage1Lanes();
   const maneuverSystem = stage1ManeuverSystem();
@@ -102,7 +88,17 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
  * of bug the lane graph's own comment warns about.
  */
 export function stage1ManeuverSystem(): VehicleManeuverSystem {
-  sharedManeuverSystem ??= new VehicleManeuverSystem(stage1Lanes(), stage1Maneuvers(), STAGE1_LAYOUT);
+  /*
+   * The manoeuvre curves are built here, once, for the same reason the lane
+   * graph is: they are a pure function of authored layout, hold no mutable
+   * state, and the benchmark constructs thousands of simulations — flattening
+   * them per `Sim` would be tens of thousands of identical polylines.
+   */
+  sharedManeuverSystem ??= new VehicleManeuverSystem(
+    stage1Lanes(),
+    new ManeuverTable(STAGE1_LAYOUT, stage1Lanes()),
+    STAGE1_LAYOUT,
+  );
   return sharedManeuverSystem;
 }
 

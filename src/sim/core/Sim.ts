@@ -99,6 +99,8 @@ export class Sim {
         headingX: 1,
         headingY: 0,
         braking: false,
+        patience: 0,
+        moving: false,
       };
     }
 
@@ -240,6 +242,8 @@ export class Sim {
       target.headingX = this.laneSample.tangentX;
       target.headingY = this.laneSample.tangentY;
       target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
+      target.patience = 0;
+      target.moving = (vehicles.speed[slot] ?? 0) > 0;
       index++;
     }
     return index;
@@ -272,6 +276,8 @@ export class Sim {
       target.headingX = record.headingX;
       target.headingY = record.headingY;
       target.braking = false;
+      target.patience = record.patienceMaxMs > 0 ? record.patienceMs / record.patienceMaxMs : 0;
+      target.moving = record.targetX !== record.x || record.targetY !== record.y;
       index++;
     }
     return index;
@@ -289,6 +295,8 @@ export class Sim {
       target.y = record.y;
       target.z = record.z;
       target.kind = record.kind;
+      target.patience = 0;
+      target.moving = false;
       index++;
     }
     return index;

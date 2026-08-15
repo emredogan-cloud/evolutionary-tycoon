@@ -61,6 +61,18 @@ export const DECISION_YES = 2;
 interface FactorReport {
   value: number;
   reason: number;
+  /**
+   * Whether this factor can be named as the cause of a refusal.
+   *
+   * False for `baseAffinity`, and the distinction matters more than it looks.
+   * Affinity is between 0.22 and 0.34, so it is smaller than almost every
+   * penalty and a plain "smallest factor wins" scan named it every single time
+   * — the panel would have reported JUST_PASSING for a stand with a queue out
+   * onto the road. Affinity is who the driver is, not something that went
+   * wrong; only the modifiers are things the player can act on, which is the
+   * same rule that decides what belongs in the product at all.
+   */
+  blame: boolean;
 }
 
 export class ConversionSystem implements SimSystem {
@@ -81,7 +93,9 @@ export class ConversionSystem implements SimSystem {
     private readonly lanes: LaneGraph,
     private readonly layout: StageLayout,
   ) {
-    for (let i = 0; i < 10; i++) this.factors.push({ value: 1, reason: REASON_JUST_PASSING });
+    for (let i = 0; i < 10; i++) {
+      this.factors.push({ value: 1, reason: REASON_JUST_PASSING, blame: true });
+    }
   }
 
   run(world: World): void {
@@ -192,7 +206,7 @@ export class ConversionSystem implements SimSystem {
     const hour = world.clock.gameHour;
     const queueLength = this.visibleQueueLength(world);
 
-    this.set(0, spec.baseAffinity, REASON_JUST_PASSING);
+    this.set(0, spec.baseAffinity, REASON_JUST_PASSING, false);
     this.set(1, visibilityAt(hour), REASON_NOT_VISIBLE);
     this.set(2, MENU_APPEAL_PLACEHOLDER, REASON_NO_DESIRED_ITEM);
     this.set(3, PRICE_FIT_PLACEHOLDER, REASON_PRICE_TOO_HIGH);
@@ -224,21 +238,23 @@ export class ConversionSystem implements SimSystem {
     return Math.min(clamped * GLOBAL_DIFFICULTY_CURVE, ceiling);
   }
 
-  private set(index: number, value: number, reason: number): void {
+  private set(index: number, value: number, reason: number, blame = true): void {
     const factor = this.factors[index];
     if (factor === undefined) return;
     factor.value = value;
     factor.reason = reason;
+    factor.blame = blame;
   }
 
   /**
    * The factor that cost the most, as a reason code.
    *
-   * The smallest multiplier, because these are multiplied: halving one factor
-   * halves the result regardless of the others. A factor at or above 1.0 helped
-   * rather than hurt, so if nothing is below 1.0 the honest answer is that the
-   * driver simply was not stopping today — which is what `JUST_PASSING` means,
-   * and it should be the most common entry in the panel by a wide margin.
+   * The smallest blameable multiplier, because these are multiplied: halving
+   * one factor halves the result regardless of the others. A factor at or above
+   * 1.0 helped rather than hurt, so if nothing is below 1.0 the honest answer is
+   * that the driver simply was not stopping today — which is what
+   * `JUST_PASSING` means, and it should be the most common entry in the panel by
+   * a wide margin.
    */
   private dominantReason(): number {
     let worst = 1;
@@ -246,7 +262,7 @@ export class ConversionSystem implements SimSystem {
     // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < this.factors.length; i++) {
       const factor = this.factors[i];
-      if (factor === undefined) continue;
+      if (factor?.blame !== true) continue;
       if (factor.value < worst) {
         worst = factor.value;
         reason = factor.reason;

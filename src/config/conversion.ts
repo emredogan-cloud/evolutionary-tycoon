@@ -132,12 +132,21 @@ export const TIME_OF_DAY_FIT: readonly number[] = [
  * to the seventh sedan. Small on purpose: it adds texture to the archetype mix
  * without ever being a strategy the player has to think about.
  */
+const NOVELTY_WINDOW = 8;
+const NOVELTY_PER_CONVERSION = 0.03;
+
 export const NOVELTY_DECAY = {
   /** How many recent conversions of the same archetype are remembered. */
-  window: 8,
+  window: NOVELTY_WINDOW,
   /** Multiplier lost per remembered conversion. */
-  perConversion: 0.03,
-  floor: 0.75,
+  perConversion: NOVELTY_PER_CONVERSION,
+  /**
+   * Computed, not chosen. A hand-written floor of 0.75 sat below the value a
+   * full window can actually reach (0.76), so the clamp was unreachable — a
+   * limit that cannot fire is a claim the code does not keep, and the test
+   * asserting it fires was what found it.
+   */
+  floor: 1 - NOVELTY_WINDOW * NOVELTY_PER_CONVERSION,
 } as const;
 
 /**
