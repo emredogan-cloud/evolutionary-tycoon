@@ -167,11 +167,21 @@ export const STAGE1_LAYOUT: StageLayout = {
    * empty: it is how customers walk from their cars to the counter, and how the
    * queue spills back towards the road when the stand is overwhelmed.
    */
+  /*
+   * The doors stand 1.5 m out from the bay centre, not 1.2.
+   *
+   * A car is 1.9 m wide, so 1.2 m clears the bodywork by 25 cm — and then the
+   * 0.5 m navigation grid rounds the two into the same cell, so the spot a
+   * customer steps out onto was marked solid by their own car. They could not
+   * be routed from it and could not be routed to it. 1.5 m puts the door in the
+   * next cell out, which is the number that has to be true rather than the one
+   * that looks tidy.
+   */
   parking: [
-    { id: 'p1', x: 3.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 9.8 } },
-    { id: 'p2', x: 8.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 9.8 } },
-    { id: 'p3', x: 15.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 15.5, y: 9.8 } },
-    { id: 'p4', x: 20.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 20.5, y: 9.8 } },
+    { id: 'p1', x: 3.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 10.1 } },
+    { id: 'p2', x: 8.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 10.1 } },
+    { id: 'p3', x: 15.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 15.5, y: 10.1 } },
+    { id: 'p4', x: 20.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 20.5, y: 10.1 } },
   ],
 
   /*
