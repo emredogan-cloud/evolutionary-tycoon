@@ -7,6 +7,15 @@ import { DAY_CURVE_PEAK, dayCurveAt } from '@sim/systems/TimeSystem';
 import { pickArchetype } from '@sim/systems/TrafficSpawnSystem';
 
 /**
+ * These tests simulate whole minutes of traffic and inspect every vehicle on
+ * every tick, so they are genuinely slow — a second or two normally, and past
+ * Vitest's 5 s default under v8 coverage instrumentation on a CI runner. The
+ * simulated window is the point of each one, so the timeout moves rather than
+ * the window.
+ */
+const LONG_RUN_TIMEOUT_MS = 60_000;
+
+/**
  * Spawning — deterministic, Poisson, and shaped by the day.
  *
  * "Same seed, same day, same traffic" is the foundation of Day Replay and of
@@ -66,137 +75,169 @@ describe('Poisson determinism', () => {
     expect(second.at).toEqual(first.at);
   }, 120_000);
 
-  it('advances the same way in one call or many', () => {
-    // `advance(n)` must be exactly n `tick()`s — a spawn system that batched by
-    // delta would break here.
-    const bulk = new Sim({ seed: 4242 });
-    bulk.advance(TICKS_PER_MINUTE * 4);
+  it(
+    'advances the same way in one call or many',
+    () => {
+      // `advance(n)` must be exactly n `tick()`s — a spawn system that batched by
+      // delta would break here.
+      const bulk = new Sim({ seed: 4242 });
+      bulk.advance(TICKS_PER_MINUTE * 4);
 
-    const stepped = new Sim({ seed: 4242 });
-    for (let i = 0; i < TICKS_PER_MINUTE * 4; i++) stepped.tick();
+      const stepped = new Sim({ seed: 4242 });
+      for (let i = 0; i < TICKS_PER_MINUTE * 4; i++) stepped.tick();
 
-    expect(stepped.world.hash()).toBe(bulk.world.hash());
-  });
+      expect(stepped.world.hash()).toBe(bulk.world.hash());
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 
-  it('does not re-roll traffic when the speed multiplier changes', () => {
-    // Speed is a presentation control: 4x must run the same day faster, not a
-    // different day. (`World.hash` excludes the multiplier for the same reason.)
-    const normal = new Sim({ seed: 99 });
-    normal.advance(TICKS_PER_MINUTE * 3);
+  it(
+    'does not re-roll traffic when the speed multiplier changes',
+    () => {
+      // Speed is a presentation control: 4x must run the same day faster, not a
+      // different day. (`World.hash` excludes the multiplier for the same reason.)
+      const normal = new Sim({ seed: 99 });
+      normal.advance(TICKS_PER_MINUTE * 3);
 
-    const fast = new Sim({ seed: 99 });
-    fast.dispatch({ t: 'SET_SPEED', mult: 4 });
-    fast.advance(TICKS_PER_MINUTE * 3);
+      const fast = new Sim({ seed: 99 });
+      fast.dispatch({ t: 'SET_SPEED', mult: 4 });
+      fast.advance(TICKS_PER_MINUTE * 3);
 
-    expect(fast.world.stats.vehiclesSpawned).toBe(normal.world.stats.vehiclesSpawned);
-  });
+      expect(fast.world.stats.vehiclesSpawned).toBe(normal.world.stats.vehiclesSpawned);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 });
 
 describe('spawn rate', () => {
-  it('delivers the convertible rate the economy is calibrated on', () => {
-    /*
-     * The number that matters to the economy is **convertible** arrivals: 24 per
-     * real minute at stage 1 (ECONOMY_DESIGN §3). Decorative traffic sits on top
-     * of that and must never be counted as demand.
-     *
-     * The delivered figure is lower than the nominal one and always was. The road
-     * refuses arrivals when a lane head is occupied, and a 36 m lane at ~13.9 m/s
-     * carries only about 45 vehicles a minute in total:
-     *
-     *   nominal demand                     24.0 /min
-     *   delivered, no decorative traffic   21.2 /min   (12% refused)
-     *   delivered, with decorative traffic 19.5 /min
-     *
-     * That ceiling is a property of the authored road, not of this system, and it
-     * is recorded in PHASE_5_REPORT rather than hidden behind a loose tolerance.
-     */
-    const sim = new Sim({ seed: 31337 });
-    sim.advance((MS_PER_GAME_DAY / TICK_MS) | 0);
-    const minutes = MS_PER_GAME_DAY / 60_000;
+  it(
+    'delivers the convertible rate the economy is calibrated on',
+    () => {
+      /*
+       * The number that matters to the economy is **convertible** arrivals: 24 per
+       * real minute at stage 1 (ECONOMY_DESIGN §3). Decorative traffic sits on top
+       * of that and must never be counted as demand.
+       *
+       * The delivered figure is lower than the nominal one and always was. The road
+       * refuses arrivals when a lane head is occupied, and a 36 m lane at ~13.9 m/s
+       * carries only about 45 vehicles a minute in total:
+       *
+       *   nominal demand                     24.0 /min
+       *   delivered, no decorative traffic   21.2 /min   (12% refused)
+       *   delivered, with decorative traffic 19.5 /min
+       *
+       * That ceiling is a property of the authored road, not of this system, and it
+       * is recorded in PHASE_5_REPORT rather than hidden behind a loose tolerance.
+       */
+      const sim = new Sim({ seed: 31337 });
+      sim.advance((MS_PER_GAME_DAY / TICK_MS) | 0);
+      const minutes = MS_PER_GAME_DAY / 60_000;
 
-    const convertible = sim.world.stats.convertibleSpawned / minutes;
-    expect(convertible).toBeGreaterThan(BASE_SPAWN_PER_REAL_MINUTE * 0.75);
-    expect(convertible).toBeLessThanOrEqual(BASE_SPAWN_PER_REAL_MINUTE * 1.05);
-  });
+      const convertible = sim.world.stats.convertibleSpawned / minutes;
+      expect(convertible).toBeGreaterThan(BASE_SPAWN_PER_REAL_MINUTE * 0.75);
+      expect(convertible).toBeLessThanOrEqual(BASE_SPAWN_PER_REAL_MINUTE * 1.05);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 
-  it('puts decorative traffic on the road without counting it as demand', () => {
-    const sim = new Sim({ seed: 31337 });
-    sim.advance((MS_PER_GAME_DAY / TICK_MS) | 0);
+  it(
+    'puts decorative traffic on the road without counting it as demand',
+    () => {
+      const sim = new Sim({ seed: 31337 });
+      sim.advance((MS_PER_GAME_DAY / TICK_MS) | 0);
 
-    const total = sim.world.stats.vehiclesSpawned;
-    const convertible = sim.world.stats.convertibleSpawned;
-    expect(total).toBeGreaterThan(convertible);
-    // Roughly doubles the road's population; the exact ratio is capped by the
-    // road's throughput, not by the configured multiplier.
-    expect(total).toBeGreaterThan(convertible * 1.5);
-    expect(sim.world.traffic.droppedDecorative).toBeLessThanOrEqual(sim.world.traffic.droppedSpawns);
-  });
+      const total = sim.world.stats.vehiclesSpawned;
+      const convertible = sim.world.stats.convertibleSpawned;
+      expect(total).toBeGreaterThan(convertible);
+      // Roughly doubles the road's population; the exact ratio is capped by the
+      // road's throughput, not by the configured multiplier.
+      expect(total).toBeGreaterThan(convertible * 1.5);
+      expect(sim.world.traffic.droppedDecorative).toBeLessThanOrEqual(sim.world.traffic.droppedSpawns);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 
-  it('never lets a decorative vehicle be mistaken for a customer', () => {
-    // The single property Phase 6 depends on. A decorative vehicle that reached
-    // the conversion system would spend the economy's demand on a car that was
-    // only ever scenery.
-    const sim = new Sim({ seed: 4242 });
-    sim.advance(TICKS_PER_MINUTE * 10);
+  it(
+    'never lets a decorative vehicle be mistaken for a customer',
+    () => {
+      // The single property Phase 6 depends on. A decorative vehicle that reached
+      // the conversion system would spend the economy's demand on a car that was
+      // only ever scenery.
+      const sim = new Sim({ seed: 4242 });
+      sim.advance(TICKS_PER_MINUTE * 10);
 
-    let decorative = 0;
-    let convertible = 0;
-    for (let slot = 0; slot < sim.world.vehicles.capacity; slot++) {
-      if (!sim.world.vehicles.isActive(slot)) continue;
-      if (sim.world.vehicles.decorative[slot] === 1) decorative++;
-      else convertible++;
-    }
-    expect(decorative + convertible).toBe(sim.world.vehicles.activeCount);
-    expect(decorative).toBeGreaterThan(0);
-  });
-
-  it('spawns more at the evening peak than in the small hours', () => {
-    // The day curve is the whole reason peaks exist; if this fails the curve is
-    // being ignored somewhere.
-    const { at } = spawnTimeline(555, (MS_PER_GAME_DAY / TICK_MS) | 0);
-    const hourOf = (ms: number): number => ((ms % MS_PER_GAME_DAY) / MS_PER_GAME_DAY) * 24;
-    const inWindow = (from: number, to: number): number =>
-      at.filter((ms) => hourOf(ms) >= from && hourOf(ms) < to).length;
-
-    const evening = inWindow(17, 20); // the largest peak
-    const night = inWindow(2, 5); // the trough
-    expect(evening).toBeGreaterThan(night * 3);
-  });
-
-  it('spreads across both lanes', () => {
-    const { lanes } = spawnTimeline(8080, TICKS_PER_MINUTE * 30);
-    const east = lanes.filter((lane) => lane === 0).length;
-    const west = lanes.filter((lane) => lane === 1).length;
-    expect(east).toBeGreaterThan(0);
-    expect(west).toBeGreaterThan(0);
-    // Roughly even. Not exactly: an arrival whose drawn lane is occupied spills
-    // to the other rather than being lost.
-    expect(Math.abs(east - west) / lanes.length).toBeLessThan(0.2);
-  });
-
-  it('refuses rather than overlapping when the road is saturated', () => {
-    // Self-limiting by design: a jam stops accepting cars instead of stacking
-    // them inside each other at the entrance.
-    const sim = new Sim({ seed: 1234 });
-    sim.world.progression.stage = 4; // the busiest approved stage
-    sim.advance(TICKS_PER_MINUTE * 10);
-
-    const vehicles = sim.world.vehicles;
-    const byLane = new Map<number, number[]>();
-    for (let slot = 0; slot < vehicles.capacity; slot++) {
-      if (!vehicles.isActive(slot)) continue;
-      const lane = vehicles.lane[slot] ?? 0;
-      const list = byLane.get(lane) ?? [];
-      list.push(vehicles.laneS[slot] ?? 0);
-      byLane.set(lane, list);
-    }
-    for (const positions of byLane.values()) {
-      positions.sort((a, b) => a - b);
-      for (let i = 1; i < positions.length; i++) {
-        expect((positions[i] ?? 0) - (positions[i - 1] ?? 0)).toBeGreaterThan(0);
+      let decorative = 0;
+      let convertible = 0;
+      for (let slot = 0; slot < sim.world.vehicles.capacity; slot++) {
+        if (!sim.world.vehicles.isActive(slot)) continue;
+        if (sim.world.vehicles.decorative[slot] === 1) decorative++;
+        else convertible++;
       }
-    }
-  });
+      expect(decorative + convertible).toBe(sim.world.vehicles.activeCount);
+      expect(decorative).toBeGreaterThan(0);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
+
+  it(
+    'spawns more at the evening peak than in the small hours',
+    () => {
+      // The day curve is the whole reason peaks exist; if this fails the curve is
+      // being ignored somewhere.
+      const { at } = spawnTimeline(555, (MS_PER_GAME_DAY / TICK_MS) | 0);
+      const hourOf = (ms: number): number => ((ms % MS_PER_GAME_DAY) / MS_PER_GAME_DAY) * 24;
+      const inWindow = (from: number, to: number): number =>
+        at.filter((ms) => hourOf(ms) >= from && hourOf(ms) < to).length;
+
+      const evening = inWindow(17, 20); // the largest peak
+      const night = inWindow(2, 5); // the trough
+      expect(evening).toBeGreaterThan(night * 3);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
+
+  it(
+    'spreads across both lanes',
+    () => {
+      const { lanes } = spawnTimeline(8080, TICKS_PER_MINUTE * 30);
+      const east = lanes.filter((lane) => lane === 0).length;
+      const west = lanes.filter((lane) => lane === 1).length;
+      expect(east).toBeGreaterThan(0);
+      expect(west).toBeGreaterThan(0);
+      // Roughly even. Not exactly: an arrival whose drawn lane is occupied spills
+      // to the other rather than being lost.
+      expect(Math.abs(east - west) / lanes.length).toBeLessThan(0.2);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
+
+  it(
+    'refuses rather than overlapping when the road is saturated',
+    () => {
+      // Self-limiting by design: a jam stops accepting cars instead of stacking
+      // them inside each other at the entrance.
+      const sim = new Sim({ seed: 1234 });
+      sim.world.progression.stage = 4; // the busiest approved stage
+      sim.advance(TICKS_PER_MINUTE * 10);
+
+      const vehicles = sim.world.vehicles;
+      const byLane = new Map<number, number[]>();
+      for (let slot = 0; slot < vehicles.capacity; slot++) {
+        if (!vehicles.isActive(slot)) continue;
+        const lane = vehicles.lane[slot] ?? 0;
+        const list = byLane.get(lane) ?? [];
+        list.push(vehicles.laneS[slot] ?? 0);
+        byLane.set(lane, list);
+      }
+      for (const positions of byLane.values()) {
+        positions.sort((a, b) => a - b);
+        for (let i = 1; i < positions.length; i++) {
+          expect((positions[i] ?? 0) - (positions[i - 1] ?? 0)).toBeGreaterThan(0);
+        }
+      }
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 });
 
 describe('the day curve', () => {
@@ -278,11 +319,15 @@ describe('archetype mix', () => {
     });
   });
 
-  it('produces every archetype in a real run', () => {
-    const { archetypes } = spawnTimeline(2468, TICKS_PER_MINUTE * 60);
-    const seen = new Set(archetypes);
-    expect(seen.size).toBe(ARCHETYPE_SPECS.length);
-  });
+  it(
+    'produces every archetype in a real run',
+    () => {
+      const { archetypes } = spawnTimeline(2468, TICKS_PER_MINUTE * 60);
+      const seen = new Set(archetypes);
+      expect(seen.size).toBe(ARCHETYPE_SPECS.length);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 
   it('shifts the mix across the day', () => {
     // Pickups skew to the early morning; if the hour bias were ignored the two

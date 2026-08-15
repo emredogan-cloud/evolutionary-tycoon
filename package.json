@@ -38,6 +38,7 @@
     "test:coverage": "vitest run --coverage",
     "test:determinism": "vitest run tests/unit/determinism",
     "bench:sim": "vitest run --config vitest.bench.config.ts",
+    "bench:record": "BENCH_RECORD=1 vitest run --config vitest.bench.config.ts",
     "e2e": "playwright test --project=chromium --project=firefox",
     "e2e:chromium": "playwright test --project=chromium",
     "e2e:firefox": "playwright test --project=firefox",

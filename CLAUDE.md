@@ -88,6 +88,7 @@ pnpm test             # Vitest unit + integration
 pnpm test:coverage    # with coverage thresholds (per-layer, see TESTING_STRATEGY §13)
 pnpm test:determinism # the determinism suite on its own — the most important signal
 pnpm bench:sim        # headless simulation benchmark + budgets (needs --expose-gc; config handles it)
+pnpm bench:record     # rewrite tools/bench/baseline.json — full run only, never a filtered one
 pnpm e2e              # Playwright: chromium + firefox
 pnpm e2e:smoke        # Playwright: webkit reduced suite
 pnpm test:visual      # visual goldens (chromium, forced SwiftShader)

@@ -9,6 +9,15 @@ import { VehicleMotionSystem } from '@sim/systems/VehicleMotionSystem';
 import { TrafficSpawnSystem } from '@sim/systems/TrafficSpawnSystem';
 
 /**
+ * These tests simulate whole minutes of traffic and inspect every vehicle on
+ * every tick, so they are genuinely slow — a second or two normally, and past
+ * Vitest's 5 s default under v8 coverage instrumentation on a CI runner. The
+ * simulated window is the point of each one, so the timeout moves rather than
+ * the window.
+ */
+const LONG_RUN_TIMEOUT_MS = 60_000;
+
+/**
  * What traffic does at its limits.
  *
  * Every path here is one the system takes when something has run out — the
@@ -21,23 +30,27 @@ import { TrafficSpawnSystem } from '@sim/systems/TrafficSpawnSystem';
 const TICKS_PER_MINUTE = 60_000 / TICK_MS;
 
 describe('when the vehicle store is full', () => {
-  it('refuses new arrivals instead of overwriting a live vehicle', () => {
-    // A tiny store reaches capacity in seconds, which is the same condition a
-    // full-size store hits during a stage-4 jam.
-    const sim = new Sim({ seed: 4242, capacities: { vehicles: 3 } });
-    sim.world.progression.stage = 4;
-    sim.advance(TICKS_PER_MINUTE * 5);
+  it(
+    'refuses new arrivals instead of overwriting a live vehicle',
+    () => {
+      // A tiny store reaches capacity in seconds, which is the same condition a
+      // full-size store hits during a stage-4 jam.
+      const sim = new Sim({ seed: 4242, capacities: { vehicles: 3 } });
+      sim.world.progression.stage = 4;
+      sim.advance(TICKS_PER_MINUTE * 5);
 
-    expect(sim.world.vehicles.activeCount).toBeLessThanOrEqual(3);
-    expect(sim.world.traffic.droppedSpawns).toBeGreaterThan(0);
-    // And it stays consistent: nothing was written into a slot it did not own.
-    const ids = new Set<number>();
-    for (let slot = 0; slot < sim.world.vehicles.capacity; slot++) {
-      if (!sim.world.vehicles.isActive(slot)) continue;
-      ids.add(at(sim.world.vehicles.entityId, slot));
-    }
-    expect(ids.size).toBe(sim.world.vehicles.activeCount);
-  });
+      expect(sim.world.vehicles.activeCount).toBeLessThanOrEqual(3);
+      expect(sim.world.traffic.droppedSpawns).toBeGreaterThan(0);
+      // And it stays consistent: nothing was written into a slot it did not own.
+      const ids = new Set<number>();
+      for (let slot = 0; slot < sim.world.vehicles.capacity; slot++) {
+        if (!sim.world.vehicles.isActive(slot)) continue;
+        ids.add(at(sim.world.vehicles.entityId, slot));
+      }
+      expect(ids.size).toBe(sim.world.vehicles.activeCount);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 
   it('keeps running rather than throwing', () => {
     const sim = new Sim({ seed: 1, capacities: { vehicles: 1 } });
@@ -49,14 +62,18 @@ describe('when the vehicle store is full', () => {
 });
 
 describe('when both lane heads are blocked', () => {
-  it('refuses the arrival and records it', () => {
-    const sim = new Sim({ seed: 909, capacities: { vehicles: 40 } });
-    sim.world.progression.stage = 4;
-    sim.advance(TICKS_PER_MINUTE * 8);
-    // Stage 4 runs 3.5x the stage-1 rate down the same two lanes, so refusals
-    // are guaranteed — this is the self-limiting behaviour, observed.
-    expect(sim.world.traffic.droppedSpawns).toBeGreaterThan(0);
-  });
+  it(
+    'refuses the arrival and records it',
+    () => {
+      const sim = new Sim({ seed: 909, capacities: { vehicles: 40 } });
+      sim.world.progression.stage = 4;
+      sim.advance(TICKS_PER_MINUTE * 8);
+      // Stage 4 runs 3.5x the stage-1 rate down the same two lanes, so refusals
+      // are guaranteed — this is the self-limiting behaviour, observed.
+      expect(sim.world.traffic.droppedSpawns).toBeGreaterThan(0);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 });
 
 describe('the motion system with nothing to do', () => {
@@ -139,24 +156,28 @@ describe('the render view under pressure', () => {
     expect(view.vehicleCount).toBe(8);
   });
 
-  it('gives every vehicle a heading the renderer can use', () => {
-    // Sampled across a window rather than at one tick: the stage-1 road is
-    // genuinely empty about 40% of the time (PHASE_5_REPORT), so a single read
-    // is a coin flip.
-    const sim = new Sim({ seed: 606 });
-    let checked = 0;
-    for (let tick = 0; tick < TICKS_PER_MINUTE * 3; tick++) {
-      sim.tick();
-      const view = sim.readView();
-      for (let i = 0; i < view.actorCount; i++) {
-        const actor = view.actors[i];
-        if (actor === undefined) continue;
-        expect(Math.hypot(actor.headingX, actor.headingY)).toBeCloseTo(1, 6);
-        checked++;
+  it(
+    'gives every vehicle a heading the renderer can use',
+    () => {
+      // Sampled across a window rather than at one tick: the stage-1 road is
+      // genuinely empty about 40% of the time (PHASE_5_REPORT), so a single read
+      // is a coin flip.
+      const sim = new Sim({ seed: 606 });
+      let checked = 0;
+      for (let tick = 0; tick < TICKS_PER_MINUTE * 3; tick++) {
+        sim.tick();
+        const view = sim.readView();
+        for (let i = 0; i < view.actorCount; i++) {
+          const actor = view.actors[i];
+          if (actor === undefined) continue;
+          expect(Math.hypot(actor.headingX, actor.headingY)).toBeCloseTo(1, 6);
+          checked++;
+        }
       }
-    }
-    expect(checked).toBeGreaterThan(0);
-  });
+      expect(checked).toBeGreaterThan(0);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 });
 
 describe('array helpers', () => {

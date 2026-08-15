@@ -245,12 +245,23 @@ export function benchEventFlush(): TimingResult {
   });
 }
 
+/**
+ * Spawn/despawn churn through the store's free list.
+ *
+ * 250 rounds rather than the obvious 10, for measurement reasons only — see
+ * `MIN_STABLE_CALIBRATION_UNITS` in `tests/perf/sim.bench.test.ts`. At 10 rounds
+ * the timed region was ~60 µs and the normalised ratio swung between 0.043 and
+ * 0.085 across CI runs of near-identical code, which is a 2x false regression on
+ * a gate whose threshold is 15%.
+ */
+const CHURN_ROUNDS = 250;
+
 export function benchStoreChurn(): TimingResult {
   const world = new World({ seed: 1 });
   const capacity = world.vehicles.capacity;
 
-  return timeIt('vehicle spawn + despawn cycles', capacity * 10, () => {
-    for (let round = 0; round < 10; round++) {
+  return timeIt('vehicle spawn + despawn cycles', capacity * CHURN_ROUNDS, () => {
+    for (let round = 0; round < CHURN_ROUNDS; round++) {
       for (let i = 0; i < capacity; i++) world.vehicles.spawn(i + 1);
       for (let i = 0; i < capacity; i++) world.vehicles.despawn(i);
     }
@@ -290,15 +301,31 @@ export function benchDepthSort(): TimingResult {
     });
   }
 
-  return timeIt('depth sort, 260 objects', 1, () => {
-    assignAndSort(items);
-    // Re-shuffle cheaply so the next pass is not sorting an already-sorted array,
-    // which is the best case and not the one the budget is about.
-    const first = items[0];
-    const last = items[items.length - 1];
-    if (first !== undefined && last !== undefined) {
-      items[0] = last;
-      items[items.length - 1] = first;
+  /*
+   * A hundred sorts per sample, not one.
+   *
+   * One sort takes about 12 microseconds, which is close enough to timer
+   * resolution that the *ratio* used by the regression gate swings ~28% between
+   * runs on identical code — measured on CI, and it was the only benchmark still
+   * failing after the timings were normalised. Everything else in this file
+   * already samples a thousand ticks or a hundred hashes for the same reason.
+   *
+   * `perOpUs` still divides by the sort count, so the reported per-sort figure
+   * and the 0.15 ms budget are unchanged.
+   */
+  const SORTS_PER_SAMPLE = 100;
+
+  return timeIt('depth sort, 260 objects', SORTS_PER_SAMPLE, () => {
+    for (let pass = 0; pass < SORTS_PER_SAMPLE; pass++) {
+      assignAndSort(items);
+      // Re-shuffle cheaply so the next pass is not sorting an already-sorted
+      // array, which is the best case and not the one the budget is about.
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (first !== undefined && last !== undefined) {
+        items[0] = last;
+        items[items.length - 1] = first;
+      }
     }
   });
 }
