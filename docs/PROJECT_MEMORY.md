@@ -14,17 +14,17 @@
 
 ## 1. Project Identity
 
-|                    |                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| **Proje adı**      | Evolutionary Tycoon                                                                |
-| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)             |
-| **Sürüm**          | 0.1.0                                                                              |
-| **Mevcut faz**     | **PHASE 4 — Art Direction & Asset Pipeline v1** (BATCH P2→P4'ün son fazı)          |
-| **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi)     |
-| **Durum**          | 🔴 **BATCH BİTTİ — DURULDU.** P2 ✅ · P3 ✅ · P4 🟡 PARTIAL. P5–P7 yetkisiz.       |
-| **Son güncelleme** | 2026-08-15 — CHECKPOINT L (P4 tamamlandı, kısmi)                                   |
-| **Son commit SHA** | `a60b6418f9e475163ae969b6fa5631c41a617a24` (main — P3 merge, `git rev-parse HEAD`) |
-| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                         |
+|                    |                                                                                |
+| ------------------ | ------------------------------------------------------------------------------ |
+| **Proje adı**      | Evolutionary Tycoon                                                            |
+| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)         |
+| **Sürüm**          | 0.1.0                                                                          |
+| **Mevcut faz**     | **PHASE 4 — Art Direction & Asset Pipeline v1** (BATCH P2→P4'ün son fazı)      |
+| **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi) |
+| **Durum**          | 🔴 **BATCH BİTTİ — DURULDU.** P2 ✅ · P3 ✅ · P4 🟡 PARTIAL. P5–P7 yetkisiz.   |
+| **Son güncelleme** | 2026-08-15 — CHECKPOINT L (P4 tamamlandı, kısmi)                               |
+| **Son commit SHA** | `9b2570f667115537a98c85bfb3de3370e5709e90` (main, `git rev-parse HEAD`)        |
+| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                     |
 
 ---
 
@@ -557,7 +557,7 @@ CI run [31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/acti
 | Plan                | Hobby — ⚠ ticari kullanıma kapalı; monetizasyon öncesi Pro (Faz 23 görevi)                               |
 | GitHub entegrasyonu | ✅ bağlı, push'ta otomatik deploy                                                                        |
 | **Production URL**  | **<https://evolutionary-tycoon.vercel.app>**                                                             |
-| Build SHA (canlı)   | `4643d88de950c48313888979eb4d31f266467945` — main ile eşleşiyor, production E2E 23/23                    |
+| Build SHA (canlı)   | `9b2570f667115537a98c85bfb3de3370e5709e90` — main ile eşleşiyor, schema v2, production smoke ✅ yeşil    |
 | Sağlık              | ✅ `/health.json` 200 · header'lar doğru · `/assets/**` immutable · SPA rewrite · `/api/time` 204 + Date |
 | Config kaynağı      | `vercel.ts` (tek kaynak; `vercel.json` yok)                                                              |
 
@@ -659,26 +659,30 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P2 — Simulation Core & Determinism**
+**Son tamamlanan faz: P4 — Art Direction & Asset Pipeline v1 (KISMİ)**
 
-| Kanıt                         | Değer                                                                                                                            |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| PR                            | [#8](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/8) · 11 commit                                                  |
-| CI                            | [run 31844494830](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844494830) — **8/8 yeşil** + CodeQL      |
-| **preview-e2e (bloke edici)** | [run 31844512902](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31844512902) — **23/23**, SHA eşleşti      |
-| Canlı preview                 | Chromium **23/23** · Firefox **23/23** (yerelden, deployment'a karşı)                                                            |
-| Testler                       | **314** unit/integration · **58** determinizm · lines %99.53 · branches %91.73 · functions %99.47                                |
-| Determinizm                   | 10.000 tick replay · frame pacing · 1×/2×/4× · save→resume · stream izolasyonu · AST taraması · **motorlar arası hash eşitliği** |
-| Perf                          | 1000 boş tick **0.195 ms** (bütçe 5 ms) · **0.20 B/tick** (bütçe ≈0) · 7/7 bütçe geçti                                           |
-| Bundle                        | **41.23 kB** gzip / 550 kB bütçe                                                                                                 |
-| Güvenlik                      | `pnpm audit` — sıfır zafiyet · CodeQL pass                                                                                       |
-| Rapor                         | [PHASE_2_REPORT.md](phases/PHASE_2_REPORT.md)                                                                                    |
-| Kapı                          | **✅ PASS** — batch içi, P3'e otomatik devam                                                                                     |
+| Kanıt                         | Değer                                                                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| PR                            | [#10](https://github.com/emredogan-cloud/evolutionary-tycoon/pull/10) · 8 commit · squash-merge `ad76943`                                      |
+| CI                            | [run 31854915548](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31854915548) — **16/16 yeşil**                           |
+| **preview-e2e (bloke edici)** | [run 31854929287](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31854929287) — **31/31**, SHA `e5a665b` eşleşti          |
+| main CI                       | `ad76943` ✅ (run 31855058051) · `9b2570f` ✅ (fix PR #11 sonrası)                                                                             |
+| **Production smoke**          | `9b2570f` ✅ [run 31855543235](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31855543235) — **Faz 3'ten beri ilk yeşil** |
+| Canlı production              | `/health.json` → `buildSha 9b2570f…`, `schemaVersion 2`, `assetManifestHash null` (henüz manifest yok — beklenen)                              |
+| Testler                       | **583** unit/integration (37 dosya) + 10 perf · lines %98.46 · branches %89.85 · functions %96.64                                              |
+| E2E                           | 48 geçti / 12 atlandı · WebKit 3/3 (pinlenmiş container)                                                                                       |
+| Visual                        | 3 golden yeniden üretildi, 6/6 · kapı artık **tek birimlik** renk değişimini yakalıyor                                                         |
+| Bundle                        | **406.45 kB** gzip / 550 kB bütçe                                                                                                              |
+| Asset pipeline                | `assets:validate` + `assets:build` CI'da · tüm §13 bütçeleri içinde · determinizm ölçüldü                                                      |
+| **Üretim asset'i**            | **0** — START CONDITION kapanmadı, roadmap kuralı gereği üretilmedi                                                                            |
+| Rapor                         | [PHASE_4_REPORT.md](phases/PHASE_4_REPORT.md) · [BATCH_2_4_REPORT.md](BATCH_2_4_REPORT.md)                                                     |
+| Kapı                          | 🟡 **PARTIAL** — makine tamam, sanat üretimi insan kararına bağlı. **Batch bitti, durum DUR.**                                                 |
 
-**Dürüst kayıtlar:** FPS hâlâ ölçülmedi (render yok, Faz 3'ün borcu) · JS bütçesi Phaser'a karşı
-hâlâ sınanmadı (Faz 3) · save/resume testi bugün **tam hash** eşitliği kuruyor, Faz 5'ten sonra
-kalıcı duruma daraltılmalı · `MS_PER_GAME_DAY` provizyonel (S1, Faz 5) · WebKit smoke yerelde
-koşamıyor (CI'da geçiyor) · yeni flaky test yok, `FLAKY.md` büyümedi.
+**Dürüst kayıtlar:** Faz 4'te FPS ölçülmedi (frame loop'a dokunulmadı; Faz 3'ün 200 FPS p50 ölçümü
+geçerli ve tekrarlanmadı) · texture memory 0.79 MB ama yalnızca placeholder, gerçek kısıt tek 4096²
+sayfanın 64 MB'ı · `referenceHeights.json`'daki `pending` listesi verilmemiş sanat kararları ·
+`baseline.json`'daki `bytesPerTick` eski yöntemle kaydedildi ve karşılaştırmada kullanılmıyor ·
+WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
