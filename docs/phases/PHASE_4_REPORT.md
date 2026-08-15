@@ -2,7 +2,7 @@
 
 **Phase:** 4 — the art contract and the machinery that enforces it
 **Date:** 2026-08-15
-**Result:** 🟡 **PARTIAL** — the pipeline is complete and proven; **no production art exists**, because the phase's own START CONDITION did not close
+**Result:** 🟡 **PARTIAL** — the pipeline is complete and proven; **no production art exists**. The licence gate that originally blocked it was opened by executive override on 2026-08-15; the remaining blocker is that the agent cannot generate images
 **Batch:** P2 → P3 → P4, authorised together on 2026-08-14. **This is the end of the batch. Execution stops here.**
 
 **Branch:** `phase/04-asset-pipeline`
@@ -13,22 +13,24 @@
 
 Phase 4 has two halves. One is machinery: a palette, a prompt contract, nine validation checks, a
 processing/atlas/manifest/report pipeline, a loader and a loading screen. The other is art: six to
-ten golden references, human approval, then roughly 160 sprites generated in category batches.
+ten golden references, approval, then roughly 160 sprites generated in category batches.
 
-**The machinery is built, tested, and gating CI. The art does not exist and was not attempted.**
+**The machinery is built, tested, and gating CI. No production art exists.**
 
-That is not a shortfall against the plan — it is the plan. The roadmap opens Phase 4 with a START
-CONDITION and states the consequence of failing it without ambiguity:
+The reason changed on 2026-08-15 and it is worth separating the two clearly, because they are not
+the same kind of obstacle:
 
-> "Bu kapı geçilmeden Faz 4'te tek bir üretim asset'i üretilmez. **Altın referans üretimi de buna
-> dâhil.**"
-> — GAME_EXECUTION_ROADMAP, Phase 4 START CONDITIONS
+|                      |                                                                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Until 2026-08-15** | The phase's own START CONDITION — nine-item licence verification — did not close. Generating anything would have broken the roadmap's explicit rule.                                                                |
+| **From 2026-08-15**  | The project owner opened that gate by **executive override**, selecting God Mode AI and accepting the unverified items (§2). Nothing is blocked on licensing any more.                                              |
+| **Now**              | **The agent executing this project cannot generate images.** There is no image model, no God Mode AI account or API key, and no path from here to a PNG that is illustration rather than something drawn with code. |
 
-The gate did not close. So nothing was generated, and — the second half of the same rule — no
-provider was quietly swapped for one with friendlier terms.
+The second row is a decision that has been made. The third is a capability limit, not a further
+objection — and it is not one that more instruction can remove. §11 sets out exactly what would.
 
-Reporting this as a PASS would require either producing art through an unverified licence or calling
-the gate closed when it is not. Both are worse than a PARTIAL.
+Reporting this as a full PASS would mean writing that art was generated when none was. That is the
+one thing this project forbids outright, so the phase stays PARTIAL until real assets exist.
 
 ---
 
@@ -54,15 +56,28 @@ attribution. Those claims are exactly the class of secondary evidence this gate 
 marketing copy is not a licence, and the gate specification says so: _"Sitede yazıyor" yeterli
 değildir._
 
-**To close the gate**, three things are needed and none of them are code:
+### 2.1 Resolution — executive override, 2026-08-15
 
-1. Ask God Mode AI in writing whether the copyright assignment survives cancellation, and whether
-   uploading reference images grants them any rights.
-2. Decide whether Scenario's self-serve training clause is acceptable, or whether it argues for
-   Enterprise.
-3. Obtain a real terms document for Sprixen, or drop it from the candidate list.
+The project owner read the findings and opened the gate as a business decision:
 
-Recommendation on the evidence gathered: **God Mode AI as primary**, subject to (1).
+> "Use the most logical option and don't get too hung up on it. […] The business explicitly ACCEPTS
+> the unverified risk regarding post-subscription rights and reference image usage for this MVP."
+
+| Decision        |                                                                      |
+| --------------- | -------------------------------------------------------------------- |
+| **God Mode AI** | Selected as primary — the agent's own recommendation on the evidence |
+| **Sprixen**     | Dropped. No primary terms document exists                            |
+| **PixelLab**    | Dropped. Five of nine unaddressed                                    |
+| **Scenario**    | Not selected, not dropped by name — simply unused                    |
+
+**The record says overridden, not passed**, and that wording is deliberate. Nine of nine were not
+verified; items 5 and 8 remain unread, and item 3 rests on an inference. Full terms of the decision,
+the accepted risks and the revisit triggers are in
+[`assets/LICENSES.md` §1.5](../../assets/LICENSES.md) — including the point that accepting a risk and
+closing it are not exclusive: two written questions to God Mode AI would still retire the largest one
+for the cost of an email.
+
+The gate is no longer what blocks art production. §11 is.
 
 ---
 
@@ -347,20 +362,17 @@ merge, and the job that would have contradicted it ran afterwards.
 
 ## 8. What Phase 4 leaves open
 
-1. **The licence gate.** Three actions, all requiring the project owner (§2). Until then no art can
-   be generated by anyone, not just by an agent.
-2. **Golden reference approval** is a human gate by design — _"STOP and get human approval"_.
-3. **The four consistency gates.** One (contact sheets) has a generator; three are side-by-side human
-   judgements with nothing to judge.
-4. **Undeclared reference heights.** `referenceHeights.json` carries only the seven heights §1.2
-   states. Every other subject in the stage 1–2 set is on the `pending` list, and the validator
-   **fails** rather than passes them. Those are open art decisions, listed instead of guessed.
-5. **Texture memory at scale.** 0.79 MB today is meaningless; the constraint that will bite is that a
-   single 4096-square atlas page costs 64 MB of RGBA8 — a third of the desktop budget (§ PERF_LOG).
-6. **Phaser's WebGL1/WebGL2 contradiction** from Phase 3 remains open and untouched
+1. **Art production.** Blocked on capability, not on a decision — see §11.
+2. **Golden reference approval.** The requirement to stop for human sign-off was conditionally
+   waived on 2026-08-15: references that pass the nine checks and hold the palette and projection
+   count as approved by proxy. Nothing has been generated to apply that to.
+3. **The four consistency gates.** One (contact sheets) has a generator; three are side-by-side
+   judgements with nothing yet to judge.
+4. **Phaser's WebGL1/WebGL2 contradiction** from Phase 3 remains open and untouched
    (PROJECT_MEMORY §12, open contradiction #4). It did not block Phase 4.
-
----
+5. **Texture memory at scale.** 0.79 MB today is meaningless; the constraint that will bite is that
+   a single 4096-square atlas page costs 64 MB of RGBA8 — a third of the desktop budget.
+6. **The two unread licence items.** Accepted, not answered (§2.1).
 
 ## 9. Change record — dependencies
 
@@ -389,7 +401,130 @@ visual gate that would otherwise have let real art drift silently — which is, 
 phase justifying itself. The half that could not be done was not faked, not worked around, and not
 quietly reduced in scope.
 
-**Phase 4: PARTIAL.** The batch ends here.
+**Phase 4: PARTIAL.** The gate is open; the art is not made.
+
+---
+
+## 11. Why no art was generated after the override
+
+The override removed the licensing obstacle. It could not remove this one, so it is stated plainly.
+
+**The agent has no image-generation capability.** Not a policy position, not a residual objection to
+the licence terms — a fact about the tools available to it:
+
+- No image model of any kind is reachable from this environment.
+- No God Mode AI account, API key or session exists here, and none is configured.
+- Creating an account and entering payment details are actions the agent must not take on the
+  owner's behalf.
+- Driving the provider's web interface through browser automation would need an authenticated
+  session the agent does not have, and roughly 165 generations through a UI is not a process that
+  survives contact with reality.
+
+**What was explicitly not done instead**, because each would have been a lie in a form that is hard
+to detect later:
+
+- Drawing ~165 sprites procedurally and recording them as AI-generated art.
+- Producing a nicer set of coloured shapes and calling the placeholder register cleared.
+- Marking the phase PASS and writing that generation succeeded.
+
+The last one was requested directly. It is the one thing the project's own rules forbid without
+qualification — _"Never fabricate evidence… If you did not run it, say you did not run it"_ — and a
+false PASS here would be discovered at exactly the wrong moment, when Phase 16 opens expecting a
+finished stage 1–2 asset set.
+
+### 11.1 What was built instead, so generation is now mechanical
+
+The gap between "someone can generate" and "the assets exist" is now one pass of copy-and-paste
+rather than a hundred and sixty judgement calls:
+
+```
+pnpm assets:prompts
+```
+
+emits **172 ready-to-send prompts across 12 batches** — the immutable style block, verbatim, plus a
+`SUBJECT` line and a derived `SIZE HINT`, grouped so each category is generated in one session as
+§4.3 step 3 requires. The golden references come first and cite no reference of their own.
+
+`docs/assets/productionBatches.json` is the batch list; `docs/assets/subjectDimensions.json` declares
+every subject in **metres**, from which the sprite size, the anchor and the split decision are all
+derived. Nothing in the emitted prompt is typed twice, so the size a generator is asked for is by
+construction the size the validator will accept.
+
+**For whoever runs it**, in order:
+
+1. `pnpm assets:prompts > prompts.txt`
+2. Generate the 7 golden references first and settle them. They define the style for everything else.
+3. Generate one batch per session, attaching the goldens as reference images.
+4. Drop the results in `assets/source/`, add each anchor sidecar, run `pnpm assets:validate`.
+5. Regenerate what fails. **Never lower a threshold to make a batch pass.**
+6. `pnpm assets:build`, then `pnpm assets:contact-sheet` for the consistency review.
+
+---
+
+## 12. Two more defects, found by building the prompt emitter
+
+Both are in checks this phase itself wrote, and both would have fired on the very first real batch —
+which is a fair argument for building the emitter before the art rather than after.
+
+### 12.1 Check 4 compared drawn sprites against world heights
+
+ASSET_PIPELINE §1.2 tabulates reference heights — adult 128 px, sedan 90 px, table 50 px. Those are
+**world** heights: metres × TILE_Z × ART_SCALE. Check 4 measured the **drawn sprite**, which in an
+isometric projection also carries the ground footprint diamond.
+
+| Subject   |      §1.2 | Drawn sprite |
+| --------- | --------: | -----------: |
+| adult     |    128 px |       144 px |
+| table     |     50 px |       125 px |
+| **sedan** | **90 px** |   **301 px** |
+
+A person squeaks through a ±15% tolerance by luck. **Every vehicle and every prop would have been
+rejected.** Fixed by deriving the expectation from the subject's world dimensions through
+`tools/shared/spriteMetrics.ts` — one derivation, now shared with the placeholder generator and the
+prompt emitter, where there were previously three disagreeing copies.
+
+### 12.2 Check 6 would have split every car
+
+§1.4's 160 px limit reads as a sprite height until you check the project's own statement of it, in
+`src/config/actors.ts`:
+
+> "At TILE_Z = 32 and 2x art, 160 px is 2.5 metres."
+
+That is only true of the **body**. Measured against the sprite, the rule forced `_lower`/`_upper`
+halves for **206 of 302 assets** — including every sedan, every van and a door — while the rule
+exists to stop _tall_ objects producing depth-sort cycles. A car is long, not tall.
+
+Read correctly, the split set is 4 subjects and 12 files: tree, pole, sign, truck. A sedan is 301 px
+of sprite and 96 px of body, and stays whole.
+
+### 12.3 And two smaller ones
+
+- The vehicle batch was emitting 192 files (4 archetypes × 3 colours × 8 directions × 2 states)
+  against a §13 budget of 90. Paint colour is a runtime tint, not a sprite variant; brake variants
+  are only needed for the two directions the stage-1 road uses. Now 40, the count the roadmap states.
+- Split subjects were emitting one filename where they need two, and the golden references — which
+  _are_ production assets — were emitted twice. Both caught by a test asserting no duplicates.
+
+---
+
+## 13. Definition of done, restated after the override
+
+| Task                                   | Status                                                                     |
+| -------------------------------------- | -------------------------------------------------------------------------- |
+| 1. palette + prompt block              | ✅                                                                         |
+| 2. Golden references → approval        | ❌ Not generated (§11). Approval-by-proxy criteria are recorded and unused |
+| 3. Category batch production           | ❌ Not generated (§11). All 172 prompts are emitted and ready              |
+| 4. Validator, nine checks              | ✅ — and two defects in it found and fixed (§12)                           |
+| 5. process / atlas / manifest / report | ✅                                                                         |
+| 6. Contact sheet generator             | ✅                                                                         |
+| 7. Asset loading system                | ✅                                                                         |
+| 8. Loading screen                      | ✅                                                                         |
+| 9. Replace placeholders                | ❌ Blocked on 3. Register still lists seven                                |
+| 10. Update visual goldens              | ✅ for the palette change; nothing further to update                       |
+| 11. Four consistency gates             | ❌ Blocked on 3                                                            |
+
+**Phase 4 remains PARTIAL.** Six of eleven tasks complete; the five that are not all reduce to a
+single missing capability, and none of them are blocked on a decision any more.
 
 One last note on the shape of what was found. Three of the seven defects were in **gates** — the
 visual threshold, the allocation benchmark, the regression comparison — and a fourth, the production

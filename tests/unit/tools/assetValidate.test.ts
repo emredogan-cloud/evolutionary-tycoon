@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { writeFixture } from '../../../tools/asset-pipeline/testFixtures.ts';
 import type { FixtureOptions } from '../../../tools/asset-pipeline/testFixtures.ts';
+import { resolveExpectation } from '../../../tools/asset-pipeline/subjectDimensions.ts';
 import {
   CHECKS,
   metaPathFor,
@@ -28,8 +29,26 @@ import type { AssetValidation, CheckId } from '../../../tools/asset-pipeline/val
 
 let dir: string;
 
+/**
+ * Fixtures are sized from the same derivation the validator checks against, so a
+ * change to the projection moves both together and cannot silently invalidate
+ * the suite. `margin` is the transparent border, hence the +4 on each axis.
+ */
+function sizeFor(subjectKey: string): { canvasWidth: number; canvasHeight: number } {
+  const expectation = resolveExpectation(subjectKey);
+  if (expectation === null) throw new Error(`no expectation for ${subjectKey}`);
+  if (expectation.mode === 'canvas') {
+    return { canvasWidth: expectation.width + 4, canvasHeight: expectation.height + 4 };
+  }
+  // Width is not what any size check looks at; keep it proportionate and legal.
+  return {
+    canvasWidth: Math.max(20, Math.round(expectation.height * 1.2)),
+    canvasHeight: expectation.height + 4,
+  };
+}
+
 const TABLE = 'prop_table_case@2x.png';
-const base: FixtureOptions = { canvasWidth: 70, canvasHeight: 54, ramp: 'timber' };
+const base: FixtureOptions = { ...sizeFor('prop/table'), ramp: 'timber' };
 
 async function check(
   filename: string,
@@ -71,7 +90,9 @@ describe('a compliant asset', () => {
 
   it('reports the trimmed size', async () => {
     const result = await check(TABLE);
-    expect(result.bounds).toEqual({ width: 66, height: 50 });
+    // 1.2 x 1.2 x 0.75 m projects to a 125 px sprite — not §1.2's 50 px, which
+    // is the table's world height and says nothing about what is drawn.
+    expect(result.bounds).toEqual({ width: 146, height: 125 });
   });
 });
 
@@ -118,26 +139,32 @@ describe('check 3 — palette compliance', () => {
 
 describe('check 4 — reference height', () => {
   it('fails a table that is the wrong height', async () => {
-    // The reference is 50px +/-15%; 90px is nowhere near it.
-    const result = await check('prop_table_tall@2x.png', { canvasHeight: 94 });
+    // 1.2 x 1.2 x 0.75 m projects to 125px +/-15%, so 60px is nowhere near it.
+    const result = await check('prop_table_tall@2x.png', { canvasHeight: 64 });
     expect(finding(result, 'reference-height').ok).toBe(false);
-    expect(finding(result, 'reference-height').detail).toMatch(/outside 43-57px/);
+    expect(finding(result, 'reference-height').detail).toMatch(/outside 106-144px/);
   });
 
-  it('refuses a subject nobody has declared a height for', async () => {
-    // `nature/tree` is on the pending list in referenceHeights.json. An
-    // undeclared height is an open art decision, and passing it would close that
-    // decision silently.
-    const result = await check('nature_tree_oak@2x.png');
+  it('refuses a subject nobody has declared dimensions for', async () => {
+    // An undeclared subject is an open decision, and passing it would close that
+    // decision silently. Declaring metres is a fact; declaring pixels would not be.
+    const result = await check('prop_umbrella_large@2x.png');
     expect(finding(result, 'reference-height').ok).toBe(false);
-    expect(finding(result, 'reference-height').detail).toMatch(/no reference height declared/);
+    expect(finding(result, 'reference-height').detail).toMatch(/nothing declared/);
+    expect(finding(result, 'reference-height').detail).toMatch(/world dimensions in metres/);
   });
 
   it('uses an envelope where only the assembled height is known', async () => {
-    // char/* has no per-part height, only "no part exceeds the 128px adult".
-    const result = await check('char_body_male-01_se@2x.png');
+    // char/* has no per-part box — only "no part exceeds the assembled adult",
+    // which is 144px drawn rather than §1.2's 128px world height.
+    const result = await check('char_body_male-01_se@2x.png', sizeFor('char/head'));
     expect(finding(result, 'reference-height').ok).toBe(true);
-    expect(finding(result, 'reference-height').detail).toMatch(/within the 128px envelope/);
+    expect(finding(result, 'reference-height').detail).toMatch(/within the 144px assembled envelope/);
+  });
+
+  it('checks an icon against its declared canvas rather than a projection', async () => {
+    const result = await check('ui_icon_cash@2x.png', { canvasWidth: 128, canvasHeight: 128, margin: 0 });
+    expect(finding(result, 'reference-height').detail).toMatch(/matches the declared canvas/);
   });
 });
 
@@ -155,15 +182,33 @@ describe('check 5 — light direction', () => {
 });
 
 describe('check 6 — the split rule', () => {
-  it('fails a sprite taller than 160px with no _lower/_upper', async () => {
-    const result = await check('struct_door_single@2x.png', { canvasHeight: 200 });
+  it('fails an object whose BODY exceeds 160px and is not split', async () => {
+    // struct/sign is 3.2 m -> 205px of body. §1.4's limit is 2.5 m of object,
+    // so this must arrive as halves.
+    const result = await check('struct_sign_large_whole@2x.png', sizeFor('struct/sign'));
     expect(finding(result, 'split-rule').ok).toBe(false);
     expect(finding(result, 'split-rule').detail).toMatch(/depth-sort cycles/);
+    expect(finding(result, 'split-rule').detail).toMatch(/body height/);
   });
 
-  it('accepts the same height when it is named as a half', async () => {
-    const result = await check('struct_sign_large_lower@2x.png', { canvasHeight: 200 });
+  it('accepts the same object when it is named as a half', async () => {
+    const result = await check('struct_sign_large_lower@2x.png', sizeFor('struct/sign'));
     expect(finding(result, 'split-rule').ok).toBe(true);
+  });
+
+  it('does NOT split a car, which is long rather than tall', async () => {
+    // The defect this check used to have. A sedan's sprite is 301px, but only
+    // 96px of that is body — measured against the sprite, every vehicle in the
+    // game would have been forced into halves.
+    const result = await check('veh_sedan_default_se@2x.png', sizeFor('veh/sedan'));
+    expect(finding(result, 'split-rule').ok).toBe(true);
+    expect(finding(result, 'split-rule').detail).toMatch(/96px body height, within/);
+  });
+
+  it('rejects splitting an object that does not need it', async () => {
+    const result = await check('prop_table_round_lower@2x.png', sizeFor('prop/table'));
+    expect(finding(result, 'split-rule').ok).toBe(false);
+    expect(finding(result, 'split-rule').detail).toMatch(/does not need it/);
   });
 });
 
@@ -249,8 +294,16 @@ describe('set-level checks', () => {
     rmSync(setDir, { recursive: true, force: true });
   });
 
+  /**
+   * A sign is 0.6 x 0.6 x 3.2 m: a 243px sprite of which 205px is body, so it
+   * must be split. Each half is drawn complete on its own ground diamond, so the
+   * two sprite heights sum to the object plus ONE extra diamond — which is why
+   * the pair check subtracts the shared footprint before comparing.
+   */
+  const SIGN = { canvasWidth: 80, canvasHeight: 143 };
+
   it('fails a split object that is missing its other half', async () => {
-    await writeFixture(setDir, 'struct_sign_large_lower@2x.png', { ...base, canvasHeight: 110 });
+    await writeFixture(setDir, 'struct_sign_large_lower@2x.png', { ...base, ...SIGN });
     const result = await validateDirectory(setDir);
     const split = result.setFindings.filter((entry) => !entry.ok);
     expect(split).toHaveLength(1);
@@ -258,12 +311,14 @@ describe('set-level checks', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('checks the pair against the reference height, not each half', async () => {
-    // 200px sign, +/-15% -> 170-230. Two halves of 106px trimmed sum to 212.
-    await writeFixture(setDir, 'struct_sign_large_upper@2x.png', { ...base, canvasHeight: 110 });
+  it('checks the pair against the projected height, less the shared footprint', async () => {
+    await writeFixture(setDir, 'struct_sign_large_upper@2x.png', { ...base, ...SIGN });
     const result = await validateDirectory(setDir);
+    const heights = result.setFindings.map((entry) => entry.detail).join(' ');
+    // Two trimmed halves of 139px sum to 278; the sign's own diamond is 38px, so
+    // the object measures 240 against a 243px expectation.
+    expect(heights).toMatch(/halves total 240px \(278 less one shared footprint\)/);
     expect(result.setFindings.every((entry) => entry.ok)).toBe(true);
-    expect(result.setFindings.some((entry) => entry.detail.includes('halves total 212px'))).toBe(true);
   });
 
   it('reports zero checked for an empty directory rather than passing quietly', async () => {

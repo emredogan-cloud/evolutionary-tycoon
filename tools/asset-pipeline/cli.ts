@@ -4,6 +4,7 @@ import { buildAtlases } from './atlas.ts';
 import { buildContactSheets } from './contactSheet.ts';
 import { convertAudioDirectory } from './audio.ts';
 import { buildManifest, writeManifest } from './manifest.ts';
+import { emitPrompts } from './prompts.ts';
 import { PATHS } from './paths.ts';
 import { processDirectory } from './process.ts';
 import { buildReport, formatReport } from './report.ts';
@@ -23,7 +24,8 @@ import { validateDirectory } from './validate.ts';
  * output says so in words rather than printing a row of ticks over nothing.
  */
 
-type Stage = 'validate' | 'process' | 'atlas' | 'audio' | 'manifest' | 'report' | 'contact-sheet' | 'build';
+type Stage =
+  'validate' | 'process' | 'atlas' | 'audio' | 'manifest' | 'report' | 'contact-sheet' | 'prompts' | 'build';
 
 const STAGES: readonly Stage[] = [
   'validate',
@@ -33,6 +35,7 @@ const STAGES: readonly Stage[] = [
   'manifest',
   'report',
   'contact-sheet',
+  'prompts',
   'build',
 ];
 
@@ -138,6 +141,31 @@ async function runReport(): Promise<boolean> {
   return report.ok;
 }
 
+/**
+ * Print every generation prompt, grouped by batch.
+ *
+ * The output is meant to be worked through in order: golden references first
+ * and settled before anything else, then one category at a time in a single
+ * session each (ASSET_PIPELINE §4.3 step 3).
+ */
+function runPrompts(): boolean {
+  const assets = emitPrompts();
+  let current = '';
+  for (const asset of assets) {
+    if (asset.batch !== current) {
+      current = asset.batch;
+      const count = assets.filter((entry) => entry.batch === current).length;
+      console.log(
+        `\n\n${'='.repeat(78)}\nBATCH: ${current}  (${count} assets — generate in ONE session)\n${'='.repeat(78)}`,
+      );
+    }
+    console.log(`\n--- ${asset.file}${asset.split ? '   [SPLIT: also produce the _upper half]' : ''}\n`);
+    console.log(asset.prompt);
+  }
+  console.log(`\n\n${assets.length} assets across ${new Set(assets.map((a) => a.batch)).size} batches.`);
+  return true;
+}
+
 async function runContactSheets(): Promise<boolean> {
   const sheets = await buildContactSheets();
   if (sheets.length === 0) {
@@ -166,6 +194,8 @@ async function run(stage: Stage): Promise<boolean> {
       return runReport();
     case 'contact-sheet':
       return runContactSheets();
+    case 'prompts':
+      return runPrompts();
     case 'build': {
       for (const step of ['validate', 'process', 'atlas', 'audio', 'manifest', 'report'] as const) {
         console.log(`\n--- assets:${step} ---`);

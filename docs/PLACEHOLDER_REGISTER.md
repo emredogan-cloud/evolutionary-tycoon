@@ -30,11 +30,11 @@ Every temporary asset or stand-in, and when it gets replaced.
 The replacement column said **Phase 4** for six of the seven rows. It now says **Phase 16**, and the
 reason is not a slip in the plan — it is the Phase 4 START CONDITION.
 
-The nine-item AI-tool licence verification did not close
-([`assets/LICENSES.md`](../assets/LICENSES.md) §1; item 8, rights after a subscription ends, is
-unaddressed by every candidate provider). The roadmap's rule for that state is that **not one
-production asset may be produced, golden references included**, and that no provider may be silently
-substituted. So no art was generated and every placeholder here is still standing.
+The nine-item AI-tool licence verification did not close, so no art could be produced. That gate was
+later opened by executive override ([`assets/LICENSES.md`](../assets/LICENSES.md) §1.5) — but still
+no art exists, because the agent has no image-generation capability
+([PHASE_4_REPORT §11](phases/PHASE_4_REPORT.md)). Every placeholder here is still standing, and the
+prompts that would replace them are emitted by `pnpm assets:prompts`.
 
 Phase 16 is where full asset production lives, and it is the earliest phase that could hold this work
 without inventing a new one. If the licence gate closes sooner, the art can land sooner — this column

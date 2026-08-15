@@ -8,8 +8,8 @@ import type { ParsedName } from './naming.ts';
 import { loadPalette, nearest } from './palette.ts';
 import type { LoadedPalette } from './palette.ts';
 import { PATHS } from './paths.ts';
-import { loadReferenceHeights, resolveReference } from './referenceHeights.ts';
-import type { ReferenceHeights } from './referenceHeights.ts';
+import { loadSubjectDimensions, resolveExpectation, spriteFor } from './subjectDimensions.ts';
+import type { SubjectDimensions } from './subjectDimensions.ts';
 
 /**
  * The nine asset checks of ASSET_PIPELINE §4.3 step 4.
@@ -177,42 +177,73 @@ function checkPalette(image: RawImage, palette: LoadedPalette): Finding {
     : fail('palette-compliance', `${detail}; furthest pixel is ${Math.sqrt(worst).toFixed(1)} away`);
 }
 
-/** Check 4 — trimmed height against the declared reference for the subject. */
-function checkReferenceHeight(name: ParsedName, height: number, table: ReferenceHeights): Finding {
-  const entry = resolveReference(name.subjectKey, table);
-  if (entry === null) {
+/**
+ * Check 4 — drawn size against what the subject's world dimensions project to.
+ *
+ * Compared against a **derived** sprite height, not against the pixel numbers in
+ * ASSET_PIPELINE §1.2. Those are world heights (`metres x TILE_Z x ART_SCALE`)
+ * and a drawn isometric sprite is taller, because it also carries the projected
+ * ground diamond. A 4.5 x 1.9 m car is 90 px by §1.2 and 301 px on screen; the
+ * first version of this check compared the second number against the first and
+ * would have rejected every correct vehicle. `tools/shared/spriteMetrics.ts`
+ * owns the derivation and the placeholder generator uses the same one.
+ */
+function checkReferenceHeight(
+  name: ParsedName,
+  bounds: { width: number; height: number },
+  table: SubjectDimensions,
+): Finding {
+  const expectation = resolveExpectation(name.subjectKey, table);
+  if (expectation === null) {
     return fail(
       'reference-height',
-      `no reference height declared for "${name.subjectKey}" — add it to ` +
-        'docs/assets/referenceHeights.json with its source before this asset can be accepted',
+      `nothing declared for "${name.subjectKey}" — add its world dimensions in metres to ` +
+        'docs/assets/subjectDimensions.json, with a source, before this asset can be accepted',
     );
   }
 
-  if (entry.mode === 'envelope') {
-    return height <= entry.height
-      ? ok('reference-height', `${height}px within the ${entry.height}px envelope (${entry.match})`)
+  if (expectation.mode === 'envelope') {
+    return bounds.height <= expectation.height
+      ? ok('reference-height', `${bounds.height}px within the ${expectation.height}px assembled envelope`)
       : fail(
           'reference-height',
-          `${height}px exceeds the ${entry.height}px envelope for ${entry.match} (${entry.source})`,
+          `${bounds.height}px exceeds the ${expectation.height}px assembled-adult envelope (${expectation.source})`,
+        );
+  }
+
+  if (expectation.mode === 'canvas') {
+    const matches = bounds.width === expectation.width && bounds.height === expectation.height;
+    return matches
+      ? ok('reference-height', `${bounds.width}x${bounds.height} matches the declared canvas`)
+      : fail(
+          'reference-height',
+          `${bounds.width}x${bounds.height}, declared canvas is ` +
+            `${expectation.width}x${expectation.height} (${expectation.source})`,
         );
   }
 
   // A split object is only the right height as a pair, so a half is checked at
   // the set level in `validateDirectory` and passed over here.
   if (name.splitPart !== null) {
-    return ok('reference-height', `split half — the pair is checked against ${entry.height}px`);
+    return ok('reference-height', `split half — the pair is checked against ${expectation.height}px`);
   }
 
-  const tolerance = entry.tolerance ?? 0.15;
-  const low = entry.height * (1 - tolerance);
-  const high = entry.height * (1 + tolerance);
-  return height >= low && height <= high
-    ? ok('reference-height', `${height}px within ${low.toFixed(0)}-${high.toFixed(0)}px`)
-    : fail(
-        'reference-height',
-        `${height}px is outside ${low.toFixed(0)}-${high.toFixed(0)}px ` +
-          `(${entry.height}px +/-${(tolerance * 100).toFixed(0)}%, ${entry.source})`,
-      );
+  const low = expectation.height * (1 - expectation.tolerance);
+  const high = expectation.height * (1 + expectation.tolerance);
+  if (bounds.height >= low && bounds.height <= high) {
+    return ok('reference-height', `${bounds.height}px within ${low.toFixed(0)}-${high.toFixed(0)}px`);
+  }
+  // A subject declared as split that arrives whole is a different mistake from
+  // one that is simply the wrong size, and saying so saves the reader a guess.
+  const hint = expectation.splitExpected
+    ? ' — this subject is declared `split`, so it should arrive as _lower/_upper halves'
+    : '';
+  return fail(
+    'reference-height',
+    `${bounds.height}px is outside ${low.toFixed(0)}-${high.toFixed(0)}px ` +
+      `(${expectation.height}px projected +/-${(expectation.tolerance * 100).toFixed(0)}%, ` +
+      `${expectation.source})${hint}`,
+  );
 }
 
 /**
@@ -270,17 +301,44 @@ function checkLightDirection(
       );
 }
 
-/** Check 6 — the mandatory split rule of §1.4. */
-function checkSplitRule(name: ParsedName, height: number): Finding {
-  if (height <= SPLIT_HEIGHT_LIMIT_PX) {
-    return ok('split-rule', `${height}px is within the ${SPLIT_HEIGHT_LIMIT_PX}px single-sprite limit`);
+/**
+ * Check 6 — the mandatory split rule of §1.4.
+ *
+ * The 160 px limit measures the object's **body**, not its sprite. The project
+ * states its own reading in `src/config/actors.ts`: "At TILE_Z = 32 and 2x art,
+ * 160 px is 2.5 metres" — true of `heightMetres x TILE_Z x ART_SCALE` and of
+ * nothing else. Measured against the sprite instead, the rule splits a sedan
+ * (301 px tall, of which only 96 is body) and leaves a 5 m tree and a sedan in
+ * the same category. The rule exists to stop *tall* objects producing depth-sort
+ * cycles; a car is long, not tall.
+ *
+ * When the subject has no declared dimensions the body cannot be derived, so
+ * this falls back to the sprite box and says which quantity it used — check 4
+ * has already failed the asset by then anyway.
+ */
+function checkSplitRule(name: ParsedName, spriteHeight: number, table: SubjectDimensions): Finding {
+  const expectation = resolveExpectation(name.subjectKey, table);
+  const bodyHeight = expectation?.mode === 'reference' ? expectation.bodyHeight : null;
+  const measured = bodyHeight ?? spriteHeight;
+  const measuredAs = bodyHeight === null ? 'sprite height, subject undeclared' : 'body height';
+
+  if (measured <= SPLIT_HEIGHT_LIMIT_PX) {
+    return name.splitPart === null
+      ? ok('split-rule', `${measured}px ${measuredAs}, within the ${SPLIT_HEIGHT_LIMIT_PX}px limit`)
+      : fail(
+          'split-rule',
+          `named _${name.splitPart} but ${measured}px ${measuredAs} is within the ` +
+            `${SPLIT_HEIGHT_LIMIT_PX}px limit — splitting an object that does not need it gives it ` +
+            'two depths and two anchors for no benefit',
+        );
   }
+
   return name.splitPart !== null
-    ? ok('split-rule', `${height}px, but named _${name.splitPart}`)
+    ? ok('split-rule', `${measured}px ${measuredAs}, correctly named _${name.splitPart}`)
     : fail(
         'split-rule',
-        `${height}px exceeds ${SPLIT_HEIGHT_LIMIT_PX}px and is not named _lower/_upper — ` +
-          'a sprite this tall creates depth-sort cycles (ASSET_PIPELINE §1.4)',
+        `${measured}px ${measuredAs} exceeds ${SPLIT_HEIGHT_LIMIT_PX}px and is not named ` +
+          '_lower/_upper — an object this tall creates depth-sort cycles (ASSET_PIPELINE §1.4)',
       );
 }
 
@@ -336,12 +394,12 @@ function checkFileBudget(name: ParsedName, bytes: number): Finding {
 
 export interface ValidateOptions {
   readonly palette?: LoadedPalette;
-  readonly referenceHeights?: ReferenceHeights;
+  readonly subjectDimensions?: SubjectDimensions;
 }
 
 export async function validateAsset(file: string, options: ValidateOptions = {}): Promise<AssetValidation> {
   const palette = options.palette ?? loadPalette();
-  const table = options.referenceHeights ?? loadReferenceHeights();
+  const table = options.subjectDimensions ?? loadSubjectDimensions();
   const filename = basename(file);
 
   // Check 7 first: nothing else can be checked against a name we cannot read.
@@ -377,9 +435,9 @@ export async function validateAsset(file: string, options: ValidateOptions = {})
     checkTransparentBackground(image),
     checkCoverage(image, bounds),
     checkPalette(image, palette),
-    checkReferenceHeight(name, bounds.height, table),
+    checkReferenceHeight(name, bounds, table),
     checkLightDirection(image, bounds),
-    checkSplitRule(name, bounds.height),
+    checkSplitRule(name, bounds.height, table),
     checkAnchor(file, image),
     checkFileBudget(name, statSync(file).size),
   );
@@ -420,7 +478,7 @@ export async function validateDirectory(
     assets.push(await validateAsset(join(dir, file), options));
   }
 
-  const table = options.referenceHeights ?? loadReferenceHeights();
+  const table = options.subjectDimensions ?? loadSubjectDimensions();
   const setFindings = checkSplitPairs(assets, table);
 
   return {
@@ -439,7 +497,7 @@ export async function validateDirectory(
  * reference height on its own. Both are set-level facts, so they live here
  * rather than in `validateAsset`.
  */
-function checkSplitPairs(assets: readonly AssetValidation[], table: ReferenceHeights): Finding[] {
+function checkSplitPairs(assets: readonly AssetValidation[], table: SubjectDimensions): Finding[] {
   const groups = new Map<string, AssetValidation[]>();
   for (const asset of assets) {
     if (asset.name?.splitPart === undefined || asset.name.splitPart === null) continue;
@@ -459,21 +517,29 @@ function checkSplitPairs(assets: readonly AssetValidation[], table: ReferenceHei
     }
 
     const first = halves[0]?.name ?? null;
-    const entry = first === null ? null : resolveReference(first.subjectKey, table);
-    if (entry?.mode !== 'reference') {
+    const entry = first === null ? null : resolveExpectation(first.subjectKey, table);
+    if (first === null || entry?.mode !== 'reference') {
       findings.push(ok('split-rule', `${group}: both halves present`));
       continue;
     }
 
-    const total = halves.reduce((sum, half) => sum + (half.bounds?.height ?? 0), 0);
-    const tolerance = entry.tolerance ?? 0.15;
-    const low = entry.height * (1 - tolerance);
-    const high = entry.height * (1 + tolerance);
+    /*
+     * The halves overlap: each is drawn complete on its own ground diamond, so
+     * summing their sprite heights double-counts one diamond. The object's
+     * projected height is the sum minus the shared footprint — which is exactly
+     * the diamond the derivation already computes.
+     */
+    const summed = halves.reduce((sum, half) => sum + (half.bounds?.height ?? 0), 0);
+    const sprite = spriteFor(first.subjectKey, table);
+    const total = summed - (sprite?.metrics.footprintHeight ?? 0);
+    const low = entry.height * (1 - entry.tolerance);
+    const high = entry.height * (1 + entry.tolerance);
     findings.push(
       total >= low && total <= high
         ? ok(
             'reference-height',
-            `${group}: halves total ${total}px, within ${low.toFixed(0)}-${high.toFixed(0)}px`,
+            `${group}: halves total ${total}px (${summed} less one shared footprint), ` +
+              `within ${low.toFixed(0)}-${high.toFixed(0)}px`,
           )
         : fail(
             'reference-height',

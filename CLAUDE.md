@@ -123,10 +123,14 @@ pnpm verify           # everything above, in order — run before claiming done
   fails the build if they drift.
 - **Placeholders must be registered** in `docs/PLACEHOLDER_REGISTER.md` and must look obviously
   wrong. A placeholder that looks "good enough" is the dangerous kind.
-- **No production asset may be generated until the licence gate closes.** `assets/LICENSES.md` §1
-  records nine-item verification per AI tool from primary sources. It is currently **open** — item 8,
-  rights after a subscription ends, is unaddressed by every candidate. If a provider fails, the rule
-  is a documented change request, never a silent substitution (ASSET_PIPELINE §4.2).
+- **The asset licence gate was opened by executive override**, not satisfied. `assets/LICENSES.md`
+  §1.5 records the decision: God Mode AI selected, items 5 and 8 knowingly accepted unverified,
+  Sprixen and PixelLab dropped. Scoped to the MVP — reopen before monetisation, at Phase 16 and at
+  Phase 23. Do not restate the gate as "passed"; the distinction is the record.
+- **Sprite size is derived, never typed.** `tools/shared/spriteMetrics.ts` projects a world box to a
+  sprite; §1.2's reference heights are _world_ heights and are ~3x smaller than what gets drawn.
+  §1.4's 160 px split limit measures the **body** (2.5 m), not the sprite — read as sprite height it
+  splits every car.
 - **Asset thresholds are never lowered to make a batch pass.** If real art cannot meet one, that is a
   change request against ASSET_PIPELINE, not an edit to `tools/asset-pipeline/validate.ts`.
 - **`docs/assets/PROMPT_BLOCK.md` is hash-locked.** Editing the block fails a test until the recorded

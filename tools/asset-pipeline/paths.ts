@@ -24,7 +24,8 @@ export const PATHS = {
   contactSheets: resolve(REPO_ROOT, 'assets', 'contact-sheets'),
   manifest: resolve(REPO_ROOT, 'public', 'asset-manifest.json'),
   palette: resolve(REPO_ROOT, 'docs', 'assets', 'palette.json'),
-  referenceHeights: resolve(REPO_ROOT, 'docs', 'assets', 'referenceHeights.json'),
+  subjectDimensions: resolve(REPO_ROOT, 'docs', 'assets', 'subjectDimensions.json'),
+  productionBatches: resolve(REPO_ROOT, 'docs', 'assets', 'productionBatches.json'),
   promptBlock: resolve(REPO_ROOT, 'docs', 'assets', 'PROMPT_BLOCK.md'),
   placeholders: resolve(REPO_ROOT, 'assets', '_placeholder'),
 } as const;

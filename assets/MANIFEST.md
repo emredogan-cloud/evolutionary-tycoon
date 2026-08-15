@@ -13,10 +13,12 @@ which afternoon the sprite was made.
 
 > ## No production asset exists.
 >
-> The Phase 4 START CONDITION — nine-item licence verification from primary sources — **did not
-> close**. See [LICENSES.md §1](LICENSES.md). The roadmap's own rule for that state is explicit:
-> _"Bu kapı geçilmeden Faz 4'te tek bir üretim asset'i üretilmez. Altın referans üretimi de buna
-> dâhil."_ No asset was generated, and no provider was silently substituted.
+> The licence gate was opened by executive override on 2026-08-15 — God Mode AI selected, Sprixen and
+> PixelLab dropped ([LICENSES.md §1.5](LICENSES.md)). Nothing is blocked on licensing.
+>
+> No art has been generated because the agent executing this project has no image-generation
+> capability ([PHASE_4_REPORT §11](../docs/phases/PHASE_4_REPORT.md)). Every prompt needed is emitted
+> by `pnpm assets:prompts` — 172 across 12 batches, golden references first.
 >
 > The pipeline that would record rows here is built, tested and running in CI. It has never seen a
 > production asset — only the synthetic fixtures in `tools/asset-pipeline/testFixtures.ts`, which
@@ -24,13 +26,14 @@ which afternoon the sprite was made.
 
 ## Contract in force
 
-| Field                | Value                                                                          |
-| -------------------- | ------------------------------------------------------------------------------ |
-| Prompt block         | [`docs/assets/PROMPT_BLOCK.md`](../docs/assets/PROMPT_BLOCK.md) v1             |
-| Prompt block SHA-256 | `1c4f4b4ee2e3dd33f54a3921b2be34c9f948c0bd51b347fa38f5588c434466d7`             |
-| Palette              | [`docs/assets/palette.json`](../docs/assets/palette.json) v1, 48 colours       |
-| Reference heights    | [`docs/assets/referenceHeights.json`](../docs/assets/referenceHeights.json) v1 |
-| Production scale     | 2x                                                                             |
+| Field                | Value                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| Prompt block         | [`docs/assets/PROMPT_BLOCK.md`](../docs/assets/PROMPT_BLOCK.md) v1                             |
+| Prompt block SHA-256 | `1c4f4b4ee2e3dd33f54a3921b2be34c9f948c0bd51b347fa38f5588c434466d7`                             |
+| Palette              | [`docs/assets/palette.json`](../docs/assets/palette.json) v1, 48 colours                       |
+| Subject dimensions   | [`docs/assets/subjectDimensions.json`](../docs/assets/subjectDimensions.json) v1, in metres    |
+| Batch list           | [`docs/assets/productionBatches.json`](../docs/assets/productionBatches.json) v1 — 172 prompts |
+| Production scale     | 2x                                                                                             |
 
 The prompt block hash is asserted against the document by
 `tests/unit/tools/assetNaming.test.ts`, and stamped into `public/asset-manifest.json` by

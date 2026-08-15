@@ -14,10 +14,21 @@
 | **P3 — Isometric Rendering & World** | ✅ **PASS**    | [PHASE_3_REPORT](phases/PHASE_3_REPORT.md) |
 | **P4 — Art Direction & Pipeline v1** | 🟡 **PARTIAL** | [PHASE_4_REPORT](phases/PHASE_4_REPORT.md) |
 
-P4 is reported as partial, not as a pass. Its machinery is complete and gating CI; its art half was
-never started, because the phase's own START CONDITION — nine-item AI-tool licence verification from
-primary sources — did not close. That is the roadmap's designed behaviour for that state, not a
-shortfall against it, but it is not a pass and is not written up as one.
+P4 is reported as partial, not as a pass. Its machinery is complete and gating CI; no production art
+exists.
+
+The reason changed mid-flight and the two are worth keeping apart. Until 2026-08-15 the blocker was
+the phase's own START CONDITION — nine-item licence verification — which did not close. The project
+owner then **opened that gate by executive override**, selecting God Mode AI and accepting the two
+unverified items for the MVP ([LICENSES §1.5](../assets/LICENSES.md)). Licensing no longer blocks
+anything.
+
+What blocks it now is capability: **the agent has no image generation of any kind** — no model, no
+provider account, no API key. That is not an objection that further instruction can lift, and it is
+set out with the alternatives that were explicitly _not_ taken in
+[PHASE_4_REPORT §11](phases/PHASE_4_REPORT.md). What was built instead is the thing that makes
+generation mechanical for whoever can do it: `pnpm assets:prompts` emits 172 ready-to-send prompts
+across 12 batches, sized from the same derivation the validator checks against.
 
 # PHASES 5–7 NOT AUTHORIZED
 
@@ -65,25 +76,27 @@ number is claimed for it.
 
 ## 3. Defects the batch found in its own work
 
-Fourteen real defects were found by tests and measurements rather than by review. The ones that would
+Sixteen real defects were found by tests and measurements rather than by review. The ones that would
 have shipped silently:
 
-| Phase | Defect                                                                               | How it surfaced           |
-| ----- | ------------------------------------------------------------------------------------ | ------------------------- |
-| P2    | `MAX_CATCHUP_TICKS` was dead code — the frame clamp made it unreachable              | Writing a test for it     |
-| P2    | CRC-32 consumed two bytes per UTF-16 unit, so it did not match published vectors     | Published test vectors    |
-| P2    | Our own bundle called `eval()` — Zod probes `Function('')` for a JIT path            | Preview E2E under CSP     |
-| P3    | Interpolation silently collapsed; later frames blended from an already-reached pose  | A test of frame ordering  |
-| P3    | The depth tie-break could outvote a real height difference                           | Arithmetic on the bound   |
-| P3    | Checksum verified after migration, so every v1 save broke the moment v2 landed       | Migration test            |
-| P3    | The stress scene measured 74 actors while claiming 100                               | Real-hardware run         |
-| P4    | **The visual gate could not see a repainted ground** — 233,365 pixels, and it passed | Changing a colour         |
-| P4    | UI success green and danger red collapsed under simulated deuteranopia               | Colour-blind test         |
-| P4    | The prompt block hash was hashing the prose that describes the markers               | Content assertion         |
-| P4    | Atlas fill reported 120.8% — above the floor it was supposed to enforce              | Impossible number         |
-| P4    | The per-tick allocation gate had been flaky since P2 — one failure in four runs      | `pnpm verify`             |
-| P4    | The 15% regression gate benchmarked twice per process and gated on the degraded run  | CI, on this PR            |
-| P4    | Production smoke hardcoded `schemaVersion !== 1` — red on main since the P3 merge    | Checking main after merge |
+| Phase | Defect                                                                               | How it surfaced             |
+| ----- | ------------------------------------------------------------------------------------ | --------------------------- |
+| P2    | `MAX_CATCHUP_TICKS` was dead code — the frame clamp made it unreachable              | Writing a test for it       |
+| P2    | CRC-32 consumed two bytes per UTF-16 unit, so it did not match published vectors     | Published test vectors      |
+| P2    | Our own bundle called `eval()` — Zod probes `Function('')` for a JIT path            | Preview E2E under CSP       |
+| P3    | Interpolation silently collapsed; later frames blended from an already-reached pose  | A test of frame ordering    |
+| P3    | The depth tie-break could outvote a real height difference                           | Arithmetic on the bound     |
+| P3    | Checksum verified after migration, so every v1 save broke the moment v2 landed       | Migration test              |
+| P3    | The stress scene measured 74 actors while claiming 100                               | Real-hardware run           |
+| P4    | **The visual gate could not see a repainted ground** — 233,365 pixels, and it passed | Changing a colour           |
+| P4    | UI success green and danger red collapsed under simulated deuteranopia               | Colour-blind test           |
+| P4    | The prompt block hash was hashing the prose that describes the markers               | Content assertion           |
+| P4    | Atlas fill reported 120.8% — above the floor it was supposed to enforce              | Impossible number           |
+| P4    | The per-tick allocation gate had been flaky since P2 — one failure in four runs      | `pnpm verify`               |
+| P4    | The 15% regression gate benchmarked twice per process and gated on the degraded run  | CI, on this PR              |
+| P4    | Production smoke hardcoded `schemaVersion !== 1` — red on main since the P3 merge    | Checking main after merge   |
+| P4    | Check 4 compared drawn sprites against world heights — would reject every vehicle    | Building the prompt emitter |
+| P4    | Check 6 would have split every car; §1.4's 160 px means 2.5 m of body, not sprite    | Building the prompt emitter |
 
 The Phase 4 visual-gate defect is the one worth singling out, because it was a defect in a **gate**:
 Phase 3 set `maxDiffPixelRatio: 0.002` and left `threshold` at Playwright's default of 0.2, which
@@ -129,9 +142,10 @@ it, and "someone will notice" is not a mechanism.
 
 ## 6. What the batch leaves open
 
-1. **The AI asset licence gate** — three decisions, all the project owner's, none of them code.
-   ([PHASE_4_REPORT §2](phases/PHASE_4_REPORT.md))
-2. **Golden reference approval** — a human gate by design.
+1. **Art production** — blocked on capability, not on any decision
+   ([PHASE_4_REPORT §11](phases/PHASE_4_REPORT.md)). Every prompt is written and waiting.
+2. **The two unread licence items** — accepted rather than answered. Two written questions to God
+   Mode AI would still retire the larger one.
 3. **Phaser's WebGL1/WebGL2 contradiction** — measured in Phase 3, four documents disagree with the
    measurement, referred to the user and untouched since. It does not block anything; it only makes
    the Phase 1 capability gate stricter than necessary.
@@ -144,7 +158,9 @@ it, and "someone will notice" is not a mechanism.
 
 ## FINAL STATE
 
-> **PHASES 2–4 COMPLETE.**
+> **PHASES 2–4 COMPLETE** — P2 PASS, P3 PASS, **P4 PARTIAL**.
 > **PHASES 5–7 NOT AUTHORIZED.**
 >
-> Execution has stopped and is waiting for explicit approval.
+> Execution has stopped and is waiting for explicit approval. P4's remaining work is ~165 generated
+> images; the licence gate that once blocked it is open, and every prompt needed to produce them is
+> emitted by `pnpm assets:prompts`.

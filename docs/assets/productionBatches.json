@@ -1,0 +1,547 @@
+{
+  "version": 1,
+  "note": "The stage 1–2 production set, as batches. ASSET_PIPELINE §4.3 step 3 requires a category to be generated as a COMPLETE batch in one session against the same golden references — never one sprite at a time — because same-session coherence is most of what keeps a set looking related. This file is the batch list; `pnpm assets:prompts` turns it into the exact text to send.",
+  "tool": "God Mode AI (selected by the 2026-08-15 executive override, assets/LICENSES.md §1.5)",
+  "goldenReferences": {
+    "note": "ASSET_PIPELINE §4.3 step 1: 6–10 images that BECOME the definition of the style. One character, one vehicle, one table, one appliance, one ground fragment, one tree. Everything afterwards is generated with these attached as reference images. Generate these first, alone, and settle them before anything else — a golden reference that is merely acceptable makes 160 merely acceptable sprites.",
+    "assets": [
+      {
+        "file": "char_body_male-01_se@2x.png",
+        "subject": "char/body",
+        "describe": "adult male torso and hips, standing, plain work shirt, facing south-east, arms and head omitted (they are separate rig parts)"
+      },
+      {
+        "file": "veh_sedan_default_se@2x.png",
+        "subject": "veh/sedan",
+        "describe": "four-door commuter sedan in a muted neutral paint (colour is tinted at run time), facing south-east, wheels visible, no driver"
+      },
+      {
+        "file": "prop_table_round_4seat@2x.png",
+        "subject": "prop/table",
+        "describe": "round outdoor cafe table, wooden top, single central metal leg"
+      },
+      {
+        "file": "struct_grill_lv1@2x.png",
+        "subject": "struct/grill",
+        "describe": "commercial flat-top griddle on a stainless stand, cold, no food on it"
+      },
+      {
+        "file": "ground_stage1_tile-a@2x.png",
+        "subject": "ground/stage1",
+        "describe": "roadside dirt-and-gravel lot surface, subtle tyre tracks, seamless on all four edges"
+      },
+      {
+        "file": "nature_tree_broadleaf-01_lower@2x.png",
+        "subject": "nature/tree",
+        "describe": "trunk and lower branches of a mid-size roadside broadleaf tree, cut cleanly at the split line"
+      },
+      {
+        "file": "nature_tree_broadleaf-01_upper@2x.png",
+        "subject": "nature/tree",
+        "describe": "canopy of the same broadleaf tree, cut cleanly at the split line so it stacks onto the lower half"
+      }
+    ]
+  },
+  "batches": [
+    {
+      "id": "char-bodies",
+      "category": "char",
+      "describePrefix": "adult torso and hips, standing, arms and head omitted",
+      "variants": ["male-01", "male-02", "female-01", "female-02"],
+      "directions": ["ne", "se", "sw", "nw"],
+      "subject": "char/body",
+      "part": "body"
+    },
+    {
+      "id": "char-heads",
+      "category": "char",
+      "describePrefix": "adult head and neck, neutral expression, no hair (hair is a separate part)",
+      "variants": ["male-01", "male-02", "female-01", "female-02", "neutral-01"],
+      "directions": ["ne", "se", "sw", "nw"],
+      "subject": "char/head",
+      "part": "head"
+    },
+    {
+      "id": "char-hair",
+      "category": "char",
+      "describePrefix": "hair only, sitting on an implied head, transparent where the head would be",
+      "variants": ["short-01", "short-02", "long-01", "tied-01"],
+      "directions": ["ne", "se", "sw", "nw"],
+      "subject": "char/hair",
+      "part": "hair"
+    },
+    {
+      "id": "char-limbs",
+      "category": "char",
+      "describePrefix": "single limb for a doll rig, straight neutral pose, cut at the joint",
+      "variants": ["default"],
+      "subjects": ["arm-l", "arm-r", "leg-l", "leg-r"],
+      "directions": ["ne", "se", "sw", "nw"],
+      "subject": "char/arm-l",
+      "part": "limb"
+    },
+    {
+      "id": "vehicles",
+      "category": "veh",
+      "describePrefix": "road vehicle, empty, wheels visible, no driver",
+      "archetypes": [
+        {
+          "name": "sedan",
+          "describe": "four-door commuter sedan",
+          "subject": "veh/sedan"
+        },
+        {
+          "name": "pickup",
+          "describe": "light work pickup with an open bed",
+          "subject": "veh/pickup"
+        },
+        {
+          "name": "van",
+          "describe": "family minivan",
+          "subject": "veh/van"
+        },
+        {
+          "name": "motorcycle",
+          "describe": "motorcycle, upright, no rider",
+          "subject": "veh/motorcycle"
+        }
+      ],
+      "variants": ["default"],
+      "directions": ["n", "ne", "e", "se", "s", "sw", "w", "nw"],
+      "states": [""],
+      "note": "Paint colour is a runtime tint, not a sprite variant: three colours would triple the atlas for no gameplay difference and blow the 90-file budget of ASSET_PIPELINE §13. Brake variants only for the two directions the stage-1 road actually uses — the lanes run east and west — which gives 4 archetypes x 8 directions + 4 x 2 brake = 40, the count the roadmap states.",
+      "brakeDirections": ["e", "w"]
+    },
+    {
+      "id": "structures",
+      "category": "struct",
+      "assets": [
+        {
+          "name": "counter",
+          "variant": "lv1",
+          "subject": "struct/counter",
+          "describe": "roadside service counter, wooden front, flat serving top"
+        },
+        {
+          "name": "counter",
+          "variant": "lv2",
+          "subject": "struct/counter",
+          "describe": "upgraded service counter, painted panels, tiled top"
+        },
+        {
+          "name": "awning",
+          "variant": "lv1",
+          "subject": "struct/awning",
+          "describe": "striped fabric awning panel, no posts"
+        },
+        {
+          "name": "truck",
+          "variant": "lv1",
+          "subject": "struct/truck",
+          "describe": "converted food truck with a serving hatch in the side"
+        },
+        {
+          "name": "window",
+          "variant": "default",
+          "subject": "struct/window",
+          "describe": "serving hatch with a raised shutter"
+        },
+        {
+          "name": "sign",
+          "variant": "large",
+          "subject": "struct/sign",
+          "describe": "roadside sign on a single post, blank face, no lettering"
+        },
+        {
+          "name": "door",
+          "variant": "default",
+          "subject": "struct/door",
+          "describe": "plain service door in a frame"
+        },
+        {
+          "name": "grill",
+          "variant": "lv1",
+          "subject": "struct/grill",
+          "describe": "commercial flat-top griddle on a stainless stand"
+        },
+        {
+          "name": "grill",
+          "variant": "lv2",
+          "subject": "struct/grill",
+          "describe": "upgraded twin-zone griddle with a splashback"
+        },
+        {
+          "name": "fryer",
+          "variant": "lv1",
+          "subject": "struct/fryer",
+          "describe": "twin-basket deep fryer"
+        },
+        {
+          "name": "drink",
+          "variant": "lv1",
+          "subject": "struct/drink",
+          "describe": "upright drinks cabinet with a glass front"
+        },
+        {
+          "name": "pass",
+          "variant": "default",
+          "subject": "struct/pass",
+          "describe": "pass-through shelf between kitchen and counter"
+        }
+      ]
+    },
+    {
+      "id": "props",
+      "category": "prop",
+      "assets": [
+        {
+          "name": "table",
+          "variant": "round",
+          "state": "4seat",
+          "subject": "prop/table",
+          "describe": "round outdoor cafe table, wooden top, central metal leg"
+        },
+        {
+          "name": "table",
+          "variant": "square",
+          "state": "2seat",
+          "subject": "prop/table",
+          "describe": "small square outdoor table, wooden top"
+        },
+        {
+          "name": "chair",
+          "variant": "plastic",
+          "subject": "prop/chair",
+          "describe": "stacking outdoor chair"
+        },
+        {
+          "name": "chair",
+          "variant": "wooden",
+          "subject": "prop/chair",
+          "describe": "wooden outdoor chair"
+        },
+        {
+          "name": "bin",
+          "variant": "default",
+          "subject": "prop/bin",
+          "describe": "lidded wheelie bin"
+        },
+        {
+          "name": "barrier",
+          "variant": "default",
+          "subject": "prop/barrier",
+          "describe": "roadside barrier section"
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "category": "nature",
+      "assets": [
+        {
+          "name": "tree",
+          "variant": "broadleaf-01",
+          "subject": "nature/tree",
+          "describe": "mid-size roadside broadleaf tree"
+        },
+        {
+          "name": "tree",
+          "variant": "broadleaf-02",
+          "subject": "nature/tree",
+          "describe": "broader, shorter roadside tree"
+        },
+        {
+          "name": "tree",
+          "variant": "conifer-01",
+          "subject": "nature/tree",
+          "describe": "narrow roadside conifer"
+        },
+        {
+          "name": "bush",
+          "variant": "round-01",
+          "subject": "nature/bush",
+          "describe": "rounded shrub"
+        },
+        {
+          "name": "bush",
+          "variant": "round-02",
+          "subject": "nature/bush",
+          "describe": "sparser shrub with visible stems"
+        },
+        {
+          "name": "bush",
+          "variant": "flowering-01",
+          "subject": "nature/bush",
+          "describe": "flowering shrub, small warm blossoms"
+        },
+        {
+          "name": "pole",
+          "variant": "lamp",
+          "subject": "nature/pole",
+          "describe": "roadside lamp post, head unlit"
+        }
+      ]
+    },
+    {
+      "id": "food-icons",
+      "category": "food",
+      "describePrefix": "single food item on a plain plate or wrapper, centred, drawn straight-on rather than in projection — this is an interface icon, not a world object",
+      "assets": [
+        {
+          "name": "burger",
+          "variant": "default",
+          "subject": "food/burger",
+          "describe": "hamburger in a sesame bun"
+        },
+        {
+          "name": "fries",
+          "variant": "default",
+          "subject": "food/fries",
+          "describe": "carton of chips"
+        },
+        {
+          "name": "hotdog",
+          "variant": "default",
+          "subject": "food/hotdog",
+          "describe": "hot dog in a bun"
+        },
+        {
+          "name": "wrap",
+          "variant": "default",
+          "subject": "food/wrap",
+          "describe": "rolled flatbread wrap, cut end facing the viewer"
+        },
+        {
+          "name": "soda",
+          "variant": "default",
+          "subject": "food/soda",
+          "describe": "cup of soft drink with a lid and straw"
+        },
+        {
+          "name": "coffee",
+          "variant": "default",
+          "subject": "food/coffee",
+          "describe": "paper coffee cup with a lid"
+        }
+      ]
+    },
+    {
+      "id": "fx",
+      "category": "fx",
+      "describePrefix": "soft particle sprite on full transparency, greyscale with alpha so it can be tinted at run time, no hard edges",
+      "assets": [
+        {
+          "name": "steam",
+          "variant": "soft",
+          "subject": "fx/steam",
+          "describe": "wisp of steam"
+        },
+        {
+          "name": "smoke",
+          "variant": "soft",
+          "subject": "fx/smoke",
+          "describe": "puff of smoke"
+        },
+        {
+          "name": "dust",
+          "variant": "soft",
+          "subject": "fx/dust",
+          "describe": "small dust cloud"
+        },
+        {
+          "name": "sparkle",
+          "variant": "soft",
+          "subject": "fx/sparkle",
+          "describe": "four-point sparkle"
+        }
+      ]
+    },
+    {
+      "id": "ui-icons",
+      "category": "ui",
+      "describePrefix": "interface icon drawn straight-on rather than in projection — flat, centred, single subject, generous margin, no background plate",
+      "assets": [
+        {
+          "name": "icon",
+          "variant": "cash",
+          "subject": "ui/icon",
+          "describe": "banknote and coins"
+        },
+        {
+          "name": "icon",
+          "variant": "coin",
+          "subject": "ui/icon",
+          "describe": "single stacked coin"
+        },
+        {
+          "name": "icon",
+          "variant": "customer",
+          "subject": "ui/icon",
+          "describe": "customer silhouette head and shoulders"
+        },
+        {
+          "name": "icon",
+          "variant": "clock",
+          "subject": "ui/icon",
+          "describe": "clock face"
+        },
+        {
+          "name": "icon",
+          "variant": "speed-1",
+          "subject": "ui/icon",
+          "describe": "single play triangle"
+        },
+        {
+          "name": "icon",
+          "variant": "speed-2",
+          "subject": "ui/icon",
+          "describe": "double play triangle"
+        },
+        {
+          "name": "icon",
+          "variant": "speed-4",
+          "subject": "ui/icon",
+          "describe": "triple play triangle"
+        },
+        {
+          "name": "icon",
+          "variant": "pause",
+          "subject": "ui/icon",
+          "describe": "pause bars"
+        },
+        {
+          "name": "icon",
+          "variant": "upgrade",
+          "subject": "ui/icon",
+          "describe": "upward chevron on a plinth"
+        },
+        {
+          "name": "icon",
+          "variant": "build",
+          "subject": "ui/icon",
+          "describe": "hammer and wrench crossed"
+        },
+        {
+          "name": "icon",
+          "variant": "grill",
+          "subject": "ui/icon",
+          "describe": "griddle seen straight on"
+        },
+        {
+          "name": "icon",
+          "variant": "fryer",
+          "subject": "ui/icon",
+          "describe": "fryer basket seen straight on"
+        },
+        {
+          "name": "icon",
+          "variant": "drink",
+          "subject": "ui/icon",
+          "describe": "cup with a straw"
+        },
+        {
+          "name": "icon",
+          "variant": "staff",
+          "subject": "ui/icon",
+          "describe": "two overlapping person silhouettes"
+        },
+        {
+          "name": "icon",
+          "variant": "hire",
+          "subject": "ui/icon",
+          "describe": "person silhouette with a plus"
+        },
+        {
+          "name": "icon",
+          "variant": "fire",
+          "subject": "ui/icon",
+          "describe": "person silhouette with a minus"
+        },
+        {
+          "name": "icon",
+          "variant": "patience",
+          "subject": "ui/icon",
+          "describe": "hourglass"
+        },
+        {
+          "name": "icon",
+          "variant": "happy",
+          "subject": "ui/icon",
+          "describe": "smiling face"
+        },
+        {
+          "name": "icon",
+          "variant": "neutral",
+          "subject": "ui/icon",
+          "describe": "neutral face"
+        },
+        {
+          "name": "icon",
+          "variant": "angry",
+          "subject": "ui/icon",
+          "describe": "frowning face"
+        },
+        {
+          "name": "icon",
+          "variant": "star",
+          "subject": "ui/icon",
+          "describe": "five-point star"
+        },
+        {
+          "name": "icon",
+          "variant": "lock",
+          "subject": "ui/icon",
+          "describe": "closed padlock"
+        },
+        {
+          "name": "icon",
+          "variant": "unlock",
+          "subject": "ui/icon",
+          "describe": "open padlock"
+        },
+        {
+          "name": "icon",
+          "variant": "warning",
+          "subject": "ui/icon",
+          "describe": "triangle with an exclamation"
+        },
+        {
+          "name": "icon",
+          "variant": "info",
+          "subject": "ui/icon",
+          "describe": "circle with an i"
+        },
+        {
+          "name": "icon",
+          "variant": "close",
+          "subject": "ui/icon",
+          "describe": "x cross"
+        },
+        {
+          "name": "icon",
+          "variant": "settings",
+          "subject": "ui/icon",
+          "describe": "gear"
+        },
+        {
+          "name": "icon",
+          "variant": "sound-on",
+          "subject": "ui/icon",
+          "describe": "speaker with waves"
+        },
+        {
+          "name": "icon",
+          "variant": "sound-off",
+          "subject": "ui/icon",
+          "describe": "speaker with a slash"
+        },
+        {
+          "name": "icon",
+          "variant": "save",
+          "subject": "ui/icon",
+          "describe": "floppy-disk-style save mark"
+        }
+      ]
+    }
+  ]
+}
