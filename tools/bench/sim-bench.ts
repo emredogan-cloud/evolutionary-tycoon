@@ -47,9 +47,35 @@ export interface AllocationResult {
   readonly gcForced: boolean;
 }
 
+/**
+ * A fixed workload used to measure how fast *this machine* is right now.
+ *
+ * The regression gate compares wall-clock timings against a recorded baseline,
+ * and on GitHub's shared runners that comparison was worthless: a baseline
+ * recorded on CI was 47-68% "slower" when the identical commit re-ran on CI six
+ * minutes later. The runner fleet is heterogeneous and noisy, and taking the
+ * minimum of 25 samples removes scheduler contention but not a different CPU.
+ *
+ * Dividing every measurement by this one turns absolute milliseconds into a
+ * ratio, and machine speed cancels. It is deliberately dull arithmetic with no
+ * allocation and no I/O, so it measures processor throughput and nothing else.
+ */
+export function calibrationMs(): number {
+  return timeIt('calibration', 1, () => {
+    let total = 0;
+    for (let i = 1; i < 400_000; i++) {
+      total += Math.sqrt(i) / (i % 97 === 0 ? 3 : 7);
+    }
+    // Consumed so the loop cannot be optimised away entirely.
+    if (total < 0) throw new Error('unreachable');
+  }).minMs;
+}
+
 export interface BenchReport {
   readonly timings: readonly TimingResult[];
   readonly allocation: AllocationResult;
+  /** Machine speed at the time of the run — see `calibrationMs`. */
+  readonly calibrationMs: number;
 }
 
 /** Default sample count: enough for a stable median on a noisy CI runner. */
@@ -279,6 +305,7 @@ export function benchDepthSort(): TimingResult {
 
 export function runSimBench(): BenchReport {
   return {
+    calibrationMs: calibrationMs(),
     timings: [
       benchEmptyTicks(),
       benchWorldHash(),
@@ -325,12 +352,19 @@ export function formatReport(report: BenchReport): string {
  */
 export function formatBaselineJson(report: BenchReport, recordedAt: string, environment: string): string {
   const timings: Record<string, number> = {};
-  for (const timing of report.timings) timings[timing.name] = Number(timing.minMs.toFixed(4));
+  /*
+   * Recorded as a ratio to the calibration run, not as milliseconds. The raw
+   * millisecond figures are meaningless across machines — see `calibrationMs`.
+   */
+  for (const timing of report.timings) {
+    timings[timing.name] = Number((timing.minMs / report.calibrationMs).toFixed(5));
+  }
   return JSON.stringify(
     {
       recordedAt,
       environment,
-      statistic: 'minMs',
+      statistic: 'minMsPerCalibration',
+      calibrationMs: Number(report.calibrationMs.toFixed(4)),
       timings,
       bytesPerTick: Number(report.allocation.bytesPerTick.toFixed(3)),
     },

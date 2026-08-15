@@ -164,6 +164,12 @@ describe('vehicle motion in the pipeline', () => {
     expect(states.has(VEHICLE_STATE_BRAKING)).toBe(true);
   });
 
+  /*
+   * Two 30-minute runs, so 72 000 ticks with live traffic on both. About a
+   * second normally and past the 5 s default under v8 coverage instrumentation
+   * on a CI runner, which is where it first timed out. The window is the point
+   * of the test, so the timeout moves rather than the window.
+   */
   it('is deterministic over a long run', () => {
     const run = (): string => {
       const sim = new Sim({ seed: 20260815 });
@@ -171,7 +177,7 @@ describe('vehicle motion in the pipeline', () => {
       return sim.world.hash();
     };
     expect(run()).toBe(run());
-  });
+  }, 60_000);
 
   it('keeps vehicles moving at a plausible speed rather than crawling', () => {
     /*

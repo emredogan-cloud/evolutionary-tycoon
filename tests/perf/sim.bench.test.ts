@@ -49,8 +49,10 @@ const REGRESSION_THRESHOLD = 1.15;
 interface Baseline {
   readonly recordedAt: string;
   readonly environment: string;
-  /** Which statistic `timings` holds. Only 'minMs' is understood. */
+  /** Which statistic `timings` holds. Only 'minMsPerCalibration' is understood. */
   readonly statistic: string;
+  /** Machine speed when the baseline was recorded — see `calibrationMs`. */
+  readonly calibrationMs: number;
   readonly timings: Record<string, number>;
   readonly bytesPerTick: number;
 }
@@ -189,29 +191,23 @@ describe('regression against the recorded baseline', () => {
   });
 
   /**
-   * The comparison is only valid on the machine family the baseline came from.
+   * Compared as a ratio to a calibration run, never as raw milliseconds.
    *
-   * A recorded baseline is a set of wall-clock timings from one environment.
-   * Comparing a developer laptop against a GitHub runner is not a regression
-   * test, it is a hardware comparison — after the Phase 5 baseline was recorded
-   * on CI, the same unchanged commit reported "17% slower" locally purely
-   * because the laptop is slower than the runner.
+   * Wall-clock comparison against a recorded baseline does not work on shared
+   * CI runners, and this was measured rather than assumed: a baseline recorded
+   * on GitHub Actions reported the *identical commit* as 47-68% slower when it
+   * re-ran on GitHub Actions six minutes later. Taking the minimum of 25 samples
+   * removes scheduler contention but cannot remove a different CPU.
    *
-   * So the gate runs where the baseline was recorded and reports its numbers
-   * everywhere else. That is not a weaker gate: it is the only place the gate
-   * ever meant anything, and CI is where it blocks a merge.
+   * Every timing is therefore divided by `calibrationMs()` — a fixed arithmetic
+   * workload run in the same process — so machine speed cancels and what remains
+   * is the simulation's cost relative to the processor it is on. The 15%
+   * threshold from TESTING_STRATEGY §6 is unchanged; only the quantity being
+   * compared is chosen to be comparable.
    */
-  const comparable = baseline !== null && process.env['CI'] === 'true';
-
-  it.runIf(baseline !== null && !comparable)('reports, but does not gate, off the baseline machine', () => {
-    // Visible rather than silent: a developer still sees the numbers, and sees
-    // why they are not being asserted on.
-    expect(baseline?.environment).toContain('github-actions');
-  });
-
-  it.runIf(comparable)('has not regressed by more than 15%', () => {
+  it.runIf(baseline !== null)('has not regressed by more than 15%', () => {
     if (baseline === null) return;
-    expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMs');
+    expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMsPerCalibration');
 
     const report = benchOnce();
     const regressions: string[] = [];
@@ -219,10 +215,12 @@ describe('regression against the recorded baseline', () => {
     for (const timing of report.timings) {
       const recorded = baseline.timings[timing.name];
       if (recorded === undefined) continue;
-      const ratio = timing.minMs / recorded;
+      const normalised = timing.minMs / report.calibrationMs;
+      const ratio = normalised / recorded;
       if (ratio > REGRESSION_THRESHOLD) {
         regressions.push(
-          `${timing.name}: ${timing.minMs.toFixed(3)} ms vs baseline ${recorded.toFixed(3)} ms (${((ratio - 1) * 100).toFixed(0)}% slower)`,
+          `${timing.name}: ${normalised.toFixed(4)} vs baseline ${recorded.toFixed(4)} ` +
+            `calibration units (${((ratio - 1) * 100).toFixed(0)}% slower)`,
         );
       }
     }

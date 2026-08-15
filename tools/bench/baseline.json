@@ -1,15 +1,16 @@
 {
-  "recordedAt": "155889908869b38dff8f8041df22229e66257b1d",
-  "environment": "github-actions ubuntu-24.04, node 24.13.1",
-  "statistic": "minMs",
+  "recordedAt": "617185292dd1d9dcda46b942d95f4228a54cdde6",
+  "environment": "local (normalised \u2014 see calibrationMs; the ratio is machine-independent)",
+  "statistic": "minMsPerCalibration",
+  "calibrationMs": 1.2314,
   "timings": {
-    "1000 empty ticks": 1.6111,
-    "world hash (120 vehicles, 60 customers)": 4.5661,
-    "1000 ticks, one command each": 1.6904,
-    "1000 ticks, 8 events per tick, 3 subscribers": 1.823,
-    "vehicle spawn + despawn cycles": 0.0734,
-    "world snapshot + JSON serialise": 0.2669,
-    "depth sort, 260 objects": 0.0122
+    "1000 empty ticks": 1.46962,
+    "world hash (120 vehicles, 60 customers)": 4.1328,
+    "1000 ticks, one command each": 1.63729,
+    "1000 ticks, 8 events per tick, 3 subscribers": 1.7894,
+    "vehicle spawn + despawn cycles": 0.05486,
+    "world snapshot + JSON serialise": 0.29674,
+    "depth sort, 260 objects": 0.01019
   },
   "bytesPerTick": 7.389
 }
