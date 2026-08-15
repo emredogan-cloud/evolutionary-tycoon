@@ -39,3 +39,6 @@ public/asset-manifest.json
 
 # vercel cli
 .vercel/
+
+# generated review artefacts
+assets/contact-sheets/

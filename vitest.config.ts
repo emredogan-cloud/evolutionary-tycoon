@@ -55,7 +55,7 @@ export default defineConfig({
         // Scene, so a Node unit test could only exercise a mock of Phaser —
         // which would prove the mock works. They are covered where the thing
         // they wrap actually exists:
-        //   PhaserBootstrap, BootScene, WorldScene, SceneGraph → tests/e2e/render.spec.ts
+        //   PhaserBootstrap, LoadScene, WorldScene, SceneGraph → tests/e2e/render.spec.ts
         //   CameraController                                   → tests/e2e/render.spec.ts (wheel)
         //   DevOverlays                                        → dev-only, never in a production build
         // The logic they were deliberately built *around* — projection, depth

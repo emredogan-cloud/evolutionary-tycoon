@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BootScene } from './scenes/BootScene';
+import { LoadScene } from './scenes/LoadScene';
 import { RENDER_CONTEXT_KEY } from './RenderContext';
 import type { RenderContext } from './RenderContext';
 import { WorldScene } from './scenes/WorldScene';
@@ -41,14 +41,14 @@ export function createPhaserGame(options: PhaserBootstrapOptions): Phaser.Game {
     // The renderer is driven by Phaser's own loop, but the *simulation* is not:
     // it advances on the fixed-timestep GameLoop in src/app, and the scene only
     // ever reads a view of it.
-    scene: [BootScene, WorldScene],
+    scene: [LoadScene, WorldScene],
     audio: { noAudio: true },
     banner: false,
   });
 
   // Through the registry rather than as scene data: Phaser starts the first
   // scene in the list on its own, so there is no call site to hand data to, and
-  // BootScene would otherwise have to forward it purely as a courier.
+  // LoadScene would otherwise have to forward it purely as a courier.
   game.registry.set(RENDER_CONTEXT_KEY, options.context);
 
   return game;

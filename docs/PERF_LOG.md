@@ -145,6 +145,42 @@ _custom_ Phaser build, and this is the **default** build at ~364 kB. The total i
 and it passes; the breakdown line does not. A custom Phaser build is the documented remedy and
 belongs to Phase 20 (Performance Optimization) unless the total gets tight sooner.
 
+### Phase 4 — 2026-08-15 · texture memory, and what it does not yet measure
+
+The roadmap's Phase 4 definition of done asks for texture memory in this file. Here it is, with the
+caveat that makes it nearly meaningless as a forecast: **there is no production art.** The licence
+gate did not close ([`assets/LICENSES.md`](../assets/LICENSES.md) §1), so what is measured is the
+placeholder set — six generated checkers standing in for ~160 sprites.
+
+Measured by reading each committed PNG's dimensions and computing `w x h x 4` (RGBA8, no mipmaps —
+sprite atlases are not mipmapped in this project):
+
+| Texture                             | Size       |   GPU bytes |
+| ----------------------------------- | ---------- | ----------: |
+| `ph-customer__PLACEHOLDER__`        | 64x144     |     36.0 kB |
+| `ph-employee__PLACEHOLDER__`        | 64x144     |     36.0 kB |
+| `ph-prop-short__PLACEHOLDER__`      | 154x134    |     80.6 kB |
+| `ph-prop-tall__PLACEHOLDER__`       | 102x205    |     81.7 kB |
+| `ph-scale-reference__PLACEHOLDER__` | 128x192    |     96.0 kB |
+| `ph-vehicle__PLACEHOLDER__`         | 410x301    |    482.1 kB |
+| **Total**                           | 6 textures | **0.79 MB** |
+
+Against the 192 MB desktop / 96 MB mobile budget in ASSET_PIPELINE, that is 0.4% and 0.8%. **This
+number will not survive contact with real art** and should not be quoted as headroom. The bound that
+will actually matter is the atlas page count: §7 allows up to 4096-square pages for `vehicles` and
+`structures`, and one such page costs 64 MB of RGBA8 on its own — a third of the desktop budget for
+one atlas. Two full 4096 pages plus the 2048-square atlases would exceed 192 MB.
+
+That is a real constraint discovered by doing this arithmetic rather than by measuring, and it is
+recorded now so Phase 16 does not meet it as a surprise. The remedies are already in the documents
+(atlas splitting per stage, the KTX2/Basis reconsideration deferred to Phase 20); nothing is being
+decided here.
+
+**No FPS was measured in Phase 4.** Nothing in this phase changed the render loop — the surface
+colours moved onto the locked palette and the boot scene became a loading screen, neither of which
+affects frame cost. The Phase 3 measurement (200 FPS p50, 5.1 ms p95, GTX 1660 Ti) stands and was
+not re-run, so it is not restated here as if it were.
+
 ### Template for future entries
 
 ```

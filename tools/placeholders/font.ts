@@ -1,4 +1,4 @@
-import type { PixelCanvas, Rgba } from './png';
+import type { PixelCanvas, Rgba } from './png.ts';
 
 /**
  * A 3x5 bitmap font, just large enough to label a placeholder.

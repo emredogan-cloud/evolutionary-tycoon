@@ -7,5 +7,6 @@
   },
   "playwright": {
     "config": ["playwright.config.ts"]
-  }
+  },
+  "ignoreBinaries": ["ffmpeg"]
 }

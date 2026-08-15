@@ -63,6 +63,45 @@ jobs:
           fi
           echo "No obvious secrets in tracked files."
 
+  assets:
+    name: Asset pipeline (validate, budgets)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Validate source art
+        # ASSET_PIPELINE §4.3 step 4. Any rule violation fails the build; no
+        # threshold may be lowered to make a batch pass. With no source art the
+        # stage reports "0 assets" and passes, which is not the same as approving
+        # anything — see the wording in tools/asset-pipeline/cli.ts.
+        run: pnpm assets:validate
+
+      - name: Build atlases, manifest and budget report
+        # §13 budgets and the §7 atlas fill floor. Over budget is a red build:
+        # this is a Vercel bandwidth constraint as much as a performance one.
+        run: pnpm assets:build
+
+      - name: Placeholders are reproducible from source
+        # The committed placeholder set is derived from src/config dimensions.
+        # If a world dimension changes without regenerating them, the images and
+        # the layout they stand in for have silently diverged.
+        run: |
+          set -euo pipefail
+          pnpm placeholders:build
+          if ! git diff --quiet -- assets/_placeholder; then
+            echo "::error::assets/_placeholder is stale. Run pnpm placeholders:build and commit."
+            git --no-pager diff --stat -- assets/_placeholder
+            exit 1
+          fi
+          echo "Placeholders match their source."
+
   test:
     name: Unit + integration
     runs-on: ubuntu-24.04
