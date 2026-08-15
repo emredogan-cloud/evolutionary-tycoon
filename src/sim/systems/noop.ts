@@ -83,7 +83,7 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
      * at 20 Hz is 50 ms of a customer standing on their queue slot before
      * noticing they are on it.
      */
-    NavigationSystem: new NavigationSystem(stage1Fields()),
+    NavigationSystem: new NavigationSystem(stage1Fields(), world.customers.capacity),
     CustomerFsmSystem: new CustomerFsmSystem(STAGE1_LAYOUT, maneuverSystem),
     QueueSystem: new QueueSystem(STAGE1_LAYOUT),
   };

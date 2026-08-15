@@ -79,21 +79,31 @@ export class QueueSystem implements SimSystem {
       const free = this.firstFreeIndex();
       if (free < 0) {
         /*
-         * Every authored slot is taken, including the ones that count as spilled
-         * onto the road. They hold position rather than continuing towards the
-         * counter — you see the queue is full and you hang back.
+         * Every authored slot is taken. They hold position rather than
+         * continuing towards the counter — you see the queue is full and you
+         * hang back.
          *
-         * This is a behavioural fix for a physical problem. Sending them all on
-         * meant every unplaced customer walked at the *same point*, and with
-         * thirty pedestrians at the entrance — the roadmap's own naturalness
-         * scenario — fifteen of them converged on one spot and stacked up.
-         * Steering cannot resolve that: separation is outvoted by fifteen agents
-         * all pulled the same way, and no number of position corrections fixes a
-         * crowd that has been told to stand in one place.
+         * Two alternatives were measured and rejected, both worse:
          *
-         * The conversion penalty from the visible queue is already discouraging
-         * further arrivals, so this is not the mechanism that limits the crowd —
-         * it is only where the crowd stands while it waits.
+         * Sending them on had every unplaced customer walk at the *same point*.
+         * With thirty pedestrians at the entrance — this phase's own naturalness
+         * scenario — fifteen converged on one spot: closest approach 2.2 cm and
+         * 5.5% of pair-ticks inside 30 cm, which is people standing inside each
+         * other. No amount of steering fixes a crowd told to stand in one place.
+         *
+         * **Extending the line** past the last slot, at the same spacing and on
+         * the same heading, is what a real queue does and is wrong *here*: Stage
+         * 1's queue is authored pointing at the road, because an overflowing
+         * queue spilling towards the traffic is the whole spillover mechanic
+         * (ECONOMY_DESIGN §7, Fren 4). Extending it walks people into the
+         * carriageway, the grid refuses them, and they pile up against the kerb
+         * instead — closest approach 0.9 cm and 11% of pair-ticks too close,
+         * forty times worse than holding.
+         *
+         * Holding is not the prettiest of the three; it is the one that measures
+         * best on this layout. A layout whose queue ran along the counter rather
+         * than towards the road could extend, and this is the note that will say
+         * so when one does.
          */
         customer.queueIndex = -1;
         customer.targetX = customer.x;

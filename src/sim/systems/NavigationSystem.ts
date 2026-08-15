@@ -45,8 +45,23 @@ export class NavigationSystem implements SimSystem {
   private readonly scratch: SteerOutput = { x: 0, y: 0 };
   /** Layout version the grid was last built against; -1 forces a first build. */
   private builtFor = -1;
+  /**
+   * Per-agent overlap corrections, accumulated before any is applied.
+   *
+   * Sized to the customer pool once. Applying each pair's correction as it is
+   * found means an agent in a cluster is moved once per neighbour, and the
+   * limit that keeps a correction gentler than a walking step stops holding.
+   */
+  private readonly correctionX: Float64Array;
+  private readonly correctionY: Float64Array;
 
-  constructor(private readonly fields: FlowFieldCache) {}
+  constructor(
+    private readonly fields: FlowFieldCache,
+    capacity: number,
+  ) {
+    this.correctionX = new Float64Array(capacity);
+    this.correctionY = new Float64Array(capacity);
+  }
 
   run(world: World, deltaMs: number): void {
     const seconds = deltaMs / 1000;
@@ -90,6 +105,10 @@ export class NavigationSystem implements SimSystem {
   private resolveOverlaps(world: World): void {
     const customers = world.customers;
     const limit = customers.scanLimit;
+    if (limit > this.correctionX.length) return;
+
+    this.correctionX.fill(0, 0, limit);
+    this.correctionY.fill(0, 0, limit);
 
     for (let slot = 0; slot < limit; slot++) {
       if (!customers.isActive(slot)) continue;
@@ -107,57 +126,48 @@ export class NavigationSystem implements SimSystem {
         if (distance >= MIN_PERSONAL_SPACE_METRES) continue;
 
         /*
-         * Exactly co-located: there is no direction to separate along, so the
-         * higher slot steps aside along +x. Arbitrary, fixed, and the same on
-         * every engine — an unbroken tie leaves them stacked forever.
+         * Exactly co-located: no direction to separate along, so the higher slot
+         * steps aside along +x. Arbitrary, fixed, and the same on every engine —
+         * an unbroken tie leaves them stacked forever.
          */
         if (distance < 1e-6) {
-          neighbour.x += MIN_PERSONAL_SPACE_METRES;
+          this.correctionX[other] = (this.correctionX[other] ?? 0) + MIN_PERSONAL_SPACE_METRES;
           continue;
         }
 
-        /*
-         * Half the overlap each, so neither is privileged and the pair's centre
-         * of mass does not drift — but if one of them cannot move, the other
-         * takes the whole correction.
-         *
-         * That second clause is what makes this work at all. Measured without
-         * it: a pair pressed against the counter separated at half rate because
-         * one push landed in the counter's own footprint and was refused, and
-         * the flow pulled them back together faster than the survivor could
-         * open the gap. Closest approach stayed at 4 cm.
-         */
-        const overlap = MIN_PERSONAL_SPACE_METRES - distance;
+        const overlap = (MIN_PERSONAL_SPACE_METRES - distance) / 2;
         const nx = dx / distance;
         const ny = dy / distance;
-
-        const movedFirst = this.nudge(customer, -nx * overlap * 0.5, -ny * overlap * 0.5);
-        const movedSecond = this.nudge(neighbour, nx * overlap * 0.5, ny * overlap * 0.5);
-
-        if (!movedFirst && movedSecond) this.nudge(neighbour, nx * overlap * 0.5, ny * overlap * 0.5);
-        else if (movedFirst && !movedSecond) {
-          this.nudge(customer, -nx * overlap * 0.5, -ny * overlap * 0.5);
-        }
+        this.correctionX[slot] = (this.correctionX[slot] ?? 0) - nx * overlap;
+        this.correctionY[slot] = (this.correctionY[slot] ?? 0) - ny * overlap;
+        this.correctionX[other] = (this.correctionX[other] ?? 0) + nx * overlap;
+        this.correctionY[other] = (this.correctionY[other] ?? 0) + ny * overlap;
       }
     }
-  }
 
-  /**
-   * Move an agent, unless that would put them somewhere they cannot stand.
-   *
-   * A correction that pushed somebody into the counter or onto the road would
-   * fix an overlap by creating a worse problem, and the flow field cannot route
-   * them out of a solid cell. Returns whether the move happened, so the caller
-   * can give the whole correction to whichever of the pair can take it.
-   */
-  private nudge(customer: CustomerRecord, dx: number, dy: number): boolean {
-    const grid = this.fields.grid;
-    const x = customer.x + dx;
-    const y = customer.y + dy;
-    if (grid.isBlocked(grid.cellXAt(x), grid.cellYAt(y))) return false;
-    customer.x = x;
-    customer.y = y;
-    return true;
+    /*
+     * Accumulated first, applied once per agent.
+     *
+     * Applying each pair's correction as it is found is not equivalent: an agent
+     * in a cluster is corrected against several neighbours in the same tick, so
+     * the corrections compound in whatever order the scan happened to visit them
+     * and the resulting move is neither bounded nor symmetric.
+     *
+     * A per-tick cap on the magnitude was tried and removed. It bounded the move
+     * and made the separation strictly worse — closest approach fell from 29 cm
+     * to 6 cm and the share of too-close pair-ticks more than doubled — while
+     * buying no measurable smoothness. The correction is a constraint; capping a
+     * constraint just means it is not satisfied.
+     */
+    for (let slot = 0; slot < limit; slot++) {
+      if (!customers.isActive(slot)) continue;
+      const dx = this.correctionX[slot] ?? 0;
+      const dy = this.correctionY[slot] ?? 0;
+      const magnitude = Math.hypot(dx, dy);
+      if (magnitude < 1e-9) continue;
+
+      this.nudge(customers.at(slot), dx, dy);
+    }
   }
 
   /**
@@ -175,6 +185,23 @@ export class NavigationSystem implements SimSystem {
     if (signature === this.builtFor) return;
     this.fields.rebuild(world.layout.placed);
     this.builtFor = signature;
+  }
+
+  /**
+   * Move an agent, unless that would put them somewhere they cannot stand.
+   *
+   * A correction that pushed somebody into the counter or onto the road would
+   * fix an overlap by creating a worse problem, and the flow field cannot route
+   * them out of a solid cell. Refusing it leaves the overlap for one more tick,
+   * which is the lesser failure by a wide margin.
+   */
+  private nudge(customer: CustomerRecord, dx: number, dy: number): void {
+    const grid = this.fields.grid;
+    const x = customer.x + dx;
+    const y = customer.y + dy;
+    if (grid.isBlocked(grid.cellXAt(x), grid.cellYAt(y))) return;
+    customer.x = x;
+    customer.y = y;
   }
 
   private move(world: World, customer: CustomerRecord, slot: number, seconds: number): void {

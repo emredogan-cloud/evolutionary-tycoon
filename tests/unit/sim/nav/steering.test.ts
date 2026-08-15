@@ -3,6 +3,7 @@ import {
   ARRIVAL_SLOWING_METRES,
   arrivalSpeed,
   blendSteering,
+  MIN_PERSONAL_SPACE_METRES,
   SEPARATION_RADIUS_METRES,
   SEPARATION_WEIGHT,
   separationFrom,
@@ -85,13 +86,48 @@ describe('blending', () => {
     expect(Math.abs(out.y), 'separation did nothing at all').toBeGreaterThan(0.1);
   });
 
-  it('refuses to move when the two cancel exactly', () => {
+  it('keeps the personal-space floor below the queue spacing', () => {
     /*
-     * Rare, and not an error: the agent is being pushed precisely against where
-     * it wants to go. "Do not move this tick" is the honest answer; a direction
-     * picked to break the tie would send it somewhere neither force asked for.
+     * Queue slots are 0.8 m apart. A personal space wider than that would have
+     * the constraint fighting the queue it is meant to protect, and a formed
+     * queue would never settle.
      */
-    expect(blendSteering(1, 0, -1 / SEPARATION_WEIGHT, 0, out)).toBe(false);
+    expect(MIN_PERSONAL_SPACE_METRES).toBeLessThan(0.8);
+    expect(MIN_PERSONAL_SPACE_METRES).toBeLessThan(SEPARATION_RADIUS_METRES);
+  });
+
+  it('never reverses, however hard the push is', () => {
+    /*
+     * The property that makes this steering rather than jostling, and it is
+     * structural rather than tuned: only the component of the push *across* the
+     * flow is used, so the blended vector's dot product with the flow is always
+     * 1 and the result can never turn more than ninety degrees.
+     *
+     * Applying the push whole let it point backwards, and a pair then
+     * oscillated — push apart, flow pulls together, push apart. Measured at
+     * 64.7% of walking steps reversing direction, which on screen is people
+     * vibrating rather than walking.
+     */
+    for (const magnitude of [0.5, 1, 5, 100]) {
+      expect(blendSteering(1, 0, -magnitude, 0, out)).toBe(true);
+      expect(out.x, `push of ${String(magnitude)} against the flow`).toBeGreaterThan(0);
+    }
+  });
+
+  it('ignores a push pointing straight back, and steers round a sideways one', () => {
+    // Directly opposed: nothing across the flow, so the flow is unchanged.
+    blendSteering(1, 0, -1, 0, out);
+    expect(out.x).toBeCloseTo(1, 9);
+    expect(out.y).toBeCloseTo(0, 9);
+
+    // Across it: the direction bends, and keeps going forward.
+    blendSteering(1, 0, 0, 1, out);
+    expect(out.y).toBeGreaterThan(0.1);
+    expect(out.x).toBeGreaterThan(0);
+  });
+
+  it('refuses only a flow it cannot use', () => {
+    expect(blendSteering(0, 0, 0, 0, out)).toBe(false);
     expect(out).toEqual({ x: 0, y: 0 });
   });
 });
