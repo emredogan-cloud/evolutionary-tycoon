@@ -29,6 +29,35 @@ export class VehicleStore {
   readonly state: Uint8Array;
   /** Archetype index (`SEDAN_COMMUTER`, `PICKUP_WORKER`, …). Populated in Phase 5. */
   readonly archetype: Uint8Array;
+  /** Which lane of the `LaneGraph` the vehicle is travelling on. */
+  readonly lane: Uint8Array;
+  /**
+   * 1 when this vehicle can never convert — decorative traffic.
+   *
+   * It drives, brakes, queues and propagates waves exactly like any other
+   * vehicle; the only difference is that Phase 6's conversion system does not
+   * offer it the restaurant. Approved by executive decision as option B of
+   * PHASE_5_REPORT §4.3, so that the road can look busy without moving the
+   * 24-per-minute demand figure the economy is calibrated on.
+   */
+  readonly decorative: Uint8Array;
+  /**
+   * This vehicle's own free-road speed, m/s.
+   *
+   * Per vehicle rather than per archetype: the spread around the archetype's
+   * nominal speed is what stops the road looking like a conveyor belt, and it
+   * has to be drawn once at spawn and remembered, not re-rolled per tick.
+   */
+  readonly desiredSpeed: Float32Array;
+  /**
+   * Acceleration from the last tick, m/s². Negative is braking.
+   *
+   * Stored because the renderer needs it — brake lights and the nose dip are
+   * driven by deceleration, and recomputing IDM in the render layer would both
+   * duplicate the model and put simulation logic on the wrong side of the
+   * boundary.
+   */
+  readonly accel: Float32Array;
 
   private readonly activeFlags: Uint8Array;
   private readonly freeStack: Int32Array;
@@ -44,6 +73,10 @@ export class VehicleStore {
     this.speed = new Float32Array(capacity);
     this.state = new Uint8Array(capacity);
     this.archetype = new Uint8Array(capacity);
+    this.lane = new Uint8Array(capacity);
+    this.decorative = new Uint8Array(capacity);
+    this.desiredSpeed = new Float32Array(capacity);
+    this.accel = new Float32Array(capacity);
 
     this.activeFlags = new Uint8Array(capacity);
     this.freeStack = new Int32Array(capacity);
@@ -67,6 +100,10 @@ export class VehicleStore {
     this.speed[slot] = 0;
     this.state[slot] = 0;
     this.archetype[slot] = 0;
+    this.lane[slot] = 0;
+    this.decorative[slot] = 0;
+    this.desiredSpeed[slot] = 0;
+    this.accel[slot] = 0;
     this.live++;
     return slot;
   }
@@ -79,6 +116,10 @@ export class VehicleStore {
     this.speed[slot] = 0;
     this.state[slot] = 0;
     this.archetype[slot] = 0;
+    this.lane[slot] = 0;
+    this.decorative[slot] = 0;
+    this.desiredSpeed[slot] = 0;
+    this.accel[slot] = 0;
     this.freeStack[this.freeTop] = slot;
     this.freeTop++;
     this.live--;
@@ -111,6 +152,17 @@ export class VehicleStore {
       hasher.writeF64(at(this.speed, slot));
       hasher.writeU8(at(this.state, slot));
       hasher.writeU8(at(this.archetype, slot));
+      hasher.writeU8(at(this.lane, slot));
+      hasher.writeU8(at(this.decorative, slot));
+      hasher.writeF64(at(this.desiredSpeed, slot));
+      /*
+       * `accel` is deliberately NOT hashed. It is derived state — recomputed
+       * from scratch every tick from position and speed — and exists only so the
+       * renderer can show brake lights without reimplementing IDM. Hashing a
+       * value that no future tick reads would make the digest sensitive to
+       * something that cannot change an outcome, which is exactly the property
+       * World.hash() is documented to avoid.
+       */
     }
   }
 }

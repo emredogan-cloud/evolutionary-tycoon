@@ -5,6 +5,7 @@ import { buildContactSheets } from './contactSheet.ts';
 import { convertAudioDirectory } from './audio.ts';
 import { buildManifest, writeManifest } from './manifest.ts';
 import { emitPrompts } from './prompts.ts';
+import { exportPromptHtml } from './promptExport.ts';
 import { PATHS } from './paths.ts';
 import { processDirectory } from './process.ts';
 import { buildReport, formatReport } from './report.ts';
@@ -25,7 +26,16 @@ import { validateDirectory } from './validate.ts';
  */
 
 type Stage =
-  'validate' | 'process' | 'atlas' | 'audio' | 'manifest' | 'report' | 'contact-sheet' | 'prompts' | 'build';
+  | 'validate'
+  | 'process'
+  | 'atlas'
+  | 'audio'
+  | 'manifest'
+  | 'report'
+  | 'contact-sheet'
+  | 'prompts'
+  | 'prompts:html'
+  | 'build';
 
 const STAGES: readonly Stage[] = [
   'validate',
@@ -36,6 +46,7 @@ const STAGES: readonly Stage[] = [
   'report',
   'contact-sheet',
   'prompts',
+  'prompts:html',
   'build',
 ];
 
@@ -196,6 +207,14 @@ async function run(stage: Stage): Promise<boolean> {
       return runContactSheets();
     case 'prompts':
       return runPrompts();
+    case 'prompts:html': {
+      const result = exportPromptHtml();
+      console.log(
+        `${result.path}\n  ${result.count} prompts · ${result.batches} batches · ` +
+          `categories: ${result.categories.join(', ')}`,
+      );
+      return true;
+    }
     case 'build': {
       for (const step of ['validate', 'process', 'atlas', 'audio', 'manifest', 'report'] as const) {
         console.log(`\n--- assets:${step} ---`);

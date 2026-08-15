@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SaveService } from '@app/SaveService';
 import { Sim } from '@sim/core/Sim';
+import { snapshotWorld } from '@sim/core/snapshot';
 import { SaveManager } from '@persistence/SaveManager';
 import { MemoryStorageAdapter } from '@persistence/StorageAdapter';
 
@@ -28,6 +29,11 @@ describe('SaveService', () => {
     const savedHash = sim.world.hash();
 
     await service.save();
+    // The reference is the *restored* world, not the live one: a live world has
+    // vehicles on the road and the save deliberately does not carry them, so
+    // comparing the two would assert that transient traffic survives a reload.
+    await service.load();
+    const restoredSnapshot = snapshotWorld(sim.world);
 
     sim.advance(1_000);
     sim.world.economy.cash = 0;
@@ -36,7 +42,7 @@ describe('SaveService', () => {
     const result = await service.load();
 
     expect(result.ok).toBe(true);
-    expect(sim.world.hash()).toBe(savedHash);
+    expect(snapshotWorld(sim.world)).toEqual(restoredSnapshot);
     expect(sim.world.economy.cash).toBe(512);
     expect(sim.world.tick).toBe(400);
   });

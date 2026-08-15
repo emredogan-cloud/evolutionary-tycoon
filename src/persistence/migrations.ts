@@ -78,7 +78,67 @@ const v1ToV2: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2];
+/**
+ * v2 → v3: the traffic arrival cursor becomes part of the save.
+ *
+ * Phase 5 gave the world a Poisson process whose next-candidate time decides
+ * every future arrival. A v2 save has no such field, and 0 is the correct value
+ * rather than a placeholder: it means "the next candidate is due immediately",
+ * which is exactly how a fresh world starts. The spawn system snaps a cursor
+ * that lies in the past up to the current time, so an old save resumes with
+ * traffic arriving normally instead of replaying an entire day of backlog.
+ */
+const v2ToV3: Migration = {
+  from: 2,
+  to: 3,
+  up: (save) => ({
+    ...save,
+    schemaVersion: 3,
+    traffic: { nextCandidateMs: 0 },
+  }),
+};
+
+/**
+ * v3 → v4: vehicles past the restaurant split into convertible and decorative.
+ *
+ * Phase 5's executive decision put decorative traffic on the road so it would
+ * look busy without moving the 24-per-minute demand the economy is calibrated
+ * on. That makes `vehiclesSpawned` ambiguous on its own, so a second counter
+ * arrived beside it.
+ *
+ * A v3 save predates decorative traffic entirely: every vehicle it counted was
+ * convertible. Copying the old total across is therefore exactly what the save
+ * meant, not a default.
+ */
+const v3ToV4: Migration = {
+  from: 3,
+  to: 4,
+  up: (save) => {
+    const stats = save['stats'];
+    const previous =
+      stats !== null && typeof stats === 'object'
+        ? (stats as { vehiclesSpawned?: unknown }).vehiclesSpawned
+        : 0;
+
+    return {
+      ...save,
+      schemaVersion: 4,
+      stats: {
+        ...(typeof stats === 'object' && stats !== null ? stats : {}),
+        convertibleSpawned: typeof previous === 'number' ? previous : 0,
+      },
+      // A v3 save has one arrival cursor. Decorative traffic starts due
+      // immediately, which is how a fresh world starts and what the spawn
+      // system's past-due snap expects.
+      traffic: {
+        ...(typeof save['traffic'] === 'object' && save['traffic'] !== null ? save['traffic'] : {}),
+        nextDecorativeMs: 0,
+      },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4];
 
 assertContiguous(migrations);
 

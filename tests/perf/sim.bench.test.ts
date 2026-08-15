@@ -49,8 +49,10 @@ const REGRESSION_THRESHOLD = 1.15;
 interface Baseline {
   readonly recordedAt: string;
   readonly environment: string;
-  /** Which statistic `timings` holds. Only 'minMs' is understood. */
+  /** Which statistic `timings` holds. Only 'minMsPerCalibration' is understood. */
   readonly statistic: string;
+  /** Machine speed when the baseline was recorded — see `calibrationMs`. */
+  readonly calibrationMs: number;
   readonly timings: Record<string, number>;
   readonly bytesPerTick: number;
 }
@@ -69,9 +71,31 @@ describe('simulation performance budgets', () => {
   });
 
   it('allocates essentially nothing per tick in steady state', () => {
-    // Budget is 0 B/tick. The tolerance absorbs V8 bookkeeping that is not the
-    // simulation's doing; a real per-tick allocation is orders of magnitude
-    // above it — a single object literal per tick is ~50 B.
+    /*
+     * **32 B/tick, raised from 8 by executive decision on 2026-08-15.**
+     *
+     * The original 8 was measured in Phase 2 when all eighteen system slots were
+     * no-ops, so "essentially nothing" was calibrated against a pipeline that did
+     * nothing. Phase 5's traffic systems measured 29 B/tick and the source could
+     * not be isolated — each of the motion system's three passes measures 0.17
+     * B/tick alone while the three together measure 16, and no individual
+     * operation inside them allocates on its own (PHASE_5_REPORT §7.2).
+     *
+     * The owner accepted it for the MVP on the arithmetic: 29 B/tick at 20 Hz is
+     * 580 B/s, about 2 MB an hour, which is a minor collection every few minutes
+     * — far below the frame stutter this budget exists to prevent.
+     *
+     * **Then CI measured 7.4 B/tick on the same commit.** The 29 is a property of
+     * one developer machine's V8, not of the simulation, which also explains why
+     * the source could never be isolated: there was no allocation to find. The
+     * raised ceiling stays because it makes the gate stop depending on whose
+     * laptop runs it, but the number that describes the code is CI's 7.4, and
+     * that is what `tools/bench/baseline.json` records.
+     *
+     * This is a ceiling raised once with a reason written down, not a number that
+     * moves whenever it is inconvenient: if a later phase pushes CI past 32, the
+     * answer is to find the allocation, not to raise it again.
+     */
     //
     // The harness reports the minimum of several samples, because the noise it
     // is separating out is one-sided: runtime bookkeeping only ever adds to a
@@ -85,7 +109,7 @@ describe('simulation performance budgets', () => {
       result.bytesPerTick,
       `measured ${result.bytesPerTick.toFixed(2)} B/tick (worst sample ` +
         `${result.worstBytesPerTick.toFixed(2)}) over ${result.ticks} ticks x ${result.samples} samples`,
-    ).toBeLessThan(8);
+    ).toBeLessThan(32);
   });
 
   it('hashes a populated world fast enough to run in a debug overlay', () => {
@@ -166,9 +190,24 @@ describe('regression against the recorded baseline', () => {
     expect(report.timings.length).toBeGreaterThan(0);
   });
 
+  /**
+   * Compared as a ratio to a calibration run, never as raw milliseconds.
+   *
+   * Wall-clock comparison against a recorded baseline does not work on shared
+   * CI runners, and this was measured rather than assumed: a baseline recorded
+   * on GitHub Actions reported the *identical commit* as 47-68% slower when it
+   * re-ran on GitHub Actions six minutes later. Taking the minimum of 25 samples
+   * removes scheduler contention but cannot remove a different CPU.
+   *
+   * Every timing is therefore divided by `calibrationMs()` — a fixed arithmetic
+   * workload run in the same process — so machine speed cancels and what remains
+   * is the simulation's cost relative to the processor it is on. The 15%
+   * threshold from TESTING_STRATEGY §6 is unchanged; only the quantity being
+   * compared is chosen to be comparable.
+   */
   it.runIf(baseline !== null)('has not regressed by more than 15%', () => {
     if (baseline === null) return;
-    expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMs');
+    expect(baseline.statistic, 'baseline.json records an unknown statistic').toBe('minMsPerCalibration');
 
     const report = benchOnce();
     const regressions: string[] = [];
@@ -176,10 +215,12 @@ describe('regression against the recorded baseline', () => {
     for (const timing of report.timings) {
       const recorded = baseline.timings[timing.name];
       if (recorded === undefined) continue;
-      const ratio = timing.minMs / recorded;
+      const normalised = timing.minMs / report.calibrationMs;
+      const ratio = normalised / recorded;
       if (ratio > REGRESSION_THRESHOLD) {
         regressions.push(
-          `${timing.name}: ${timing.minMs.toFixed(3)} ms vs baseline ${recorded.toFixed(3)} ms (${((ratio - 1) * 100).toFixed(0)}% slower)`,
+          `${timing.name}: ${normalised.toFixed(4)} vs baseline ${recorded.toFixed(4)} ` +
+            `calibration units (${((ratio - 1) * 100).toFixed(0)}% slower)`,
         );
       }
     }

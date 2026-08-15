@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ACTOR_KIND_SPECS, actorKindSpec } from '@config/actors';
+import { ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE, actorKindSpec } from '@config/actors';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { sceneFixture } from '@config/scenes';
 import { SURFACE_COLORS } from '@config/surfaces';
@@ -13,6 +13,8 @@ import { RenderBridge } from '../RenderBridge';
 import { RENDER_CONTEXT_KEY } from '../RenderContext';
 import type { RenderContext } from '../RenderContext';
 import { SceneGraph } from '../SceneGraph';
+import { vehicleBodyMotion } from '../views/VehicleView';
+import type { VehicleBodyMotion } from '../views/VehicleView';
 
 export const WORLD_SCENE_KEY = 'world';
 
@@ -44,6 +46,8 @@ export class WorldScene extends Phaser.Scene {
   private overlays: DevOverlays | null = null;
 
   private readonly sprites: Phaser.GameObjects.Image[] = [];
+  /** Reused every frame; the body motion helper writes into it. */
+  private readonly bodyMotion: VehicleBodyMotion = { bobY: 0, pitch: 0 };
   private readonly screenScratch: Point2 = { x: 0, y: 0 };
   private readonly originsByKey = new Map<string, { x: number; y: number }>();
 
@@ -140,7 +144,37 @@ export class WorldScene extends Phaser.Scene {
 
       // Art is authored at 2x and drawn at 1x.
       sprite.setScale(0.5);
-      sprite.setPosition(view.screenX, view.screenY);
+
+      /*
+       * Vehicles get the procedural body motion Phase 5 owes them: a suspension
+       * bob driven by distance travelled and a nose dip under braking. Both are
+       * pure functions in `VehicleView`, so the maths is unit-tested without a
+       * renderer and this is only the application of it.
+       *
+       * The bob is applied here rather than baked into the world position on
+       * purpose — it is presentation, and a vehicle that bobbed in world space
+       * would sort against a different depth every frame.
+       *
+       * The eight-direction sprite is *selected* but cannot yet be *drawn*: no
+       * production vehicle art exists (PHASE_4_REPORT §11), so every vehicle
+       * still renders the one registered placeholder. `directionFor` is wired
+       * and tested so the art drops in without touching this code.
+       */
+      let offsetY = 0;
+      if (view.kind === ACTOR_KIND_VEHICLE) {
+        vehicleBodyMotion(view.travelled, view.braking ? -4 : 0, this.bodyMotion);
+        offsetY = this.bodyMotion.bobY;
+        sprite.setRotation(this.bodyMotion.pitch);
+        // Until the brake-light frame exists, braking is shown as a tint. It is
+        // deliberately obvious rather than subtle: this is placeholder feedback,
+        // and placeholder feedback that looks finished is the dangerous kind.
+        sprite.setTint(view.braking ? 0xffb0b0 : 0xffffff);
+      } else if (sprite.rotation !== 0) {
+        sprite.setRotation(0);
+        sprite.clearTint();
+      }
+
+      sprite.setPosition(view.screenX, view.screenY + offsetY);
       sprite.setDepth(i);
       sprite.setVisible(true);
     }

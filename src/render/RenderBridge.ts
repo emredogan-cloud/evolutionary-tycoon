@@ -46,6 +46,8 @@ interface TrackedPosition {
   curZ: number;
   /** The tick `cur` was observed at, so a departed actor can be dropped. */
   tick: number;
+  /** Metres travelled since first seen. Drives the suspension bob. */
+  travelled: number;
 }
 
 /** A never-moving world object, sorted alongside actors. */
@@ -119,6 +121,10 @@ export class RenderBridge {
       if (target === null) break;
       target.entityId = item.entityId;
       target.kind = item.kind;
+      target.headingX = 1;
+      target.headingY = 0;
+      target.braking = false;
+      target.travelled = 0;
       target.worldX = item.x;
       target.worldY = item.y;
       target.worldZ = item.z;
@@ -150,6 +156,12 @@ export class RenderBridge {
 
       target.entityId = actor.entityId;
       target.kind = actor.kind;
+      target.headingX = actor.headingX;
+      target.headingY = actor.headingY;
+      target.braking = actor.braking;
+      // Accumulated from the interpolated position, so the bob advances smoothly
+      // between ticks instead of stepping 20 times a second.
+      target.travelled = tracked?.travelled ?? 0;
 
       const screen = worldToScreen(target.worldX, target.worldY, target.worldZ, this.screenScratch);
       target.screenX = screen.x;
@@ -168,6 +180,7 @@ export class RenderBridge {
       const existing = this.tracked.get(actor.entityId);
       if (existing === undefined) {
         this.tracked.set(actor.entityId, {
+          travelled: 0,
           prevX: actor.x,
           prevY: actor.y,
           prevZ: actor.z,
@@ -184,6 +197,7 @@ export class RenderBridge {
         existing.curY = actor.y;
         existing.curZ = actor.z;
         existing.tick = view.tick;
+        existing.travelled += Math.hypot(existing.curX - existing.prevX, existing.curY - existing.prevY);
       }
     }
     this.forgetDeparted(view.tick);

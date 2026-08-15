@@ -9,8 +9,8 @@ import type { SpeedMultiplier } from '@config/simulation';
  *
  * The union grows one phase at a time. These three exist because they are the
  * only things a Phase 2 kernel can honestly announce: the clock rolled over, and
- * the player changed the rate or paused. Gameplay events (`VEHICLE_SPAWNED`,
- * `PAYMENT`, …) arrive with the systems that emit them.
+ * the player changed the rate or paused. The vehicle events below arrived with
+ * Phase 5; `PAYMENT` and the rest follow the systems that emit them.
  */
 
 export interface DayStartedEvent {
@@ -28,7 +28,41 @@ export interface PauseChangedEvent {
   paused: boolean;
 }
 
-export type SimEvent = DayStartedEvent | SpeedChangedEvent | PauseChangedEvent;
+/**
+ * A vehicle entered the road.
+ *
+ * Carries the archetype so Phase 17 can pick an engine sample without asking the
+ * simulation again, and so the dev overlay can show the mix without a scan.
+ */
+export interface VehicleSpawnedEvent {
+  readonly t: 'VEHICLE_SPAWNED';
+  entityId: number;
+  lane: number;
+  archetype: number;
+}
+
+/** A vehicle began braking hard enough to be worth hearing or seeing. */
+export interface VehicleBrakedEvent {
+  readonly t: 'VEHICLE_BRAKED';
+  entityId: number;
+  /** Deceleration in m/s², positive. */
+  decel: number;
+}
+
+/** A vehicle reached the end of its lane and returned to the pool. */
+export interface VehicleDespawnedEvent {
+  readonly t: 'VEHICLE_DESPAWNED';
+  entityId: number;
+  lane: number;
+}
+
+export type SimEvent =
+  | DayStartedEvent
+  | SpeedChangedEvent
+  | PauseChangedEvent
+  | VehicleSpawnedEvent
+  | VehicleBrakedEvent
+  | VehicleDespawnedEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -39,7 +73,14 @@ export type SimEventType = SimEvent['t'];
  * specified for string keys, but relying on it in the one module whose entire
  * job is determinism would be a poor precedent.
  */
-export const SIM_EVENT_TYPES: readonly SimEventType[] = ['DAY_STARTED', 'SPEED_CHANGED', 'PAUSE_CHANGED'];
+export const SIM_EVENT_TYPES: readonly SimEventType[] = [
+  'DAY_STARTED',
+  'SPEED_CHANGED',
+  'PAUSE_CHANGED',
+  'VEHICLE_SPAWNED',
+  'VEHICLE_BRAKED',
+  'VEHICLE_DESPAWNED',
+];
 
 /**
  * A subscriber's view of an event.

@@ -66,4 +66,4 @@ export const EVENT_QUEUE_CAPACITY = 512;
  * v2 (Phase 3): placed objects gained `z`, because the renderer sorts on height
  * and an object on a counter has to draw in front of the counter.
  */
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 4;

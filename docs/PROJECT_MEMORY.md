@@ -392,6 +392,128 @@ altın referanslar hem golden hem batch olarak iki kez çıkıyordu → tekille�
 
 **Doğrulama:** `pnpm verify` exit 0 · **605 test** · lines %98.46 · bütçeler içinde.
 
+> **Checkpoint harf çakışması.** Bu batch'in talimatı M→S harflerini istiyor, ama M ve N zaten
+> kullanılmıştı (lisans kapısı geçersiz kılma / görüntü üretme yetenek sınırı). Geçmiş
+> yeniden yazılmıyor: yeni olanlar **"BATCH 5–7 · CHECKPOINT <harf>"** biçiminde etiketleniyor.
+> Eşleme: M=batch başlangıcı · N=P5 başlangıcı · O=P5 tamam · P=P6 başlangıcı · Q=P6 tamam ·
+> R=P7 başlangıcı · S=P7 tamam.
+
+### BATCH 5–7 · CHECKPOINT M — Batch başlangıcı (2026-08-15)
+
+**Context reset sonrası durum, repodan yeniden kuruldu (varsayım değil, ölçüm):**
+
+| Ne                    | Değer                                                                             |
+| --------------------- | --------------------------------------------------------------------------------- |
+| main SHA              | `e7a997e3487271f9c7b9a09b097ba0ea3af801e4`                                        |
+| Çalışma ağacı         | temiz                                                                             |
+| Production            | `/health.json` → `buildSha e7a997e…`, `schemaVersion 2`, `assetManifestHash null` |
+| CI (main)             | ✅ CI · ✅ Preview E2E · ✅ Production smoke · ✅ CodeQL                          |
+| Vercel Authentication | **kapalı** (kullanıcı tarafından; yeniden açılmayacak)                            |
+| preview-e2e           | **bloke edici** — gevşetilmeyecek                                                 |
+| Testler               | 605 unit/integration + 10 perf                                                    |
+| Bundle                | 406.45 kB gzip / 550 kB                                                           |
+
+**Faz durumu — DEĞİŞTİRİLMEDİ, geçmiş yeniden yazılmadı:**
+
+- **P2 = PASS** · **P3 = PASS** · **P4 = PARTIAL**
+- P4 mühendislik/pipeline tarafı tamam ve kanıtlı; **üretim sanatı hâlâ dış iş.**
+- Lisans kapısı **yönetici kararıyla geçersiz kılındı** (geçti değil): God Mode AI seçildi,
+  Sprixen + PixelLab düşürüldü, madde 5 ve 8 bilerek kabul edildi. Altın referans onay muafiyeti
+  kayıtlı. → `assets/LICENSES.md` §1.5
+- **172 görsel üretilmedi.** Bu ortam üretemez. Placeholder'lar hâlâ yerinde (7 adet) ve register
+  dürüst tutuluyor.
+
+**Yetkilendirme:** P5 → P6 → P7 tek batch, otonom, aralarda onay beklenmeyecek. P8–P10 yetkisiz.
+
+**Açık kalan mimari çelişki:** Phaser 4.2.1 WebGL1 context açıyor, dört doküman WebGL2 diyor (§12,
+AÇIK ÇELİŞKİ #4). P5–P7'yi bloke etmiyor; sessizce değiştirilmeyecek.
+
+### BATCH 5–7 · Asset prompt export (2026-08-15) ✅
+
+`docs/ASSET_GENERATION_PROMPTS.html` — 526 KB, tek dosya, çevrimdışı, satır içi CSS + JS, sıfır
+dış bağımlılık. `pnpm assets:prompts:html` ile deterministik olarak üretiliyor.
+
+| Doğrulama                            | Sonuç                                                                                                |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Prompt sayısı                        | **172** (beklenen 172 — birebir)                                                                     |
+| Batch sayısı                         | **12**                                                                                               |
+| Kategori                             | 9 (char, food, fx, ground, nature, prop, struct, ui, veh)                                            |
+| Prompt gövdeleri                     | Birebir korunuyor — HTML-escape edilip `textContent` ile geri okunuyor                               |
+| Otomatik test                        | `tests/unit/tools/promptExport.test.ts` — **18 test**                                                |
+| Tarayıcı: yükleme                    | ✅ 172/12/9 başlıkta doğru görünüyor                                                                 |
+| Tarayıcı: arama                      | ✅ "sedan" → 8 · "P042" → 1 (`char_head_neutral-01_nw@2x.png`) · eşleşmeyen → boş durum mesajı       |
+| Tarayıcı: kategori filtresi          | ✅ `veh` → 32, yalnızca ilgili 2 batch görünür; `all` → 172                                          |
+| Tarayıcı: kopyala (güvenli bağlam)   | ✅ `navigator.clipboard`, kopyalanan metin prompt ile **birebir**                                    |
+| Tarayıcı: kopyala (`file://` yedeği) | ✅ `navigator.clipboard` kaldırılarak zorlandı → `execCommand('copy')`, textarea içeriği **birebir** |
+| Tarayıcı: batch kopyala              | ✅ golden-references → 7 prompt, 14 830 karakter                                                     |
+
+**Dürüst sınır:** tarayıcı doğrulaması `http://127.0.0.1:8199` üzerinden yapıldı — Chrome eklentisi
+`file://` adreslerine gidemiyor. `file://` senaryosunun kritik kısmı (güvenli olmayan bağlamda
+kopyalama) `navigator.clipboard` silinerek **aynı kod yolu** üzerinden doğrulandı; sayfanın hiç dış
+kaynağı olmadığı da testle iddia ediliyor.
+
+### BATCH 5–7 · CHECKPOINT N — P5 başlangıcı (2026-08-15)
+
+Dal `phase/05-traffic`, `e7a997e`'ten. Mevcut mimari incelendi; yeniden yazılmadı, genişletildi:
+`VehicleStore` zaten `laneS/speed/state/archetype` taşıyordu (Faz 2'de "Faz 5 dolduracak" diye
+bırakılmış), `SYSTEM_ORDER`'da dört trafik yuvası zaten ayrılmıştı.
+
+### BATCH 5–7 · CHECKPOINT O — P5 tamamlandı (2026-08-15) ✅ PASS
+
+Önce KISMİ raporlandı; iki DoD maddesi **kullanıcı kararıyla** çözüldü ve uygulandı.
+Kayıt "geçersiz kılındı ve uygulandı" diyor, "sessizce sağlandı" demiyor.
+
+| Kanıt       | Değer                                                        |
+| ----------- | ------------------------------------------------------------ |
+| Testler     | **727** · branches %89+                                      |
+| CI          | **15/15 yeşil** — PR #13                                     |
+| Bundle      | 414 kB gzip / 550 kB                                         |
+| Save şeması | **v2 → v3 → v4**, her biri migration + commit'li fixture ile |
+| Rapor       | [PHASE_5_REPORT.md](phases/PHASE_5_REPORT.md)                |
+
+**Karar 1 — dekoratif trafik (seçenek B).** Ekonominin 24 araç/dk dönüşebilir talebi
+değişmedi; yola dönüşemeyen ama süren, frenleyen, dalga yayan araçlar eklendi.
+
+|                            |  önce |     sonra |
+| -------------------------- | ----: | --------: |
+| yolda ortalama araç        |  1.05 |  **2.05** |
+| yol tamamen boş            | %40.9 | **%14.6** |
+| takipçi bulunan tick oranı |   ~%0 | **%36.6** |
+
+Tek işaretlenmiş süreç yerine **iki bağımsız Poisson süreci**: paylaşılan süreç
+reddedilenleri de paylaşıyor ve tıkanıklık — dekoratif katmanın bütün amacı —
+dönüşebilir talebi 24'ten **7.3/dk**'ya düşürdü. Ayrıca dekoratif trafiğe daha
+büyük giriş boşluğu (28 m / 12 m) verildi; yoksa iki saniye önce giren dekoratif
+araç zaten şerit başını tutuyor.
+
+**Dürüst yargı:** belirgin biçimde daha iyi ama "yoğun trafik" değil. Tepe saatte
+2–3 araç. 36 m şerit 13.9 m/s'de toplam ~45 araç/dk taşıyor ve bunun 24'ü
+dönüşebilir kalmak zorunda, yani ~2 ortalama doluluk bu yolun tavanı.
+
+**Ve ortaya çıkan asıl bulgu:** yol 24 araç/dk'yı **hiçbir zaman teslim etmedi.**
+Dekoratif trafik yokken bile 21.2/dk idi (varışların ~%12'si şerit başı doluyken
+reddediliyor); şimdi 19.5/dk. Ekonomi 24'e göre kalibre; yol 19.5 veriyor. Faz 9
+bunu bilerek kalibre etmeli.
+
+**Karar 2 — tahsis bütçesi 8 → 32 B/tick.** Uygulandı. **Sonra CI aynı commit'te
+7.4 B/tick ölçtü.** 29 B/tick tek bir geliştirici makinesinin V8'inin özelliğiymiş,
+kodun değil — üç bisect turunun kaynağı bulamamasının sebebi de buymuş: bulunacak
+bir tahsis yoktu. Tavan yerinde kaldı (kapının kimin makinesinde koştuğuna bağlı
+olmasını engelliyor), ama kodu tanımlayan sayı CI'ın 7.4'ü.
+
+**Bunu düzeltirken çok daha önemli bir kusur çıktı:** regresyon kapısı paylaşılan
+CI runner'larında **hiç çalışamıyordu.** CI'da kaydedilen baseline, aynı commit
+altı dakika sonra CI'da tekrar koştuğunda kendini **%47–68 yavaş** raporladı.
+25 örneğin minimumu scheduler gürültüsünü siliyor ama farklı bir CPU'yu silemiyor.
+Artık her ölçüm aynı süreçte koşan bir **kalibrasyon iş yüküne bölünüyor** — makine
+hızı sadeleşiyor. %15 eşiği değişmedi; yalnızca karşılaştırılan büyüklük
+karşılaştırılabilir olacak şekilde seçildi. Doğrulaması: dizüstünde kaydedilen
+baseline artık CI'da geçiyor.
+
+**Zaman ölçeği kararı hâlâ açık** — yoğunluk engeli kalktı, ama bu roadmap'in
+açıkça _insana_ bıraktığı, oynayarak verilecek bir yargı. Ajanın hüküm vermesi
+tam da o talimatın önlemek istediği şey olurdu.
+
 ---
 
 ## 7. Completed Work (yalnızca doğrulanmış)
@@ -745,25 +867,24 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🔴 DUR — P5, P6, P7 YETKİLENDİRİLMEMİŞTİR
+> ## 🔴 DUR — P5 KISMİ, İKİ AÇIK MADDE VAR. P6/P7 BAŞLATILMADI.
 >
-> **P2 ✅ PASS · P3 ✅ PASS · P4 🟡 PARTIAL.**
+> **P2 ✅ · P3 ✅ · P4 🟡 · P5 🟡** — dal `phase/05-traffic`, merge edilmedi.
 >
-> P4'ün kalan işi ~165 üretilmiş görsel. **Lisans kapısı açık** (yönetici kararı, CHECKPOINT M).
-> Engel artık karar değil, **yetenek**: bu ajan görüntü üretemiyor (CHECKPOINT N).
+> **Kullanıcıdan beklenen bir karar:**
 >
-> **Sanat üretimi için üç seçenek — üçü de kullanıcının:**
+> **Trafik yoğunluğu.** Yol ekranda ortalama 1 araç gösteriyor ve zamanın %41'i boş. Ayrı ayrı
+> onaylanmış üç sayı (şerit 36 m · 13.9 m/s · 24 araç/dk) birlikte trafik üretmiyor. Dört seçenek ve
+> öneri PHASE_5_REPORT §4.3'te. **Ekonomi sabitini sessizce değiştirmedim.**
 >
-> 1. **Kullanıcı üretir.** `pnpm assets:prompts > prompts.txt` → God Mode AI'da önce 7 altın
->    referans, sonra batch başına tek oturum. Çıktılar `assets/source/`'a, anchor sidecar'ları
->    eklenir, `pnpm assets:validate` koşar. Ajan bu noktadan sonrasını (doğrulama, düzeltme, atlas,
->    manifest, contact sheet, golden güncelleme, register temizliği) tamamlayabilir.
-> 2. **Görüntü üretme yeteneği olan bir araca erişim verilir** (API anahtarı + ortam değişkeni).
->    O durumda ajan uçtan uca yürütebilir.
-> 3. **Prosedürel sanat**, gerçek bir kapsam değişikliği olarak. ASSET_PIPELINE'ın bütün stil
->    sözleşmesi AI illüstrasyonu varsayıyor; bu bir değişiklik talebi gerektirir, sessiz ikame değil.
+> **Ayrıca karara bağlanmayı bekleyen iki teknik madde** (kullanıcı isterse ajan çözebilir):
+> tahsis bütçesinin boş boru hattında belirlenmiş olması (§7.2) ve perf baseline'ının bayatlaması
+> (§7.3) — ikisi de sayıyı düzeltmekle değil, bilinçli olarak yeniden belirlemekle çözülür.
 >
-> **P5 başlatılmaz. P5 hazırlığı "temizlik" adı altında da yapılmaz.**
+> Trafik yoğunluğu kararı verildiğinde sırayla: zaman ölçeği kararı (oynayarak) → gerçek GPU FPS →
+> P5 kapanışı → P6.
+>
+> **P8–P10 yetkisiz. P6/P7 yetkili ama başlatılmadı.**
 
 ## 22. Change Log
 
@@ -775,6 +896,7 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 | 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                                                                                                                                                                                                                                         |
 | 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 2026-08-15 | **O**      | **P5 KISMİ.** Trafik çekirdeği tamam ve deterministik (723 test, 10 000 spawn'da determinizm, fren dalgası yukarı yayılıyor). İki DoD maddesi karşılanmadı: yol canlı görünmüyor (ölçüldü: ortalama 1.05 araç, %40.9 tamamen boş — üç onaylı sayının çelişkisi, karar kullanıcının) ve tahsis bütçesi (29 B/tick vs 8; bütçe boş boru hattında belirlenmişti, sebep bisect edildi ama açıklanamadı, test düşük bırakıldı). Zaman ölçeği kararı verilmedi — boş yolda verilecek bir yargı değil. **P6/P7 başlatılmadı.**                                         |
 | 2026-08-15 | **N**      | **Sanat üretilemedi — yetenek sınırı.** Lisans engeli kalktıktan sonra bile 0 asset: ajanın görüntü üretme yeteneği yok. Sahte PASS yazılmadı, prosedürel çizim "AI üretimi" diye kaydedilmedi. Yerine `pnpm assets:prompts` (12 batch, 172 prompt) ve metre-tabanlı `subjectDimensions.json` yazıldı. Bu araç iki gerçek kusur ortaya çıkardı: kontrol 4 çizimi dünya yüksekliğiyle karşılaştırıyordu (sedan 301'e karşı 90 — her araç reddedilecekti) ve kontrol 6 302 asset'in 206'sını böldürüyordu (§1.4'ün 160 px'i gövde, sprite değil). 605 test yeşil. |
 | 2026-08-15 | **M**      | **Lisans kapısı yönetici kararıyla açıldı.** God Mode AI seçildi; madde 5 ve 8 okunmamış hâlde bilerek kabul edildi; Sprixen ve PixelLab düşürüldü. Altın referans insan onayı koşullu kaldırıldı. Kayıt "geçti" değil "geçersiz kılındı" diyor — 9/9 doğrulanmadı.                                                                                                                                                                                                                                                                                             |
 | 2026-08-15 | **L**      | **P4 PARTIAL — BATCH BİTTİ.** Pipeline kuruldu ve kanıtlandı (583 test, determinizm ölçüldü). **START CONDITION kapanmadı → 0 üretim asset'i.** Faz 3'ün visual regression kapısında ciddi bir kusur bulundu ve düzeltildi: `threshold` varsayılanda (0.2) bırakılmıştı, bu yüzden zeminin tamamen yeniden boyanması (233 365 piksel) kapıdan geçiyordu → `threshold: 0`, tek birimlik renk değişimiyle kapının kırıldığı ölçüldü. Palette'in ilk taslağında UI başarı/tehlike çifti döteranopide 22.6 birime düşüyordu → palet değişti, eşik değişmedi.        |

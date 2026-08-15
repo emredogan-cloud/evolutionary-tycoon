@@ -107,7 +107,11 @@ describe('Sim.tick', () => {
     const ticksPerDay = MS_PER_GAME_DAY / TICK_MS;
     sim.advance(ticksPerDay * 2);
 
-    expect(events).toEqual([
+    // Filtered to day events on purpose. Since Phase 5 the same two days also
+    // produce several hundred vehicle events, and this test is about the day
+    // boundary — asserting the whole stream would make it fail every time a new
+    // system starts announcing something.
+    expect(events.filter((event) => event.t === 'DAY_STARTED')).toEqual([
       { t: 'DAY_STARTED', day: 1 },
       { t: 'DAY_STARTED', day: 2 },
     ]);

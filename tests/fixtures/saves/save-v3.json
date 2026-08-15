@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 3,
+  "buildSha": "phase5fixture",
+  "createdAt": 1700000000000,
+  "lastSeenAt": 1700000000000,
+  "lastSeenServerAt": null,
+  "playtimeMs": 30000,
+  "tick": 601,
+  "nextEntityId": 2,
+  "clock": {
+    "simTimeMs": 30050
+  },
+  "rng": {
+    "traffic": {
+      "a": -1751688255,
+      "b": 852391755,
+      "c": 332537114,
+      "d": 179281312
+    },
+    "conversion": {
+      "a": -812448231,
+      "b": -410334676,
+      "c": 1488923042,
+      "d": 1018225985
+    },
+    "customer": {
+      "a": 1045605125,
+      "b": -1945175716,
+      "c": 1384928012,
+      "d": 639578587
+    },
+    "tips": {
+      "a": -1900594541,
+      "b": -446101977,
+      "c": 899329291,
+      "d": -1941108807
+    },
+    "events": {
+      "a": -2028393869,
+      "b": 518688473,
+      "c": 1203038653,
+      "d": -1353633737
+    },
+    "cosmetic": {
+      "a": 1355816087,
+      "b": 269386119,
+      "c": 1485929123,
+      "d": 84360716
+    }
+  },
+  "control": {
+    "speedMultiplier": 2,
+    "paused": false
+  },
+  "progression": {
+    "stage": 2,
+    "unlocks": [],
+    "milestones": []
+  },
+  "economy": {
+    "cash": 1234.5,
+    "reputation": 0.4,
+    "lifetimeRevenue": 0,
+    "prices": []
+  },
+  "layout": {
+    "placed": [
+      {
+        "objectId": "counter",
+        "x": 12,
+        "y": 11,
+        "z": 0
+      }
+    ],
+    "upgrades": [["grill", 2]]
+  },
+  "staff": {
+    "hired": [
+      {
+        "entityId": 7,
+        "roleId": "cook"
+      }
+    ]
+  },
+  "traffic": {
+    "nextCandidateMs": 30387.991989964412
+  },
+  "stats": {
+    "customersServed": 0,
+    "vehiclesSpawned": 1,
+    "commandsApplied": 1
+  },
+  "settings": {
+    "audio": {
+      "master": 1,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": false,
+      "highContrast": false
+    }
+  },
+  "checksum": "20829b3d"
+}

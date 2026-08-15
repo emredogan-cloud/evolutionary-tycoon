@@ -7,6 +7,9 @@ import type {
   SimEvent,
   SimEventType,
   SpeedChangedEvent,
+  VehicleBrakedEvent,
+  VehicleDespawnedEvent,
+  VehicleSpawnedEvent,
 } from './events';
 import { SIM_EVENT_TYPES } from './events';
 
@@ -38,6 +41,12 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'SPEED_CHANGED', mult: 1 };
     case 'PAUSE_CHANGED':
       return { t: 'PAUSE_CHANGED', paused: false };
+    case 'VEHICLE_SPAWNED':
+      return { t: 'VEHICLE_SPAWNED', entityId: 0, lane: 0, archetype: 0 };
+    case 'VEHICLE_BRAKED':
+      return { t: 'VEHICLE_BRAKED', entityId: 0, decel: 0 };
+    case 'VEHICLE_DESPAWNED':
+      return { t: 'VEHICLE_DESPAWNED', entityId: 0, lane: 0 };
   }
 }
 
@@ -98,6 +107,34 @@ export class EventQueue {
     const record = this.lease('PAUSE_CHANGED');
     if (record === null) return;
     (record as PauseChangedEvent).paused = paused;
+    this.push(record);
+  }
+
+  emitVehicleSpawned(entityId: number, lane: number, archetype: number): void {
+    const record = this.lease('VEHICLE_SPAWNED');
+    if (record === null) return;
+    const event = record as VehicleSpawnedEvent;
+    event.entityId = entityId;
+    event.lane = lane;
+    event.archetype = archetype;
+    this.push(record);
+  }
+
+  emitVehicleBraked(entityId: number, decel: number): void {
+    const record = this.lease('VEHICLE_BRAKED');
+    if (record === null) return;
+    const event = record as VehicleBrakedEvent;
+    event.entityId = entityId;
+    event.decel = decel;
+    this.push(record);
+  }
+
+  emitVehicleDespawned(entityId: number, lane: number): void {
+    const record = this.lease('VEHICLE_DESPAWNED');
+    if (record === null) return;
+    const event = record as VehicleDespawnedEvent;
+    event.entityId = entityId;
+    event.lane = lane;
     this.push(record);
   }
 

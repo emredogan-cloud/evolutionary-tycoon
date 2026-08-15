@@ -26,6 +26,17 @@ export class Clock {
     return this.ms;
   }
 
+  /**
+   * Real milliseconds in one game day.
+   *
+   * Exposed so systems can convert an arbitrary sim time to an hour without
+   * mutating the clock — the spawn process needs the hour of a *future*
+   * candidate arrival, not of now.
+   */
+  get msPerGameDay(): number {
+    return MS_PER_GAME_DAY;
+  }
+
   /** Whole in-game days elapsed. Day 0 is the first day. */
   get gameDay(): number {
     return Math.floor(this.ms / MS_PER_GAME_DAY);

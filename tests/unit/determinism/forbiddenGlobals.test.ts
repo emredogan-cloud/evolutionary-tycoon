@@ -129,8 +129,24 @@ function scanSource(filePath: string, source: string): Finding[] {
   return findings;
 }
 
+/**
+ * Every `.ts` under a directory, except deliberate test fixtures.
+ *
+ * `__fixture__` is skipped because `tests/unit/architecture/enforcement.test.ts`
+ * writes a *knowingly illegal* file into `src/sim/__fixture__` to prove the
+ * architecture rules actually fire, then deletes it. Vitest runs files in
+ * parallel workers, so this scan could catch that fixture mid-flight and report
+ * a violation that is really the other test doing its job — which is exactly
+ * what happened once the suite grew large enough to shift the timing.
+ *
+ * Nothing real is excluded: the directory only ever exists for the few
+ * milliseconds that test holds it, is never committed (see `.gitignore`), and a
+ * violation smuggled into a path named `__fixture__` would still be caught by
+ * `depcruise` and by ESLint.
+ */
 function collectTsFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
+    if (entry === '__fixture__') continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       collectTsFiles(full, out);
