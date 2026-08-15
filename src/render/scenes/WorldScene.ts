@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE, actorKindSpec } from '@config/actors';
+import { ACTOR_KIND_CUSTOMER, ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE, actorKindSpec } from '@config/actors';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { sceneFixture } from '@config/scenes';
 import { SURFACE_COLORS } from '@config/surfaces';
@@ -9,6 +9,7 @@ import { DevOverlays } from '../debug/DevOverlays';
 import { worldRectToScreenBounds, worldToScreen } from '../iso/IsoProjection';
 import type { Point2 } from '../iso/IsoProjection';
 import { placeholderTextures } from '../placeholderTextures';
+import { patienceRing } from '../views/CustomerView';
 import { RenderBridge } from '../RenderBridge';
 import { RENDER_CONTEXT_KEY } from '../RenderContext';
 import type { RenderContext } from '../RenderContext';
@@ -17,6 +18,15 @@ import { vehicleBodyMotion } from '../views/VehicleView';
 import type { VehicleBodyMotion } from '../views/VehicleView';
 
 export const WORLD_SCENE_KEY = 'world';
+
+/**
+ * Placeholder colours for the patience bands.
+ *
+ * Amber then red, and nothing at all while a wait is going well — a marker over
+ * every customer from the moment they arrive is noise, and a player learns to
+ * stop seeing it.
+ */
+const PATIENCE_TINTS = { calm: 0xffffff, restless: 0xffd479, angry: 0xff8080 } as const;
 
 /** Statics are declared by texture key; the render catalogue is indexed by number. */
 function kindIndexForTexture(textureKey: string): number {
@@ -169,6 +179,19 @@ export class WorldScene extends Phaser.Scene {
         // deliberately obvious rather than subtle: this is placeholder feedback,
         // and placeholder feedback that looks finished is the dangerous kind.
         sprite.setTint(view.braking ? 0xffb0b0 : 0xffffff);
+      } else if (view.kind === ACTOR_KIND_CUSTOMER) {
+        /*
+         * The patience ring, as a tint — GAME_EXECUTION_ROADMAP Phase 6 asks for
+         * "sabır halkası (basit)". A drawn ring needs the character art it is
+         * meant to sit above, and none exists yet (PHASE_4_REPORT §11), so this
+         * is the same placeholder-feedback approach the brake lights take:
+         * deliberately obvious rather than subtle, because placeholder feedback
+         * that looks finished is the dangerous kind. `patienceRing` is a pure
+         * function and is unit-tested; this is only the application of it.
+         */
+        if (sprite.rotation !== 0) sprite.setRotation(0);
+        const ring = patienceRing(view.patience);
+        sprite.setTint(ring.visible ? PATIENCE_TINTS[ring.band] : 0xffffff);
       } else if (sprite.rotation !== 0) {
         sprite.setRotation(0);
         sprite.clearTint();

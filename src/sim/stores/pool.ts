@@ -24,6 +24,7 @@ export class SlotPool<T> {
   private readonly freeStack: Int32Array;
   private freeTop: number;
   private live = 0;
+  private highWater = 0;
 
   private readonly resetRecord: (record: T) => void;
 
@@ -47,6 +48,17 @@ export class SlotPool<T> {
     return this.live;
   }
 
+  /**
+   * One past the highest live slot — the only range a scan has to cover.
+   *
+   * Same bound and the same reasoning as `VehicleStore.scanLimit`: systems sweep
+   * this pool every tick, the free list hands out low slots first, and without
+   * it most of the sweep is spent finding nothing.
+   */
+  get scanLimit(): number {
+    return this.highWater;
+  }
+
   /** Slot index, or -1 when the pool is exhausted. Never grows: growth is an allocation. */
   acquire(): number {
     if (this.freeTop === 0) return -1;
@@ -54,6 +66,7 @@ export class SlotPool<T> {
     const slot = at(this.freeStack, this.freeTop);
     this.activeFlags[slot] = 1;
     this.live++;
+    if (slot >= this.highWater) this.highWater = slot + 1;
     return slot;
   }
 
@@ -64,6 +77,7 @@ export class SlotPool<T> {
     this.freeStack[this.freeTop] = slot;
     this.freeTop++;
     this.live--;
+    while (this.highWater > 0 && this.activeFlags[this.highWater - 1] !== 1) this.highWater--;
   }
 
   isActive(slot: number): boolean {
@@ -86,6 +100,7 @@ export class SlotPool<T> {
     }
     this.freeTop = this.capacity;
     this.live = 0;
+    this.highWater = 0;
   }
 
   /**

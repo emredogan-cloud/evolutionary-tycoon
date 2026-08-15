@@ -4,7 +4,7 @@ import { TICK_MS } from '@config/simulation';
 import { MAX_SPEED_METRES_PER_SECOND } from '@config/traffic';
 import { Sim } from '@sim/core/Sim';
 import { stage1Lanes } from '@sim/systems/noop';
-import { VEHICLE_STATE_BRAKING, VEHICLE_STATE_CRUISING } from '@sim/systems/VehicleMotionSystem';
+import { VEHICLE_ON_ROAD } from '@sim/systems/VehicleManeuverSystem';
 
 /**
  * These tests simulate whole minutes of traffic and inspect every vehicle on
@@ -34,11 +34,20 @@ interface LaneState {
   slot: number;
 }
 
+/**
+ * Vehicles the traffic model is currently responsible for.
+ *
+ * Phase 6 filters on `VEHICLE_ON_ROAD`. A car mid-manoeuvre keeps the `laneS` it
+ * held when it turned off — a real distance on a real lane, and no longer where
+ * the car is — so including it reports overlaps between a parked car and the
+ * traffic driving past the spot it used to occupy.
+ */
 function snapshotVehicles(sim: Sim): LaneState[] {
   const vehicles = sim.world.vehicles;
   const out: LaneState[] = [];
   for (let slot = 0; slot < vehicles.capacity; slot++) {
     if (!vehicles.isActive(slot)) continue;
+    if ((vehicles.state[slot] ?? 0) !== VEHICLE_ON_ROAD) continue;
     out.push({
       slot,
       lane: vehicles.lane[slot] ?? 0,
@@ -185,18 +194,27 @@ describe('vehicle motion in the pipeline', () => {
   it(
     'marks braking vehicles so the renderer can light them',
     () => {
+      /*
+       * Asserted on the actor snapshot rather than on a stored enum, because
+       * that is the value the renderer actually lights the brake lights from.
+       * Phase 5 kept a braking flag in `VehicleStore.state`; Phase 6 needed that
+       * field for the lifecycle and braking became derived from `accel`, so this
+       * now tests the whole path from the model to the render bridge.
+       */
       const sim = new Sim({ seed: 909 });
-      const states = new Set<number>();
+      const braking = new Set<boolean>();
       for (let tick = 0; tick < TICKS_PER_MINUTE * 20; tick++) {
         sim.tick();
-        for (const vehicle of snapshotVehicles(sim)) {
-          states.add(sim.world.vehicles.state[vehicle.slot] ?? 0);
+        const view = sim.readView();
+        for (let i = 0; i < view.actorCount; i++) {
+          const actor = view.actors[i];
+          if (actor !== undefined) braking.add(actor.braking);
         }
       }
-      // Both states occur in a normal run: vehicles accelerate away from the
-      // entrance and ease off as they approach the desired speed.
-      expect(states.has(VEHICLE_STATE_CRUISING)).toBe(true);
-      expect(states.has(VEHICLE_STATE_BRAKING)).toBe(true);
+      // Both occur in a normal run: vehicles accelerate away from the entrance
+      // and ease off as they approach the desired speed or a slower leader.
+      expect(braking.has(false)).toBe(true);
+      expect(braking.has(true)).toBe(true);
     },
     LONG_RUN_TIMEOUT_MS,
   );

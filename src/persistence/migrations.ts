@@ -138,7 +138,35 @@ const v3ToV4: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4];
+/**
+ * v4 to v5 — the Phase 6 conversion funnel.
+ *
+ * Four lifetime counters, all zero in a v4 save because nothing counted them.
+ * Zero is the honest value rather than a default: a save written before the
+ * conversion system existed genuinely had no conversions, and inventing a
+ * plausible number from `vehiclesSpawned` would put a fabricated history in
+ * front of the player the first time they open the analysis panel.
+ */
+const v4ToV5: Migration = {
+  from: 4,
+  to: 5,
+  up: (save) => {
+    const stats = save['stats'];
+    return {
+      ...save,
+      schemaVersion: 5,
+      stats: {
+        ...(typeof stats === 'object' && stats !== null ? stats : {}),
+        conversionsSucceeded: 0,
+        conversionsFailed: 0,
+        turnedAwayNoParking: 0,
+        customersAbandoned: 0,
+      },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5];
 
 assertContiguous(migrations);
 

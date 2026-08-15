@@ -30,12 +30,34 @@ export interface Lane {
    * draw it and the geometry can be tested before anything depends on it.
    */
   readonly decisionS: number;
+  /**
+   * Distance at which a committed vehicle leaves the lane for the car park.
+   *
+   * Always after `decisionS` — a driver decides, then turns — and the gap
+   * between them is the braking distance the moment is built on.
+   */
+  readonly entryS: number;
+  /** Distance at which a departing vehicle rejoins this lane. */
+  readonly rejoinS: number;
 }
 
 export class LaneGraph {
   readonly lanes: readonly Lane[];
 
   constructor(layout: StageLayout) {
+    /*
+     * An authoring error, checked once against the authored metres rather than
+     * per lane against the resolved distances. A lane whose closest approach to
+     * the counter is nearer than either figure clamps both to zero, and that is
+     * a legitimate short lane — not a reason to refuse the layout.
+     */
+    if (layout.entryPointMetres >= layout.road.decisionPointMetres) {
+      throw new RangeError(
+        `entryPointMetres (${layout.entryPointMetres}) must be smaller than ` +
+          `decisionPointMetres (${layout.road.decisionPointMetres}): a driver decides, then turns`,
+      );
+    }
+
     this.lanes = layout.road.lanes.map((lane, index) => {
       const path = new Polyline(lane.points);
       /*
@@ -46,6 +68,15 @@ export class LaneGraph {
        */
       const nearest = closestS(path, layout.counter.x, layout.counter.y);
       const decisionS = Math.max(0, nearest - layout.road.decisionPointMetres);
+      /*
+       * Never before the decision point. The authored metres already guarantee
+       * it, and `Math.max` preserves it through the clamp at zero — a lane that
+       * starts level with the restaurant has a driver deciding and turning on
+       * the same tick, which is geometrically honest rather than an error.
+       */
+      const entryS = Math.max(decisionS, Math.max(0, nearest - layout.entryPointMetres));
+      const rejoinS = Math.min(path.length, nearest + layout.rejoinPointMetres);
+
       return {
         index,
         id: lane.id,
@@ -53,6 +84,8 @@ export class LaneGraph {
         path,
         length: path.length,
         decisionS,
+        entryS,
+        rejoinS,
       };
     });
 

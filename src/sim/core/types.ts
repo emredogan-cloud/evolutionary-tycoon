@@ -99,6 +99,14 @@ export interface TrafficState {
 
 export interface StatsState {
   customersServed: number;
+  /** Vehicles that rolled and passed. Hashed, like every other lifetime count. */
+  conversionsSucceeded: number;
+  /** Vehicles that rolled and failed. */
+  conversionsFailed: number;
+  /** Converted vehicles that found no free bay and left. */
+  turnedAwayNoParking: number;
+  /** Customers who ran out of patience and left. */
+  customersAbandoned: number;
   vehiclesSpawned: number;
   /**
    * Of those, how many could ever become customers.
@@ -117,6 +125,19 @@ export interface StatsState {
    * effects (speed, pause) are excluded from the hash.
    */
   commandsApplied: number;
+  /**
+   * Conversion failures by `REASON_*` index — diagnostics, and **not hashed**.
+   *
+   * The same reasoning as `TrafficState.droppedSpawns`: nothing reads it back,
+   * so no future tick can behave differently because of it, and hashing it
+   * would make the world digest sensitive to something that cannot change an
+   * outcome. The aggregate counters above *are* hashed, because they sit
+   * alongside `vehiclesSpawned` and `customersServed`, which always have been.
+   *
+   * A fixed-length array rather than a Map, so its iteration order is its index
+   * order and the dev overlay can read it without allocating.
+   */
+  failureReasons: Uint32Array;
 }
 
 interface AudioSettings {
@@ -170,6 +191,24 @@ export interface ActorSnapshot {
   readonly headingY: number;
   /** Decelerating hard enough to light the brakes. Phase 5. */
   readonly braking: boolean;
+  /**
+   * Patience remaining as a fraction of what this actor started with, or 0.
+   *
+   * Phase 6. On the snapshot rather than looked up by the renderer for the same
+   * reason `headingX` is: the render layer may not reach into a store, and
+   * "how impatient does this person look" is a question only the simulation can
+   * answer.
+   */
+  readonly patience: number;
+  /**
+   * Moving under their own power this tick.
+   *
+   * Supplied rather than derived from successive positions, because the
+   * difference between frames is zero for an actor that is stopped *and* for one
+   * the renderer has not seen before — and a walk cycle that starts a frame late
+   * on every customer is exactly the kind of thing nobody can point at.
+   */
+  readonly moving: boolean;
 }
 
 export interface SimView {

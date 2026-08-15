@@ -58,11 +58,37 @@ export class VehicleStore {
    * boundary.
    */
   readonly accel: Float32Array;
+  /**
+   * Whether this vehicle has had its one conversion roll, and how it went.
+   *
+   * `DECISION_PENDING` / `DECISION_NO` / `DECISION_YES` from `ConversionSystem`.
+   * The point of storing the *decided* state rather than a bare boolean is that
+   * "not yet asked" and "asked, answered no" must be distinguishable: a vehicle
+   * that re-rolled each tick as it crawled past the decision point would
+   * convert with probability 1, and would do it more often in heavy traffic.
+   */
+  readonly decision: Uint8Array;
+  /** Assigned parking bay, or -1. Int8 because Stage 4 has far fewer than 127. */
+  readonly parkingSlot: Int8Array;
+  /** Slot of the customer driving this vehicle, or -1. */
+  readonly customerSlot: Int32Array;
+  /** Arc-length position along the current manoeuvre spline, in metres. */
+  readonly maneuverS: Float32Array;
+  /**
+   * Milliseconds spent waiting to merge back onto the road.
+   *
+   * On the vehicle rather than on its driver because the vehicle outlives the
+   * customer record in one path — a customer whose car was recycled is released
+   * immediately — and a car left waiting with nothing counting for it never
+   * merges at all.
+   */
+  readonly waitMs: Float32Array;
 
   private readonly activeFlags: Uint8Array;
   private readonly freeStack: Int32Array;
   private freeTop: number;
   private live = 0;
+  private highWater = 0;
 
   constructor(capacity: number) {
     if (capacity <= 0) throw new RangeError('VehicleStore capacity must be positive');
@@ -77,6 +103,11 @@ export class VehicleStore {
     this.decorative = new Uint8Array(capacity);
     this.desiredSpeed = new Float32Array(capacity);
     this.accel = new Float32Array(capacity);
+    this.decision = new Uint8Array(capacity);
+    this.parkingSlot = new Int8Array(capacity).fill(-1);
+    this.customerSlot = new Int32Array(capacity).fill(-1);
+    this.maneuverS = new Float32Array(capacity);
+    this.waitMs = new Float32Array(capacity);
 
     this.activeFlags = new Uint8Array(capacity);
     this.freeStack = new Int32Array(capacity);
@@ -86,6 +117,24 @@ export class VehicleStore {
 
   get activeCount(): number {
     return this.live;
+  }
+
+  /**
+   * One past the highest live slot — the only range a scan has to cover.
+   *
+   * Every per-tick system sweeps this store looking for live entities, and with
+   * a capacity of 160 and a dozen cars on the road that is 90% of the work spent
+   * finding nothing. The free list hands out low slots first, so the live set
+   * stays clustered near zero and this bound is tight in practice.
+   *
+   * Maintained rather than recomputed: `spawn` pushes it up, `despawn` pulls it
+   * back down past whatever is now dead at the top. Both are O(1) amortised, and
+   * the value is never wrong in the direction that matters — it can lag high
+   * after a burst of despawns, which costs a few wasted iterations, but it can
+   * never be too low and hide a live entity.
+   */
+  get scanLimit(): number {
+    return this.highWater;
   }
 
   /** Slot index, or -1 when full. A full store drops the spawn; it never grows. */
@@ -104,7 +153,13 @@ export class VehicleStore {
     this.decorative[slot] = 0;
     this.desiredSpeed[slot] = 0;
     this.accel[slot] = 0;
+    this.decision[slot] = 0;
+    this.parkingSlot[slot] = -1;
+    this.customerSlot[slot] = -1;
+    this.maneuverS[slot] = 0;
+    this.waitMs[slot] = 0;
     this.live++;
+    if (slot >= this.highWater) this.highWater = slot + 1;
     return slot;
   }
 
@@ -120,9 +175,15 @@ export class VehicleStore {
     this.decorative[slot] = 0;
     this.desiredSpeed[slot] = 0;
     this.accel[slot] = 0;
+    this.decision[slot] = 0;
+    this.parkingSlot[slot] = -1;
+    this.customerSlot[slot] = -1;
+    this.maneuverS[slot] = 0;
+    this.waitMs[slot] = 0;
     this.freeStack[this.freeTop] = slot;
     this.freeTop++;
     this.live--;
+    while (this.highWater > 0 && this.activeFlags[this.highWater - 1] !== 1) this.highWater--;
   }
 
   isActive(slot: number): boolean {
@@ -135,16 +196,26 @@ export class VehicleStore {
     this.speed.fill(0);
     this.state.fill(0);
     this.archetype.fill(0);
+    this.lane.fill(0);
+    this.decorative.fill(0);
+    this.desiredSpeed.fill(0);
+    this.accel.fill(0);
+    this.decision.fill(0);
+    this.parkingSlot.fill(-1);
+    this.customerSlot.fill(-1);
+    this.maneuverS.fill(0);
+    this.waitMs.fill(0);
     this.activeFlags.fill(0);
     for (let i = 0; i < this.capacity; i++) this.freeStack[i] = this.capacity - 1 - i;
     this.freeTop = this.capacity;
     this.live = 0;
+    this.highWater = 0;
   }
 
   /** Live slots in ascending order; dead slots and the free list are not state. */
   hashInto(hasher: Hasher): void {
     hasher.writeU32(this.live);
-    for (let slot = 0; slot < this.capacity; slot++) {
+    for (let slot = 0; slot < this.highWater; slot++) {
       if (this.activeFlags[slot] !== 1) continue;
       hasher.writeU32(slot);
       hasher.writeI32(at(this.entityId, slot));
@@ -155,6 +226,11 @@ export class VehicleStore {
       hasher.writeU8(at(this.lane, slot));
       hasher.writeU8(at(this.decorative, slot));
       hasher.writeF64(at(this.desiredSpeed, slot));
+      hasher.writeU8(at(this.decision, slot));
+      hasher.writeI32(at(this.parkingSlot, slot));
+      hasher.writeI32(at(this.customerSlot, slot));
+      hasher.writeF64(at(this.maneuverS, slot));
+      hasher.writeF64(at(this.waitMs, slot));
       /*
        * `accel` is deliberately NOT hashed. It is derived state — recomputed
        * from scratch every tick from position and speed — and exists only so the

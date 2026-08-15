@@ -1,10 +1,13 @@
 import { ARCHETYPE_SPECS } from '@config/archetypes';
-import { MAX_SPEED_METRES_PER_SECOND, STOP_SPEED_EPSILON } from '@config/traffic';
+import { ENTRY_APPROACH_SPEED } from '@config/customer';
+import { IDM, MAX_SPEED_METRES_PER_SECOND, STOP_SPEED_EPSILON } from '@config/traffic';
 import { idmAcceleration } from '../math/idm';
 import { at } from '../math/typedArray';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { LaneGraph } from '../nav/LaneGraph';
+import { DECISION_YES } from './ConversionSystem';
+import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
 
 /**
  * Car following, integration and despawn.
@@ -25,9 +28,17 @@ import type { LaneGraph } from '../nav/LaneGraph';
  * capacity once, and nothing else is created per tick.
  */
 
-/** Vehicle motion states, stored in `VehicleStore.state`. */
-export const VEHICLE_STATE_CRUISING = 0;
-export const VEHICLE_STATE_BRAKING = 1;
+/*
+ * Braking is **not** a stored state. `VehicleStore.state` carries the lifecycle
+ * (on the road, entering, parked, exiting) and braking is read from `accel`,
+ * which is recomputed every tick anyway. Phase 5 stored both in the same field
+ * and Phase 6 needed the field for the lifecycle; keeping a separate braking
+ * enum would have meant two sources of truth for one derived fact, and the
+ * renderer already reads the derived one through `ActorSnapshot.braking`.
+ */
+
+/** The physical floor on deceleration, shared with the follower model. */
+const MAX_BRAKE_METRES_PER_SECOND_SQUARED = IDM.maxBrake;
 
 export class VehicleMotionSystem implements SimSystem {
   readonly name = 'VehicleMotionSystem' as const;
@@ -39,13 +50,13 @@ export class VehicleMotionSystem implements SimSystem {
   /** Write cursor for the bucketing pass. Separate from `laneCounts`, which
    *  `accelerate` still needs afterwards. */
   private readonly laneCursor: Int32Array;
-  private readonly capacity: number;
 
   constructor(
     private readonly lanes: LaneGraph,
     capacity: number,
   ) {
-    this.capacity = capacity;
+    // Sized to the store's full capacity, but only ever filled up to its scan
+    // limit — the buffer has to survive a moment when every slot is live.
     this.ordered = new Int32Array(capacity);
     this.laneCounts = new Int32Array(lanes.laneCount);
     this.laneOffsets = new Int32Array(lanes.laneCount);
@@ -76,8 +87,8 @@ export class VehicleMotionSystem implements SimSystem {
     const laneCount = this.lanes.laneCount;
     this.laneCounts.fill(0);
 
-    for (let slot = 0; slot < this.capacity; slot++) {
-      if (!vehicles.isActive(slot)) continue;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!this.onRoad(vehicles, slot)) continue;
       const lane = at(vehicles.lane, slot);
       if (lane < laneCount) this.laneCounts[lane] = at(this.laneCounts, lane) + 1;
     }
@@ -92,8 +103,8 @@ export class VehicleMotionSystem implements SimSystem {
     const cursor = this.laneCursor;
     const starts = this.laneOffsets;
     cursor.fill(0);
-    for (let slot = 0; slot < this.capacity; slot++) {
-      if (!vehicles.isActive(slot)) continue;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!this.onRoad(vehicles, slot)) continue;
       const lane = at(vehicles.lane, slot);
       if (lane >= laneCount) continue;
       const index = at(starts, lane) + at(cursor, lane);
@@ -137,22 +148,66 @@ export class VehicleMotionSystem implements SimSystem {
           leaderSpeed = at(vehicles.speed, leader);
         }
 
-        vehicles.accel[slot] = idmAcceleration(
+        let accel = idmAcceleration(
           speed,
           at(vehicles.desiredSpeed, slot),
           gap,
           leaderSpeed,
           spec.accelFactor,
         );
+
+        /*
+         * A driver who has decided to stop slows for the entrance.
+         *
+         * Kinematics rather than the follower model, and the difference is not
+         * cosmetic. Treating the entrance as a slow *vehicle* was tried first
+         * and deadlocked the whole road: IDM keeps a standstill gap, so the car
+         * came to rest 2.4 m short of the turn it wanted to take, sat there
+         * braking at zero speed forever, and every lane backed up behind it —
+         * visible as spawns collapsing from 2 400 to 108 over twenty minutes.
+         * An entrance is a point to arrive *at*, not an obstacle to stay clear
+         * of, and only one of those two things has a minimum gap.
+         *
+         * `v² = u² + 2as` solved for the acceleration that turns the current
+         * speed into the approach speed over the remaining distance. It is the
+         * gentlest braking that still works, so it starts early and eases off —
+         * which is what a driver committing to a turn looks like.
+         *
+         * The traffic behind reacts through the ordinary follower model, which
+         * is the reason this lives here rather than in the manoeuvre system: a
+         * car slowing to turn in sends an accordion wave back up the queue, and
+         * that wave is the visible consequence of the player's stand existing.
+         */
+        if (at(vehicles.decision, slot) === DECISION_YES && speed > ENTRY_APPROACH_SPEED) {
+          const toEntry = this.lanes.lane(lane).entryS - at(vehicles.laneS, slot);
+          if (toEntry > 0) {
+            const required = (ENTRY_APPROACH_SPEED ** 2 - speed ** 2) / (2 * toEntry);
+            const clamped = Math.max(required, -MAX_BRAKE_METRES_PER_SECOND_SQUARED);
+            if (clamped < accel) accel = clamped;
+          }
+        }
+
+        vehicles.accel[slot] = accel;
       }
     }
+  }
+
+  /**
+   * Live, and still under the traffic model's control.
+   *
+   * A vehicle mid-manoeuvre is on a Bézier rather than a lane, so it must not be
+   * bucketed, followed, integrated or despawned here — including it would have
+   * it braking for a leader on a road it has already left.
+   */
+  private onRoad(vehicles: World['vehicles'], slot: number): boolean {
+    return vehicles.isActive(slot) && at(vehicles.state, slot) === VEHICLE_ON_ROAD;
   }
 
   private integrate(world: World, seconds: number): void {
     const vehicles = world.vehicles;
 
-    for (let slot = 0; slot < this.capacity; slot++) {
-      if (!vehicles.isActive(slot)) continue;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!this.onRoad(vehicles, slot)) continue;
 
       const accel = at(vehicles.accel, slot);
       let speed = at(vehicles.speed, slot) + accel * seconds;
@@ -165,13 +220,12 @@ export class VehicleMotionSystem implements SimSystem {
 
       vehicles.speed[slot] = speed;
       vehicles.laneS[slot] = at(vehicles.laneS, slot) + speed * seconds;
-      vehicles.state[slot] = accel < 0 ? VEHICLE_STATE_BRAKING : VEHICLE_STATE_CRUISING;
     }
 
     // Despawn in a separate pass. Freeing a slot mid-scan would let the store
     // hand it straight back out and the loop would process the same index twice.
-    for (let slot = 0; slot < this.capacity; slot++) {
-      if (!vehicles.isActive(slot)) continue;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!this.onRoad(vehicles, slot)) continue;
 
       /*
        * A vehicle on a lane that no longer exists is removed rather than

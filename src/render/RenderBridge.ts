@@ -125,6 +125,8 @@ export class RenderBridge {
       target.headingY = 0;
       target.braking = false;
       target.travelled = 0;
+      target.patience = 0;
+      target.moving = false;
       target.worldX = item.x;
       target.worldY = item.y;
       target.worldZ = item.z;
@@ -159,6 +161,8 @@ export class RenderBridge {
       target.headingX = actor.headingX;
       target.headingY = actor.headingY;
       target.braking = actor.braking;
+      target.patience = actor.patience;
+      target.moving = actor.moving;
       // Accumulated from the interpolated position, so the bob advances smoothly
       // between ticks instead of stepping 20 times a second.
       target.travelled = tracked?.travelled ?? 0;

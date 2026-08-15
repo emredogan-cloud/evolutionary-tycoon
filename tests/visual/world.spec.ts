@@ -25,13 +25,19 @@ import type { Page } from '@playwright/test';
 const VIEWPORT = { width: 1280, height: 720 };
 
 /** Everything the visual mode pins, in one place. */
-function frozenUrl(scene: string, extra = ''): string {
-  return `/?scene=${scene}&freezeAt=0&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1${extra}`;
+/**
+ * `freezeAt` is a parameter rather than a suffix because `URLSearchParams.get`
+ * returns the *first* match: appending a second `freezeAt=` would be silently
+ * ignored, and the Phase 6 goldens would photograph tick 0 while claiming to
+ * photograph tick 4264.
+ */
+function frozenUrl(scene: string, freezeAt = 0): string {
+  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1`;
 }
 
-async function openFrozen(page: Page, scene: string, extra = ''): Promise<void> {
+async function openFrozen(page: Page, scene: string, freezeAt = 0): Promise<void> {
   await page.setViewportSize(VIEWPORT);
-  await page.goto(frozenUrl(scene, extra));
+  await page.goto(frozenUrl(scene, freezeAt));
   // Wait on a state attribute, never a timeout — the difference between a suite
   // that is stable and one that lives in docs/FLAKY.md.
   await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
@@ -54,6 +60,32 @@ test.describe('visual goldens', () => {
   test('camera-bounds — zoomed out against the lot edge', async ({ page }) => {
     await openFrozen(page, 'stress');
     await expect(page).toHaveScreenshot('camera-bounds.png');
+  });
+
+  /*
+   * The two Phase 6 goldens are the first that photograph a *simulated* state
+   * rather than an authored arrangement. There is no way to author them: a
+   * customer standing beside a parked car is the product of a conversion roll, a
+   * braking curve, a manoeuvre and a walk, and placing one by hand would prove
+   * that the renderer can draw a person, which the depth test card already does.
+   *
+   * The cost is that the tick numbers are load-bearing. They come from seed
+   * 424242 — the seed every golden already uses — and were found by running the
+   * simulation and looking for the first frame in each state. A balance change
+   * moves them, and the golden will diff; TESTING_STRATEGY §8.4 requires looking
+   * at that diff and deciding, which is exactly the right amount of friction for
+   * a change that moves when the first customer arrives.
+   */
+  test('stage1-first-customer — the moment the loop closes', async ({ page }) => {
+    // Tick 4264: one customer walking to the counter, one car still parking.
+    await openFrozen(page, 'empty', 4264);
+    await expect(page).toHaveScreenshot('stage1-first-customer.png');
+  });
+
+  test('stage1-queue — four people waiting, and one of them losing patience', async ({ page }) => {
+    // Tick 7940 is the busiest the counter gets on this seed.
+    await openFrozen(page, 'empty', 7940);
+    await expect(page).toHaveScreenshot('stage1-queue.png');
   });
 });
 

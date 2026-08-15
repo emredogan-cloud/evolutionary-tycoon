@@ -1,6 +1,10 @@
 import { EVENT_QUEUE_CAPACITY } from '@config/simulation';
 import type { SpeedMultiplier } from '@config/simulation';
 import type {
+  ConversionFailedEvent,
+  ConversionSucceededEvent,
+  CustomerLeftAngryEvent,
+  CustomerSpawnedEvent,
   DayStartedEvent,
   PauseChangedEvent,
   ReadonlySimEvent,
@@ -9,6 +13,7 @@ import type {
   SpeedChangedEvent,
   VehicleBrakedEvent,
   VehicleDespawnedEvent,
+  VehicleParkedEvent,
   VehicleSpawnedEvent,
 } from './events';
 import { SIM_EVENT_TYPES } from './events';
@@ -47,6 +52,16 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'VEHICLE_BRAKED', entityId: 0, decel: 0 };
     case 'VEHICLE_DESPAWNED':
       return { t: 'VEHICLE_DESPAWNED', entityId: 0, lane: 0 };
+    case 'CONVERSION_SUCCEEDED':
+      return { t: 'CONVERSION_SUCCEEDED', entityId: 0, archetype: 0, probability: 0 };
+    case 'CONVERSION_FAILED':
+      return { t: 'CONVERSION_FAILED', entityId: 0, archetype: 0, reason: 0, probability: 0 };
+    case 'VEHICLE_PARKED':
+      return { t: 'VEHICLE_PARKED', entityId: 0, parkingSlot: -1 };
+    case 'CUSTOMER_SPAWNED':
+      return { t: 'CUSTOMER_SPAWNED', entityId: 0, archetype: 0 };
+    case 'CUSTOMER_LEFT_ANGRY':
+      return { t: 'CUSTOMER_LEFT_ANGRY', entityId: 0, reason: 0, dwellMs: 0 };
   }
 }
 
@@ -135,6 +150,55 @@ export class EventQueue {
     const event = record as VehicleDespawnedEvent;
     event.entityId = entityId;
     event.lane = lane;
+    this.push(record);
+  }
+
+  emitConversionSucceeded(entityId: number, archetype: number, probability: number): void {
+    const record = this.lease('CONVERSION_SUCCEEDED');
+    if (record === null) return;
+    const event = record as ConversionSucceededEvent;
+    event.entityId = entityId;
+    event.archetype = archetype;
+    event.probability = probability;
+    this.push(record);
+  }
+
+  emitConversionFailed(entityId: number, archetype: number, reason: number, probability: number): void {
+    const record = this.lease('CONVERSION_FAILED');
+    if (record === null) return;
+    const event = record as ConversionFailedEvent;
+    event.entityId = entityId;
+    event.archetype = archetype;
+    event.reason = reason;
+    event.probability = probability;
+    this.push(record);
+  }
+
+  emitVehicleParked(entityId: number, parkingSlot: number): void {
+    const record = this.lease('VEHICLE_PARKED');
+    if (record === null) return;
+    const event = record as VehicleParkedEvent;
+    event.entityId = entityId;
+    event.parkingSlot = parkingSlot;
+    this.push(record);
+  }
+
+  emitCustomerSpawned(entityId: number, archetype: number): void {
+    const record = this.lease('CUSTOMER_SPAWNED');
+    if (record === null) return;
+    const event = record as CustomerSpawnedEvent;
+    event.entityId = entityId;
+    event.archetype = archetype;
+    this.push(record);
+  }
+
+  emitCustomerLeftAngry(entityId: number, reason: number, dwellMs: number): void {
+    const record = this.lease('CUSTOMER_LEFT_ANGRY');
+    if (record === null) return;
+    const event = record as CustomerLeftAngryEvent;
+    event.entityId = entityId;
+    event.reason = reason;
+    event.dwellMs = dwellMs;
     this.push(record);
   }
 

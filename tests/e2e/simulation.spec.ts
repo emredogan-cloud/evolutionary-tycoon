@@ -27,8 +27,14 @@ const REFERENCE = {
   // Regenerated in Phase 5. Traffic put vehicles, a lane, an archetype and two
   // Poisson cursors into the digest, so the world's shape genuinely changed —
   // which is exactly the deliberate reason the comment above allows for.
-  hashAtTick0: '2ab762a504e055c4',
-  hashAtTick1000: 'aaa448e753e77ed6',
+  /*
+   * Regenerated again in Phase 6. Customers, parking bays, manoeuvre progress
+   * and the conversion funnel counters all entered the digest, so the world's
+   * shape genuinely changed — the deliberate reason the comment above allows
+   * for, for the second time.
+   */
+  hashAtTick0: 'f2b8d1f5b4b22b04',
+  hashAtTick1000: '8373e8f91dce3dab',
 } as const;
 
 interface TestApi {
@@ -236,5 +242,71 @@ test.describe('simulation kernel in the browser', () => {
       () => (window as unknown as { __EVOTYCOON_BUILD__: { isDev: boolean } }).__EVOTYCOON_BUILD__.isDev,
     );
     expect(exposed).toBe(isDev);
+  });
+});
+
+test.describe('the loop closes — Phase 6', () => {
+  test('a passing vehicle becomes a customer, parks, and walks to the counter', async ({ page }) => {
+    /*
+     * Driven through the diagnostics hook rather than by waiting on the clock,
+     * and the reason is arithmetic. Stage 1 converts under 10% of about 20
+     * convertible arrivals a minute, so a fifteen-second wall-clock window at
+     * 4x expects roughly two conversions — and a Poisson process with a mean of
+     * two produces none about one run in eleven. That is a test that fails one
+     * morning a fortnight for no reason, which teaches people to re-run it.
+     *
+     * Advancing deterministically instead proves the thing that actually needs
+     * proving in a browser: that the whole chain — roll, brake, turn, park, get
+     * out, walk, queue — produces the same events under a browser engine as it
+     * does in Node. The real-time half is the test below.
+     */
+    await bootSimulation(page);
+
+    const events = await page.evaluate(() => {
+      const api = window.__EVOTYCOON__;
+      api.drainEvents();
+      api.advanceTicks(6000);
+      return api.drainEvents().map((event) => event.t);
+    });
+
+    expect(events).toContain('CONVERSION_SUCCEEDED');
+    expect(events).toContain('CUSTOMER_SPAWNED');
+    expect(events).toContain('VEHICLE_PARKED');
+
+    const state = await page.evaluate(() => window.__EVOTYCOON__.getState());
+    expect(state.customerCount).toBeGreaterThan(0);
+  });
+
+  test('the conversion pipeline runs under real requestAnimationFrame', async ({ page }) => {
+    /*
+     * The half the deterministic test cannot cover: that this happens on its
+     * own, driven by the frame loop, rather than only when a test pushes ticks
+     * through it.
+     *
+     * Asserted on decisions rather than on successes for the reason above — a
+     * decision is made for every convertible arrival, so fifteen seconds at 4x
+     * expects around twenty of them and seeing none would mean the pipeline is
+     * genuinely not running.
+     */
+    await bootSimulation(page);
+
+    await page.evaluate(() => {
+      window.__EVOTYCOON__.drainEvents();
+      window.__EVOTYCOON__.dispatch({ t: 'SET_SPEED', mult: 4 });
+    });
+
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            () =>
+              window.__EVOTYCOON__
+                .drainEvents()
+                .filter((event) => event.t === 'CONVERSION_SUCCEEDED' || event.t === 'CONVERSION_FAILED')
+                .length,
+          ),
+        { timeout: 15_000, message: 'no vehicle reached the decision point in fifteen seconds' },
+      )
+      .toBeGreaterThan(0);
   });
 });

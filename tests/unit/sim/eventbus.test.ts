@@ -22,6 +22,12 @@ describe('EventQueue', () => {
         'VEHICLE_SPAWNED',
         'VEHICLE_BRAKED',
         'VEHICLE_DESPAWNED',
+        // Phase 6 — customers.
+        'CONVERSION_SUCCEEDED',
+        'CONVERSION_FAILED',
+        'VEHICLE_PARKED',
+        'CUSTOMER_SPAWNED',
+        'CUSTOMER_LEFT_ANGRY',
       ].sort(),
     );
   });

@@ -15,6 +15,15 @@ function simWithCustomers(positions: readonly (readonly [number, number, number]
     record.x = x;
     record.y = y;
     record.z = z;
+    /*
+     * Standing in the world (`visible`) and placed by hand rather than by
+     * conversion (`staged`), which is what `stageScene` does for an authored
+     * scene. Without `staged` the customer state machine takes ownership of
+     * them and walks them off to their default target, which is a fine thing
+     * for it to do to a real customer and useless here.
+     */
+    record.visible = 1;
+    record.staged = 1;
   }
   return sim;
 }
@@ -199,6 +208,8 @@ describe('RenderBridge', () => {
     const slot = sim.world.customers.acquire();
     const record = sim.world.customers.at(slot);
     record.entityId = sim.world.allocateEntityId();
+    record.visible = 1;
+    record.staged = 1;
     record.kind = ACTOR_KIND_PROP_TALL;
 
     const bridge = new RenderBridge(16);

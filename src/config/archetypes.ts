@@ -32,6 +32,16 @@ export interface ArchetypeSpec {
   /** Relative share of spawns, before the hourly bias below. */
   readonly baseShare: number;
   /**
+   * How inclined this archetype is to stop at all — the first factor of
+   * GAME_DESIGN_DOCUMENT §9.5's product, and the only one that is a property of
+   * the driver rather than of the stand.
+   *
+   * Calibrated against ECONOMY_DESIGN §3's zero-upgrade Stage 1 conversion rate
+   * of 0.09: the share-weighted mean of these is 0.292, and 0.292 x 0.55
+   * (unlit-sign visibility) x 0.60 (reputation at zero) = 0.096.
+   */
+  readonly baseAffinity: number;
+  /**
    * Hourly multiplier on `baseShare`, 24 entries.
    *
    * Pickups skew to the early morning, vans to the middle of the day,
@@ -55,6 +65,8 @@ function biasAround(centre: number, width: number, peak: number, floor = 0.5): r
 export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   {
     id: 'SEDAN_COMMUTER',
+    // The baseline driver.
+    baseAffinity: 0.28,
     textureStem: 'veh_sedan',
     lengthMetres: 4.5,
     desiredSpeed: 13.9,
@@ -66,6 +78,8 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   },
   {
     id: 'PICKUP_WORKER',
+    // On the road for work, and hungry for most of it.
+    baseAffinity: 0.34,
     textureStem: 'veh_pickup',
     lengthMetres: 5.4,
     desiredSpeed: 12.5,
@@ -77,6 +91,8 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   },
   {
     id: 'FAMILY_VAN',
+    // Slow to commit, but a stop is a whole family.
+    baseAffinity: 0.3,
     textureStem: 'veh_van',
     lengthMetres: 5.0,
     desiredSpeed: 12.0,
@@ -88,6 +104,8 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   },
   {
     id: 'MOTORCYCLE',
+    // Least likely to stop — no boot, and the weather.
+    baseAffinity: 0.22,
     textureStem: 'veh_motorcycle',
     lengthMetres: 2.1,
     desiredSpeed: 15.6,

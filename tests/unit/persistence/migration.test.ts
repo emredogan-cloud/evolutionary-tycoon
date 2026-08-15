@@ -28,14 +28,19 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 4, with three registered migrations', () => {
+  it('the current version is 5, with four registered migrations', () => {
+    /*
+     * Both halves matter. The first says the schema constant and the save layer
+     * agree; the second is a deliberate speed bump — bumping the version means
+     * coming here, which means noticing that a migration and a fixture are owed.
+     */
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(4);
-    expect(migrations).toHaveLength(3);
+    expect(CURRENT_SCHEMA_VERSION).toBe(5);
+    expect(migrations).toHaveLength(4);
   });
 
   it('a save already at the current version needs no steps', () => {
-    const outcome = migrateToCurrent({ schemaVersion: 4 }, 4);
+    const outcome = migrateToCurrent({ schemaVersion: CURRENT_SCHEMA_VERSION }, CURRENT_SCHEMA_VERSION);
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
     expect(outcome.steps).toBe(0);
@@ -63,6 +68,8 @@ describe('migration chain', () => {
     const outcome = migrateToCurrent(
       { schemaVersion: 3, stats: { vehiclesSpawned: 41 }, traffic: { nextCandidateMs: 900 } },
       3,
+      undefined,
+      4,
     );
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
@@ -72,20 +79,51 @@ describe('migration chain', () => {
     expect(outcome.save['traffic']).toEqual({ nextCandidateMs: 900, nextDecorativeMs: 0 });
   });
 
-  it('v1 → v4 runs every step in order', () => {
+  it('v4 → v5 opens the conversion funnel at zero', () => {
+    // Zero is what the save meant, not a default: a v4 world predates the
+    // conversion system, so it genuinely converted nobody. Deriving a plausible
+    // number from `vehiclesSpawned` would show the player a history that never
+    // happened the first time they open the analysis panel.
+    const outcome = migrateToCurrent(
+      { schemaVersion: 4, stats: { vehiclesSpawned: 41, convertibleSpawned: 41 } },
+      4,
+      undefined,
+      5,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(1);
+    expect(outcome.save['schemaVersion']).toBe(5);
+    expect(outcome.save['stats']).toEqual({
+      vehiclesSpawned: 41,
+      convertibleSpawned: 41,
+      conversionsSucceeded: 0,
+      conversionsFailed: 0,
+      turnedAwayNoParking: 0,
+      customersAbandoned: 0,
+    });
+  });
+
+  it('v1 → v5 runs every step in order', () => {
     const outcome = migrateToCurrent(
       { schemaVersion: 1, layout: { placed: [{ objectId: 'a', x: 0, y: 0 }] } },
       1,
     );
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(3);
-    expect(outcome.save['schemaVersion']).toBe(4);
+    expect(outcome.steps).toBe(4);
+    expect(outcome.save['schemaVersion']).toBe(5);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'a', x: 0, y: 0, z: 0 },
     ]);
     expect(outcome.save['traffic']).toEqual({ nextCandidateMs: 0, nextDecorativeMs: 0 });
-    expect(outcome.save['stats']).toEqual({ convertibleSpawned: 0 });
+    expect(outcome.save['stats']).toEqual({
+      convertibleSpawned: 0,
+      conversionsSucceeded: 0,
+      conversionsFailed: 0,
+      turnedAwayNoParking: 0,
+      customersAbandoned: 0,
+    });
   });
 
   it('v1 → v2 gives every placed object a ground-level height', () => {
@@ -107,10 +145,15 @@ describe('migration chain', () => {
 
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    // Two steps now: v1 → v2 → v3. The z-height assertion is about what v1→v2
-    // did, and it still has to be true after the chain has run on past it.
-    expect(outcome.steps).toBe(3);
-    expect(outcome.save['schemaVersion']).toBe(4);
+    /*
+     * Against the chain's own length rather than a number, because the claim
+     * here is not "there are three migrations" — the test above owns that — but
+     * "what v1 to v2 did survives every step that runs after it". Pinning a
+     * literal made this fail on each version bump for a reason that had nothing
+     * to do with what it tests.
+     */
+    expect(outcome.steps).toBe(migrations.length);
+    expect(outcome.save['schemaVersion']).toBe(CURRENT_SCHEMA_VERSION);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'counter', x: 1, y: 2, z: 0 },
       { objectId: 'awning', x: 3, y: 4, z: 0 },
@@ -251,7 +294,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(3);
+    expect(result.migrationSteps).toBe(4);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
@@ -266,12 +309,23 @@ describe('committed save fixtures', () => {
     // Was zero until Phase 5 added the traffic cursor. The fixture is a
     // historical record and is never regenerated, so this number grows by one
     // with every schema change — which is the point of keeping it.
+    expect(result.migrationSteps).toBe(3);
+  });
+
+  it('save-v3.json migrates to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v3.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
     expect(result.migrationSteps).toBe(2);
   });
 
-  it('save-v3.json migrates one step to the current version', async () => {
+  it('save-v4.json migrates one step to the current version', async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v3.json'));
+    await storage.write('save', readFixture('save-v4.json'));
 
     const result = await new SaveManager(storage).load();
 
@@ -280,15 +334,30 @@ describe('committed save fixtures', () => {
     expect(result.migrationSteps).toBe(1);
   });
 
-  it('save-v4.json loads with no migration at all', async () => {
+  it('save-v5.json loads with no migration at all', async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v4.json'));
+    await storage.write('save', readFixture('save-v5.json'));
 
     const result = await new SaveManager(storage).load();
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
     expect(result.migrationSteps).toBe(0);
+  });
+
+  it('save-v5.json carries a conversion funnel that actually ran', () => {
+    /*
+     * Taken from ten simulated minutes rather than the thirty seconds the
+     * earlier fixtures used, so the Phase 6 counters are non-zero. A fixture
+     * whose new fields are all zero round-trips a shape without ever proving the
+     * values survive, which is most of what a fixture is for.
+     */
+    const parsed = JSON.parse(readFixture('save-v5.json')) as {
+      stats: { conversionsSucceeded: number; conversionsFailed: number; customersAbandoned: number };
+    };
+    expect(parsed.stats.conversionsSucceeded).toBeGreaterThan(0);
+    expect(parsed.stats.conversionsFailed).toBeGreaterThan(0);
+    expect(parsed.stats.customersAbandoned).toBeGreaterThan(0);
   });
 
   it('save-v1.json restores into a live world with no data loss', async () => {
