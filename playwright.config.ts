@@ -90,7 +90,25 @@ export default defineConfig({
       },
       expect: {
         toHaveScreenshot: {
-          // A minimal tolerance for anti-aliasing noise, not a licence to drift.
+          /*
+           * `threshold` decides whether a pixel counts as different at all;
+           * `maxDiffPixelRatio` decides how many are allowed to. They are not
+           * interchangeable, and leaving the first at Playwright's default of
+           * 0.2 made the second meaningless.
+           *
+           * Found in Phase 4: repainting the entire lot and road from
+           * #4a5d3a/#3b3b40 to the locked palette's #586e22/#3a414c changed
+           * 233,365 pixels — a quarter of the frame — and the suite passed,
+           * because a YIQ distance of 0.2 swallows a colour change that large.
+           * A gate that cannot see a repainted ground is not a gate.
+           *
+           * Zero is affordable here because the rendering is bit-exact: the
+           * determinism test below asserts ten consecutive captures are
+           * byte-identical, and Phase 3 measured host and container output equal
+           * by SHA-256. The ratio below stays as the margin for cross-machine
+           * anti-aliasing, not as cover for a colour drift.
+           */
+          threshold: 0,
           maxDiffPixelRatio: 0.002,
           animations: 'disabled',
         },
