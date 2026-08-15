@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   benchCommandProcessing,
   benchDepthSort,
-  benchEmptyTicks,
+  benchTicksFromFresh,
   benchEventFlush,
   benchPopulatedTick,
   benchSnapshot,
@@ -65,10 +65,17 @@ function readBaseline(): Baseline | null {
 }
 
 describe('simulation performance budgets', () => {
-  it('runs 1000 empty ticks in under 5 ms', () => {
-    // The Phase 2 reference point. Every later phase adds work on top of this
-    // number, so it is measured now while the pipeline is still empty.
-    const result = benchEmptyTicks();
+  it('runs 1000 ticks from a fresh world in under 5 ms', () => {
+    /*
+     * The Phase 2 reference point, and every later phase adds work on top of it.
+     *
+     * "From a fresh world" is load-bearing and was not always true. The world
+     * fills as it runs — traffic from Phase 5, customers from Phase 6 — so
+     * without a reset per sample this measured twenty minutes of an increasingly
+     * busy simulation while claiming to measure an empty one, and the minimum
+     * and median samples described different worlds.
+     */
+    const result = benchTicksFromFresh();
     expect(result.p50Ms, `measured ${result.p50Ms.toFixed(3)} ms`).toBeLessThan(5);
   });
 

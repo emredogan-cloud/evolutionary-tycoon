@@ -203,9 +203,26 @@ export function measureAllocationPerTick(ticks = 200_000, samples = 5): Allocati
   };
 }
 
-export function benchEmptyTicks(): TimingResult {
+/**
+ * A thousand ticks from a world in a known state.
+ *
+ * The Phase 2 reference point, and until now it was quietly measuring something
+ * else. It was called "1000 empty ticks" because in Phase 2 the pipeline was
+ * eighteen no-ops and the world stayed empty. Since Phase 5 the world *fills* —
+ * traffic accrues, and from Phase 6 customers do too — so across 25 samples of
+ * 1000 ticks it was really measuring twenty minutes of a world getting steadily
+ * busier. The minimum sample and the median sample were describing different
+ * simulations, which is why one improved 44% while the other went over budget.
+ *
+ * Resetting per sample makes every sample the same work: the same seed, the same
+ * arrivals, the same 1000 ticks. `World.reset` is a handful of typed-array fills
+ * and its cost is constant, so it does not skew the comparison between samples —
+ * which is the only comparison this benchmark makes.
+ */
+export function benchTicksFromFresh(): TimingResult {
   const sim = new Sim({ seed: 1 });
-  return timeIt('1000 empty ticks', 1000, () => {
+  return timeIt('1000 ticks from a fresh world', 1000, () => {
+    sim.world.reset();
     sim.advance(1000);
   });
 }
@@ -413,7 +430,7 @@ export function runSimBench(): BenchReport {
   return {
     calibrationMs: calibrationMs(),
     timings: [
-      benchEmptyTicks(),
+      benchTicksFromFresh(),
       benchWorldHash(),
       benchPopulatedTick(),
       benchCommandProcessing(),
