@@ -26,6 +26,8 @@ export const PATHS = {
   palette: resolve(REPO_ROOT, 'docs', 'assets', 'palette.json'),
   subjectDimensions: resolve(REPO_ROOT, 'docs', 'assets', 'subjectDimensions.json'),
   productionBatches: resolve(REPO_ROOT, 'docs', 'assets', 'productionBatches.json'),
+  /** The offline copy-and-paste page for whoever runs the generator. */
+  promptHtml: resolve(REPO_ROOT, 'docs', 'ASSET_GENERATION_PROMPTS.html'),
   promptBlock: resolve(REPO_ROOT, 'docs', 'assets', 'PROMPT_BLOCK.md'),
   placeholders: resolve(REPO_ROOT, 'assets', '_placeholder'),
 } as const;

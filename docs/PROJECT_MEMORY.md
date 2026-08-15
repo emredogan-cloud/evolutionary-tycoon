@@ -392,6 +392,66 @@ altın referanslar hem golden hem batch olarak iki kez çıkıyordu → tekille�
 
 **Doğrulama:** `pnpm verify` exit 0 · **605 test** · lines %98.46 · bütçeler içinde.
 
+> **Checkpoint harf çakışması.** Bu batch'in talimatı M→S harflerini istiyor, ama M ve N zaten
+> kullanılmıştı (lisans kapısı geçersiz kılma / görüntü üretme yetenek sınırı). Geçmiş
+> yeniden yazılmıyor: yeni olanlar **"BATCH 5–7 · CHECKPOINT <harf>"** biçiminde etiketleniyor.
+> Eşleme: M=batch başlangıcı · N=P5 başlangıcı · O=P5 tamam · P=P6 başlangıcı · Q=P6 tamam ·
+> R=P7 başlangıcı · S=P7 tamam.
+
+### BATCH 5–7 · CHECKPOINT M — Batch başlangıcı (2026-08-15)
+
+**Context reset sonrası durum, repodan yeniden kuruldu (varsayım değil, ölçüm):**
+
+| Ne                    | Değer                                                                             |
+| --------------------- | --------------------------------------------------------------------------------- |
+| main SHA              | `e7a997e3487271f9c7b9a09b097ba0ea3af801e4`                                        |
+| Çalışma ağacı         | temiz                                                                             |
+| Production            | `/health.json` → `buildSha e7a997e…`, `schemaVersion 2`, `assetManifestHash null` |
+| CI (main)             | ✅ CI · ✅ Preview E2E · ✅ Production smoke · ✅ CodeQL                          |
+| Vercel Authentication | **kapalı** (kullanıcı tarafından; yeniden açılmayacak)                            |
+| preview-e2e           | **bloke edici** — gevşetilmeyecek                                                 |
+| Testler               | 605 unit/integration + 10 perf                                                    |
+| Bundle                | 406.45 kB gzip / 550 kB                                                           |
+
+**Faz durumu — DEĞİŞTİRİLMEDİ, geçmiş yeniden yazılmadı:**
+
+- **P2 = PASS** · **P3 = PASS** · **P4 = PARTIAL**
+- P4 mühendislik/pipeline tarafı tamam ve kanıtlı; **üretim sanatı hâlâ dış iş.**
+- Lisans kapısı **yönetici kararıyla geçersiz kılındı** (geçti değil): God Mode AI seçildi,
+  Sprixen + PixelLab düşürüldü, madde 5 ve 8 bilerek kabul edildi. Altın referans onay muafiyeti
+  kayıtlı. → `assets/LICENSES.md` §1.5
+- **172 görsel üretilmedi.** Bu ortam üretemez. Placeholder'lar hâlâ yerinde (7 adet) ve register
+  dürüst tutuluyor.
+
+**Yetkilendirme:** P5 → P6 → P7 tek batch, otonom, aralarda onay beklenmeyecek. P8–P10 yetkisiz.
+
+**Açık kalan mimari çelişki:** Phaser 4.2.1 WebGL1 context açıyor, dört doküman WebGL2 diyor (§12,
+AÇIK ÇELİŞKİ #4). P5–P7'yi bloke etmiyor; sessizce değiştirilmeyecek.
+
+### BATCH 5–7 · Asset prompt export (2026-08-15) ✅
+
+`docs/ASSET_GENERATION_PROMPTS.html` — 526 KB, tek dosya, çevrimdışı, satır içi CSS + JS, sıfır
+dış bağımlılık. `pnpm assets:prompts:html` ile deterministik olarak üretiliyor.
+
+| Doğrulama                            | Sonuç                                                                                                |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Prompt sayısı                        | **172** (beklenen 172 — birebir)                                                                     |
+| Batch sayısı                         | **12**                                                                                               |
+| Kategori                             | 9 (char, food, fx, ground, nature, prop, struct, ui, veh)                                            |
+| Prompt gövdeleri                     | Birebir korunuyor — HTML-escape edilip `textContent` ile geri okunuyor                               |
+| Otomatik test                        | `tests/unit/tools/promptExport.test.ts` — **18 test**                                                |
+| Tarayıcı: yükleme                    | ✅ 172/12/9 başlıkta doğru görünüyor                                                                 |
+| Tarayıcı: arama                      | ✅ "sedan" → 8 · "P042" → 1 (`char_head_neutral-01_nw@2x.png`) · eşleşmeyen → boş durum mesajı       |
+| Tarayıcı: kategori filtresi          | ✅ `veh` → 32, yalnızca ilgili 2 batch görünür; `all` → 172                                          |
+| Tarayıcı: kopyala (güvenli bağlam)   | ✅ `navigator.clipboard`, kopyalanan metin prompt ile **birebir**                                    |
+| Tarayıcı: kopyala (`file://` yedeği) | ✅ `navigator.clipboard` kaldırılarak zorlandı → `execCommand('copy')`, textarea içeriği **birebir** |
+| Tarayıcı: batch kopyala              | ✅ golden-references → 7 prompt, 14 830 karakter                                                     |
+
+**Dürüst sınır:** tarayıcı doğrulaması `http://127.0.0.1:8199` üzerinden yapıldı — Chrome eklentisi
+`file://` adreslerine gidemiyor. `file://` senaryosunun kritik kısmı (güvenli olmayan bağlamda
+kopyalama) `navigator.clipboard` silinerek **aynı kod yolu** üzerinden doğrulandı; sayfanın hiç dış
+kaynağı olmadığı da testle iddia ediliyor.
+
 ---
 
 ## 7. Completed Work (yalnızca doğrulanmış)
