@@ -1,4 +1,6 @@
 import { menuItem } from '@config/economy/menu';
+import type { World } from '../core/World';
+import { effectValue } from './UpgradeSystem';
 import {
   EXPECTATION_PENALTY_SLOPE,
   EXPECTED_WAIT_MS,
@@ -79,13 +81,24 @@ export function priceScore(price: number, basePrice: number): number {
  * `quality` arrives already decayed by hold temperature — `KitchenSystem`
  * computes that, because it is the kitchen's business how long a plate sat.
  */
-export function evaluateSatisfaction(order: OrderRecord, quality: number, nowMs: number): number {
+export function evaluateSatisfaction(
+  order: OrderRecord,
+  quality: number,
+  nowMs: number,
+  world?: World,
+): number {
   const item = menuItem(order.item);
   const waited = Math.max(0, (order.deliveredAtMs > 0 ? order.deliveredAtMs : nowMs) - order.orderedAtMs);
 
   const score =
     WEIGHTS.wait * waitScore(waited) +
-    WEIGHTS.quality * Math.min(1, Math.max(0, quality)) +
+    /*
+     * Quality, plus whatever the kitchen upgrades add — Phase 13's
+     * `foodQuality`. Clamped after the addition rather than before, so an
+     * upgrade lifts a mediocre plate and cannot push a perfect one past 1.
+     */
+    WEIGHTS.quality *
+      Math.min(1, Math.max(0, quality + (world === undefined ? 0 : effectValue(world, 'foodQuality')))) +
     WEIGHTS.price * priceScore(order.price, item.basePrice) +
     // Dormant inputs, each named with the phase that makes it live. They score
     // 1.0 because there is nothing yet to be dissatisfied about — no tables to
@@ -93,7 +106,15 @@ export function evaluateSatisfaction(order: OrderRecord, quality: number, nowMs:
     // `@config/satisfaction` for what that costs later.
     WEIGHTS.service * NEUTRAL_SCORE +
     WEIGHTS.cleanliness * NEUTRAL_SCORE +
-    WEIGHTS.atmosphere * NEUTRAL_SCORE +
+    /*
+     * Atmosphere is **live** since Phase 13: the planters, the neon and the
+     * covered terrace all push on it. It is the first of the four dormant
+     * inputs to be fed by anything, and it is fed by upgrades rather than by a
+     * system — which is exactly what GAME_DESIGN_DOCUMENT §13.2 describes
+     * ("peyzaj / cephe → atmosphere ↑").
+     */
+    WEIGHTS.atmosphere *
+      Math.min(1, NEUTRAL_SCORE + (world === undefined ? 0 : effectValue(world, 'atmosphere'))) +
     WEIGHTS.accessibility * NEUTRAL_SCORE;
 
   return Math.min(1, Math.max(0, score));

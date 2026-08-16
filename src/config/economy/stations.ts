@@ -60,6 +60,23 @@ const STAGE1_STATIONS: Station[] = [
    */
   { id: 'prep-2', type: 'PREP', x: 15.2, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 1 },
   { id: 'prep-3', type: 'PREP', x: 8.8, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 2 },
+
+  /*
+   * The three stations the later menu needs — Phase 13.
+   *
+   * Appended, never inserted: a station's index is hashed into the world digest
+   * and written into every save, so the order of this array is a compatibility
+   * surface. Adding to the end is the only safe edit.
+   *
+   * They exist from the first tick and sit idle until there is something to make
+   * on them, because the *menu* is what gates a stage rather than the kitchen —
+   * a Stage 1 stand simply never receives an order for coffee. Gating them a
+   * second time here would put the same rule in two places and let the two
+   * disagree.
+   */
+  { id: 'fryer-1', type: 'FRYER', x: 17.0, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'coffee-1', type: 'COFFEE', x: 7.4, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'dessert-1', type: 'DESSERT', x: 18.6, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
 ];
 
 /**

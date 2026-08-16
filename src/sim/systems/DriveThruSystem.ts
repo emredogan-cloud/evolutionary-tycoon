@@ -118,7 +118,22 @@ export function laneLength(world: World): number {
 export function driveThruOverflow(world: World): number {
   const layout = layoutForStage(world.progression.stage);
   if (layout.driveThru === null) return 0;
-  return Math.max(0, laneLength(world) - layout.driveThru.laneCapacity);
+  return Math.max(0, laneLength(world) - driveThruCapacity(world, layout.driveThru.laneCapacity));
+}
+
+/**
+ * How many cars the lane holds, after upgrades — Phase 13's `laneCapacity`.
+ *
+ * Stage 4 authors **six** lane points and a capacity of four, so `lane-extension`
+ * has somewhere real to extend to: the two spare points were always there,
+ * waiting for the upgrade that repaints the lane further back up the lot.
+ * Clamped to the authored points, because capacity past the last one would tell
+ * the overflow penalty the lane is fine while there is nowhere for the next car.
+ */
+function driveThruCapacity(world: World, authored: number): number {
+  const layout = layoutForStage(world.progression.stage);
+  const points = layout.driveThru?.lane.length ?? authored;
+  return Math.min(points, authored + effectValue(world, 'laneCapacity'));
 }
 
 /**
@@ -150,7 +165,14 @@ export function stepDriveThruCustomer(world: World, customerSlot: number, deltaM
 function order(world: World, customerSlot: number, deltaMs: number): void {
   const customer = world.customers.at(customerSlot);
   customer.timerMs += deltaMs;
-  if (customer.timerMs < DRIVE_THRU_ORDER_MS * effectValue(world, 'orderSpeed')) return;
+  /*
+   * Ordering at the post. `orderSpeed` is the counter's own upgrade — a menu
+   * board helps a driver decide too — and `orderPostSpeed` is the drive-thru's
+   * second post, which halves the wait by taking two cars at once.
+   */
+  const orderMs =
+    DRIVE_THRU_ORDER_MS * effectValue(world, 'orderSpeed') * effectValue(world, 'orderPostSpeed');
+  if (customer.timerMs < orderMs) return;
   customer.timerMs = 0;
 
   const orderSlot = world.orders.acquire();
@@ -207,7 +229,8 @@ function checkWindow(world: World, customerSlot: number): void {
 function collect(world: World, customerSlot: number, deltaMs: number): void {
   const customer = world.customers.at(customerSlot);
   customer.timerMs += deltaMs;
-  if (customer.timerMs < DRIVE_THRU_WINDOW_MS) return;
+  // The window, and whatever makes it faster — a wider sill, a card reader.
+  if (customer.timerMs < DRIVE_THRU_WINDOW_MS * effectValue(world, 'windowSpeed')) return;
   customer.timerMs = 0;
 
   const orderSlot = orderOf(world, customerSlot);
@@ -220,7 +243,7 @@ function collect(world: World, customerSlot: number, deltaMs: number): void {
   const order = world.orders.at(orderSlot);
   const item = menuItem(order.item);
   const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
-  const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs);
+  const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs, world);
   const tip = order.price * tipFraction(satisfaction);
 
   world.economy.cash += order.price + tip - item.baseCost;

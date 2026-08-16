@@ -1,5 +1,6 @@
 import { ARRIVAL_EPSILON_METRES, taskDuration, walkSpeed } from '@config/employees';
 import type { World } from '../core/World';
+import { effectValue } from '../systems/UpgradeSystem';
 import type { EmployeeRecord } from '../stores/employees';
 import { UNCLAIMED } from '../stores/TaskStore';
 
@@ -69,7 +70,7 @@ export const STEP_TOLERANCE = 1.001;
 export function stepEmployee(world: World, employee: EmployeeRecord, deltaMs: number): void {
   switch (employee.state) {
     case STATE_MOVING:
-      moveToward(employee, deltaMs);
+      moveToward(world, employee, deltaMs);
       break;
     case STATE_PERFORMING:
       perform(world, employee, deltaMs);
@@ -92,7 +93,7 @@ export function stepEmployee(world: World, employee: EmployeeRecord, deltaMs: nu
  * destination — which is what "no teleporting" means at the last tick of a walk,
  * and the case a naive implementation gets wrong.
  */
-function moveToward(employee: EmployeeRecord, deltaMs: number): void {
+function moveToward(world: World, employee: EmployeeRecord, deltaMs: number): void {
   const dx = employee.targetX - employee.x;
   const dy = employee.targetY - employee.y;
   const remaining = Math.hypot(dx, dy);
@@ -103,7 +104,12 @@ function moveToward(employee: EmployeeRecord, deltaMs: number): void {
     return;
   }
 
-  const step = walkSpeed(employee.role, employee.skill) * (deltaMs / 1000);
+  /*
+   * Skill, plus whatever training has been bought — Phase 13's `staffSkill`.
+   * Additive on a 0..1 scale and clamped, so a trained novice approaches an
+   * untrained expert rather than overtaking one.
+   */
+  const step = walkSpeed(employee.role, trainedSkill(world, employee)) * (deltaMs / 1000);
   const travel = Math.min(step, remaining);
   employee.x += (dx / remaining) * travel;
   employee.y += (dy / remaining) * travel;
@@ -135,13 +141,24 @@ function perform(world: World, employee: EmployeeRecord, deltaMs: number): void 
   employee.progressMs += deltaMs;
 }
 
+/** An employee's skill, after training upgrades. Clamped to the 0..1 scale. */
+function trainedSkill(world: World, employee: EmployeeRecord): number {
+  return Math.min(1, employee.skill + effectValue(world, 'staffSkill'));
+}
+
 /** True when the current task's work is finished. */
 export function taskComplete(world: World, employee: EmployeeRecord): boolean {
   if (employee.state !== STATE_PERFORMING) return false;
   if (employee.taskSlot < 0 || !world.tasks.isActive(employee.taskSlot)) return false;
 
   const task = world.tasks.at(employee.taskSlot);
-  return employee.progressMs >= taskDuration(employee.role, employee.skill, task.durationMs);
+  /*
+   * And `staffSpeed` on top of skill: the shoes and the headsets make the same
+   * person do the same job faster, which is a different lever from making them
+   * better at it. A `scale` kind, so two of them compound.
+   */
+  const duration = taskDuration(employee.role, trainedSkill(world, employee), task.durationMs);
+  return employee.progressMs >= duration * effectValue(world, 'staffSpeed');
 }
 
 /** Send an employee to a place to do a task. */

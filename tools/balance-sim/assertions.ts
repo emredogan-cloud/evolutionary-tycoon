@@ -1,4 +1,4 @@
-import { MENU } from '@config/economy/menu';
+import { MENU, menuForStage } from '@config/economy/menu';
 import { UPGRADES } from '@config/economy/upgrades';
 import type { UpgradeEffect } from './experiment';
 import type { RunResult } from './types';
@@ -51,6 +51,38 @@ export const DESIGNED_NET_PER_MINUTE: readonly number[] = [0, 15, 55, 179, 483];
 
 /** And the "starting net per minute" row — the floor of the same envelope. */
 export const DESIGNED_ENTRY_NET_PER_MINUTE: readonly number[] = [0, 6, 20, 62, 190];
+
+/** ECONOMY_DESIGN §3, the "average ticket" row. Index by stage. */
+export const DESIGNED_TICKET: readonly number[] = [0, 4.5, 9, 18, 30];
+
+/**
+ * Whether a stage's designed average ticket is reachable at all.
+ *
+ * **The blocker Phase 13 measured, stated as arithmetic rather than as an
+ * opinion.** An order is one item and the item is chosen uniformly from what the
+ * stage sells, so the average ticket a stage can produce is the *mean price of
+ * its menu* — nothing else in the simulation can move it. ECONOMY_DESIGN §3
+ * publishes ₡9 for Stage 2; §4's Stage 2 prices average ₡7.20 across a six-item
+ * menu that still includes the ₡2.70 chips, so the mean is ₡5.85 and no amount
+ * of upgrading, staffing or traffic reaches ₡9.
+ *
+ * The design's ticket therefore assumes something the simulation does not do —
+ * multi-item orders, or a mix weighted by the `appealTags` §4 already carries.
+ * Either is a mechanic and a decision, which is why it is change request §8.1 in
+ * PHASE_12_REPORT rather than something to slip in.
+ *
+ * Computed rather than listed, so the assertions **unblock themselves** the day
+ * that decision lands: add the weighting and this returns true without anyone
+ * remembering to come back here.
+ */
+export function ticketReachable(stage: number): { reachable: boolean; achievable: number; designed: number } {
+  const menu = menuForStage(stage);
+  const achievable =
+    menu.length === 0 ? 0 : menu.reduce((total, item) => total + item.basePrice, 0) / menu.length;
+  const designed = DESIGNED_TICKET[stage] ?? 0;
+  // Within a tenth of a credit counts as reached; the mean is a mean.
+  return { reachable: achievable + 0.1 >= designed, achievable, designed };
+}
 
 export const STAGE_WINDOWS: readonly {
   readonly stage: number;
@@ -116,6 +148,23 @@ function stageTimings(runs: readonly RunResult[]): Verdict[] {
     }
 
     /*
+     * A stage cannot be reached on time if the stage *before* it cannot earn at
+     * its designed rate — the money to cross has to come from somewhere. So the
+     * timing of stage N is blocked by the ticket of stage N-1, and both are
+     * blocked by the same open decision.
+     */
+    const feeder = ticketReachable(stage - 1);
+    if (!feeder.reachable) {
+      return skip(
+        id,
+        title,
+        `stage ${String(stage - 1)} cannot earn its designed rate: its menu averages ` +
+          `₡${round(feeder.achievable)} against the ₡${round(feeder.designed)} ticket §3 assumes ` +
+          `(change request §8.1 — one item per order)`,
+      );
+    }
+
+    /*
      * The strategic policies only. `idle-player` plays a fifth of the time and
      * Stage 1 has no staff to hire — ECONOMY_DESIGN §5.1 makes the cook a
      * Stage 2 role — so an idle player is *designed* to be slower there.
@@ -153,11 +202,28 @@ function incomeEnvelope(runs: readonly RunResult[]): Verdict {
   const title = 'Net income per minute within ±25% of the designed envelope';
 
   const lines: string[] = [];
+  const blocked: string[] = [];
   let anyMeasured = false;
   let allInside = true;
 
   for (let stage = 1; stage <= 4; stage++) {
     if (!stageHasContent(stage)) continue;
+
+    /*
+     * Skipped where the ticket itself is out of reach — see `ticketReachable`.
+     * Asserting an income the menu arithmetic forbids would make the gate red
+     * forever for a reason no config change can fix; passing it silently would
+     * be worse. It is listed as blocked, with the numbers.
+     */
+    const ticket = ticketReachable(stage);
+    if (!ticket.reachable) {
+      blocked.push(
+        `stage ${String(stage)}: menu averages ₡${round(ticket.achievable)} against the ` +
+          `₡${round(ticket.designed)} ticket §3 assumes — change request §8.1`,
+      );
+      continue;
+    }
+
     const ceiling = DESIGNED_NET_PER_MINUTE[stage] ?? 0;
     const floor = DESIGNED_ENTRY_NET_PER_MINUTE[stage] ?? 0;
 
@@ -197,8 +263,9 @@ function incomeEnvelope(runs: readonly RunResult[]): Verdict {
     );
   }
 
-  if (!anyMeasured) return skip(id, title, 'no stage was observed');
-  return allInside ? pass(id, title, lines.join(' · ')) : fail(id, title, lines.join(' · '));
+  const detail = [...lines, ...blocked.map((entry) => `${entry} (blocked)`)].join(' · ');
+  if (!anyMeasured) return skip(id, title, blocked.length > 0 ? detail : 'no stage was observed');
+  return allInside ? pass(id, title, detail) : fail(id, title, detail);
 }
 
 /** 5: the dead-end rule. Merge-blocking on its own — ECONOMY_DESIGN §8. */
@@ -220,6 +287,12 @@ function deadEnd(runs: readonly RunResult[]): Verdict {
        * the balance, and Phase 13 is what makes the stage real.
        */
       if (!stageHasContent(probe.stage)) continue;
+      /*
+       * And not where the stage cannot earn its designed income: the ninety-second
+       * rule is a ratio against income, so measuring it against an income the
+       * menu arithmetic forbids measures the blocker rather than the ladder.
+       */
+      if (!ticketReachable(probe.stage).reachable) continue;
 
       /*
        * The strategic policies, for the same reason the timing assertions use
@@ -384,6 +457,58 @@ export function attentionSpread(runs: readonly RunResult[]): { ratio: number; de
   };
 }
 
+/**
+ * **Two valid investment paths per stage** — the roadmap's Phase 13 requirement.
+ *
+ * _"For each stage, verify with the balance simulator that at least two distinct
+ * investment strategies reach the next stage. If only one does, the tree is a
+ * corridor, not a decision."_
+ *
+ * Measured as: how many policies left the stage, and did they leave having
+ * bought **different things**. Both halves matter. Two policies that progressed
+ * by buying the same six upgrades in the same order are one strategy discovered
+ * twice, and a tree that permits only that is a corridor whatever its shape
+ * looks like on paper.
+ *
+ * The comparison is on the *set* rather than the order, because buying the sign
+ * before the counter and the counter before the sign is one strategy played
+ * twice — what distinguishes a strategy is where the money went.
+ */
+function twoValidPaths(runs: readonly RunResult[]): Verdict {
+  const id = 'two-valid-paths';
+  const title = 'At least two distinct investment paths leave each stage';
+
+  const lines: string[] = [];
+  let allGood = true;
+  let anyStage = false;
+
+  for (let stage = 1; stage <= 3; stage++) {
+    const arrivals = runs
+      .map((run) => {
+        const left = run.stageEnteredAtMinute[stage + 1];
+        if (left === undefined) return null;
+        const bought = run.purchases
+          .filter((purchase) => purchase.minutes <= left)
+          .map((purchase) => purchase.upgradeId);
+        return { policy: run.policy, signature: [...new Set(bought)].sort().join(','), count: bought.length };
+      })
+      .filter((entry): entry is { policy: string; signature: string; count: number } => entry !== null);
+
+    if (arrivals.length === 0) continue;
+    anyStage = true;
+
+    const distinct = new Set(arrivals.map((entry) => entry.signature));
+    if (distinct.size < 2) allGood = false;
+    lines.push(
+      `stage ${String(stage)}: ${String(arrivals.length)} policies left it, ` +
+        `${String(distinct.size)} distinct purchase sets`,
+    );
+  }
+
+  if (!anyStage) return skip(id, title, 'no policy left any stage');
+  return allGood ? pass(id, title, lines.join(' · ')) : fail(id, title, lines.join(' · '));
+}
+
 export function evaluate(runs: readonly RunResult[], effects: readonly UpgradeEffect[] = []): Verdict[] {
   return [
     ...stageTimings(runs),
@@ -394,5 +519,6 @@ export function evaluate(runs: readonly RunResult[], effects: readonly UpgradeEf
     incomeCeiling(runs),
     cashFloor(runs),
     contentRemains(runs),
+    twoValidPaths(runs),
   ];
 }

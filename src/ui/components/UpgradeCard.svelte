@@ -27,32 +27,91 @@
 
   const { upgrade, onbuy, onclose }: Props = $props();
 
+  /**
+   * Names for all thirty — Phase 13.
+   *
+   * A map rather than a field on the upgrade, because `src/config` holds the
+   * design and this is presentation: the day there is a second language, the
+   * translation lands here and the tree does not move.
+   */
   const LABELS: Record<string, string> = {
     'hand-painted-sign': 'Elle boyanmış tabela',
     'menu-board': 'Menü panosu',
+    'planter-boxes': 'Saksılar ve cephe',
+    'illuminated-sign': 'Işıklı tabela',
+    'neon-facade': 'Neon cephe',
+    'roadside-pylon': 'Yol kenarı totem',
     'second-prep-station': 'İkinci hazırlık istasyonu',
-    'bigger-counter': 'Daha büyük tezgâh',
-    'roadside-marker': 'Yol kenarı levhası',
     cooler: 'Soğutucu',
+    'sharper-knives': 'Keskin bıçaklar',
+    'pass-heat-lamp': 'Pass ısı lambası',
+    'better-ingredients': 'İyi malzeme',
+    'drink-dispenser': 'İçecek dispenseri',
+    'prep-automation': 'Mutfak otomasyonu',
+    'pastry-oven': 'Fırın',
+    'bigger-counter': 'Daha büyük tezgâh',
+    'queue-barriers': 'Kuyruk bariyerleri',
+    'shade-canopy': 'Gölgelik',
+    'padded-benches': 'Yastıklı banklar',
+    'widened-forecourt': 'Genişletilmiş ön alan',
+    'covered-terrace': 'Kapalı teras',
+    'second-register': 'İkinci kasa',
+    'lane-extension': 'Şerit uzatma',
+    'second-order-post': 'İkinci sipariş direği',
+    'express-window': 'Hızlı pencere',
+    'tap-to-pay': 'Temassız ödeme',
+    'non-slip-shoes': 'Kaymaz ayakkabı',
+    'training-programme': 'Eğitim programı',
+    headsets: 'Kulaklıklar',
+    'staff-room': 'Dinlenme odası',
+    'shift-supervisor': 'Vardiya sorumlusu',
+  };
+
+  const FAMILY_LABELS: Record<string, string> = {
+    VISIBILITY_APPEAL: 'Görünürlük & Çekicilik',
+    KITCHEN: 'Mutfak',
+    CAPACITY: 'Kapasite & Alan',
+    DRIVE_THRU: 'Drive-thru',
+    STAFF: 'Personel',
   };
 
   const EFFECT_LABELS: Record<string, string> = {
     visibility: 'Görünürlük',
+    nightVisibility: 'Gece görünürlüğü',
     menuAppeal: 'Çekicilik',
+    atmosphere: 'Atmosfer',
     orderSpeed: 'Sipariş süresi',
     prepStations: 'Hazırlık istasyonu',
-    queueCapacity: 'Kuyruk kapasitesi',
-    decisionPointMetres: 'Karar noktası',
+    prepSpeed: 'Hazırlık süresi',
+    foodQuality: 'Yemek kalitesi',
     holdToleranceMs: 'Sıcak kalma süresi',
+    queueCapacity: 'Kuyruk kapasitesi',
+    patienceScale: 'Bekleme toleransı',
+    laneCapacity: 'Şerit kapasitesi',
+    windowSpeed: 'Pencere hızı',
+    orderPostSpeed: 'Sipariş direği hızı',
+    staffSpeed: 'Personel hızı',
+    staffSkill: 'Personel becerisi',
+    decisionPointMetres: 'Karar noktası',
   };
 
   /** Each kind reads in its own units. A bare number would mean nothing. */
   function format(kind: string, value: number): string {
     switch (kind) {
       case 'visibility':
+      case 'nightVisibility':
       case 'menuAppeal':
       case 'orderSpeed':
+      case 'prepSpeed':
+      case 'windowSpeed':
+      case 'orderPostSpeed':
+      case 'staffSpeed':
+      case 'patienceScale':
         return `${value.toFixed(2)}×`;
+      case 'atmosphere':
+      case 'foodQuality':
+      case 'staffSkill':
+        return `${(value * 100).toFixed(0)}%`;
       case 'decisionPointMetres':
         return `+${value.toFixed(0)} m`;
       case 'holdToleranceMs':
@@ -64,6 +123,8 @@
 
   const maxed = $derived(upgrade.level >= upgrade.maxLevel);
   const name = $derived(LABELS[upgrade.id] ?? upgrade.id);
+  const family = $derived(FAMILY_LABELS[upgrade.family] ?? upgrade.family);
+  const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 </script>
 
 <div
@@ -76,6 +137,8 @@
     <h2>{name}</h2>
     <button class="close" type="button" onclick={onclose} aria-label="Kapat">×</button>
   </header>
+
+  <p class="family" data-testid="upgrade-family" data-family={upgrade.family}>{family}</p>
 
   <p class="level" data-testid="upgrade-level">
     Seviye {upgrade.level} / {upgrade.maxLevel}
@@ -103,16 +166,37 @@
       class="buy"
       type="button"
       data-testid="upgrade-buy"
-      disabled={!upgrade.affordable}
+      disabled={!upgrade.affordable || !upgrade.unlocked}
       onclick={() => {
         onbuy(upgrade.id);
       }}
     >
       <span>Satın al</span>
-      <span class="cost">₡{upgrade.cost}</span>
+      <span class="cost">₡{money.format(upgrade.cost)}</span>
     </button>
-    {#if !upgrade.affordable}
-      <p class="short" data-testid="upgrade-short">Yeterli nakit yok</p>
+
+    <!--
+      Two refusals, kept apart on purpose — Phase 13. "You have not unlocked
+      this" and "you cannot afford this" are different problems with different
+      answers, and a card that collapsed them into one greyed-out button would
+      leave the player guessing which.
+
+      The locked message wins when both are true, because it is the one they can
+      act on: no amount of waiting for money helps if the prerequisite is not
+      bought.
+    -->
+    {#if !upgrade.unlocked}
+      <p class="locked" data-testid="upgrade-locked">
+        {#if upgrade.missingPrereqs.length > 0}
+          Önce gerekli: {upgrade.missingPrereqs.map((id) => LABELS[id] ?? id).join(', ')}
+        {:else}
+          Aşama {upgrade.stage} gerekiyor
+        {/if}
+      </p>
+    {:else if !upgrade.affordable}
+      <p class="short" data-testid="upgrade-short" data-short-by={String(Math.ceil(upgrade.shortBy))}>
+        ₡{money.format(Math.ceil(upgrade.shortBy))} eksik
+      </p>
     {/if}
   {/if}
 </div>
@@ -122,6 +206,16 @@
     position: absolute;
     top: 0;
     left: 0;
+    /*
+     * Above the HUD's own panels — Phase 13.
+     *
+     * The card is anchored in the *world*, so where it lands depends on the
+     * camera, and Phase 11's build panel and Phase 13's upgrade list both sit in
+     * the overlay's flow. A card that opened underneath one of them was visible,
+     * enabled and unclickable: measured in Firefox as a two-minute timeout on a
+     * button the test could see the whole time.
+     */
+    z-index: 20;
     width: 15rem;
     padding: var(--sp-3);
     background: color-mix(in srgb, var(--c-surface-raised) 94%, transparent);
@@ -130,6 +224,20 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     pointer-events: auto;
     backdrop-filter: blur(8px);
+  }
+
+  .family {
+    margin: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .locked {
+    margin: var(--sp-1) 0 0;
+    font-size: 0.75rem;
+    color: var(--c-warning, #ffd479);
   }
 
   header {

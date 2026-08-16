@@ -84,11 +84,22 @@ export interface RunOptions {
   readonly minutes: number;
 }
 
+/**
+ * The upgrades a policy could buy right now.
+ *
+ * **Purchasable, not merely existing** — Phase 13. The tree has thirty upgrades
+ * across four stages with prerequisite chains, so most of it is locked at any
+ * moment. A policy offered the whole list would spend its turn asking for things
+ * the simulation refuses, which reads in the results as a policy that saves
+ * money for no reason.
+ */
 function optionsFor(world: World): UpgradeOption[] {
   const options: UpgradeOption[] = [];
   for (const item of UPGRADES) {
     const level = upgradeLevel(world, item.id);
     if (level >= item.maxLevel) continue;
+    if (item.stage > world.progression.stage) continue;
+    if (item.prereqs.some((prereq) => upgradeLevel(world, prereq) <= 0)) continue;
     options.push({
       id: item.id,
       family: item.family,

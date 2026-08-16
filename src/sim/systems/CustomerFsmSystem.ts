@@ -20,6 +20,7 @@ import { DRIVE_THRU_PATIENCE_SCALE } from '@config/driveThru';
 import { layoutForStage } from '@config/layouts';
 import { CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
+import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { atIn } from '../math/typedArray';
@@ -88,7 +89,7 @@ export class CustomerFsmSystem implements SimSystem {
      * this way a waiting state added in a later phase gets its clock without
      * anybody remembering to wire one up.
      */
-    if (customer.patienceMaxMs <= 0) this.beginPatience(customer, spec.patienceSeconds);
+    if (customer.patienceMaxMs <= 0) this.beginPatience(world, customer, spec.patienceSeconds);
 
     customer.patienceMs -= deltaMs;
     if (customer.patienceMs > 0) return;
@@ -105,6 +106,22 @@ export class CustomerFsmSystem implements SimSystem {
     this.transition(customer, STATE_ABANDONING);
     this.transition(customer, target);
     customer.queueIndex = -1;
+    /*
+     * **And the drive-thru slot**, which the first version forgot.
+     *
+     * A driver who gives up in the lane was leaving `laneSlot` set, so the slot
+     * stayed occupied by a car that was already driving away — and the car
+     * behind it could not creep past. Measured at Stage 4 once Phase 13's longer
+     * menu made drive-thru waits long enough for anyone to actually run out of
+     * patience: the window sat empty with a full lane behind it and nothing
+     * moving, which is exactly the deadlock `compactDriveThruLane` exists to
+     * prevent.
+     *
+     * Cleared here rather than in the compaction pass because this is where the
+     * customer stops being in the queue. A compaction that skipped slots whose
+     * occupant had left would be inferring the same fact one tick later.
+     */
+    customer.laneSlot = -1;
     if (target === STATE_WALKING_TO_CAR) this.aimAtOwnCar(world, customer);
   }
 
@@ -264,7 +281,7 @@ export class CustomerFsmSystem implements SimSystem {
     customer.targetY = bay.door.y;
   }
 
-  private beginPatience(customer: CustomerRecord, baseSeconds: number): void {
+  private beginPatience(world: World, customer: CustomerRecord, baseSeconds: number): void {
     const multiplier = atIn(ARCHETYPE_PATIENCE, customer.archetype, 1);
     /*
      * **The drive-thru asymmetry, applied here and only here** — Phase 11.
@@ -277,7 +294,15 @@ export class CustomerFsmSystem implements SimSystem {
      * state declaration in Phase 6 rather than at each call site.
      */
     const channelScale = customer.channel === CHANNEL_DRIVE_THRU ? DRIVE_THRU_PATIENCE_SCALE : 1;
-    customer.patienceMaxMs = baseSeconds * 1000 * multiplier * channelScale;
+    /*
+     * And the comfort of the place, which is Phase 13's `patienceScale`: a
+     * canopy over the queue and benches in the waiting area buy time rather
+     * than throughput. Applied in the same place and for the same reason as the
+     * drive-thru scale — every waiting state inherits it, including ones added
+     * later.
+     */
+    const comfort = effectValue(world, 'patienceScale');
+    customer.patienceMaxMs = baseSeconds * 1000 * multiplier * channelScale * comfort;
     customer.patienceMs = customer.patienceMaxMs;
   }
 

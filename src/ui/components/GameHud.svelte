@@ -12,6 +12,7 @@
   } from '@app/bridge/hudModel';
   import HudCash from './HudCash.svelte';
   import EvolutionPanel from './EvolutionPanel.svelte';
+  import BuildMenu from '../screens/BuildMenu.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
@@ -167,6 +168,19 @@
 
   <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
   <ObjectivePanel {objective} progress={objectiveProgress} />
+  <!--
+    The full list, for discovery — Phase 13. Selecting a row opens the card
+    beside the object rather than buying anything, so the list is a map and the
+    world is still where the decision is made (GAME_DESIGN_DOCUMENT §14.3).
+  -->
+  <BuildMenu
+    {upgrades}
+    stage={progression.stage}
+    onselect={(id: string) => {
+      openUpgrade = id;
+    }}
+  />
+
   <BuildMode
     {placed}
     onplace={(objectId: string, x: number, y: number) => {

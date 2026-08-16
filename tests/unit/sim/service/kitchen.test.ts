@@ -4,6 +4,19 @@ import { PASS_CAPACITY, station, STATIONS } from '@config/economy/stations';
 import { TICK_MS } from '@config/simulation';
 import { Sim } from '@sim/core/Sim';
 import { nextStartable, passLoad, startPrep, stationsAllBusy } from '@sim/systems/KitchenSystem';
+import type { World } from '@sim/core/World';
+
+/** True when at least one station of `type` is occupied. */
+function stationBusyByType(world: World, type: string): boolean {
+  for (let index = 0; index < STATIONS.length; index++) {
+    if (STATIONS[index]?.type !== type) continue;
+    for (let slot = 0; slot < world.orders.scanLimit; slot++) {
+      if (!world.orders.isActive(slot)) continue;
+      if (world.orders.at(slot).station === index) return true;
+    }
+  }
+  return false;
+}
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED, orderStateName } from '@sim/stores/OrderStore';
 
 /** An order sitting in the pool, placed now, ready to be started. */
@@ -54,7 +67,18 @@ describe('station reservation', () => {
     expect(startPrep(sim.world, placeOrder(sim, 'hotdog'))).toBe(true);
     expect(startPrep(sim.world, placeOrder(sim, 'lemonade'))).toBe(true);
     expect(startPrep(sim.world, placeOrder(sim, 'chips'))).toBe(true);
-    expect(stationsAllBusy(sim.world)).toBe(true);
+    /*
+     * Phase 13 added a fryer, a coffee machine and a dessert counter for the
+     * later menu, and they are unlocked from the first tick — the *menu* is what
+     * gates a stage, not the kitchen. So a Stage 1 stand with all three of its
+     * own stations working is no longer "every station busy", and the claim
+     * worth making is the one that was always meant: the three stations Stage 1
+     * can actually use are all occupied.
+     */
+    expect(stationsAllBusy(sim.world)).toBe(false);
+    expect(stationBusyByType(sim.world, 'GRILL')).toBe(true);
+    expect(stationBusyByType(sim.world, 'DRINK')).toBe(true);
+    expect(stationBusyByType(sim.world, 'PREP')).toBe(true);
   });
 
   it('frees the station when the plate reaches the pass', () => {

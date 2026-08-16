@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  EFFECT_MODE_OF,
   LEVEL_GROWTH,
   parseUpgrades,
   MIN_SIGNIFICANCE,
@@ -8,6 +9,7 @@ import {
   upgrade,
   upgradeCost,
 } from '@config/economy/upgrades';
+import { layoutForStage } from '@config/layouts';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { STATIONS } from '@config/economy/stations';
 import { ORDERING_MS } from '@config/satisfaction';
@@ -82,21 +84,33 @@ describe('the four-property rule', () => {
     }
   });
 
-  it('gives every family exactly one bottleneck, and is down to five of them', () => {
+  it("spreads thirty upgrades across the design's five families", () => {
     /*
-     * **Five, not six, since Phase 12.** The REACH family's only member —
-     * `roadside-marker` — was measured as *costing* revenue at every level and
-     * was removed; the reasoning is in `src/config/economy/upgrades.ts` beside
-     * the gap it left. Phase 13 rebuilds the tree and brings the family back with
-     * an effect that does not trade reach for parking capacity.
+     * GAME_DESIGN_DOCUMENT §13.2 names five families and Phase 13 builds all of
+     * them. The old assertion — one upgrade per family, six upgrades — described
+     * the placeholder tree, where "family" was a label on a single item.
      *
-     * The one-family-per-upgrade property is what actually matters here and it is
-     * unchanged: two upgrades in one family would stack multipliers on the same
-     * bottleneck, which is what `combineDiminishing` exists to prevent.
+     * What replaces it is the property that actually matters at thirty: every
+     * family is **populated**, so none of them is a heading with nothing under
+     * it, and none of them is the whole tree. Diminishing returns are computed
+     * over the effect *kind* rather than the family, so two upgrades sharing a
+     * family is not a stacking risk — `combineDiminishing` sees them either way.
      */
-    const families = UPGRADES.map((item) => item.family);
-    expect(new Set(families).size, 'two upgrades share a family').toBe(families.length);
-    expect(UPGRADES).toHaveLength(5);
+    const families = new Map<string, number>();
+    for (const item of UPGRADES) families.set(item.family, (families.get(item.family) ?? 0) + 1);
+
+    expect([...families.keys()].sort()).toEqual([
+      'CAPACITY',
+      'DRIVE_THRU',
+      'KITCHEN',
+      'STAFF',
+      'VISIBILITY_APPEAL',
+    ]);
+    for (const [family, count] of families) {
+      expect(count, `${family} has too few upgrades to be a decision`).toBeGreaterThanOrEqual(4);
+      expect(count, `${family} is most of the tree`).toBeLessThanOrEqual(12);
+    }
+    expect(UPGRADES.length).toBeGreaterThanOrEqual(28);
   });
 
   it('anchors every card somewhere inside the lot', () => {
@@ -119,10 +133,11 @@ describe('the validator actually validates', () => {
    */
   const wellFormed = {
     id: 'test-upgrade',
-    family: 'TEST',
+    family: 'KITCHEN' as const,
     stage: 1 as const,
     baseCost: 10,
     maxLevel: 2,
+    // A family from the closed set the schema now enforces — Phase 13.
     effects: [{ kind: 'visibility' as const, perLevel: [0.1, 0.1] }],
     worldChange: 'Something appears',
     consequence: 'Something happens',
@@ -172,37 +187,77 @@ describe('minimum significance — ECONOMY_DESIGN §6.3', () => {
      * sixty seconds does not enter the game." Checked per effect kind against
      * the documented thresholds, because "noticeable" means something different
      * for a duration than for a capacity.
+     *
+     * The rule is about the **upgrade**, so a composite one — the drinks
+     * dispenser adds a station *and* speeds prep a little — needs at least one
+     * effect over its threshold rather than all of them. What no effect may be
+     * is *nothing*: a zero contribution is filler whatever it is bundled with,
+     * and that is asserted separately below.
      */
     for (const item of UPGRADES) {
+      let anySignificant = false;
+      const note = (passed: boolean): void => {
+        anySignificant = anySignificant || passed;
+      };
+
       for (const effect of item.effects) {
         const first = effect.perLevel[0] ?? 0;
         const label = `${item.id}/${effect.kind}`;
+        expect(first, `${label} contributes nothing at all`).not.toBe(0);
 
         switch (effect.kind) {
           case 'visibility':
           case 'menuAppeal':
-            expect(first, label).toBeGreaterThanOrEqual(MIN_SIGNIFICANCE.conversion);
+            note(first >= MIN_SIGNIFICANCE.conversion);
             break;
           case 'orderSpeed':
             // A scale: 0.8 removes 20% of the duration.
-            expect(1 - first, label).toBeGreaterThanOrEqual(MIN_SIGNIFICANCE.speed);
+            note(1 - first >= MIN_SIGNIFICANCE.speed);
             break;
           case 'prepStations':
           case 'queueCapacity':
-            expect(first, label).toBeGreaterThanOrEqual(MIN_SIGNIFICANCE.capacity);
+            note(first >= MIN_SIGNIFICANCE.capacity);
             break;
           case 'decisionPointMetres':
             // Metres, and the threshold is that it must move at all by an
             // amount a driver has room to use — one car length.
-            expect(first, label).toBeGreaterThanOrEqual(5);
+            note(first >= 5);
             break;
           case 'holdToleranceMs':
             // Seconds of grace. Less than ten would be lost inside a single
             // walk from the pass to a table.
-            expect(first, label).toBeGreaterThanOrEqual(10_000);
+            note(first >= 10_000);
+            break;
+
+          // ── Phase 13's kinds ──────────────────────────────────────────────
+          case 'nightVisibility':
+          case 'atmosphere':
+          case 'foodQuality':
+          case 'staffSkill':
+            // All fractions of a 0..1 scale, judged by the same threshold as
+            // conversion: two points is the smallest change a player can feel
+            // inside a minute.
+            note(first >= MIN_SIGNIFICANCE.conversion);
+            break;
+          case 'prepSpeed':
+          case 'windowSpeed':
+          case 'orderPostSpeed':
+          case 'staffSpeed':
+            // Scales below 1: the fraction of the duration removed.
+            note(1 - first >= MIN_SIGNIFICANCE.speed);
+            break;
+          case 'patienceScale':
+            // A scale *above* 1 — it buys time rather than removing it — so the
+            // threshold is the fraction added.
+            note(first - 1 >= MIN_SIGNIFICANCE.speed);
+            break;
+          case 'laneCapacity':
+            note(first >= MIN_SIGNIFICANCE.capacity);
             break;
         }
       }
+
+      expect(anySignificant, `${item.id} has no effect a player would notice`).toBe(true);
     }
   });
 
@@ -228,14 +283,26 @@ describe('minimum significance — ECONOMY_DESIGN §6.3', () => {
     // ECONOMY_DESIGN §6.2's whole point: cost grows 2.2x per level while effect
     // shrinks. A curve that went the other way would make maxing one family
     // strictly correct and delete the decision.
+    /*
+     * Measured as **distance from the neutral value**, which is 0 for an additive
+     * or multiplier effect and 1 for a scale.
+     *
+     * The naive version compared the raw numbers, and that is wrong for scales:
+     * `prepSpeed [0.85, 0.88, 0.9]` looks like it grows and in fact shrinks —
+     * the first level cuts prep by 15% and the third by 10%. Phase 13 added
+     * scales that sit *above* 1 as well (`patienceScale`), where diminishing
+     * means falling toward 1 rather than rising toward it, and only a distance
+     * describes both.
+     */
     for (const item of UPGRADES) {
       for (const effect of item.effects) {
-        if (effect.kind === 'orderSpeed') continue; // a constant scale, by design
+        const neutral = EFFECT_MODE_OF[effect.kind] === 'scale' ? 1 : 0;
         for (let level = 1; level < effect.perLevel.length; level++) {
-          expect(
-            effect.perLevel[level] ?? 0,
-            `${item.id}/${effect.kind} level ${String(level + 1)}`,
-          ).toBeLessThanOrEqual(effect.perLevel[level - 1] ?? 0);
+          const previous = Math.abs((effect.perLevel[level - 1] ?? neutral) - neutral);
+          const current = Math.abs((effect.perLevel[level] ?? neutral) - neutral);
+          expect(current, `${item.id}/${effect.kind} level ${String(level + 1)}`).toBeLessThanOrEqual(
+            previous + 1e-9,
+          );
         }
       }
     }
@@ -243,19 +310,32 @@ describe('minimum significance — ECONOMY_DESIGN §6.3', () => {
 });
 
 describe('the upgrades fit the world they change', () => {
-  it('never buys more queue capacity than there are places to stand', () => {
+  it('never buys more queue capacity than there are places to stand, at any stage', () => {
     /*
      * The reason `bigger-counter` is one level in Stage 1. Capacity past the
      * last authored slot would tell the spillover penalty the queue is fine
      * while there is physically nowhere for the next person — and ECONOMY_DESIGN
      * §7's only negative feedback loop would quietly stop working.
+     *
+     * Checked at **every stage** since Phase 13, and cumulatively: upgrades are
+     * kept when a stage ends, so a Stage 3 restaurant is carrying whatever its
+     * Stage 1 stand bought. Adding a capacity upgrade to a later stage without
+     * lengthening that stage's queue is exactly the mistake this catches.
      */
-    const counter = upgrade('bigger-counter');
-    let total = STAGE1_LAYOUT.queueCapacity;
-    for (const effect of counter.effects) {
-      for (const amount of effect.perLevel) total += amount;
+    for (let stage = 1; stage <= 4; stage++) {
+      const layout = layoutForStage(stage);
+      let total = layout.queueCapacity;
+      for (const item of UPGRADES) {
+        if (item.stage > stage) continue;
+        for (const effect of item.effects) {
+          if (effect.kind !== 'queueCapacity') continue;
+          for (const amount of effect.perLevel) total += amount;
+        }
+      }
+      expect(total, `stage ${String(stage)} can be upgraded past its own queue`).toBeLessThanOrEqual(
+        layout.queue.length,
+      );
     }
-    expect(total).toBeLessThanOrEqual(STAGE1_LAYOUT.queue.length);
   });
 
   it('never unlocks more prep stations than the kitchen authors', () => {

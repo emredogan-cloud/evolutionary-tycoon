@@ -85,6 +85,31 @@ export interface UpgradeView {
   readonly screenX: number;
   readonly screenY: number;
   readonly visible: boolean;
+
+  // ── Phase 13's tree ──────────────────────────────────────────────────────
+  /** One of the design's five families — GAME_DESIGN_DOCUMENT §13.2. */
+  readonly family: string;
+  /** The stage it becomes available at. */
+  readonly stage: number;
+  /**
+   * Whether the player can buy it at all yet, ignoring money.
+   *
+   * Separate from `affordable` because they are different problems with
+   * different answers: one is solved by waiting and one by doing something else
+   * first, and a card that says only "you cannot buy this" tells the player
+   * neither.
+   */
+  readonly unlocked: boolean;
+  /** Prerequisites still missing, by id. Empty when `unlocked`. */
+  readonly missingPrereqs: readonly string[];
+  /**
+   * How much more money is needed, or 0.
+   *
+   * The roadmap asks the card to answer "ne kadar eksik" — how much short. A
+   * player looking at a price they cannot meet is doing this subtraction in
+   * their head anyway.
+   */
+  readonly shortBy: number;
 }
 
 /** One menu item's price, with the band the player may move it inside. */

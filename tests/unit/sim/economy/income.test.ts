@@ -157,7 +157,14 @@ describe('the dead-end rule has something to measure against', () => {
      * inputs exist and are the right shape, so that gate has something to run
      * against rather than discovering the shape late.
      */
-    const cheapest = UPGRADES.reduce((best, item) =>
+    /*
+     * Among the upgrades a Stage 1 stand can actually buy. Phase 13's tree has
+     * thirty of them across four stages, and a later stage's base cost is not
+     * comparable with this one — `STAGE_MULTIPLIER` turns a base of 4 at Stage 4
+     * into ₡220. Filtering by stage is what makes "cheapest" a question with a
+     * meaningful answer.
+     */
+    const cheapest = UPGRADES.filter((item) => item.stage === 1).reduce((best, item) =>
       upgradeCost(item, 1, 1) < upgradeCost(best, 1, 1) ? item : best,
     );
     expect(cheapest.id).toBe('hand-painted-sign');

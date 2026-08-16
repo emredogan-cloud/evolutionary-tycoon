@@ -259,8 +259,8 @@ function buying(option: UpgradeOption | null): CommandInput[] {
  * §13 names both — the point of running them side by side is that neither
  * should be able to run away from the other.
  */
-const THROUGHPUT_FAMILIES = new Set(['THROUGHPUT', 'CAPACITY', 'PRESERVATION']);
-const MARGIN_FAMILIES = new Set(['APPEAL', 'VISIBILITY', 'REACH']);
+const THROUGHPUT_FAMILIES = new Set(['KITCHEN', 'CAPACITY', 'DRIVE_THRU']);
+const MARGIN_FAMILIES = new Set(['VISIBILITY_APPEAL', 'STAFF']);
 
 export const greedyCheapest: Policy = {
   id: 'greedy-cheapest',

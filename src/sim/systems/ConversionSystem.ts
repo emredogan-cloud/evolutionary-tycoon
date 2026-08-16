@@ -252,7 +252,16 @@ export class ConversionSystem implements SimSystem {
     // A sign does not make the stand visible at 3 a.m.; it multiplies whatever
     // the hour already allows. Applied as a factor rather than added, so the
     // time-of-day curve keeps its shape and a dark hour stays dark.
-    this.set(1, visibilityAt(hour) * effectValue(world, 'visibility'), REASON_NOT_VISIBLE);
+    /*
+     * Visibility, and — after dark — the lighting on top of it. Phase 13's
+     * `nightVisibility` is a separate kind rather than a bigger `visibility`
+     * because that is the whole design of the upgrade: a lit sign does nothing
+     * at noon and changes the night completely (GAME_DESIGN_DOCUMENT §13.2).
+     * Applied as a factor on the hour's own figure, so a dark hour stays dark
+     * relative to a bright one.
+     */
+    const lighting = isNight(hour) ? effectValue(world, 'nightVisibility') : 1;
+    this.set(1, visibilityAt(hour) * effectValue(world, 'visibility') * lighting, REASON_NOT_VISIBLE);
     this.set(2, MENU_APPEAL_PLACEHOLDER * effectValue(world, 'menuAppeal'), REASON_NO_DESIRED_ITEM);
     this.set(3, PRICE_FIT_PLACEHOLDER, REASON_PRICE_TOO_HIGH);
     this.set(4, queuePenalty(queueLength), REASON_QUEUE_TOO_LONG);
@@ -330,8 +339,7 @@ export class ConversionSystem implements SimSystem {
 }
 
 export function visibilityAt(hour: number): number {
-  const isDay = hour >= VISIBILITY.dawnHour && hour < VISIBILITY.duskHour;
-  return isDay ? VISIBILITY.day : VISIBILITY.night;
+  return isNight(hour) ? VISIBILITY.night : VISIBILITY.day;
 }
 
 export function queuePenalty(queueLength: number): number {
@@ -344,6 +352,11 @@ export function spilloverPenalty(queueLength: number, queueCapacity: number): nu
   if (queueLength <= queueCapacity) return 1;
   const overflow = queueLength - queueCapacity;
   return Math.max(SPILLOVER_PENALTY.floor, 1 - overflow * SPILLOVER_PENALTY.perOverflowCustomer);
+}
+
+/** Outside `[dawn, dusk)`. One definition, so lighting and visibility agree. */
+function isNight(hour: number): boolean {
+  return hour < VISIBILITY.dawnHour || hour >= VISIBILITY.duskHour;
 }
 
 /** ECONOMY_DESIGN §9 — reputation 0..100 to a 0.60..1.40 multiplier. */

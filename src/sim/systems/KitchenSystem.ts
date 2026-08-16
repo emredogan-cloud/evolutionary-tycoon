@@ -61,7 +61,13 @@ export class KitchenSystem implements SimSystem {
   private advanceCooking(world: World, order: OrderRecord): void {
     const item = menuItem(order.item);
     const kitchen = station(order.station);
-    const finishesAt = order.startedAtMs + item.prepTimeMs / kitchen.speed;
+    /*
+     * Prep time, divided by the station's own speed and scaled by whatever the
+     * kitchen upgrades bought — Phase 13's `prepSpeed`. A `scale` kind, so two
+     * upgrades that each cut ten per cent genuinely compound to nineteen.
+     */
+    const finishesAt =
+      order.startedAtMs + (item.prepTimeMs * effectValue(world, 'prepSpeed')) / kitchen.speed;
     if (world.clock.simTimeMs < finishesAt) return;
 
     /*
@@ -115,7 +121,11 @@ export function startPrep(world: World, orderSlot: number): boolean {
    */
   order.quality = Math.min(1, item.qualityBase * station(free).quality);
 
-  world.eventQueue.emitPrepStarted(order.entityId, free, item.prepTimeMs / station(free).speed);
+  world.eventQueue.emitPrepStarted(
+    order.entityId,
+    free,
+    (item.prepTimeMs * effectValue(world, 'prepSpeed')) / station(free).speed,
+  );
   return true;
 }
 

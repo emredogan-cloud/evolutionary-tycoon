@@ -162,8 +162,13 @@ describe('the economy stays inside its designed envelope', () => {
       for (const id of blocked) {
         expect(ALLOWED_BLOCKED.has(id), `${id} became unevaluable and nobody said so`).toBe(true);
       }
-      // And the content-blocked three are always blocked until Phase 13 lands.
-      expect(blocked).toContain('stage-2-timing');
+      /*
+       * At least one must be blocked and named, or the allow-list above is
+       * describing a situation that no longer exists — which is its own kind of
+       * stale. Phase 13 filled the content holes, so what remains blocked is the
+       * ticket arithmetic of change request §8.1.
+       */
+      expect(blocked.length, 'nothing is blocked any more — prune the allow-list').toBeGreaterThan(0);
     },
     SUITE_TIMEOUT_MS,
   );

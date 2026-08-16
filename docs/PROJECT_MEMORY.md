@@ -1163,7 +1163,34 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P12 — Economy Balancing & Balance Simulator (TEKNİK PASS)**
+**Son tamamlanan faz: P13 — Upgrade System v2 / tam ağaç (TEKNİK PASS) · BATCH 11–13 KAPANDI**
+
+| Kanıt           | Değer                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| Testler         | **1 319** unit/integration · **5** balance · **128** E2E · **14** golden · **21** perf           |
+| `pnpm verify`   | ✅ temiz (303 dosya, 155 modül, knip temiz, coverage eşikleri oynatılmadı)                       |
+| Ağaç            | **30 yükseltme · 5 aile · 4 aşama**, ön koşul zincirleriyle                                      |
+| Menü            | 3 → **13 kalem**; `MenuItem.stage` (Faz 8'den beri okunmayan alan) devreye alındı                |
+| Etki türleri    | 10 yeni tür, her biri `src/sim`'de **tam bir tüketiciyle** — test kaynak taraması yapıyor        |
+| İki geçerli yol | **2 · 4 · 3 farklı satın alma seti** Aşama 1/2/3'ten çıkıyor — roadmap'in şartı ölçüldü          |
+| İçerik tükenmi  | 6 saat sonra **12–26 yükseltme hâlâ alınmamış** — P12'nin `⊘` assertion'ı artık geçiyor          |
+| Balance kapısı  | 11 assertion'ın **9'u geçiyor, 2'si DEĞERLENDİRİLEMEZ** (ortalama sepet aritmetiği)              |
+| Gelir eğrisi    | ₡12.8 → **₡21.1 → ₡40.8 → ₡69.3**/dk (aşama 1→4)                                                 |
+| Rapor           | [PHASE_13_REPORT.md](phases/PHASE_13_REPORT.md) · [BATCH_11_13_REPORT.md](BATCH_11_13_REPORT.md) |
+| Kapı            | ✅ **TEKNİK PASS** — 15 DoD maddesinin 14'ü temiz                                                |
+
+**Dürüst kayıtlar:** ağacın kendisi yetmedi — **menü Aşama 1'de duruyordu**, bu yüzden Aşama 3
+lokantası limonata fiyatına limonata satıyordu ve hiçbir yükseltme bunu düzeltemezdi ·
+drive-thru'da **pes eden müşteri şerit yuvasını bırakmıyordu** ve arkasını kilitliyordu (uzun
+menü sabrı tüketince ortaya çıktı) · dünyaya çapalı yükseltme kartının **z-index'i yoktu**,
+inşa panelinin altında açılabiliyordu — görünür, etkin ve tıklanamaz · iki assertion hâlâ
+DEĞERLENDİRİLEMEZ ve engel **hesaplanıyor**: sipariş tek kalem olduğu sürece §3'ün ortalama
+sepeti aritmetik olarak ulaşılamaz (değişiklik talebi §8.1) · **3 oyuncu ile 1 saatlik oturum
+hâlâ yapılmadı**.
+
+---
+
+**Bir önceki: P12 — Economy Balancing & Balance Simulator (TEKNİK PASS)**
 
 | Kanıt          | Değer                                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------------ |
@@ -1303,48 +1330,54 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🟢 P12 ✅ KAPANDI — BATCH DEVAM EDİYOR, DURULMUYOR. ŞİMDİ **P13**.
+> ## 🔴 DUR — BATCH 11–13 TAMAMLANDI. P14+ YETKİSİZ.
 >
-> **P2–P11 ✅ · P12 ✅ · P13 🔵 (son) · P14+ YETKİSİZ**
+> **P2–P13 tamamlandı. P14 ve sonrası için açık kullanıcı onayı gerekiyor.**
 >
-> Kullanıcı 2026-08-16 yönergesi: _"You MUST NOT stop for user approval after P12. You
-> MUST stop only after P13 is fully completed and validated."_ P12 kapandı; **durulmuyor**,
-> P13'e geçiliyor. **Batch'in sonu P13'tür ve orada durulacaktır.**
+> Kullanıcı 2026-08-16 yönergesi: _"You MUST stop only after P13 is fully completed and
+> validated. P14 and beyond are NOT authorized."_ P13 kapandı ve doğrulandı. **Durum: DUR.**
 >
-> ### P13 — yürütme yetkisi (bu faz, batch'in sonuncusu)
+> ### Kullanıcının bakması gereken beş şey
 >
-> 1. **~30 yükseltme, 5 aile** — tam ağaç, dört özellik kuralına uyan (maliyet, görünür
->    dünya değişimi, oynanış sonucu, yerleştirme çapası)
-> 2. **Ön koşul grafiği**, döngüsüz — CI'da kanıtlanacak
-> 3. **CI dört-özellik kontrolü** — eksik alanı olan yükseltme merge edilemez
-> 4. Balance simülatörü **her aşamada en az 2 ayrı yatırım stratejisi** olduğunu kanıtlasın
+> **1. 🔴 DEĞİŞİKLİK TALEBİ — ortalama sepet.** ECONOMY_DESIGN §3 zarfı ₡4.50 / ₡9 / ₡18 / ₡30
+> ortalama sepet üzerine kurulu. Sipariş **tek kalem** ve kalem, aşamanın menüsünden **düzgün
+> dağılımla** seçiliyor; dolayısıyla bir aşamanın üretebileceği ortalama sepet **menüsünün
+> fiyat ortalaması**dır — ölçülen ₡4.50 / ₡5.80 / ₡9.60 / ₡15.60. §3'ün sayıları ya çok
+> kalemli sipariş ya da `appealTags` ağırlıklı seçim varsayıyor; ikisi de **mekanik** ve karar
+> gerektiriyor. Balance kapısının iki assertion'ı bu yüzden DEĞERLENDİRİLEMEZ durumda ve engel
+> koda gömülü değil, **hesaplanıyor** — karar verilince kendiliğinden açılırlar.
 >
-> ### P13'ün P12'den devraldığı ölçülmüş kısıtlar
+> **2. 🔴 DEĞİŞİKLİK TALEBİ — evrim oyuncuyu mahsur bırakabiliyor.** ₡804 ile ₡800'lük Aşama 3'ü
+> kabul eden stant ₡4 ile açıyor, masalara servis için gereken garsonu tutamıyor, 12 saatlik
+> koşuda **92. dakikadan sonra sıfır gelir** — geri dönüş yok. Nakit hiç eksiye düşmediği için
+> oyunun hiçbir kuralı itiraz etmiyor.
 >
-> - **REACH ailesi boş.** `roadside-marker` her seviyede geliri düşürdüğü ölçüldüğü için
->   kaldırıldı. Devralınan kısıt: **erişim, kapasiteyi erkenden rezerve etmemeli** —
->   dönüşen sürücü karar anında park yeri tutuyor.
-> - **Politika ayrışması 1.0×.** Dört stratejik politikanın dördü de aynı beş yükseltmeyi
->   aynı sırada alıyor; ECONOMY_DESIGN §15'in "her aşamada en az 2 geçerli strateji"
->   maddesi **bu yüzden açık**. Ağaç bunu çözmek zorunda.
-> - **Aşama 2–4 içeriği yok**: 14 menü kaleminin 3'ü var. Balance kapısının üç assertion'ı
->   bu yüzden DEĞERLENDİRİLEMEZ durumda; P13 yükseltmeleri eklediğinde ikisi açılır,
->   menü değişiklik talebi olarak kalır.
-> - Yükseltme maliyet merdiveni 90 sn kuralına göre yeniden ölçeklendi (6, 8, 10, 11, 13,
->   16). Yeni aileler aynı kurala uymak zorunda; kapı bunu ölçüyor.
+> **3. 🔴 DEĞİŞİKLİK TALEBİ — idle oyuncu Aşama 1'de ilerleyemiyor.** §13 her politikanın
+> Aşama 2'ye 10–22 dk'da ulaşmasını istiyor; §5.1 aşçıyı Aşama 2 rolü yapıyor, yani Aşama 1
+> otomatikleştirilemiyor. Ölçüm: idle **95 dk**, dikkatli oyuncu 21 dk.
 >
-> ### Batch boyunca açık kalan, P13'ün dokunmayacağı maddeler
+> **4. 🔴 3 OYUNCU İLE 1 SAATLİK OTURUM YAPILMADI.** ECONOMY_DESIGN §15'in ve roadmap P12'nin
+> açık şartı. Bir ajan playtest koşamaz ve oyun hâlâ tamamen placeholder sanatla çiziliyor.
+> Yerine hiçbir şey konulmadı.
 >
-> - **Dört değişiklik talebi** (PHASE_12_REPORT §8): ortalama sepet vs menü fiyatları ·
->   Aşama 2–4 menüsü · idle oyuncu Aşama 1'de ilerleyemiyor · evrim oyuncuyu mahsur bırakabiliyor
-> - **3 oyuncu ile 1 saatlik oturum yapılmadı** — insan gerektiriyor
-> - Vertical slice kapısı hâlâ açık · sanata bağlı beş yargı hâlâ verilmedi
-> - Phaser 4 WebGL1 çelişkisi · `priceFit` hâlâ literal 1.0 · WebKit bu makinede koşmuyor
-> - PR #17 (P8–P10) hâlâ açık ve merge edilmedi
+> **5. Sanata bağlı beş yargı hâlâ verilmedi.** P6 dönüşüm anı · P7 yaya doğallığı · P8 döngü
+> tatmini · P10 çalışan niyeti · P11 aşama silüetleri. Hepsi **NOT JUDGED: AWAITING EXTERNAL
+> ART**. Vertical slice kapısı da bu yüzden hâlâ açık (8 ölçütün 2'si kanıtlandı).
+>
+> ### Batch'ten taşınan diğer açık maddeler
+>
+> - `roadside-marker` ölçülerek zararlı bulundu ve kaldırıldı; **REACH ailesi boş**. Devralınan
+>   kısıt: erişim, kapasiteyi erkenden rezerve etmemeli.
+> - `priceFit` hâlâ literal 1.0 → fiyatlandırma simülatörde denenemiyor (sömürü E2 korumasız)
+> - Phaser 4 WebGL1 açıyor, dört doküman WebGL2 diyor (AÇIK ÇELİŞKİ #4)
+> - `staff.hired` / `staff.employees` iki ayrı liste — uzlaştırma bir change request
+> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1)
+> - WebKit smoke bu makinede koşmuyor (`libevent-2.1-7t64`, root gerekiyor) — CI'da koşuyor
+> - **PR #17 (P8–P10) hâlâ açık ve merge edilmedi**; `phase/11-evolution` onun üstünde duruyor
 >
 > ### Şimdi ne yapılıyor
 >
-> **P13 — Upgrade System v2 (full tree).** Bitince **DUR**: P14+ yetkisiz.
+> **HİÇBİR ŞEY.** P14+ yetkisiz. Yukarıdaki beş maddeye kullanıcı bakana kadar durulur.
 
 ## 22. Change Log
 
@@ -1356,6 +1389,7 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 | 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-08-16 | **P13**    | **Faz 13 kapandı — Upgrade System v2, batch 11–13 bitti.** 30 yükseltme / 5 aile / 4 aşama, ön koşul grafiği döngü kontrollü, 10 yeni etki türü ve her biri için `src/sim` kaynak taramasıyla tüketici kanıtı. **Menü 3 → 13 kalem** ve `MenuItem.stage` devreye alındı — ağaç tek başına yetmiyordu, Aşama 3 lokantası limonata satıyordu. Gelir eğrisi ₡12.8 → 21.1 → 40.8 → **69.3**/dk. Roadmap'in "her aşamada en az 2 yatırım yolu" şartı **2/4/3 farklı satın alma setiyle ölçüldü**; "6 saat sonra alınmamış yükseltme var" assertion'ı artık geçiyor (12–26 kalıyor). İki gerçek kusur: drive-thru'da pes eden müşteri şerit yuvasını bırakmıyordu; yükseltme kartının z-index'i yoktu. Balance 11 assertion'ın 9'u yeşil, 2'si ortalama sepet aritmetiği yüzünden DEĞERLENDİRİLEMEZ (değişiklik talebi §8.1).                               |
 | 2026-08-16 | **P12**    | **Faz 12 kapandı — Economy Balancing & Balance Simulator.** `tools/balance-sim` 5 politika, 10 assertion, CI'da merge kapısı; 12 saatlik oyun 6.2 s'de koşuyor. **Trafik/atıl personel açlığı config ile çözüldü**: itibar sıfır yerine bandın nötr noktasından (50) başlıyor, arketip ilgileri ×0.75, yükseltme merdiveni 90 sn kuralına göre yeniden ölçeklendi, Aşama 1 fiyatları ve malzeme maliyetleri ×1.35 (marjlar sabit), trafik 24→28 denenen / 23.7 teslim. Aşama 1 geliri ₡8.3→**₡12.8**/dk, Aşama 2 süresi 46.7→**21.2** dk, kuyruk 0.00→**0.38**. `roadside-marker` ölçülerek zararlı bulundu ve kaldırıldı. Ayırma ölçüm aracı heap-delta'dan **örnekleyici profiler**'a geçti: 0.113 B/tick. **3 oyuncu testi yapılmadı**; dört değişiklik talebi açık.                                                                               |
 | 2026-08-16 | **P11**    | **Faz 11 kapandı — Restaurant Evolution.** Dört aşama, drive-thru, inşaat maskesi, build mode. 1 218 test · 114 E2E · 14 golden · 21 perf bütçesi. Save **v8**. Dünya hash'i altıncı kez yenilendi (`6b9fb66d69f685fc`), Node ve tarayıcı birebir. **S4 ızgaraya oturan yerleşim**, **S5 oyuncu onaylı** olarak karara bağlandı (GDD §25.1/§25.2); S4'ün ikinci argümanı ölçümle desteklenmedi ve öyle kaydedildi. İki gerçek kusur bulundu ve düzeltildi: renderer Aşama 1 layout'una sabitlenmişti, otopark 4.5 m arabaları 3 m aralıkla park ediyordu. Aşama 1 süresi **46.7–55.2 dk** ölçüldü (tasarım 12–18) — P12'ye devredildi.                                                                                                                                                                                                                |
 | 2026-08-15 | **Q**      | **P7 TAMAMLANDI ✅ — BATCH 5–7 BİTTİ.** Yayalar yürüyor: nav grid, hedef başına flow field, steering, kuyruk slotları, A\* fallback, prosedürel yürüyüş, deadlock harness (500 senaryo × 2 000 tick, 0 kilitlenme). 907 test. Flow field bütçesi ilk ölçümde kaçtı (42.9 ms / 12 ms) — roadmap'in B planı bölmekti ama "önce ölç" diyordu; ölçüm en iç döngüdeki tuple destructure'ı gösterdi, düz typed array'lerle 9.3 ms, bölme gerekmedi. Beş kusur ölçümle bulundu (park kapısı kendi arabasının hücresinde; kuyruk dolunca on beş kişi aynı noktada). İki fikir kanıtla reddedildi ve kodda kayıtlı. Perf altyapısındaki beş kusur giderildi; kalibrasyon artık aritmetik + bellek karışımı (makineler arası sapma %19 → %5). **Yaya doğallığı yargısı verilmedi** — sanat yok; ölçülen %57 yön değişimi iyi bir sayı değil ve öyle raporlandı. |

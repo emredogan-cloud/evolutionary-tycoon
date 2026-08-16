@@ -43,6 +43,15 @@ export const STAGE2_LAYOUT: StageLayout = {
     { id: 'p5', x: 3.5, y: 12.4, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 10.9 } },
   ],
 
+  /*
+   * Twelve places, six of them past `queueCapacity` — Phase 13.
+   *
+   * The last positions are the **spill**: they sit at the road edge and on the
+   * carriageway, and standing in them is what triggers ECONOMY_DESIGN §7's only
+   * negative feedback loop. Capacity upgrades eat into them, so a stage has to
+   * author enough that a fully-upgraded queue still has somewhere to overflow —
+   * otherwise buying the last barrier silently switches the loop off.
+   */
   queue: [
     { x: 12.0, y: 10.2 },
     { x: 12.0, y: 9.4 },
@@ -52,6 +61,10 @@ export const STAGE2_LAYOUT: StageLayout = {
     { x: 13.4, y: 6.7 },
     { x: 14.0, y: 6.2 },
     { x: 14.6, y: 5.8 },
+    { x: 15.3, y: 5.5 },
+    { x: 16.0, y: 5.2 },
+    { x: 16.8, y: 5.0 },
+    { x: 17.6, y: 4.9 },
   ],
   queueCapacity: 6,
 

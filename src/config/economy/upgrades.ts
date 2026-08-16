@@ -36,13 +36,28 @@ import { z } from 'zod';
 
 /** Effect categories. Same category ⇒ combined with diminishing returns. */
 const EFFECT_KINDS = [
+  // Conversion — how many of the cars that pass decide to stop.
   'visibility',
+  'nightVisibility',
   'menuAppeal',
+  'atmosphere',
+  'decisionPointMetres',
+  // Kitchen — how fast, and how good, the food is.
   'orderSpeed',
   'prepStations',
-  'queueCapacity',
-  'decisionPointMetres',
+  'prepSpeed',
+  'foodQuality',
   'holdToleranceMs',
+  // Capacity — how many people the place can hold, and for how long.
+  'queueCapacity',
+  'patienceScale',
+  // Drive-thru — Stage 4 only.
+  'laneCapacity',
+  'windowSpeed',
+  'orderPostSpeed',
+  // Staff — how quickly and how well the people work.
+  'staffSpeed',
+  'staffSkill',
 ] as const;
 
 export type EffectKind = (typeof EFFECT_KINDS)[number];
@@ -61,30 +76,59 @@ type EffectMode = 'multiplier' | 'scale' | 'additive';
 /** Which mode each kind uses. One authority, so a system cannot disagree. */
 export const EFFECT_MODE_OF: Readonly<Record<EffectKind, EffectMode>> = {
   visibility: 'multiplier',
+  nightVisibility: 'multiplier',
   menuAppeal: 'multiplier',
+  atmosphere: 'additive',
+  decisionPointMetres: 'additive',
   orderSpeed: 'scale',
   prepStations: 'additive',
-  queueCapacity: 'additive',
-  decisionPointMetres: 'additive',
+  prepSpeed: 'scale',
+  foodQuality: 'additive',
   holdToleranceMs: 'additive',
+  queueCapacity: 'additive',
+  patienceScale: 'scale',
+  laneCapacity: 'additive',
+  windowSpeed: 'scale',
+  orderPostSpeed: 'scale',
+  staffSpeed: 'scale',
+  staffSkill: 'additive',
 };
 
 /**
  * Per-category weight in `combineDiminishing` — ECONOMY_DESIGN §6.2.
  *
- * All 1 today, because no two of the six upgrades share a category and the
- * weight therefore cannot change any current number. It exists now so that the
- * Phase 13 tree has somewhere to express "conversion effects stack less
- * generously than capacity ones" without touching the combining function.
+ * **Still all 1, and Phase 13 deliberately left them there.** With thirty
+ * upgrades the temptation is to damp conversion harder — four of them now push
+ * on `visibility` or `nightVisibility` — but §6.2 publishes the sign's exact
+ * cumulative curve (1.30, 1.52, 1.68, 1.80) and that curve is computed at weight
+ * 1. Lowering the weight to 0.75 reproduces 1.225 instead, which is a different
+ * published number, and changing one of those is a change request rather than a
+ * config edit (WORKING_DISCIPLINE §6).
+ *
+ * The stacking is damped anyway, by the mechanism that was always going to do
+ * it: `combineDiminishing` runs over every upgrade contributing to the *kind*,
+ * so a second sign is worth less than the first regardless of which family it
+ * belongs to. The conversion ceiling in ECONOMY_DESIGN §3 is the hard stop
+ * behind that, and the balance gate measures it.
  */
 export const CATEGORY_WEIGHT: Readonly<Record<EffectKind, number>> = {
   visibility: 1,
+  nightVisibility: 1,
   menuAppeal: 1,
+  atmosphere: 1,
+  decisionPointMetres: 1,
   orderSpeed: 1,
   prepStations: 1,
-  queueCapacity: 1,
-  decisionPointMetres: 1,
+  prepSpeed: 1,
+  foodQuality: 1,
   holdToleranceMs: 1,
+  queueCapacity: 1,
+  patienceScale: 1,
+  laneCapacity: 1,
+  windowSpeed: 1,
+  orderPostSpeed: 1,
+  staffSpeed: 1,
+  staffSkill: 1,
 };
 
 const effectSchema = z.object({
@@ -101,8 +145,30 @@ const effectSchema = z.object({
 
 const upgradeSchema = z.object({
   id: z.string().min(1),
-  /** ECONOMY_DESIGN §6: one family per bottleneck, levels within a family. */
-  family: z.string().min(1),
+  /**
+   * Upgrades that must be owned first — GAME_EXECUTION_ROADMAP Phase 13.
+   *
+   * Ids, and only ids: a prerequisite expressed as a predicate would be code,
+   * and the roadmap is explicit that an upgrade is data. The graph they form is
+   * checked for cycles at module load, because a cycle is not a balance problem
+   * — it is a branch of the tree nobody can ever reach, and it would look
+   * exactly like an upgrade the player had not yet earned.
+   */
+  prereqs: z.array(z.string()).default([]),
+  /**
+   * One of the design's five families — GAME_DESIGN_DOCUMENT §13.2.
+   *
+   * A closed set rather than a string, since Phase 13. With six upgrades the
+   * family was a label; with thirty it is the thing that makes the build menu
+   * legible and the thing a player reasons in ("I have been putting everything
+   * into the kitchen"). A typo would silently create a sixth family that appears
+   * nowhere in the design.
+   *
+   * Note that a family is **not** what diminishing returns are computed over —
+   * that is the effect *kind*, so two upgrades in different families pushing on
+   * `visibility` still damp each other.
+   */
+  family: z.enum(['VISIBILITY_APPEAL', 'KITCHEN', 'CAPACITY', 'DRIVE_THRU', 'STAFF']),
   stage: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   /** Level-1 cost before the stage multiplier and level growth. */
   baseCost: z.number().positive(),
@@ -129,17 +195,56 @@ const upgradeSchema = z.object({
 
 export type Upgrade = z.infer<typeof upgradeSchema>;
 
-const STAGE1_UPGRADES: Upgrade[] = [
+/**
+ * The same thing as it is written below, before Zod fills in the defaults.
+ *
+ * `prereqs` defaults to `[]`, so the parsed type requires it and the authored
+ * literal does not. Annotating the array with the *input* type is what lets a
+ * root upgrade simply omit the field instead of carrying an empty list.
+ */
+type UpgradeInput = z.input<typeof upgradeSchema>;
+
+/**
+ * The full upgrade tree — GAME_EXECUTION_ROADMAP Phase 13, GAME_DESIGN_DOCUMENT §13.2.
+ *
+ * Thirty upgrades across the design's five families, spread over the four
+ * stages. Every one carries the four properties §13.1 demands — a cost, a
+ * measurable simulation effect, a visible change in the world, and a
+ * consequence for how the game is played — and a test fails the build if any
+ * of the four is missing, because that rule is what stops a tree filling with
+ * "+3% efficiency".
+ *
+ * ## Data, not code
+ *
+ * There is no `switch` on an upgrade id anywhere in `src/sim`, and there must
+ * never be. An upgrade is `{ id, family, stage, cost, prereqs, effects, visual }`
+ * and `effects` are typed references to simulation parameters. Adding an upgrade
+ * is editing this array; adding a *kind* of upgrade is the only thing that
+ * touches a system, and each kind is read in exactly one place.
+ *
+ * ## Prerequisites make it a tree rather than a menu
+ *
+ * `illuminated-sign` needs the hand-painted one; `neon-facade` needs that; the
+ * pylon needs the neon. Each family therefore reads as a story about the same
+ * object growing up, and the stage a rung sits at decides when the story can
+ * continue. The graph is checked for cycles at module load.
+ *
+ * ## Why the anchors matter
+ *
+ * The card opens beside the thing it changes (GAME_DESIGN_DOCUMENT §14.3), so
+ * every anchor is a real place on the lot: the sign anchors at the sign, the
+ * drive-thru upgrades anchor along the lane. An anchor that pointed at empty
+ * tarmac would open a card about nothing.
+ */
+const UPGRADE_TREE: UpgradeInput[] = [
   {
     id: 'hand-painted-sign',
-    family: 'VISIBILITY',
+    family: 'VISIBILITY_APPEAL',
     stage: 1,
     baseCost: 6,
     maxLevel: 4,
-    // ECONOMY_DESIGN §6.2, visibility row: +0.30, +0.22, +0.16, +0.12
-    // → 1.30, 1.52, 1.68, 1.80 cumulative.
     effects: [{ kind: 'visibility', perLevel: [0.3, 0.22, 0.16, 0.12] }],
-    worldChange: 'A painted sign appears on the stand',
+    worldChange: 'A painted sign appears on the stand, and grows with every level',
     consequence: 'More of the traffic notices you at all',
     anchor: { x: 16.4, y: 12.6 },
     iconKey: 'struct_sign_painted@2x',
@@ -147,13 +252,12 @@ const STAGE1_UPGRADES: Upgrade[] = [
   },
   {
     id: 'menu-board',
-    family: 'APPEAL',
+    family: 'VISIBILITY_APPEAL',
     stage: 1,
     baseCost: 8,
     maxLevel: 3,
     effects: [
       { kind: 'menuAppeal', perLevel: [0.18, 0.13, 0.09] },
-      // 0.8x per level: one purchase cuts ordering by 20%, clearing §6.3's 12%.
       { kind: 'orderSpeed', perLevel: [0.8, 0.8, 0.8] },
     ],
     worldChange: 'A menu board appears beside the counter',
@@ -163,17 +267,177 @@ const STAGE1_UPGRADES: Upgrade[] = [
     placeholder: 'ph-prop-tall',
   },
   {
+    id: 'planter-boxes',
+    family: 'VISIBILITY_APPEAL',
+    stage: 2,
+    baseCost: 6,
+    maxLevel: 2,
+    effects: [{ kind: 'atmosphere', perLevel: [0.12, 0.08] }],
+    worldChange: 'Planters and a painted frontage replace bare tarmac',
+    consequence: 'The place looks cared for, and people linger instead of leaving',
+    anchor: { x: 11.5, y: 13.2 },
+    iconKey: 'struct_planter@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'illuminated-sign',
+    family: 'VISIBILITY_APPEAL',
+    stage: 2,
+    baseCost: 10,
+    maxLevel: 3,
+    prereqs: ['hand-painted-sign'],
+    effects: [{ kind: 'nightVisibility', perLevel: [0.45, 0.3, 0.2] }],
+    worldChange: 'The sign lights up, and the night scene changes completely',
+    consequence: 'The empty hours after dark start earning',
+    anchor: { x: 16.4, y: 13.4 },
+    iconKey: 'struct_sign_lit@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
+    id: 'neon-facade',
+    family: 'VISIBILITY_APPEAL',
+    stage: 3,
+    baseCost: 6,
+    maxLevel: 2,
+    prereqs: ['illuminated-sign'],
+    effects: [
+      { kind: 'nightVisibility', perLevel: [0.35, 0.25] },
+      { kind: 'atmosphere', perLevel: [0.1, 0.07] },
+    ],
+    worldChange: 'Neon runs the length of the building',
+    consequence: 'The restaurant is a landmark after dark rather than a silhouette',
+    anchor: { x: 18.6, y: 12.6 },
+    iconKey: 'struct_neon@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
+    id: 'roadside-pylon',
+    family: 'VISIBILITY_APPEAL',
+    stage: 4,
+    baseCost: 4,
+    maxLevel: 2,
+    prereqs: ['neon-facade'],
+    effects: [{ kind: 'visibility', perLevel: [0.18, 0.12] }],
+    worldChange: 'A tall pylon sign rises above the roofline',
+    consequence: 'Drivers see you from the next junction, not the next car length',
+    anchor: { x: 21.4, y: 11.0 },
+    iconKey: 'struct_pylon@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
     id: 'second-prep-station',
-    family: 'THROUGHPUT',
+    family: 'KITCHEN',
     stage: 1,
     baseCost: 10,
     maxLevel: 2,
     effects: [{ kind: 'prepStations', perLevel: [1, 1] }],
     worldChange: 'A second prep bench appears in the kitchen',
-    consequence: 'Two orders can be prepared at once',
-    anchor: { x: 11.4, y: 12.2 },
-    iconKey: 'prop_prep_station@2x',
+    consequence: 'Two orders can be made at once instead of one',
+    anchor: { x: 13.0, y: 13.6 },
+    iconKey: 'struct_prep_station@2x',
     placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'cooler',
+    family: 'KITCHEN',
+    stage: 1,
+    baseCost: 12,
+    maxLevel: 3,
+    effects: [{ kind: 'holdToleranceMs', perLevel: [30000, 22000, 16000] }],
+    worldChange: 'A cooler appears behind the counter',
+    consequence: 'Food waits longer on the pass without going cold',
+    anchor: { x: 12.2, y: 14.2 },
+    iconKey: 'struct_cooler@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'sharper-knives',
+    family: 'KITCHEN',
+    stage: 2,
+    baseCost: 7,
+    maxLevel: 3,
+    effects: [{ kind: 'prepSpeed', perLevel: [0.85, 0.88, 0.9] }],
+    worldChange: 'The prep bench gains proper boards and a knife rack',
+    consequence: 'Every order leaves the kitchen sooner',
+    anchor: { x: 13.6, y: 14.2 },
+    iconKey: 'struct_knives@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'pass-heat-lamp',
+    family: 'KITCHEN',
+    stage: 2,
+    baseCost: 9,
+    maxLevel: 2,
+    prereqs: ['cooler'],
+    effects: [{ kind: 'holdToleranceMs', perLevel: [40000, 30000] }],
+    worldChange: 'A heat lamp glows over the pass',
+    consequence: 'A busy pass stops being a race against the food going cold',
+    anchor: { x: 12.6, y: 13.8 },
+    iconKey: 'struct_heatlamp@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'better-ingredients',
+    family: 'KITCHEN',
+    stage: 3,
+    baseCost: 5,
+    maxLevel: 3,
+    prereqs: ['sharper-knives'],
+    effects: [{ kind: 'foodQuality', perLevel: [0.06, 0.05, 0.04] }],
+    worldChange: 'Crates of fresh produce stack up in the back',
+    consequence: 'People rate the food higher, tip more, and come back',
+    anchor: { x: 11.0, y: 14.6 },
+    iconKey: 'struct_crates@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'drink-dispenser',
+    family: 'KITCHEN',
+    stage: 3,
+    baseCost: 7,
+    maxLevel: 2,
+    prereqs: ['second-prep-station'],
+    effects: [
+      { kind: 'prepStations', perLevel: [1, 1] },
+      { kind: 'prepSpeed', perLevel: [0.88, 0.9] },
+    ],
+    worldChange: 'A drinks dispenser appears at the end of the counter',
+    consequence: 'Drinks stop queueing behind hot food',
+    anchor: { x: 14.8, y: 13.0 },
+    iconKey: 'struct_dispenser@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'prep-automation',
+    family: 'KITCHEN',
+    stage: 4,
+    baseCost: 6,
+    maxLevel: 2,
+    prereqs: ['drink-dispenser'],
+    effects: [{ kind: 'prepSpeed', perLevel: [0.88, 0.9] }],
+    worldChange: 'Timers and automatic baskets appear on the fryers',
+    consequence: 'The kitchen keeps pace without anyone watching the clock',
+    anchor: { x: 13.2, y: 15.0 },
+    iconKey: 'struct_automation@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'pastry-oven',
+    family: 'KITCHEN',
+    stage: 4,
+    baseCost: 6,
+    maxLevel: 2,
+    prereqs: ['better-ingredients'],
+    effects: [
+      { kind: 'foodQuality', perLevel: [0.05, 0.04] },
+      { kind: 'prepStations', perLevel: [1, 1] },
+    ],
+    worldChange: 'A pastry oven appears along the back wall',
+    consequence: 'A whole extra line of food, made to a higher standard',
+    anchor: { x: 10.2, y: 15.0 },
+    iconKey: 'struct_oven@2x',
+    placeholder: 'ph-prop-tall',
   },
   {
     id: 'bigger-counter',
@@ -181,68 +445,243 @@ const STAGE1_UPGRADES: Upgrade[] = [
     stage: 1,
     baseCost: 11,
     /*
-     * One level, and that is a limit of the *world* rather than of the design.
-     * `stage1.ts` authors six queue positions and starts with a capacity of
-     * four, so +2 uses the last of them. A second level would cost ₡88 and
-     * change nothing, which is exactly the "+3% efficiency" upgrade the roadmap
-     * bans. More levels arrive when the layout authors somewhere to stand.
+     * One level, and that is a layout fact rather than a balance choice. Stage 1
+     * authors six queue places and a capacity of four; a second level would take
+     * capacity to eight and leave the queue with nowhere to spill, which is the
+     * one thing that tells an overwhelmed stand to stop attracting customers.
      */
     maxLevel: 1,
     effects: [{ kind: 'queueCapacity', perLevel: [2] }],
-    worldChange: 'The counter grows wider',
-    consequence: 'A longer queue before people start giving up and driving past',
-    anchor: { x: 15.0, y: 12.2 },
+    worldChange: 'The counter widens and a second till position appears',
+    consequence: 'The queue holds more people before it spills toward the road',
+    anchor: { x: 15.6, y: 12.0 },
     iconKey: 'struct_counter_wide@2x',
     placeholder: 'ph-prop-short',
   },
-  /*
-   * **`roadside-marker` was removed here in Phase 12, and it was measured out
-   * rather than argued out.**
-   *
-   * Its effect was `decisionPointMetres`: drivers decide about the stand further
-   * back up the road. The paired experiment, averaged over three seeds, measured
-   * every level of it as **costing ₡8.6 of revenue over twenty-four minutes** —
-   * the only upgrade in the game that made things worse, and consistently so.
-   *
-   * The mechanism is worth writing down because it will catch the next person
-   * too. A converted driver **reserves a parking bay at the moment they decide**,
-   * not when they arrive. Deciding thirty metres earlier therefore holds one of
-   * Stage 1's four bays for the whole drive down the lane, and parking is what
-   * limits Stage 1 throughput at peak. The upgrade bought reach and paid for it
-   * in capacity.
-   *
-   * ECONOMY_DESIGN §6.3 says an upgrade ships only with an effect the player can
-   * notice inside sixty seconds; one whose effect is negative does not ship at
-   * all. Phase 13 rebuilds the tree and owns the REACH family — the constraint it
-   * inherits is that reach must not reserve capacity early.
-   */
   {
-    id: 'cooler',
-    family: 'PRESERVATION',
-    stage: 1,
-    baseCost: 12,
-    maxLevel: 3,
-    effects: [{ kind: 'holdToleranceMs', perLevel: [30_000, 22_000, 16_000] }],
-    worldChange: 'A cooler appears behind the counter',
-    consequence: 'Food keeps longer on the pass before its quality starts falling',
-    anchor: { x: 17.2, y: 12.2 },
-    iconKey: 'prop_cooler@2x',
+    id: 'queue-barriers',
+    family: 'CAPACITY',
+    stage: 2,
+    baseCost: 8,
+    maxLevel: 2,
+    prereqs: ['bigger-counter'],
+    effects: [{ kind: 'queueCapacity', perLevel: [2, 2] }],
+    worldChange: 'Rope barriers mark out the queue',
+    consequence: 'A long queue folds instead of reaching the carriageway',
+    anchor: { x: 15.0, y: 11.4 },
+    iconKey: 'struct_barrier@2x',
     placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'shade-canopy',
+    family: 'CAPACITY',
+    stage: 2,
+    baseCost: 9,
+    maxLevel: 2,
+    effects: [{ kind: 'patienceScale', perLevel: [1.15, 1.1] }],
+    worldChange: 'A canopy stretches over the queue',
+    consequence: 'People stay in the queue in weather that would have moved them on',
+    anchor: { x: 15.4, y: 11.8 },
+    iconKey: 'struct_canopy@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
+    id: 'padded-benches',
+    family: 'CAPACITY',
+    stage: 3,
+    baseCost: 4,
+    maxLevel: 2,
+    prereqs: ['shade-canopy'],
+    effects: [{ kind: 'patienceScale', perLevel: [1.12, 1.08] }],
+    worldChange: 'Benches and padded seating fill the waiting area',
+    consequence: 'Waiting stops being the worst part of the visit',
+    anchor: { x: 16.8, y: 14.4 },
+    iconKey: 'struct_bench@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'widened-forecourt',
+    family: 'CAPACITY',
+    stage: 3,
+    baseCost: 7,
+    maxLevel: 1,
+    prereqs: ['queue-barriers'],
+    effects: [{ kind: 'queueCapacity', perLevel: [2] }],
+    worldChange: 'The forecourt is resurfaced and marked out wider',
+    consequence: 'The queue and the car park stop fighting each other for room',
+    anchor: { x: 9.0, y: 11.6 },
+    iconKey: 'struct_forecourt@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'covered-terrace',
+    family: 'CAPACITY',
+    stage: 4,
+    baseCost: 6,
+    maxLevel: 2,
+    prereqs: ['padded-benches'],
+    effects: [
+      { kind: 'patienceScale', perLevel: [1.1, 1.08] },
+      { kind: 'atmosphere', perLevel: [0.08, 0.06] },
+    ],
+    worldChange: 'A covered terrace extends the dining room outdoors',
+    consequence: 'The restaurant holds a lunch rush without anyone standing outside',
+    anchor: { x: 19.0, y: 15.4 },
+    iconKey: 'struct_terrace@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
+    id: 'second-register',
+    family: 'CAPACITY',
+    stage: 4,
+    baseCost: 7,
+    maxLevel: 1,
+    prereqs: ['widened-forecourt'],
+    effects: [
+      { kind: 'queueCapacity', perLevel: [2] },
+      { kind: 'orderSpeed', perLevel: [0.85] },
+    ],
+    worldChange: 'A second till opens at the far end of the counter',
+    consequence: 'Two people are served at once, and the queue halves',
+    anchor: { x: 17.2, y: 12.0 },
+    iconKey: 'struct_register@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'lane-extension',
+    family: 'DRIVE_THRU',
+    stage: 4,
+    baseCost: 5,
+    maxLevel: 2,
+    effects: [{ kind: 'laneCapacity', perLevel: [1, 1] }],
+    worldChange: 'The drive-thru lane is repainted further back up the lot',
+    consequence: 'More cars can wait in the lane instead of driving past',
+    anchor: { x: 22.6, y: 7.0 },
+    iconKey: 'struct_lane@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'second-order-post',
+    family: 'DRIVE_THRU',
+    stage: 4,
+    baseCost: 6,
+    maxLevel: 1,
+    prereqs: ['lane-extension'],
+    effects: [{ kind: 'orderPostSpeed', perLevel: [0.7] }],
+    worldChange: 'A second order post appears halfway down the lane',
+    consequence: 'Two cars order at once, so the lane keeps moving',
+    anchor: { x: 22.8, y: 8.6 },
+    iconKey: 'struct_orderpost@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
+    id: 'express-window',
+    family: 'DRIVE_THRU',
+    stage: 4,
+    baseCost: 4,
+    maxLevel: 3,
+    effects: [{ kind: 'windowSpeed', perLevel: [0.85, 0.88, 0.9] }],
+    worldChange: 'The service window is rebuilt with a wider sill and a chute',
+    consequence: 'A car is handed its order and gone before the next one stops',
+    anchor: { x: 23.0, y: 11.4 },
+    iconKey: 'struct_window@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'tap-to-pay',
+    family: 'DRIVE_THRU',
+    stage: 4,
+    baseCost: 4,
+    maxLevel: 2,
+    prereqs: ['express-window'],
+    effects: [{ kind: 'windowSpeed', perLevel: [0.88, 0.9] }],
+    worldChange: 'A card reader appears on the window frame',
+    consequence: 'Nobody counts out change with three cars waiting',
+    anchor: { x: 23.2, y: 11.0 },
+    iconKey: 'struct_reader@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'non-slip-shoes',
+    family: 'STAFF',
+    stage: 2,
+    baseCost: 6,
+    maxLevel: 2,
+    effects: [{ kind: 'staffSpeed', perLevel: [0.88, 0.92] }],
+    worldChange: 'The staff get proper footwear, visible on every uniform',
+    consequence: 'Everyone crosses the floor faster, all shift',
+    anchor: { x: 12.8, y: 12.2 },
+    iconKey: 'struct_shoes@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'training-programme',
+    family: 'STAFF',
+    stage: 2,
+    baseCost: 10,
+    maxLevel: 3,
+    effects: [{ kind: 'staffSkill', perLevel: [0.12, 0.1, 0.08] }],
+    worldChange: 'Training badges appear on the uniforms',
+    consequence: 'The same staff do the same jobs better and drop fewer orders',
+    anchor: { x: 11.8, y: 12.6 },
+    iconKey: 'struct_badge@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'headsets',
+    family: 'STAFF',
+    stage: 3,
+    baseCost: 5,
+    maxLevel: 2,
+    prereqs: ['non-slip-shoes'],
+    effects: [{ kind: 'staffSpeed', perLevel: [0.88, 0.91] }],
+    worldChange: 'Headsets appear on the kitchen and counter staff',
+    consequence: 'Nobody walks the length of the room to ask a question',
+    anchor: { x: 12.4, y: 13.0 },
+    iconKey: 'struct_headset@2x',
+    placeholder: 'ph-prop-short',
+  },
+  {
+    id: 'staff-room',
+    family: 'STAFF',
+    stage: 3,
+    baseCost: 8,
+    maxLevel: 2,
+    prereqs: ['training-programme'],
+    effects: [{ kind: 'staffSkill', perLevel: [0.08, 0.06] }],
+    worldChange: 'A staff room appears behind the kitchen',
+    consequence: 'People come back from a break working like they did at open',
+    anchor: { x: 9.6, y: 15.4 },
+    iconKey: 'struct_staffroom@2x',
+    placeholder: 'ph-prop-tall',
+  },
+  {
+    id: 'shift-supervisor',
+    family: 'STAFF',
+    stage: 4,
+    baseCost: 7,
+    maxLevel: 2,
+    prereqs: ['staff-room'],
+    effects: [
+      { kind: 'staffSkill', perLevel: [0.08, 0.06] },
+      { kind: 'staffSpeed', perLevel: [0.94, 0.95] },
+    ],
+    worldChange: 'A supervisor walks the floor in a different uniform',
+    consequence: 'The room organises itself instead of waiting to be told',
+    anchor: { x: 14.6, y: 12.8 },
+    iconKey: 'struct_supervisor@2x',
+    placeholder: 'ph-prop-tall',
   },
 ];
 
-/**
- * Parsed at module load, and **append-only** for the same reason the menu is:
- * an upgrade's id is a key in a map that is hashed into the world digest and
- * written into every save.
- */
 /**
  * The validator, exported so it can be given bad input.
  *
  * A schema that is only ever run on data known to be correct proves nothing —
  * it would pass just as happily if every refinement were deleted.
- * `tests/unit/sim/economy/upgradeCost.test.ts` feeds it a duplicate id and a
- * mismatched level count, which is the only way to know the guards fire.
+ * `tests/unit/sim/economy/upgradeCost.test.ts` feeds it a duplicate id, a
+ * mismatched level count, a prerequisite that does not exist and a cycle, which
+ * is the only way to know the guards fire.
  */
 export function parseUpgrades(list: unknown): readonly Upgrade[] {
   return upgradesSchema.parse(list);
@@ -250,11 +689,14 @@ export function parseUpgrades(list: unknown): readonly Upgrade[] {
 
 const upgradesSchema = z.array(upgradeSchema).superRefine((list, ctx) => {
   const ids = new Set<string>();
+  const byId = new Map<string, z.infer<typeof upgradeSchema>>();
+
   for (const upgrade of list) {
     if (ids.has(upgrade.id)) {
       ctx.addIssue({ code: 'custom', message: `Duplicate upgrade id "${upgrade.id}"` });
     }
     ids.add(upgrade.id);
+    byId.set(upgrade.id, upgrade);
 
     for (const effect of upgrade.effects) {
       if (effect.perLevel.length !== upgrade.maxLevel) {
@@ -265,9 +707,53 @@ const upgradesSchema = z.array(upgradeSchema).superRefine((list, ctx) => {
       }
     }
   }
+
+  for (const upgrade of list) {
+    for (const prereq of upgrade.prereqs) {
+      const target = byId.get(prereq);
+      if (target === undefined) {
+        ctx.addIssue({ code: 'custom', message: `${upgrade.id} requires "${prereq}", which does not exist` });
+        continue;
+      }
+      /*
+       * A prerequisite from a *later* stage is unreachable in a different way
+       * from a cycle: the graph is fine, but the player can never satisfy it,
+       * because they have already left the stage where the dependent upgrade was
+       * offered. It reads to them as an upgrade that is permanently greyed out.
+       */
+      if (target.stage > upgrade.stage) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `${upgrade.id} (stage ${String(upgrade.stage)}) requires "${prereq}" from stage ${String(target.stage)}`,
+        });
+      }
+    }
+  }
+
+  /*
+   * **Cycles.** A cycle is not a balance problem — it is a branch of the tree
+   * nobody can ever reach, and to the player it is indistinguishable from an
+   * upgrade they have not yet earned. Depth-first with a colour per node: grey
+   * while its subtree is being walked, black when finished, and an edge back
+   * into a grey node is a cycle by definition.
+   */
+  const state = new Map<string, 'walking' | 'done'>();
+  const walk = (id: string, trail: readonly string[]): void => {
+    const mark = state.get(id);
+    if (mark === 'done') return;
+    if (mark === 'walking') {
+      ctx.addIssue({ code: 'custom', message: `Prerequisite cycle: ${[...trail, id].join(' → ')}` });
+      return;
+    }
+
+    state.set(id, 'walking');
+    for (const prereq of byId.get(id)?.prereqs ?? []) walk(prereq, [...trail, id]);
+    state.set(id, 'done');
+  };
+  for (const upgrade of list) walk(upgrade.id, []);
 });
 
-export const UPGRADES: readonly Upgrade[] = upgradesSchema.parse(STAGE1_UPGRADES);
+export const UPGRADES: readonly Upgrade[] = upgradesSchema.parse(UPGRADE_TREE);
 
 export function upgrade(id: string): Upgrade {
   const found = UPGRADES.find((item) => item.id === id);

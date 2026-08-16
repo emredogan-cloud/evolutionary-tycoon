@@ -119,6 +119,11 @@ interface MutableUpgrade {
   screenX: number;
   screenY: number;
   visible: boolean;
+  family: string;
+  stage: number;
+  unlocked: boolean;
+  missingPrereqs: string[];
+  shortBy: number;
 }
 type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
 type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
@@ -225,6 +230,13 @@ export class UiBridge implements HudSource {
       screenX: 0,
       screenY: 0,
       visible: false,
+      family: item.family,
+      stage: item.stage,
+      unlocked: false,
+      // Sized once from the config, refilled in place — like every other row
+      // here, so a sample never allocates.
+      missingPrereqs: [],
+      shortBy: 0,
     }));
     const prices: MutablePrice[] = MENU.map((item) => ({
       itemId: item.id,
@@ -621,6 +633,18 @@ export class UiBridge implements HudSource {
       view.level = upgradeLevel(world, item.id);
       view.cost = nextUpgradeCost(world, item.id);
       view.affordable = view.cost >= 0 && world.economy.cash >= view.cost;
+
+      /*
+       * Locked and unaffordable are different problems with different answers —
+       * one is solved by doing something else first, the other by waiting — so
+       * the card is given both rather than a single "no".
+       */
+      view.missingPrereqs.length = 0;
+      for (const prereq of item.prereqs) {
+        if (upgradeLevel(world, prereq) <= 0) view.missingPrereqs.push(prereq);
+      }
+      view.unlocked = item.stage <= world.progression.stage && view.missingPrereqs.length === 0;
+      view.shortBy = view.affordable ? 0 : Math.max(0, view.cost - world.economy.cash);
       view.visible = this.projectInto(item.anchor.x, item.anchor.y, UPGRADE_CARD_HEIGHT_METRES, view);
 
       const preview = previewNextLevel(world, item.id);
@@ -654,8 +678,22 @@ export class UiBridge implements HudSource {
    * Phase 11 is going to replace.
    */
   private refillObjective(world: World): void {
+    /*
+     * **Among the upgrades the player can actually buy** — Phase 13.
+     *
+     * With six upgrades, all of them Stage 1, "the cheapest one you do not own"
+     * was unambiguous. With thirty across four stages it is not: `STAGE_MULTIPLIER`
+     * makes a Stage 4 base of ₡4 cost ₡220 there and nothing at all here, so the
+     * raw base cost picked `roadside-pylon` — an upgrade a lemonade stand cannot
+     * see, let alone buy — and offered it as the thing to aim at next.
+     *
+     * An objective the player cannot act on is worse than no objective.
+     */
     let target: { id: string; cost: number } | null = null;
     for (const item of UPGRADES) {
+      if (item.stage > world.progression.stage) continue;
+      if (item.prereqs.some((prereq) => upgradeLevel(world, prereq) <= 0)) continue;
+
       const cost = nextUpgradeCost(world, item.id);
       if (cost < 0) continue;
       if (target === null || cost < target.cost) target = { id: item.id, cost };

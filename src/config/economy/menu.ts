@@ -127,6 +127,144 @@ const STAGE1_ITEMS: MenuItem[] = [
 ];
 
 /**
+ * Stages 2 to 4 — ECONOMY_DESIGN §4, the rest of the published table.
+ *
+ * **Added in Phase 13, and it is the reason the later stages can earn at all.**
+ * Only the three Stage 1 items existed, so a Stage 3 diner sold lemonade and hot
+ * dogs at Stage 1 prices; §3's envelope puts its average ticket at ₡18 and the
+ * balance simulator measured ₡4.50. Every stage-timing and income assertion past
+ * the first failed for that one reason, and no upgrade could have fixed it.
+ *
+ * Prices carry the same ×1.35 scaling as the Stage 1 rows and for the same
+ * reason (see the note above them): the ticket §3 builds the envelope on assumes
+ * a mix the simulation does not yet weight, and scaling prices and ingredient
+ * costs together closes it while leaving every published margin exactly where §4
+ * put it.
+ */
+const LATER_ITEMS: MenuItem[] = [
+  {
+    id: 'hamburger',
+    stage: 2,
+    station: 'GRILL',
+    baseCost: 4.32,
+    basePrice: 12.15,
+    prepTimeMs: 9000,
+    holdToleranceMs: 70000,
+    qualityBase: 0.79,
+    appealTags: ['HEARTY'],
+    iconKey: 'icon_food_burger@2x',
+  },
+  {
+    id: 'fries',
+    stage: 2,
+    station: 'FRYER',
+    baseCost: 1.49,
+    basePrice: 5.4,
+    prepTimeMs: 6000,
+    holdToleranceMs: 45000,
+    qualityBase: 0.74,
+    appealTags: ['FAST', 'HEARTY'],
+    iconKey: 'icon_food_fries@2x',
+  },
+  {
+    id: 'cola',
+    stage: 2,
+    station: 'DRINK',
+    baseCost: 0.81,
+    basePrice: 4.05,
+    prepTimeMs: 1500,
+    holdToleranceMs: 240000,
+    qualityBase: 0.7,
+    appealTags: ['FAST'],
+    iconKey: 'icon_food_cola@2x',
+  },
+  {
+    id: 'breakfast-set',
+    stage: 3,
+    station: 'GRILL',
+    baseCost: 7.43,
+    basePrice: 18.9,
+    prepTimeMs: 14000,
+    holdToleranceMs: 60000,
+    qualityBase: 0.8,
+    appealTags: ['BREAKFAST', 'HEARTY'],
+    iconKey: 'icon_food_breakfast@2x',
+  },
+  {
+    id: 'chicken-meal',
+    stage: 3,
+    station: 'FRYER',
+    baseCost: 8.1,
+    basePrice: 21.6,
+    prepTimeMs: 12000,
+    holdToleranceMs: 65000,
+    qualityBase: 0.8,
+    appealTags: ['HEARTY'],
+    iconKey: 'icon_food_chicken@2x',
+  },
+  {
+    id: 'coffee',
+    stage: 3,
+    station: 'COFFEE',
+    baseCost: 1.22,
+    basePrice: 6.75,
+    prepTimeMs: 4000,
+    holdToleranceMs: 120000,
+    qualityBase: 0.76,
+    appealTags: ['FAST', 'BREAKFAST'],
+    iconKey: 'icon_food_coffee@2x',
+  },
+  {
+    id: 'dessert',
+    stage: 3,
+    station: 'DESSERT',
+    baseCost: 3.24,
+    basePrice: 10.8,
+    prepTimeMs: 5000,
+    holdToleranceMs: 200000,
+    qualityBase: 0.82,
+    appealTags: ['SWEET', 'PREMIUM'],
+    iconKey: 'icon_food_dessert@2x',
+  },
+  {
+    id: 'salad',
+    stage: 3,
+    station: 'PREP',
+    baseCost: 4.05,
+    basePrice: 12.15,
+    prepTimeMs: 7000,
+    holdToleranceMs: 150000,
+    qualityBase: 0.75,
+    appealTags: ['VEGGIE'],
+    iconKey: 'icon_food_salad@2x',
+  },
+  {
+    id: 'premium-burger',
+    stage: 4,
+    station: 'GRILL',
+    baseCost: 11.48,
+    basePrice: 32.4,
+    prepTimeMs: 16000,
+    holdToleranceMs: 70000,
+    qualityBase: 0.86,
+    appealTags: ['PREMIUM', 'HEARTY'],
+    iconKey: 'icon_food_premium@2x',
+  },
+  {
+    id: 'family-meal',
+    stage: 4,
+    station: 'GRILL',
+    baseCost: 24.3,
+    basePrice: 64.8,
+    prepTimeMs: 26000,
+    holdToleranceMs: 60000,
+    qualityBase: 0.84,
+    appealTags: ['HEARTY', 'PREMIUM'],
+    iconKey: 'icon_food_family@2x',
+  },
+];
+
+/**
  * Parsed at module load, so a bad edit fails immediately and by name.
  *
  * `MENU` is indexed by position throughout the simulation — an order stores an
@@ -134,12 +272,38 @@ const STAGE1_ITEMS: MenuItem[] = [
  * is append-only**. Inserting an item in the middle changes every existing
  * replay and every save, exactly like the archetype array.
  */
-export const MENU: readonly MenuItem[] = z.array(menuItemSchema).parse(STAGE1_ITEMS);
+export const MENU: readonly MenuItem[] = z.array(menuItemSchema).parse([...STAGE1_ITEMS, ...LATER_ITEMS]);
 
 export function menuItem(index: number): MenuItem {
   const item = MENU[index];
   if (item === undefined) throw new RangeError(`Unknown menu item ${index}`);
   return item;
+}
+
+/**
+ * What a stage sells, cached per stage.
+ *
+ * Cached because `ServiceSystem` asks on every order and a filtered array per
+ * order is an allocation on a hot path — the same reasoning that interned the
+ * parking-goal names in Phase 12. There are four stages, so the cache is four
+ * entries and never grows.
+ *
+ * Cumulative: a Stage 3 diner still sells lemonade. That is the design's own
+ * shape (§4 lists a stage per item, not a stage *range*) and it is what makes
+ * the average ticket rise gradually rather than jumping at every transition.
+ */
+const MENU_BY_STAGE = new Map<number, readonly MenuItem[]>();
+
+export function menuForStage(stage: number): readonly MenuItem[] {
+  const cached = MENU_BY_STAGE.get(stage);
+  if (cached !== undefined) return cached;
+
+  const items = MENU.filter((item) => item.stage <= stage);
+  // A stage that somehow sells nothing would deadlock the counter; falling back
+  // to the opening menu keeps a malformed stage playable rather than frozen.
+  const resolved = items.length > 0 ? items : MENU.filter((item) => item.stage === 1);
+  MENU_BY_STAGE.set(stage, resolved);
+  return resolved;
 }
 
 export function menuIndexOf(id: string): number {

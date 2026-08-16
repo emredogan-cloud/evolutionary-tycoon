@@ -32,6 +32,25 @@ function fund(sim: Sim, amount = 100_000): void {
   sim.world.economy.cash = amount;
 }
 
+/**
+ * Put the world where `id` can actually be bought — Phase 13.
+ *
+ * The tree has thirty upgrades across four stages with prerequisite chains, so
+ * "buy it and see what moved" now needs the stage set and the chain owned first.
+ * Before that, the sweep below silently tested six upgrades and reported success
+ * for the other twenty-four as `locked`.
+ */
+function unlock(sim: Sim, id: string): void {
+  const item = UPGRADES.find((candidate) => candidate.id === id);
+  if (item === undefined) return;
+  sim.world.progression.stage = item.stage;
+  for (const prereq of item.prereqs) {
+    unlock(sim, prereq);
+    sim.world.progression.stage = item.stage;
+    buyUpgrade(sim.world, prereq);
+  }
+}
+
 /** Play with an attentive cook, which is what Stage 1's player is. */
 function playFor(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
@@ -41,7 +60,7 @@ function playFor(sim: Sim, ticks: number): void {
 }
 
 describe('every upgrade changes a number the simulation reads', () => {
-  it('has a measurable effect for all six, with none silently inert', () => {
+  it('has a measurable effect for all thirty, with none silently inert', () => {
     /*
      * The sweep. Every upgrade, every level, asserting the value the simulation
      * would read actually moved. A future upgrade added with a well-formed
@@ -51,6 +70,7 @@ describe('every upgrade changes a number the simulation reads', () => {
     for (const item of UPGRADES) {
       const sim = new Sim({ seed: 1 });
       fund(sim);
+      unlock(sim, item.id);
 
       for (let level = 1; level <= item.maxLevel; level++) {
         const before = item.effects.map((effect) => effectValue(sim.world, effect.kind));
@@ -225,26 +245,171 @@ describe('the bigger counter — queue capacity', () => {
 });
 
 describe('the roadside marker — the decision point', () => {
-  it('has no reach upgrade at all, since Phase 12 measured the only one as harmful', () => {
+  it('has no upgrade that moves the decision point, and that is deliberate', () => {
     /*
-     * `roadside-marker` was the REACH family's only member and it moved the
-     * decision point further up the road. The Phase 12 paired experiment,
-     * averaged over three seeds, measured **every level of it as costing
-     * revenue** — a converted driver reserves a parking bay the moment they
-     * decide, so deciding earlier holds one of Stage 1's four bays for the whole
+     * `roadside-marker` moved the decision point further up the road and the
+     * Phase 12 paired experiment measured **every level of it as costing
+     * revenue**: a converted driver reserves a parking bay the moment they
+     * decide, so deciding earlier held one of Stage 1's four bays for the whole
      * drive down the lane, and parking is what limits Stage 1 at peak.
      *
-     * It was removed rather than weakened, because ECONOMY_DESIGN §6.3 says an
-     * upgrade ships only with an effect the player notices inside sixty seconds
-     * and a negative one does not ship at all. Phase 13 rebuilds the tree and
-     * owns the family; this asserts the interim state so its return is
-     * deliberate.
+     * Phase 13 rebuilt the tree with thirty upgrades and deliberately did not
+     * bring it back. `decisionPointMetres` still exists as an effect kind and
+     * `ConversionSystem` still reads it — the mechanism is fine, the *upgrade*
+     * was not — so this asserts the interim state rather than deleting the
+     * capability, and its return has to be a decision rather than an accident.
      */
     const sim = new Sim({ seed: 1 });
-    expect(UPGRADES.some((item) => item.family === 'REACH')).toBe(false);
+    expect(
+      UPGRADES.some((item) => item.effects.some((effect) => effect.kind === 'decisionPointMetres')),
+    ).toBe(false);
     expect(effectValue(sim.world, 'decisionPointMetres')).toBe(0);
   });
+});
 
+describe('the sign — visibility', () => {
+  it('follows ECONOMY_DESIGN §6.2 exactly: 1.30, 1.52, 1.68, 1.80', () => {
+    const sim = new Sim({ seed: 1 });
+    fund(sim);
+    const expected = [1.3, 1.52, 1.68, 1.8];
+
+    for (let level = 0; level < expected.length; level++) {
+      buyUpgrade(sim.world, 'hand-painted-sign');
+      expect(effectValue(sim.world, 'visibility'), `level ${String(level + 1)}`).toBeCloseTo(
+        expected[level] ?? 0,
+        9,
+      );
+    }
+  });
+
+  it(
+    'converts measurably more of the same traffic',
+    () => {
+      /*
+       * The gameplay consequence, measured rather than asserted from the
+       * multiplier. Two worlds, same seed, same commands — one with a sign.
+       * If this ever fails while the multiplier test passes, the effect is
+       * wired to nothing.
+       */
+      const plain = new Sim({ seed: 20260816 });
+      const signed = new Sim({ seed: 20260816 });
+      fund(signed, 12);
+      expect(buyUpgrade(signed.world, 'hand-painted-sign')).toBe('ok');
+
+      playFor(plain, TICKS_PER_MINUTE * 20);
+      playFor(signed, TICKS_PER_MINUTE * 20);
+
+      const before = plain.world.stats.conversionsSucceeded;
+      const after = signed.world.stats.conversionsSucceeded;
+      expect(after, `${String(before)} → ${String(after)} conversions`).toBeGreaterThan(before);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
+});
+
+describe('the menu board — appeal and ordering speed', () => {
+  it('cuts the beat at the counter by a fifth per level', () => {
+    const sim = new Sim({ seed: 1 });
+    fund(sim);
+
+    buyUpgrade(sim.world, 'menu-board');
+    expect(ORDERING_MS * effectValue(sim.world, 'orderSpeed')).toBeCloseTo(ORDERING_MS * 0.8, 6);
+
+    buyUpgrade(sim.world, 'menu-board');
+    expect(ORDERING_MS * effectValue(sim.world, 'orderSpeed')).toBeCloseTo(ORDERING_MS * 0.64, 6);
+  });
+
+  it('raises appeal with diminishing returns', () => {
+    const sim = new Sim({ seed: 1 });
+    fund(sim);
+
+    buyUpgrade(sim.world, 'menu-board');
+    const first = effectValue(sim.world, 'menuAppeal');
+    buyUpgrade(sim.world, 'menu-board');
+    const second = effectValue(sim.world, 'menuAppeal');
+    buyUpgrade(sim.world, 'menu-board');
+    const third = effectValue(sim.world, 'menuAppeal');
+
+    expect(first).toBeCloseTo(1.18, 9);
+    expect(second - first).toBeLessThan(first - 1);
+    expect(third - second).toBeLessThan(second - first);
+  });
+});
+
+describe('the second prep station — parallel preparation', () => {
+  it('lets two chips orders cook at once, where one could before', () => {
+    /*
+     * The clearest test in this file, and the one that proves stations are a
+     * real capacity ceiling rather than a label. Ten identical orders, one
+     * `startPrep` each: the number that ends up cooking is exactly the number of
+     * unlocked PREP benches.
+     */
+    const cooking = (sim: Sim): number => {
+      let count = 0;
+      for (let slot = 0; slot < sim.world.orders.scanLimit; slot++) {
+        if (!sim.world.orders.isActive(slot)) continue;
+        if (sim.world.orders.at(slot).state === ORDER_COOKING) count++;
+      }
+      return count;
+    };
+
+    const fill = (sim: Sim): void => {
+      for (let i = 0; i < 10; i++) {
+        const slot = sim.world.orders.acquire();
+        const order = sim.world.orders.at(slot);
+        order.entityId = sim.world.allocateEntityId();
+        order.item = menuIndexOf('chips');
+        order.state = ORDER_PLACED;
+        order.orderedAtMs = i;
+        startPrep(sim.world, slot);
+      }
+    };
+
+    const one = new Sim({ seed: 1 });
+    fill(one);
+    expect(cooking(one)).toBe(1);
+
+    const two = new Sim({ seed: 1 });
+    fund(two);
+    buyUpgrade(two.world, 'second-prep-station');
+    fill(two);
+    expect(cooking(two)).toBe(2);
+
+    const three = new Sim({ seed: 1 });
+    fund(three);
+    buyUpgrade(three.world, 'second-prep-station');
+    buyUpgrade(three.world, 'second-prep-station');
+    fill(three);
+    expect(cooking(three)).toBe(3);
+  });
+});
+
+describe('the bigger counter — queue capacity', () => {
+  it('raises the capacity the spillover penalty is measured against', () => {
+    const sim = new Sim({ seed: 1 });
+    fund(sim);
+    const before = queueCapacityOf(sim.world, STAGE1_LAYOUT);
+
+    buyUpgrade(sim.world, 'bigger-counter');
+    const after = queueCapacityOf(sim.world, STAGE1_LAYOUT);
+
+    expect(after - before).toBe(2);
+    // And never past the authored positions, or the negative feedback loop that
+    // ECONOMY_DESIGN §7 calls the economy's only self-correction stops working.
+    expect(after).toBeLessThanOrEqual(STAGE1_LAYOUT.queue.length);
+  });
+
+  it('is capped by the world rather than by the config alone', () => {
+    // Buying every level still cannot exceed the authored slots. Asserted
+    // directly because the cap lives in `queueCapacityOf`, not in the table.
+    const sim = new Sim({ seed: 1 });
+    fund(sim);
+    for (let i = 0; i < 10; i++) buyUpgrade(sim.world, 'bigger-counter');
+    expect(queueCapacityOf(sim.world, STAGE1_LAYOUT)).toBeLessThanOrEqual(STAGE1_LAYOUT.queue.length);
+  });
+});
+
+describe('the roadside marker — the decision point', () => {
   it(
     'changes which vehicles convert, because they decide somewhere else',
     () => {

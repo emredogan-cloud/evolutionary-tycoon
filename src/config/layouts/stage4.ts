@@ -52,6 +52,15 @@ export const STAGE4_LAYOUT: StageLayout = {
    */
   parking: STAGE3_LAYOUT.parking,
 
+  /* Twenty, for the same reason as Stage 3: capacity ten, upgrades add ten. */
+  queue: [
+    ...STAGE3_LAYOUT.queue,
+    { x: 21.6, y: 5.4 },
+    { x: 22.3, y: 5.8 },
+    { x: 22.9, y: 6.3 },
+    { x: 23.4, y: 6.9 },
+  ],
+
   queueCapacity: 10,
 
   /*

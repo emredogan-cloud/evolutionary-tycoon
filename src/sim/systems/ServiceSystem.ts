@@ -1,4 +1,4 @@
-import { menuItem, MENU, PRICE_BAND } from '@config/economy/menu';
+import { PRICE_BAND, menuForStage, menuIndexOf, menuItem } from '@config/economy/menu';
 import { EATING_MS, ORDERING_MS, REPUTATION } from '@config/satisfaction';
 import {
   STATE_EATING,
@@ -115,8 +115,23 @@ export class ServiceSystem implements SimSystem {
       return;
     }
 
+    /*
+     * Chosen from **this stage's menu**, not from the whole table — Phase 13.
+     *
+     * `MenuItem.stage` had existed since Phase 8 and nothing read it, so a
+     * lemonade stand with three items and a Stage 4 restaurant with thirteen
+     * were the same shop: the later items simply did not exist, and when they
+     * were added a Stage 1 stand would have started selling family meals.
+     *
+     * The choice within the stage is still uniform. Weighting it by the
+     * `appealTags` each item already carries is what ECONOMY_DESIGN §3's rising
+     * average ticket really assumes, and that is a change request rather than
+     * something to slip in here (docs/BALANCE_REPORT.md).
+     */
+    const available = menuForStage(world.progression.stage);
     const roll = world.rng.customer.next();
-    const item = Math.min(MENU.length - 1, Math.floor(roll * MENU.length));
+    const chosen = available[Math.min(available.length - 1, Math.floor(roll * available.length))];
+    const item = chosen === undefined ? 0 : menuIndexOf(chosen.id);
 
     const order = world.orders.at(orderSlot);
     order.entityId = world.allocateEntityId();
@@ -198,7 +213,7 @@ export class ServiceSystem implements SimSystem {
     const order = world.orders.at(orderSlot);
     const item = menuItem(order.item);
     const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
-    const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs);
+    const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs, world);
     const tip = order.price * tipFraction(satisfaction);
 
     world.economy.cash += order.price + tip - item.baseCost;

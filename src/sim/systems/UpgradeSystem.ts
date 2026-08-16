@@ -170,7 +170,7 @@ export function previewNextLevel(world: World, id: string): readonly EffectPrevi
 }
 
 /** Why a purchase was refused. `ok` means it happened. */
-export type PurchaseOutcome = 'ok' | 'unknown' | 'maxed' | 'unaffordable';
+export type PurchaseOutcome = 'ok' | 'unknown' | 'maxed' | 'unaffordable' | 'locked';
 
 /**
  * Buy one level of an upgrade — the whole of `BUY_UPGRADE`'s meaning.
@@ -190,6 +190,26 @@ export function buyUpgrade(world: World, id: string): PurchaseOutcome {
 
   const level = upgradeLevel(world, id);
   if (level >= item.maxLevel) return 'maxed';
+
+  /*
+   * Locked before unaffordable, and both before any money moves — Phase 13.
+   *
+   * Two gates, and the order is deliberate: a player looking at an upgrade they
+   * cannot buy needs to know *which* problem to solve, and "you have not
+   * unlocked this yet" is the one they can act on. Reported to the interface as
+   * a single `locked`, because from the player's side a stage they have not
+   * reached and a prerequisite they have not bought are the same sentence.
+   *
+   * Enforced here rather than only in the interface for the reason every
+   * validation in this file exists: the only path into the world is a command,
+   * commands are replayed from logs and loaded from saves, and a save written by
+   * a modified build must not be able to smuggle a Stage 4 window into a
+   * lemonade stand.
+   */
+  if (item.stage > world.progression.stage) return 'locked';
+  for (const prereq of item.prereqs) {
+    if (upgradeLevel(world, prereq) <= 0) return 'locked';
+  }
 
   const cost = upgradeCost(item, level + 1, world.progression.stage);
   if (world.economy.cash < cost) return 'unaffordable';

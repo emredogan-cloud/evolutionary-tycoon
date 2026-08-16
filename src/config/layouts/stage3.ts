@@ -48,6 +48,21 @@ export const STAGE3_LAYOUT: StageLayout = {
     { id: 'p8', x: 8.5, y: 16.2, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 14.7 } },
   ],
 
+  /*
+   * Sixteen places — four more than Stage 2 — because Stage 3 authors a
+   * capacity of eight and the capacity upgrades add six more on top. A queue
+   * whose authored places run out stops spilling, and spilling is the only
+   * thing that tells an overwhelmed diner to stop attracting customers
+   * (ECONOMY_DESIGN §7).
+   */
+  queue: [
+    ...STAGE2_LAYOUT.queue,
+    { x: 18.4, y: 4.8 },
+    { x: 19.2, y: 4.8 },
+    { x: 20.0, y: 4.9 },
+    { x: 20.8, y: 5.1 },
+  ],
+
   queueCapacity: 8,
 
   /*
