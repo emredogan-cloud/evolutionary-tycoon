@@ -82,10 +82,21 @@ describe('the four-property rule', () => {
     }
   });
 
-  it('covers all six families the roadmap names, one bottleneck each', () => {
+  it('gives every family exactly one bottleneck, and is down to five of them', () => {
+    /*
+     * **Five, not six, since Phase 12.** The REACH family's only member —
+     * `roadside-marker` — was measured as *costing* revenue at every level and
+     * was removed; the reasoning is in `src/config/economy/upgrades.ts` beside
+     * the gap it left. Phase 13 rebuilds the tree and brings the family back with
+     * an effect that does not trade reach for parking capacity.
+     *
+     * The one-family-per-upgrade property is what actually matters here and it is
+     * unchanged: two upgrades in one family would stack multipliers on the same
+     * bottleneck, which is what `combineDiminishing` exists to prevent.
+     */
     const families = UPGRADES.map((item) => item.family);
     expect(new Set(families).size, 'two upgrades share a family').toBe(families.length);
-    expect(UPGRADES).toHaveLength(6);
+    expect(UPGRADES).toHaveLength(5);
   });
 
   it('anchors every card somewhere inside the lot', () => {

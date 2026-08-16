@@ -24,7 +24,7 @@ import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { atIn } from '../math/typedArray';
 import { discardOrdersFor } from './ServiceSystem';
-import { VEHICLE_EXITING } from './VehicleManeuverSystem';
+import { VEHICLE_DT_ADVANCING, VEHICLE_EXITING } from './VehicleManeuverSystem';
 import type { VehicleManeuverSystem } from './VehicleManeuverSystem';
 
 /**
@@ -221,7 +221,19 @@ export class CustomerFsmSystem implements SimSystem {
      * the exit curve by the manoeuvre system the moment it finishes crossing the
      * apron, and beginning it a second time would snap it back to the start.
      */
-    if (world.vehicles.state[vehicleSlot] !== VEHICLE_EXITING) {
+    /*
+     * And not in the middle of a drive-thru creep.
+     *
+     * A car edging from one lane slot to the next is on the short path between
+     * them; the exit curve for a slot starts *at* the slot, so beginning the
+     * exit halfway through the creep moved the car by up to **1.3 m in one
+     * tick** — small enough to look like a stutter rather than a bug, which is
+     * worse. You cannot turn around halfway through a manoeuvre, and now neither
+     * can the simulation: the creep finishes first and the exit starts on the
+     * next tick, from a slot the exit curve actually begins at.
+     */
+    const vehicleState = world.vehicles.state[vehicleSlot];
+    if (vehicleState !== VEHICLE_EXITING && vehicleState !== VEHICLE_DT_ADVANCING) {
       this.maneuvers.beginExit(world, vehicleSlot, customer.parkingSlot);
     }
   }

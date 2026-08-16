@@ -121,7 +121,11 @@ describe('buying an upgrade', () => {
     sim.tick();
     unsubscribe();
 
-    expect(seen).toEqual([{ id: 'hand-painted-sign', level: 1, cost: 12 }]);
+    // ₡6 since Phase 12 rescaled the Stage 1 ladder to satisfy the dead-end
+    // rule — PHASE_12_REPORT §4. Written as the literal the event carries, not
+    // as `upgradeCost(...)`, because the point of this assertion is that the
+    // *announcement* says what was actually paid.
+    expect(seen).toEqual([{ id: 'hand-painted-sign', level: 1, cost: 6 }]);
   });
 
   it('keeps the world hash sensitive to what was bought', () => {

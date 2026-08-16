@@ -61,8 +61,23 @@ const REFERENCE = {
    * Recomputed by the Node suite for seed 424242 and asserted here, which is the
    * whole point: the browser is expected to agree, and it does.
    */
-  hashAtTick0: '6b9fb66d69f685fc',
-  hashAtTick1000: 'ac08da8925b9e88d',
+  /*
+   * A seventh time, in Phase 12 — and this one is not a new field, it is a new
+   * *starting value*. Reputation began at zero, which `reputationFactor` maps to
+   * the worst conversion multiplier in the game (0.60); it now begins at 50, the
+   * neutral point of the published 0.60..1.40 band. Reputation is hashed, so the
+   * world at tick 0 is genuinely a different world.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here.
+   */
+  hashAtTick0: 'aa11223a7612b6ff',
+  /*
+   * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
+   * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
+   * the only Phase 12 change visible at tick 0 is the starting reputation, and
+   * that was already in the Phase 11 figure above.
+   */
+  hashAtTick1000: '717754535b879a4e',
 } as const;
 
 interface TestApi {

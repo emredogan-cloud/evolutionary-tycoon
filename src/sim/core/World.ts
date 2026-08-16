@@ -1,3 +1,4 @@
+import { STARTING_REPUTATION } from '@config/satisfaction';
 import { CONVERSION_REASONS } from '@config/conversion';
 import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
@@ -74,7 +75,7 @@ export class World {
   readonly progression: ProgressionState = { stage: 1, unlocks: [], milestones: [], pendingStage: 0 };
   readonly economy: EconomyState = {
     cash: 0,
-    reputation: 0,
+    reputation: STARTING_REPUTATION,
     lifetimeRevenue: 0,
     lifetimeSpend: 0,
     prices: new Map<string, number>(),
@@ -289,7 +290,7 @@ export class World {
     this.progression.milestones.length = 0;
 
     this.economy.cash = 0;
-    this.economy.reputation = 0;
+    this.economy.reputation = STARTING_REPUTATION;
     this.economy.lifetimeRevenue = 0;
     this.economy.lifetimeSpend = 0;
     this.economy.prices.clear();

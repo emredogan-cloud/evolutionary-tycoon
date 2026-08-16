@@ -101,7 +101,33 @@ export const TIP_CURVE = {
 } as const;
 
 /** ECONOMY_DESIGN §9: reputation moves ±0.004 per customer around a 0.6 baseline. */
-export const REPUTATION = { neutral: 0.6, sensitivity: 0.004, min: 0, max: 100 } as const;
+export const REPUTATION = { neutral: 0.9, sensitivity: 0.004, min: 0, max: 100 } as const;
+
+/**
+ * What a brand-new stand's reputation is — **Phase 12, and it was zero**.
+ *
+ * ## Why this was the single biggest thing wrong with the economy
+ *
+ * `reputationFactor` maps reputation 0..100 onto a **0.60..1.40** multiplier on
+ * conversion (ECONOMY_DESIGN §9). A band written that way has a neutral point,
+ * and the neutral point is the middle: reputation 50 gives a factor of exactly
+ * 1.0, meaning "your reputation is neither helping nor hurting you".
+ *
+ * Starting at **zero** therefore did not mean "unknown", it meant **the worst
+ * reputation in the game**. Every new stand converted at 60% of what its own
+ * factors said, and climbed out of it at 0.13 reputation points per customer
+ * served — so it took roughly **390 customers** to reach neutral, which the
+ * balance simulator measured as never happening inside Stage 1 at all.
+ *
+ * The knock-on was worse than the conversion loss. Stage 3 requires reputation
+ * 40; a fully-upgraded Stage 1 stand measured **38.7 after a hundred simulated
+ * minutes**. Stage 3 was not slow to reach, it was unreachable.
+ *
+ * Fifty is not a buff. It is where the published band says a stand with no
+ * history stands, and the 0.60 floor is now what it was written to be: where you
+ * end up after disappointing people, rather than where you begin.
+ */
+export const STARTING_REPUTATION = 50;
 
 /**
  * Expectation penalty — ECONOMY_DESIGN §4.
@@ -135,4 +161,4 @@ export const ORDERING_MS = 1200;
  * over reads as a vending machine, and because Phase 11's tables need somewhere
  * for the duration to already live.
  */
-export const EATING_MS = 12_000;
+export const EATING_MS = 5_000;

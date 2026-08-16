@@ -54,7 +54,7 @@ export const HOURS_IN_CURVE = 24;
  * road in real time, and the whole point of the time-scale question is that game
  * hours are a presentation choice layered on top of this.
  */
-export const BASE_SPAWN_PER_REAL_MINUTE = 24;
+export const BASE_SPAWN_PER_REAL_MINUTE = 28;
 
 /**
  * Decorative traffic, as a multiple of the converting-eligible rate.
@@ -77,7 +77,7 @@ export const BASE_SPAWN_PER_REAL_MINUTE = 24;
  * p yields an exact Poisson process of rate pR. So converting-eligible arrivals
  * remain exactly Poisson(24/min) while the road sees Poisson(24 x (1 + this)).
  */
-export const DECORATIVE_TRAFFIC_MULTIPLIER = 4;
+export const DECORATIVE_TRAFFIC_MULTIPLIER = 2;
 
 /*
  * Tuned by measurement, not by taste. A full game day at each setting, seed

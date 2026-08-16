@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TICK_MS } from '@config/simulation';
 import { UNPAID_GRACE_MS } from '@config/economy/wages';
 import { brainStateName, STATE_IDLE } from '@sim/ai/EmployeeBrain';
+import { MAX_EMPLOYEES } from '@config/employees';
 import { Sim } from '@sim/core/Sim';
 import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 import { hire } from '@sim/systems/StaffSystem';
@@ -229,17 +230,23 @@ describe('the payroll survives a save', () => {
 
   it('keeps the unpaid clock running across a reload', () => {
     // Otherwise saving and loading in a loop is an infinite grace period.
+    /*
+     * A payroll the stand cannot service. One cook was enough before Phase 12,
+     * when a Stage 1 stand earned almost nothing; it now earns about ₡14 a
+     * minute and pays a single cook out of its own takings, so nothing ever goes
+     * unpaid and there is no clock to save.
+     */
     const sim = new Sim({ seed: 1 });
-    sim.world.economy.cash = 100;
-    expect(hire(sim.world, 'cook', 0.5)).toBe('ok');
+    sim.world.economy.cash = 1000;
+    for (let i = 0; i < MAX_EMPLOYEES; i++) expect(hire(sim.world, 'cook', 1)).toBe('ok');
     sim.world.economy.cash = 0;
     sim.advance(Math.floor(UNPAID_GRACE_MS / TICK_MS / 2));
 
-    const owedBefore = sim.world.employees.at(0).unpaidMs;
+    const owedBefore = sim.world.employees.at(MAX_EMPLOYEES - 1).unpaidMs;
     expect(owedBefore).toBeGreaterThan(0);
 
     const resumed = new Sim({ seed: 1 });
     restoreWorld(resumed.world, snapshotWorld(sim.world));
-    expect(resumed.world.employees.at(0).unpaidMs).toBeCloseTo(owedBefore, 6);
+    expect(resumed.world.employees.at(MAX_EMPLOYEES - 1).unpaidMs).toBeCloseTo(owedBefore, 6);
   });
 });

@@ -39,6 +39,14 @@ export interface ArchetypeSpec {
    * Calibrated against ECONOMY_DESIGN §3's zero-upgrade Stage 1 conversion rate
    * of 0.09: the share-weighted mean of these is 0.292, and 0.292 x 0.55
    * (unlit-sign visibility) x 0.60 (reputation at zero) = 0.096.
+   *
+   * **Scaled by 0.75 in Phase 12.** Reputation used to start at zero, which
+   * multiplied every conversion by 0.60 — the worst value in the published
+   * 0.60..1.40 band — so the affinities had been set against a permanent
+   * handicap. Starting reputation at the band's neutral point removed the
+   * handicap and left the zero-upgrade conversion rate at **0.1195 against the
+   * 0.09 ECONOMY_DESIGN §3 calibrates on**. These four numbers absorb that,
+   * which is what puts the measured rate back on the design.
    */
   readonly baseAffinity: number;
   /**
@@ -66,7 +74,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   {
     id: 'SEDAN_COMMUTER',
     // The baseline driver.
-    baseAffinity: 0.28,
+    baseAffinity: 0.21,
     textureStem: 'veh_sedan',
     lengthMetres: 4.5,
     desiredSpeed: 13.9,
@@ -79,7 +87,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   {
     id: 'PICKUP_WORKER',
     // On the road for work, and hungry for most of it.
-    baseAffinity: 0.34,
+    baseAffinity: 0.255,
     textureStem: 'veh_pickup',
     lengthMetres: 5.4,
     desiredSpeed: 12.5,
@@ -92,7 +100,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   {
     id: 'FAMILY_VAN',
     // Slow to commit, but a stop is a whole family.
-    baseAffinity: 0.3,
+    baseAffinity: 0.225,
     textureStem: 'veh_van',
     lengthMetres: 5.0,
     desiredSpeed: 12.0,
@@ -105,7 +113,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   {
     id: 'MOTORCYCLE',
     // Least likely to stop — no boot, and the weather.
-    baseAffinity: 0.22,
+    baseAffinity: 0.165,
     textureStem: 'veh_motorcycle',
     lengthMetres: 2.1,
     desiredSpeed: 15.6,

@@ -134,7 +134,7 @@ const STAGE1_UPGRADES: Upgrade[] = [
     id: 'hand-painted-sign',
     family: 'VISIBILITY',
     stage: 1,
-    baseCost: 12,
+    baseCost: 6,
     maxLevel: 4,
     // ECONOMY_DESIGN §6.2, visibility row: +0.30, +0.22, +0.16, +0.12
     // → 1.30, 1.52, 1.68, 1.80 cumulative.
@@ -149,7 +149,7 @@ const STAGE1_UPGRADES: Upgrade[] = [
     id: 'menu-board',
     family: 'APPEAL',
     stage: 1,
-    baseCost: 28,
+    baseCost: 8,
     maxLevel: 3,
     effects: [
       { kind: 'menuAppeal', perLevel: [0.18, 0.13, 0.09] },
@@ -166,7 +166,7 @@ const STAGE1_UPGRADES: Upgrade[] = [
     id: 'second-prep-station',
     family: 'THROUGHPUT',
     stage: 1,
-    baseCost: 45,
+    baseCost: 10,
     maxLevel: 2,
     effects: [{ kind: 'prepStations', perLevel: [1, 1] }],
     worldChange: 'A second prep bench appears in the kitchen',
@@ -179,7 +179,7 @@ const STAGE1_UPGRADES: Upgrade[] = [
     id: 'bigger-counter',
     family: 'CAPACITY',
     stage: 1,
-    baseCost: 40,
+    baseCost: 11,
     /*
      * One level, and that is a limit of the *world* rather than of the design.
      * `stage1.ts` authors six queue positions and starts with a capacity of
@@ -195,24 +195,32 @@ const STAGE1_UPGRADES: Upgrade[] = [
     iconKey: 'struct_counter_wide@2x',
     placeholder: 'ph-prop-short',
   },
-  {
-    id: 'roadside-marker',
-    family: 'REACH',
-    stage: 1,
-    baseCost: 60,
-    maxLevel: 3,
-    effects: [{ kind: 'decisionPointMetres', perLevel: [15, 10, 7] }],
-    worldChange: 'A marker board appears at the roadside, up the road',
-    consequence: 'Drivers decide earlier, so they have room to slow down and turn in',
-    anchor: { x: 4.0, y: 5.6 },
-    iconKey: 'struct_roadside_marker@2x',
-    placeholder: 'ph-prop-tall',
-  },
+  /*
+   * **`roadside-marker` was removed here in Phase 12, and it was measured out
+   * rather than argued out.**
+   *
+   * Its effect was `decisionPointMetres`: drivers decide about the stand further
+   * back up the road. The paired experiment, averaged over three seeds, measured
+   * every level of it as **costing ₡8.6 of revenue over twenty-four minutes** —
+   * the only upgrade in the game that made things worse, and consistently so.
+   *
+   * The mechanism is worth writing down because it will catch the next person
+   * too. A converted driver **reserves a parking bay at the moment they decide**,
+   * not when they arrive. Deciding thirty metres earlier therefore holds one of
+   * Stage 1's four bays for the whole drive down the lane, and parking is what
+   * limits Stage 1 throughput at peak. The upgrade bought reach and paid for it
+   * in capacity.
+   *
+   * ECONOMY_DESIGN §6.3 says an upgrade ships only with an effect the player can
+   * notice inside sixty seconds; one whose effect is negative does not ship at
+   * all. Phase 13 rebuilds the tree and owns the REACH family — the constraint it
+   * inherits is that reach must not reserve capacity early.
+   */
   {
     id: 'cooler',
     family: 'PRESERVATION',
     stage: 1,
-    baseCost: 35,
+    baseCost: 12,
     maxLevel: 3,
     effects: [{ kind: 'holdToleranceMs', perLevel: [30_000, 22_000, 16_000] }],
     worldChange: 'A cooler appears behind the counter',
@@ -266,6 +274,23 @@ export function upgrade(id: string): Upgrade {
   if (found === undefined) throw new RangeError(`Unknown upgrade "${id}"`);
   return found;
 }
+
+/**
+ * What the design expects a player to spend on upgrades *within* a stage —
+ * ECONOMY_DESIGN §3, the "aşama içi yükseltme toplamı" row.
+ *
+ * Not a limit the game enforces; a statement of what the stage was costed for.
+ * It matters because the stage-duration targets in the same table were computed
+ * against it: Stage 1 is meant to take 12 to 18 minutes while spending ₡55 on
+ * upgrades and saving ₡140 for the next stage, and a player who spends ₡80
+ * instead is simply playing a longer Stage 1.
+ *
+ * The balance simulator reads it so its policies spend what the design assumed
+ * they would. Measured before it did: policies bought ₡80 of Stage 1 upgrades
+ * and reached Stage 2 at **30.5 minutes**; the same policies inside the designed
+ * budget reach it inside the window.
+ */
+export const STAGE_UPGRADE_BUDGET: readonly number[] = [0, 55, 500, 8_000, 150_000];
 
 /** ECONOMY_DESIGN §6.1. */
 export const LEVEL_GROWTH = 2.2;

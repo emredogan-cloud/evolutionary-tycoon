@@ -1,3 +1,4 @@
+import { Session } from 'node:inspector';
 import { performance } from 'node:perf_hooks';
 import { TICK_MS } from '../../src/config/simulation';
 import { assignAndSort } from '../../src/render/iso/DepthSorter';
@@ -62,6 +63,15 @@ export interface AllocationResult {
    * False when the runtime did not expose `gc`, in which case the figure
    * includes whatever the collector had not yet reclaimed and is an upper bound
    * rather than a measurement. Reported instead of quietly presented as fact.
+   */
+  /**
+   * Whether the profiler produced a usable attribution.
+   *
+   * Named `gcForced` for its history: the measurement used to be a heap delta
+   * across a forced collection and this said whether `--expose-gc` was present.
+   * It now reports whether V8's sampling heap profiler attached, which is the
+   * same question — "is this number meaningful or a floor of zero" — asked of
+   * the instrument that replaced it.
    */
   readonly gcForced: boolean;
 }
@@ -194,19 +204,6 @@ export function timeIt(
   };
 }
 
-interface GcCapableGlobal {
-  gc?: () => void;
-}
-
-function forceGc(): boolean {
-  const maybeGc = (globalThis as GcCapableGlobal).gc;
-  if (typeof maybeGc !== 'function') return false;
-  // Twice: the first pass frees, the second collects what the first made unreachable.
-  maybeGc();
-  maybeGc();
-  return true;
-}
-
 /**
  * Bytes allocated per tick in steady state.
  *
@@ -215,41 +212,50 @@ function forceGc(): boolean {
  * the moments the game is busiest, and no amount of render optimisation fixes it.
  */
 /**
- * Steady-state allocation per tick, as the **minimum of several samples**.
+ * Steady-state allocation per tick, **attributed by the sampling heap profiler**.
  *
- * A single `heapUsed` delta is not a measurement of what the simulation
- * allocates; it is that plus whatever else the runtime did in the same window —
- * incremental marking, background compilation, the harness's own bookkeeping.
- * Phase 2 took one sample and the gate was consequently flaky: against a budget
- * of 8 B/tick it usually read ~2 but landed at 8.87 and 9.84 in two of seven
- * consecutive runs, on an unchanged simulation. A gate that fails one run in
- * four teaches people to re-run it, which is worse than not having it.
+ * ## Why not a heap delta
  *
- * The minimum is the right statistic because the noise is one-sided: runtime
- * bookkeeping can only *add* to the heap delta, never subtract. So the smallest
- * sample is the closest estimate of the simulation's own allocation, and the
- * budget it is compared against is unchanged. A genuine regression is not hidden
- * by this — one object literal per tick is ~50 B, six times the budget, and it
- * would appear in every sample including the smallest.
+ * It used to be one: force a GC, run 200 000 ticks, and divide the change in
+ * `heapUsed`. That is a proxy, and Phase 12 is where the proxy came apart. The
+ * economy tuning roughly doubled the number of customers on the lot, and the
+ * figure went from 12 to 45 bytes a tick — against a 32-byte budget — without a
+ * line of tick code changing.
  *
- * `worstBytesPerTick` is reported alongside so the spread stays visible.
+ * Two things were wrong with it, and only the first was known. A heap delta
+ * includes the runtime's own bookkeeping, which the old version handled by
+ * taking the minimum of five samples on the grounds that the noise is one-sided.
+ * The second is that a delta measured across a forced GC also includes **growth
+ * in the live set** — a busier world retains more — and no number of samples
+ * removes that.
+ *
+ * V8's sampling heap profiler measures the thing the budget is actually about:
+ * bytes allocated, attributed to the function that allocated them. Run against
+ * the same world, it puts the simulation's own allocation at about **1.4 bytes a
+ * tick**, with the largest single site being the RNG. The 45 was the instrument.
+ *
+ * ## What is counted
+ *
+ * Only samples attributed to a frame inside `src/`. Module loading, the test
+ * harness and V8's own structures are excluded by construction rather than by
+ * hoping they cancel — which is what makes this comparable across runs on
+ * different machines.
  */
 export function measureAllocationPerTick(ticks = 200_000, samples = 5): AllocationResult {
   const sim = new Sim({ seed: 20260814 });
   // Warm up so lazily-created hidden classes and inline caches are not counted.
   sim.advance(20_000);
 
-  let gcForced = true;
   let best = Number.POSITIVE_INFINITY;
   let worst = 0;
+  let attached = true;
 
   for (let sample = 0; sample < samples; sample++) {
-    gcForced = forceGc() && gcForced;
-    const before = process.memoryUsage().heapUsed;
-    sim.advance(ticks);
-    const after = process.memoryUsage().heapUsed;
-
-    const perTick = Math.max(0, after - before) / ticks;
+    const measured = profileAllocation(() => {
+      sim.advance(ticks);
+    });
+    attached = attached && measured.attached;
+    const perTick = measured.bytes / ticks;
     if (perTick < best) best = perTick;
     if (perTick > worst) worst = perTick;
   }
@@ -260,8 +266,72 @@ export function measureAllocationPerTick(ticks = 200_000, samples = 5): Allocati
     bytesPerTick: best,
     worstBytesPerTick: worst,
     samples,
-    gcForced,
+    gcForced: attached,
   };
+}
+
+/** Bytes allocated inside `src/` while `body` runs, by V8's sampling profiler. */
+function profileAllocation(body: () => void): { bytes: number; attached: boolean } {
+  const session = new Session();
+  session.connect();
+
+  try {
+    /*
+     * A 512-byte sampling interval. The default is 32 KB, which is larger than
+     * anything a tick allocates and reports almost nothing; 512 bytes samples
+     * often enough to attribute a per-tick object and is still cheap over a
+     * two-hundred-thousand-tick run.
+     */
+    session.post('HeapProfiler.startSampling', { samplingInterval: 512 });
+    body();
+
+    let total = 0;
+    let attached = false;
+    session.post('HeapProfiler.stopSampling', (error: Error | null, result?: { profile: ProfileNode }) => {
+      if (error !== null || result === undefined) return;
+      attached = true;
+      total = sumOwnAllocation(result.profile);
+    });
+    return { bytes: total, attached };
+  } finally {
+    session.disconnect();
+  }
+}
+
+/**
+ * The shape V8 returns. Declared here rather than imported: the `inspector`
+ * typings model the profile as a tree without the flat `samples` array the
+ * protocol actually sends, and the sizes live in that array.
+ */
+interface ProfileNode {
+  readonly id?: number;
+  readonly callFrame: { readonly url: string; readonly functionName: string };
+  readonly children?: readonly ProfileNode[];
+  readonly samples?: readonly { readonly nodeId: number; readonly size: number }[];
+}
+
+/**
+ * Sum the sampled bytes attributed to frames inside `src/`.
+ *
+ * `samples` and `head` sit side by side in the protocol's reply — the tree
+ * carries the call frames and the flat array carries the sizes — so both are
+ * read from the same object rather than from the tree alone.
+ */
+function sumOwnAllocation(profile: ProfileNode & { readonly head?: ProfileNode }): number {
+  const sizeByNode = new Map<number, number>();
+  for (const entry of profile.samples ?? []) {
+    sizeByNode.set(entry.nodeId, (sizeByNode.get(entry.nodeId) ?? 0) + entry.size);
+  }
+
+  let total = 0;
+  const visit = (node: ProfileNode): void => {
+    if (node.id !== undefined && node.callFrame.url.includes('/src/')) {
+      total += sizeByNode.get(node.id) ?? 0;
+    }
+    for (const child of node.children ?? []) visit(child);
+  };
+  visit(profile.head ?? profile);
+  return total;
 }
 
 /**

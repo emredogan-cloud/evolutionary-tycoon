@@ -132,7 +132,20 @@ describe('the window', () => {
 
     expect(grossIncomePerMinute(resumed.world)).toBeCloseTo(grossIncomePerMinute(sim.world), 9);
     expect(netIncomePerMinute(resumed.world)).toBeCloseTo(netIncomePerMinute(sim.world), 9);
-    expect(resumed.world.hash()).toBe(sim.world.hash());
+
+    /*
+     * Restored against restored, not against the live world.
+     *
+     * A live world carries traffic the save deliberately does not — a save is a
+     * statement about the *stand*, not about which cars happened to be on the
+     * road (TECHNICAL_ARCHITECTURE §8.1). Comparing a restored hash with a live
+     * one therefore only passes when the road happens to be empty, which it was
+     * at this tick until Phase 12 changed the arrival rate and it was not any
+     * more. `browserWiring.test.ts` documents the same pattern.
+     */
+    const again = new Sim({ seed: 1 });
+    restoreWorld(again.world, snapshotWorld(sim.world));
+    expect(again.world.hash()).toBe(resumed.world.hash());
   });
 });
 
@@ -148,7 +161,11 @@ describe('the dead-end rule has something to measure against', () => {
       upgradeCost(item, 1, 1) < upgradeCost(best, 1, 1) ? item : best,
     );
     expect(cheapest.id).toBe('hand-painted-sign');
-    expect(upgradeCost(cheapest, 1, 1)).toBe(12);
+    // ₡6 since Phase 12. The Stage 1 ladder was rescaled so that the *next*
+    // rung is always inside ninety seconds of income — the design's own
+    // dead-end rule, which the old ladder (12, 28, 45, 40, 60, 35) broke at
+    // fifteen minutes with a 172-second gap. See PHASE_12_REPORT §4.
+    expect(upgradeCost(cheapest, 1, 1)).toBe(6);
   });
 
   it('states what income the first upgrade would need, at ninety seconds', () => {

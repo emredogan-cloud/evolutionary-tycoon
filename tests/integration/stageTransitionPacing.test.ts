@@ -71,21 +71,29 @@ describe('what is happening when a stage unlocks', () => {
   );
 
   it(
-    'takes far longer than the designed window, which Phase 12 has to fix',
+    'reaches Stage 2 inside the window the design asks for',
     () => {
       /*
-       * **A number recorded because it is wrong, not because it is right.**
+       * **This test was written to fail, and Phase 12 is what fixed it.**
        *
-       * ECONOMY_DESIGN §3 puts Stage 1 at **12–18 minutes**. Measured here:
-       * **46.7 to 55.2 minutes** across five seeds — three to four times the
-       * design target.
+       * Phase 11 measured Stage 1 at **46.7 to 55.2 minutes** against
+       * ECONOMY_DESIGN §3's designed 12 to 18, and asserted the wrong bound
+       * (`> 25`) on purpose so that the balancing phase would have a number to
+       * move rather than an impression. It now reaches Stage 2 in **21.2
+       * minutes**, inside §13's 10-to-22 assertion window.
        *
-       * That is the same demand starvation Phases 8 to 10 kept running into
-       * (1.8 customers a minute against a 5.3 ceiling), seen from the
-       * progression side. It is a **Phase 12 balance problem**, and this test
-       * exists so that phase has a number to move rather than an impression: it
-       * asserts the current, wrong bound, and it is *expected to fail* when the
-       * economy is tuned. Failing is the signal.
+       * The player modelled here is deliberately *not* the balance simulator's:
+       * they buy a sign every thirty seconds whether or not they are saving for
+       * anything, which is a spendthrift rather than a strategy. The budgeted
+       * policies reach Stage 2 at 18.5 minutes (`docs/BALANCE_REPORT.md`), so
+       * this is the slow end of reasonable play and the window has to hold for
+       * it too.
+       *
+       * What actually moved: reputation now starts at the neutral point of its
+       * own published band instead of at the worst value in the game, the Stage
+       * 1 upgrade ladder was rescaled to satisfy the ninety-second dead-end
+       * rule, and Stage 1 prices carry the ₡4.50 average ticket §3 is built on.
+       * All config; no mechanic changed. PHASE_12_REPORT §4.
        */
       const requirement = requirementFor(1);
       expect(requirement).not.toBeNull();
@@ -101,13 +109,11 @@ describe('what is happening when a stage unlocks', () => {
       }
 
       const minutes = (tick * TICK_MS) / 60_000;
-      expect(minutes, `reached in ${minutes.toFixed(1)} minutes`).toBeGreaterThan(0);
-      // The designed window is 12–18. Anything at or under 25 means Phase 12
-      // has done its job and this bound should be tightened to the real one.
-      expect(
-        minutes,
-        `reached in ${minutes.toFixed(1)} min — if this is now inside the design window, tighten the bound`,
-      ).toBeGreaterThan(25);
+      // ECONOMY_DESIGN §13's own window. The design *target* in §3 is 12 to 18;
+      // the assertion band is wider on purpose, because a player who spends
+      // carelessly should still arrive, just later.
+      expect(minutes, `reached in ${minutes.toFixed(1)} minutes`).toBeGreaterThan(10);
+      expect(minutes, `reached in ${minutes.toFixed(1)} minutes`).toBeLessThanOrEqual(22);
     },
     LONG_RUN_TIMEOUT_MS,
   );

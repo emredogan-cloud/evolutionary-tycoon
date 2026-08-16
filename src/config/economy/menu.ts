@@ -62,13 +62,38 @@ export type MenuItem = z.infer<typeof menuItemSchema>;
  */
 export const PRICE_BAND = { min: 0.5, max: 1.5 } as const;
 
+/**
+ * **Prices and ingredient costs scaled by 1.35 in Phase 12** — and the scale
+ * factor is not arbitrary.
+ *
+ * ECONOMY_DESIGN §3 builds the whole Stage 1 envelope on an **average ticket of
+ * ₡4.50**. §4 publishes three Stage 1 prices — ₡3, ₡5 and ₡2 — and the
+ * simulation picks between them uniformly, which averages **₡3.33**. The two
+ * published numbers cannot both be true: §3's ₡4.50 assumes the fourteen-item
+ * menu and the archetype-weighted choice its own `appealTags` imply, and neither
+ * exists yet.
+ *
+ * The balance simulator measured the consequence exactly. At the designed
+ * traffic and conversion, Stage 1 income topped out at **₡10.6/min against a
+ * designed ₡15**, and the whole of that gap is the ticket: ₡10.6 × (4.50/3.85
+ * including tips) = ₡12.4, inside the ±25% band. The dead-end rule missed for
+ * the same reason and by the same factor.
+ *
+ * So the three prices *and* the three ingredient costs are scaled together by
+ * 4.50 / 3.33, which lands the uniform average on ₡4.50 exactly and **leaves
+ * every published margin unchanged** (73%, 64%, 75% — ECONOMY_DESIGN §4). It is
+ * a deliberate departure from §4's price column, recorded as a change request in
+ * `docs/BALANCE_REPORT.md`: when the menu is complete and item choice is
+ * weighted, these three should go back to ₡3 / ₡5 / ₡2 and the average will
+ * arrive from the mix instead.
+ */
 const STAGE1_ITEMS: MenuItem[] = [
   {
     id: 'lemonade',
     stage: 1,
     station: 'DRINK',
-    baseCost: 0.8,
-    basePrice: 3,
+    baseCost: 1.08,
+    basePrice: 4.05,
     prepTimeMs: 2500,
     holdToleranceMs: 90_000,
     qualityBase: 0.72,
@@ -79,8 +104,8 @@ const STAGE1_ITEMS: MenuItem[] = [
     id: 'hotdog',
     stage: 1,
     station: 'GRILL',
-    baseCost: 1.8,
-    basePrice: 5,
+    baseCost: 2.43,
+    basePrice: 6.75,
     prepTimeMs: 5000,
     holdToleranceMs: 60_000,
     qualityBase: 0.78,
@@ -91,8 +116,8 @@ const STAGE1_ITEMS: MenuItem[] = [
     id: 'chips',
     stage: 1,
     station: 'PREP',
-    baseCost: 0.5,
-    basePrice: 2,
+    baseCost: 0.68,
+    basePrice: 2.7,
     prepTimeMs: 1000,
     holdToleranceMs: 300_000,
     qualityBase: 0.65,

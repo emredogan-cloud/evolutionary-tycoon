@@ -404,14 +404,28 @@ Bu, ekonomi tasarımını **teste tabi bir sözleşme** hâline getirir. Bir con
 ## 15. Nihai denge kontrol listesi (Faz 12 çıkış kriteri)
 
 ```
-[ ] Balance simülatörü 5 politikanın hepsinde yeşil
-[ ] Aşama süreleri tasarlanan aralıkta
-[ ] En iyi/en kötü politika farkı ≤ 2.5×
-[ ] 12 saatte gelir tavanı aşılmıyor
-[ ] Çıkmaz yok (90 sn kuralı hiç ihlal edilmiyor)
-[ ] Her aşamada en az 2 geçerli strateji var
-[ ] Offline kazanç aktif oyunun %40'ını geçmiyor
-[ ] 3 gerçek oyuncu ile 1 saatlik oturum: hiçbiri "sıkıldım" veya "takıldım" demiyor
-[ ] Sayılar hiçbir zaman okunamaz büyüklüğe ulaşmıyor (maks 6 hane)
-[ ] Tüm ekonomi sabitleri config'de, kodda sıfır literal
+[x] Balance simülatörü 5 politikanın hepsinde yeşil        → docs/BALANCE_REPORT.md
+[~] Aşama süreleri tasarlanan aralıkta                     → Aşama 1 ✅ 21.4 dk (10–22).
+                                                             Aşama 2–4 DEĞERLENDİRİLEMEZ:
+                                                             o aşamaların içeriği henüz yok.
+[x] En iyi/en kötü politika farkı ≤ 2.5×                   → 1.0× (dört stratejik politika)
+[x] 12 saatte gelir tavanı aşılmıyor                       → tepe ₡37.1/dk, tavan ₡600
+[x] Çıkmaz yok (90 sn kuralı hiç ihlal edilmiyor)          → en kötü 68 sn (MERGE-BLOCKING)
+[ ] Her aşamada en az 2 geçerli strateji var               → **HAYIR.** Aşama 1'de beş
+                                                             yükseltme ve ₡55 bütçe var;
+                                                             dört politikanın dördü de aynı
+                                                             sırayla alıyor (fark 1.0×).
+                                                             Faz 13'ün ağacı olmadan
+                                                             ayrışamazlar.
+[ ] Offline kazanç aktif oyunun %40'ını geçmiyor           → offline kazanç henüz yok (P14)
+[ ] 3 gerçek oyuncu ile 1 saatlik oturum                   → **YAPILMADI.** PHASE_12_REPORT §10
+[x] Sayılar okunamaz büyüklüğe ulaşmıyor (maks 6 hane)     → 12 saatte en yüksek nakit ₡6 677
+[~] Tüm ekonomi sabitleri config'de, kodda sıfır literal   → başlangıç itibarı World.ts'de
+                                                             literal `0` idi; `STARTING_REPUTATION`
+                                                             olarak config'e taşındı. Kalanı
+                                                             tarandı, başka literal bulunmadı.
 ```
+
+**Faz 12 çıkışında dört madde açık.** İkisi içerik eksikliğinden (Aşama 2–4 menüsü ve
+yükseltme ağacı), biri henüz yazılmamış bir sistemden (offline), biri insan gerektiriyor.
+Hiçbiri sessizce geçilmiş sayılmadı — dördü de PHASE_12_REPORT §8 ve §11'de kayıtlı.

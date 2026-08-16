@@ -457,7 +457,20 @@ describe('installTestHooks', () => {
     installTestHooks(target, sim, loop, saves, new FrameMeter());
     const api = hooksOn(target);
 
+    /*
+     * Advanced until there is traffic on the road, not for a fixed 300 ticks.
+     * The premise of the last assertion is that a live world carries transient
+     * state the save drops — and a fixed tick count only satisfies it when a car
+     * happens to be passing. Phase 12 changed the arrival rate and tick 300 with
+     * this seed became an empty road, so the test compared two identical worlds
+     * and asserted they differed.
+     */
     api.advanceTicks(300);
+    for (let attempt = 0; attempt < 40 && sim.world.vehicles.activeCount === 0; attempt++) {
+      api.advanceTicks(20);
+    }
+    expect(sim.world.vehicles.activeCount, 'no traffic to lose in the save').toBeGreaterThan(0);
+    const savedTick = sim.world.tick;
     const savedHash = api.getWorldHash();
 
     const saved = await api.save();
@@ -475,7 +488,7 @@ describe('installTestHooks', () => {
     expect(loaded.ok).toBe(true);
     expect(loaded.slot).toBe('save');
     expect(loaded.recovered).toBe(false);
-    expect(loaded.tick).toBe(300);
+    expect(loaded.tick).toBe(savedTick);
     expect(loaded.hash).toBe(reference.hash);
     expect(loaded.hash).not.toBe(savedHash);
   });

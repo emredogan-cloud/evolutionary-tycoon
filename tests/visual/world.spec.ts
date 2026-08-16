@@ -165,7 +165,16 @@ test.describe('visual goldens', () => {
       page,
       'empty',
       8280,
-      '&cook=1&buy=hand-painted-sign,roadside-marker,second-prep-station',
+      /*
+       * `roadside-marker` was removed in Phase 12 — the paired experiment
+       * measured every level of it as costing revenue, because a converted
+       * driver reserves a bay the moment they decide and the marker made them
+       * decide sooner. `bigger-counter` takes its place here: three upgrades
+       * from three different families is what the golden is about, and the
+       * simulation refuses a purchase it does not recognise, which is what took
+       * the scene to `data-sim-state="failed"`.
+       */
+      '&cook=1&buy=hand-painted-sign,bigger-counter,second-prep-station',
     );
     await expect(page).toHaveScreenshot('upgrades-after.png');
   });

@@ -163,18 +163,40 @@ describe('spawn rate', () => {
       // The single property Phase 6 depends on. A decorative vehicle that reached
       // the conversion system would spend the economy's demand on a car that was
       // only ever scenery.
+      /*
+       * Watched over ten minutes rather than sampled once at the end — Phase 12.
+       *
+       * A single snapshot used to be enough because decorative traffic was four
+       * times the convertible rate and the road was always full of it. It is no
+       * longer: Phase 12 raised the convertible rate to deliver the designed 24
+       * arrivals a minute and the road carries about 45 in total, so convertible
+       * traffic now claims most of the entrances and there are instants with no
+       * decorative car alive at all. The **crowding-out is a real finding** (see
+       * PHASE_12_REPORT §5) and the property this test is about — that scenery is
+       * never counted as demand — is unaffected by it.
+       */
       const sim = new Sim({ seed: 4242 });
-      sim.advance(TICKS_PER_MINUTE * 10);
+      let decorativeSeen = 0;
+      let sampled = 0;
 
-      let decorative = 0;
-      let convertible = 0;
-      for (let slot = 0; slot < sim.world.vehicles.capacity; slot++) {
-        if (!sim.world.vehicles.isActive(slot)) continue;
-        if (sim.world.vehicles.decorative[slot] === 1) decorative++;
-        else convertible++;
+      for (let tick = 0; tick < TICKS_PER_MINUTE * 10; tick++) {
+        sim.tick();
+        if (tick % 100 !== 0) continue;
+
+        let decorative = 0;
+        let convertible = 0;
+        for (let slot = 0; slot < sim.world.vehicles.capacity; slot++) {
+          if (!sim.world.vehicles.isActive(slot)) continue;
+          if (sim.world.vehicles.decorative[slot] === 1) decorative++;
+          else convertible++;
+        }
+        expect(decorative + convertible).toBe(sim.world.vehicles.activeCount);
+        decorativeSeen += decorative;
+        sampled++;
       }
-      expect(decorative + convertible).toBe(sim.world.vehicles.activeCount);
-      expect(decorative).toBeGreaterThan(0);
+
+      expect(sampled).toBeGreaterThan(0);
+      expect(decorativeSeen, 'no decorative traffic reached the road at all').toBeGreaterThan(0);
     },
     LONG_RUN_TIMEOUT_MS,
   );

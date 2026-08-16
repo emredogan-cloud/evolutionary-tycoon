@@ -60,7 +60,7 @@ async function boot(page: Page, seed = 424242): Promise<void> {
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
 }
 
-/** Earn enough for the cheapest upgrade — ₡12 — and wait for the HUD to agree. */
+/** Earn enough for the cheapest upgrade — ₡6 since Phase 12 — and wait for the HUD to agree. */
 async function earnFor(page: Page, credits: number): Promise<void> {
   for (let minute = 0; minute < 30; minute++) {
     await cookFor(page, TICKS_PER_MINUTE);
@@ -110,7 +110,9 @@ test.describe('buying an upgrade', () => {
     await expect(page.locator('[data-testid="upgrade-level"]')).toHaveText(/Seviye 0 \/ 4/);
     await expect(card).toContainText('1.00×');
     await expect(card).toContainText('1.30×');
-    await expect(page.locator('[data-testid="upgrade-buy"]')).toContainText('₡12');
+    // ₡6 since Phase 12 rescaled the Stage 1 ladder so the next rung is always
+    // inside ninety seconds of income — PHASE_12_REPORT §4.
+    await expect(page.locator('[data-testid="upgrade-buy"]')).toContainText('₡6');
   });
 
   test('refuses the purchase while the player cannot afford it', async ({ page }) => {
@@ -140,7 +142,8 @@ test.describe('buying an upgrade', () => {
       .poll(async () => readCash(page), { message: 'the HUD never showed the purchase' })
       .toBeLessThan(before);
 
-    expect(before - (await readCash(page))).toBeCloseTo(12, 1);
+    // ₡6 since Phase 12's ladder rescale — see the note on the buy button above.
+    expect(before - (await readCash(page))).toBeCloseTo(6, 1);
     await expect(
       page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]'),
     ).toHaveAttribute('data-level', '1');
@@ -211,17 +214,29 @@ test.describe('the price panel', () => {
 
     // The band itself, ±50% of ₡5, drawn as the slider's own range so the limit
     // is visible rather than discovered by being refused.
-    await expect(slider).toHaveAttribute('min', '2.5');
-    await expect(slider).toHaveAttribute('max', '7.5');
+    /*
+     * The ±50% band around the hot dog's base price, which Phase 12 moved from
+     * ₡5 to ₡6.75 — the three Stage 1 prices and their ingredient costs were
+     * scaled together so the uniform three-item average is the ₡4.50 ticket
+     * ECONOMY_DESIGN §3 builds the envelope on, with every published margin
+     * unchanged. `PRICE_BAND` itself is untouched.
+     */
+    await expect(slider).toHaveAttribute('min', '3.375');
+    await expect(slider).toHaveAttribute('max', '10.125');
 
-    await slider.fill('7.5');
+    /*
+     * The band's own maximum, not a round number. The slider steps in ₡0.05 and
+     * its minimum is ₡3.375, so ₡10 is not a value it can hold — Playwright
+     * rejects it as malformed. The maximum always is, by construction.
+     */
+    await slider.fill('10.125');
     /*
      * One tick, because a command lands at the *start* of a tick and never on
      * dispatch — a deliberate property (wall-clock arrival time must not change
      * an outcome), and one that makes a paused world look like a broken slider.
      */
     await advance(page, 1);
-    await expect(page.locator('[data-testid="price-value"][data-item="hotdog"]')).toHaveText(/7,50/);
+    await expect(page.locator('[data-testid="price-value"][data-item="hotdog"]')).toHaveText(/10,1/);
   });
 });
 

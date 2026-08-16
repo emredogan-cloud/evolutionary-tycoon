@@ -105,12 +105,20 @@ test.describe('the service loop, end to end', () => {
      */
     await boot(page);
 
+    /*
+     * Sampled every twenty ticks rather than every two hundred. A bubble exists
+     * only while somebody is waiting for food, and with manual preparation on
+     * every tick that window is a couple of seconds — thirty coarse looks caught
+     * it often enough to pass until Phase 12's balancing shifted the timing, and
+     * then it caught nothing at all. Three hundred fine looks cover the same
+     * five simulated minutes and sample fifteen times as often.
+     */
     let item: string | null = null;
-    for (let step = 0; step < 30 && item === null; step++) {
-      await cookFor(page, 200);
+    for (let step = 0; step < 300 && item === null; step++) {
+      await cookFor(page, 20);
       // The bridge samples off the frame loop, so the DOM trails the world by up
       // to a tenth of a second.
-      await page.waitForTimeout(120);
+      await page.waitForTimeout(20);
       const bubble = page.locator('[data-testid="order-bubble"]').first();
       if ((await bubble.count()) > 0) item = await bubble.getAttribute('data-item');
     }

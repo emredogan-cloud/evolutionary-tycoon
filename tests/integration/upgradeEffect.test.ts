@@ -225,14 +225,24 @@ describe('the bigger counter — queue capacity', () => {
 });
 
 describe('the roadside marker — the decision point', () => {
-  it('moves the decision earlier by the documented distance', () => {
+  it('has no reach upgrade at all, since Phase 12 measured the only one as harmful', () => {
+    /*
+     * `roadside-marker` was the REACH family's only member and it moved the
+     * decision point further up the road. The Phase 12 paired experiment,
+     * averaged over three seeds, measured **every level of it as costing
+     * revenue** — a converted driver reserves a parking bay the moment they
+     * decide, so deciding earlier holds one of Stage 1's four bays for the whole
+     * drive down the lane, and parking is what limits Stage 1 at peak.
+     *
+     * It was removed rather than weakened, because ECONOMY_DESIGN §6.3 says an
+     * upgrade ships only with an effect the player notices inside sixty seconds
+     * and a negative one does not ship at all. Phase 13 rebuilds the tree and
+     * owns the family; this asserts the interim state so its return is
+     * deliberate.
+     */
     const sim = new Sim({ seed: 1 });
-    fund(sim);
-
-    buyUpgrade(sim.world, 'roadside-marker');
-    expect(effectValue(sim.world, 'decisionPointMetres')).toBe(15);
-    buyUpgrade(sim.world, 'roadside-marker');
-    expect(effectValue(sim.world, 'decisionPointMetres')).toBe(25);
+    expect(UPGRADES.some((item) => item.family === 'REACH')).toBe(false);
+    expect(effectValue(sim.world, 'decisionPointMetres')).toBe(0);
   });
 
   it(

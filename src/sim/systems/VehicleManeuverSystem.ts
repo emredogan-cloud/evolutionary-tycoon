@@ -85,6 +85,8 @@ export class VehicleManeuverSystem implements SimSystem {
 
   /** Reused by every sample; the manoeuvre path never allocates. */
   private readonly sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  /** A second scratch, so `nearestOnExit` cannot clobber the one it is comparing against. */
+  private readonly exitScratch: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
 
   constructor(
     private readonly lanes: LaneGraph,
@@ -427,13 +429,95 @@ export class VehicleManeuverSystem implements SimSystem {
   /**
    * Start the exit manoeuvre from wherever the vehicle currently is.
    *
-   * Used both by a customer who has given up and by one who was never let in.
+   * Used both by a customer who has given up and by one who was never let in —
+   * and, since Phase 11, by a car leaving the **drive-thru lane**, which is what
+   * made the naive version wrong.
+   *
+   * ## Why it does not simply set `maneuverS` to zero
+   *
+   * The exit path starts at the *bay*. A car that is in a bay is therefore at
+   * arc length zero and the old one-liner was right for it. A car in the
+   * drive-thru window is nowhere near that bay, so starting it at zero moved it
+   * across the lot between two frames: measured, an **eleven-metre jump in a
+   * fifty-millisecond tick**, caught by `driveThru.test.ts`'s no-teleport check
+   * once Phase 12's balancing put enough cars through the lane to hit it.
+   *
+   * So the car's current position is sampled first and the exit is joined at the
+   * nearest point on it. That is continuous for every caller by construction,
+   * rather than for the callers somebody remembered.
    */
   beginExit(world: World, slot: number, bay: number): void {
     const vehicles = world.vehicles;
-    vehicles.parkingSlot[slot] = bay;
+    this.positionOf(world, slot, this.sample);
+    const fromX = this.sample.x;
+    const fromY = this.sample.y;
+
+    /*
+     * A car in the drive-thru keeps its own curve.
+     *
+     * The caller passes the *customer's* parking slot, which for a drive-thru
+     * customer is -1 — they never parked. The **vehicle** knows better: it was
+     * given the lane slot's bay index when it entered (`driveThruBay`), and that
+     * index has a real exit path leading back to the road. Overwriting it with
+     * the customer's -1 routed a car at the window onto the pass-through curve
+     * that starts beside the road, eleven metres away.
+     *
+     * `DriveThruSystem.collect` clears `customer.laneSlot` before this runs, on
+     * purpose — the slot is freed early so the car behind creeps forward on the
+     * same tick — so the customer cannot be asked either. The vehicle can.
+     */
+    const current = at(vehicles.parkingSlot, slot);
+    const resolved = this.maneuvers.laneSlotOf(current) >= 0 ? current : bay;
+
+    vehicles.parkingSlot[slot] = resolved;
     vehicles.state[slot] = VEHICLE_EXITING;
-    vehicles.maneuverS[slot] = 0;
+    vehicles.maneuverS[slot] = this.nearestOnExit(at(vehicles.lane, slot), resolved, fromX, fromY);
+  }
+
+  /**
+   * Arc length along a bay's exit path closest to a world point.
+   *
+   * Coarse scan, then bisection. The coarse pass alone left a **1.3 m step** on
+   * the drive-thru's long exit curve — a scan of thirty-two samples over an
+   * eighty-metre path can only ever land within a metre or so, and a metre in a
+   * fifty-millisecond tick is exactly the teleport this is here to remove.
+   *
+   * Twelve refinement rounds take that under a centimetre, which is well inside
+   * the 5 cm the depth sorter treats as indistinguishable. It runs when a car
+   * departs, not per tick, so the cost is irrelevant next to being right.
+   */
+  private nearestOnExit(laneIndex: number, bay: number, x: number, y: number): number {
+    if (laneIndex >= this.lanes.laneCount) return 0;
+    const path = this.maneuvers.setFor(laneIndex, bay).exit.path;
+
+    const distanceAt = (s: number): number => {
+      path.sample(s, this.exitScratch);
+      return (this.exitScratch.x - x) ** 2 + (this.exitScratch.y - y) ** 2;
+    };
+
+    const steps = 32;
+    let bestS = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i <= steps; i++) {
+      const s = (path.length * i) / steps;
+      const distance = distanceAt(s);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestS = s;
+      }
+    }
+
+    // Bisect the bracket the coarse pass left, which is one step either side.
+    let low = Math.max(0, bestS - path.length / steps);
+    let high = Math.min(path.length, bestS + path.length / steps);
+    for (let round = 0; round < 12; round++) {
+      const third = (high - low) / 3;
+      const left = low + third;
+      const right = high - third;
+      if (distanceAt(left) < distanceAt(right)) high = right;
+      else low = left;
+    }
+    return (low + high) / 2;
   }
 
   /**

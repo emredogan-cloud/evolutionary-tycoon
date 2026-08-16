@@ -1,23 +1,23 @@
 {
-  "recordedAt": "phase11",
+  "recordedAt": "phase12",
   "environment": "local (mixed calibration; see calibrationMs)",
   "statistic": "minMsPerCalibration",
-  "calibrationMs": 0.9004,
+  "calibrationMs": 0.9043,
   "timings": {
-    "1000 ticks from a fresh world": 1.85685,
-    "world hash (120 vehicles, 60 customers)": 12.30725,
-    "populated tick (120 vehicles, 20 customers)": 3.44904,
-    "crowded tick (60 pedestrians, 120 vehicles)": 56.75463,
-    "service tick (120 vehicles, 40 pedestrians, 20 orders)": 47.4269,
-    "staffed tick (8 employees, 60 pedestrians, 120 vehicles)": 59.57759,
-    "stage 4 tick (8 employees, 60 pedestrians, 120 vehicles)": 61.54253,
-    "flow field rebuild, 64x64 x 20 goals": 78.95693,
-    "flow field, one goal": 19.67254,
-    "1000 ticks, one command each": 1.89733,
-    "1000 ticks, 8 events per tick, 3 subscribers": 1.99318,
-    "vehicle spawn + despawn cycles": 1.9362,
-    "world snapshot + JSON serialise": 2.50134,
-    "depth sort, 260 objects": 1.40872
+    "1000 ticks from a fresh world": 2.73603,
+    "world hash (120 vehicles, 60 customers)": 12.4604,
+    "populated tick (120 vehicles, 20 customers)": 3.04144,
+    "crowded tick (60 pedestrians, 120 vehicles)": 56.16677,
+    "service tick (120 vehicles, 40 pedestrians, 20 orders)": 47.0625,
+    "staffed tick (8 employees, 60 pedestrians, 120 vehicles)": 58.44933,
+    "stage 4 tick (8 employees, 60 pedestrians, 120 vehicles)": 61.05722,
+    "flow field rebuild, 64x64 x 20 goals": 78.49206,
+    "flow field, one goal": 19.59126,
+    "1000 ticks, one command each": 2.75849,
+    "1000 ticks, 8 events per tick, 3 subscribers": 2.88138,
+    "vehicle spawn + despawn cycles": 1.94601,
+    "world snapshot + JSON serialise": 2.5533,
+    "depth sort, 260 objects": 1.39559
   },
-  "bytesPerTick": 11.815
+  "bytesPerTick": 0
 }

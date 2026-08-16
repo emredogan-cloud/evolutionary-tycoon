@@ -288,11 +288,20 @@ describe('vehicle motion in the pipeline', () => {
         peak = Math.max(peak, count);
       }
 
-      // Asserted loosely and deliberately: this pins the order of magnitude so a
-      // future change to the rate, the speed or the lane length has to come here
-      // and update the number consciously.
+      /*
+       * Asserted loosely and deliberately: this pins the order of magnitude so a
+       * future change to the rate, the speed or the lane length has to come here
+       * and update the number consciously.
+       *
+       * **Updated consciously in Phase 12.** The bound was 12 and the arrival
+       * rate was 24 attempted per real minute, of which the road delivered 19.
+       * Phase 12 raised the attempted rate to 28 so the *delivered* rate is the
+       * 24 the economy is calibrated on (ECONOMY_DESIGN §3), and halved the
+       * decorative multiplier so the extra arrivals are demand rather than
+       * scenery. Measured after that change: peak 12, mean 5.2 on the road.
+       */
       expect(peak).toBeGreaterThan(0);
-      expect(peak).toBeLessThan(12);
+      expect(peak).toBeLessThan(16);
       expect(empty + occupied).toBe(ticks);
     },
     LONG_RUN_TIMEOUT_MS,

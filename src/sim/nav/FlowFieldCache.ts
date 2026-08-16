@@ -50,9 +50,27 @@ import { NavGrid } from './NavGrid';
 export const GOAL_COUNTER = 'counter';
 export const GOAL_EXIT = 'exit';
 
+/**
+ * The per-bay goal names, built once.
+ *
+ * `parking_0`, `parking_1`, … — and they are **cached rather than formatted**,
+ * because `NavigationSystem.goalFor` asks for one on every tick for every
+ * customer walking back to their car. Formatting it there allocated a string per
+ * customer per tick: measured at Phase 12, the simulation allocated **48.8 bytes
+ * a tick against a 32-byte budget** in a busy world, and roughly half of that
+ * was this line. A lazily-grown array of interned strings costs nothing after
+ * the first lap of the car park.
+ */
+const PARKING_GOAL_NAMES: string[] = [];
+
 /** Prefix for the per-bay goals: `parking_0`, `parking_1`, … */
 export function parkingGoal(bay: number): string {
-  return `parking_${String(bay)}`;
+  const cached = PARKING_GOAL_NAMES[bay];
+  if (cached !== undefined) return cached;
+
+  const name = `parking_${String(bay)}`;
+  PARKING_GOAL_NAMES[bay] = name;
+  return name;
 }
 
 export class FlowFieldCache {

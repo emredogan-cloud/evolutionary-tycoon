@@ -157,6 +157,31 @@ jobs:
           BENCH_ENVIRONMENT: github-actions ubuntu-24.04, node ${{ env.NODE_VERSION }}
         run: pnpm bench:sim
 
+  balance:
+    name: Economy balance gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The ten assertions of ECONOMY_DESIGN §13, run against the real
+      # simulation core. This is the gate that makes economy balance a testable
+      # contract rather than an opinion: a config change that breaks the pacing
+      # cannot be merged. One of the ten — the dead-end rule — is marked
+      # merge-blocking by the design itself and is asserted separately so a
+      # failure of *that* one is unmistakable in the log.
+      #
+      # Two simulated hours per policy, five policies, inside a ninety-second
+      # budget that the suite asserts on itself.
+      - name: Economy assertions
+        run: pnpm balance:check
+
   build:
     name: Build + bundle budget
     runs-on: ubuntu-24.04
