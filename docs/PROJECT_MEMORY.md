@@ -1165,19 +1165,22 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 **Son tamamlanan faz: P13 — Upgrade System v2 / tam ağaç (TEKNİK PASS) · BATCH 11–13 KAPANDI**
 
-| Kanıt           | Değer                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| Testler         | **1 319** unit/integration · **5** balance · **128** E2E · **14** golden · **21** perf           |
-| `pnpm verify`   | ✅ temiz (303 dosya, 155 modül, knip temiz, coverage eşikleri oynatılmadı)                       |
-| Ağaç            | **30 yükseltme · 5 aile · 4 aşama**, ön koşul zincirleriyle                                      |
-| Menü            | 3 → **13 kalem**; `MenuItem.stage` (Faz 8'den beri okunmayan alan) devreye alındı                |
-| Etki türleri    | 10 yeni tür, her biri `src/sim`'de **tam bir tüketiciyle** — test kaynak taraması yapıyor        |
-| İki geçerli yol | **2 · 4 · 3 farklı satın alma seti** Aşama 1/2/3'ten çıkıyor — roadmap'in şartı ölçüldü          |
-| İçerik tükenmi  | 6 saat sonra **12–26 yükseltme hâlâ alınmamış** — P12'nin `⊘` assertion'ı artık geçiyor          |
-| Balance kapısı  | 11 assertion'ın **9'u geçiyor, 2'si DEĞERLENDİRİLEMEZ** (ortalama sepet aritmetiği)              |
-| Gelir eğrisi    | ₡12.8 → **₡21.1 → ₡40.8 → ₡69.3**/dk (aşama 1→4)                                                 |
-| Rapor           | [PHASE_13_REPORT.md](phases/PHASE_13_REPORT.md) · [BATCH_11_13_REPORT.md](BATCH_11_13_REPORT.md) |
-| Kapı            | ✅ **TEKNİK PASS** — 15 DoD maddesinin 14'ü temiz                                                |
+| Kanıt           | Değer                                                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Testler         | **1 319** unit/integration · **5** balance · **128** E2E · **14** golden · **21** perf                                                                              |
+| `pnpm verify`   | ✅ temiz (303 dosya, 155 modül, knip temiz, coverage eşikleri oynatılmadı)                                                                                          |
+| Ağaç            | **30 yükseltme · 5 aile · 4 aşama**, ön koşul zincirleriyle                                                                                                         |
+| Menü            | 3 → **13 kalem**; `MenuItem.stage` (Faz 8'den beri okunmayan alan) devreye alındı                                                                                   |
+| Etki türleri    | 10 yeni tür, her biri `src/sim`'de **tam bir tüketiciyle** — test kaynak taraması yapıyor                                                                           |
+| İki geçerli yol | **2 · 4 · 3 farklı satın alma seti** Aşama 1/2/3'ten çıkıyor — roadmap'in şartı ölçüldü                                                                             |
+| İçerik tükenmi  | 6 saat sonra **12–26 yükseltme hâlâ alınmamış** — P12'nin `⊘` assertion'ı artık geçiyor                                                                             |
+| Balance kapısı  | 11 assertion'ın **9'u geçiyor, 2'si DEĞERLENDİRİLEMEZ** (ortalama sepet aritmetiği)                                                                                 |
+| Gelir eğrisi    | ₡12.8 → **₡21.1 → ₡40.8 → ₡69.3**/dk (aşama 1→4)                                                                                                                    |
+| CI              | `workflow_dispatch` run **31933009343** — **11/11 job yeşil**, yeni **Economy balance gate** dahil; WebKit smoke pinlenmiş container'da geçti                       |
+| Preview E2E     | run **31933221297** ✅ — ilk koşuşta kırmızıydı, sebebi kendi CSP'mizin Vercel toolbar'ını doğru reddetmesiydi; filtre `verticalSlice.spec.ts`'in biçiminde eklendi |
+| Dal             | `phase/11-evolution` → `8fabe0c` (push edildi; **PR açılmadı** — PR #17 hâlâ açık ve bu dal onun üstünde)                                                           |
+| Rapor           | [PHASE_13_REPORT.md](phases/PHASE_13_REPORT.md) · [BATCH_11_13_REPORT.md](BATCH_11_13_REPORT.md)                                                                    |
+| Kapı            | ✅ **TEKNİK PASS** — 15 DoD maddesinin 14'ü temiz                                                                                                                   |
 
 **Dürüst kayıtlar:** ağacın kendisi yetmedi — **menü Aşama 1'de duruyordu**, bu yüzden Aşama 3
 lokantası limonata fiyatına limonata satıyordu ve hiçbir yükseltme bunu düzeltemezdi ·
