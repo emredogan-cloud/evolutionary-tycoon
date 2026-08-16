@@ -21,6 +21,24 @@ import { expect, test } from './fixtures';
  * of affordance as `?scene=` and is documented as one in `renderMode.ts`.
  */
 
+/**
+ * Hosts whose injected scripts our own CSP blocks, correctly.
+ *
+ * Vercel adds a preview-toolbar script to every preview deployment; our
+ * `script-src 'self'` refuses it and the browser logs a violation. That
+ * violation is **the policy working**, not the game failing — and this test's
+ * "no errors" assertion is about the Stage 4 world, which has nothing to do with
+ * it. Filtered by host and only for CSP violations, exactly as
+ * `verticalSlice.spec.ts` does, so a real error from our own code cannot hide
+ * behind it.
+ */
+const FOREIGN_SCRIPT_HOSTS = ['vercel.live'];
+
+function isForeignCspViolation(text: string): boolean {
+  if (!text.includes('Content Security Policy')) return false;
+  return FOREIGN_SCRIPT_HOSTS.some((host) => text.includes(host));
+}
+
 interface TestApi {
   dispatch(command: Record<string, unknown>): void;
   advanceTicks(n: number): void;
@@ -29,9 +47,12 @@ interface TestApi {
 
 test('the Stage 4 restaurant boots, renders and keeps serving', async ({ page }) => {
   const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('pageerror', (error) => {
+    if (!isForeignCspViolation(error.message)) errors.push(error.message);
+  });
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
+    if (message.type() !== 'error') return;
+    if (!isForeignCspViolation(message.text())) errors.push(message.text());
   });
 
   await page.goto('/?e2e=1&seed=424242&paused=1&stage=4');
