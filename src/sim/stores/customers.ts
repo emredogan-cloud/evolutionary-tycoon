@@ -40,6 +40,32 @@ export interface CustomerRecord {
   /** Position in the counter queue, or -1 when not queueing. */
   queueIndex: number;
   /**
+   * Which channel they chose — `CHANNEL_COUNTER` or `CHANNEL_DRIVE_THRU`.
+   *
+   * Decided once, at conversion, and never revisited. A customer who could
+   * switch channels after seeing the queue would be modelling a driver who can
+   * reverse out of a drive-thru lane, which is both rare and a much bigger
+   * simulation than this one.
+   */
+  channel: number;
+  /**
+   * Place in the drive-thru lane, or -1. Index 0 is at the window.
+   *
+   * Separate from `queueIndex` because they are different queues with different
+   * capacities and different patience, and a single field would make "which
+   * queue is this person in" a question about their state rather than a fact.
+   */
+  laneSlot: number;
+  /**
+   * The table they are sitting at, or -1 — Stage 3 onward.
+   *
+   * A seated customer is the reason delivery stops being instantaneous: their
+   * food is made at the pass and has to be *carried* to them. Three features
+   * built in Phases 8, 9 and 10 have been waiting for this one field to become
+   * meaningful — the pass plate indicator, the cooler, and the waiter role.
+   */
+  tableSlot: number;
+  /**
    * Spot in the waiting area, or -1.
    *
    * Held once assigned, and that is the whole point of storing it. Choosing the
@@ -101,6 +127,9 @@ function createCustomer(): CustomerRecord {
     vehicleSlot: -1,
     parkingSlot: -1,
     queueIndex: -1,
+    channel: 0,
+    laneSlot: -1,
+    tableSlot: -1,
     waitSpot: -1,
     patienceMs: 0,
     patienceMaxMs: 0,
@@ -127,6 +156,9 @@ function resetCustomer(record: CustomerRecord): void {
   record.vehicleSlot = -1;
   record.parkingSlot = -1;
   record.queueIndex = -1;
+  record.channel = 0;
+  record.laneSlot = -1;
+  record.tableSlot = -1;
   record.waitSpot = -1;
   record.patienceMs = 0;
   record.patienceMaxMs = 0;
@@ -160,6 +192,9 @@ export function writeCustomer(hasher: Hasher, record: CustomerRecord): void {
   hasher.writeI32(record.vehicleSlot);
   hasher.writeI32(record.parkingSlot);
   hasher.writeI32(record.queueIndex);
+  hasher.writeU8(record.channel);
+  hasher.writeI32(record.laneSlot);
+  hasher.writeI32(record.tableSlot);
   hasher.writeI32(record.waitSpot);
   hasher.writeF64(record.patienceMs);
   hasher.writeF64(record.patienceMaxMs);

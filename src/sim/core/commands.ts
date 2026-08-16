@@ -1,6 +1,9 @@
 import { MENU, PRICE_BAND } from '@config/economy/menu';
 import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
+import { navigationIntact } from '../nav/reachability';
+import { placeObject, removeObject } from '../systems/LayoutSystem';
+import { beginConstruction } from '../systems/ProgressionSystem';
 import { fire, hire } from '../systems/StaffSystem';
 import { buyUpgrade } from '../systems/UpgradeSystem';
 import type { World } from './World';
@@ -105,6 +108,34 @@ interface FireCommand {
   readonly entityId: number;
 }
 
+/**
+ * Confirm a stage transition — Phase 11.
+ *
+ * Carries nothing. The stage being built toward is whatever the world says is
+ * pending; a command that named its own target would be a command that could
+ * skip a stage, and it is replayed from logs written by other builds.
+ */
+interface EvolveCommand {
+  readonly t: 'EVOLVE';
+  readonly tick: number;
+}
+
+/** Put an object in the world. Refused if it would block navigation. */
+interface PlaceCommand {
+  readonly t: 'PLACE';
+  readonly tick: number;
+  readonly objectId: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Take one back. */
+interface RemoveCommand {
+  readonly t: 'REMOVE';
+  readonly tick: number;
+  readonly index: number;
+}
+
 export type Command =
   | SetSpeedCommand
   | SetPausedCommand
@@ -112,7 +143,10 @@ export type Command =
   | BuyUpgradeCommand
   | SetPriceCommand
   | HireCommand
-  | FireCommand;
+  | FireCommand
+  | EvolveCommand
+  | PlaceCommand
+  | RemoveCommand;
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
@@ -122,7 +156,10 @@ export type CommandInput =
   | Omit<BuyUpgradeCommand, 'tick'>
   | Omit<SetPriceCommand, 'tick'>
   | Omit<HireCommand, 'tick'>
-  | Omit<FireCommand, 'tick'>;
+  | Omit<FireCommand, 'tick'>
+  | Omit<EvolveCommand, 'tick'>
+  | Omit<PlaceCommand, 'tick'>
+  | Omit<RemoveCommand, 'tick'>;
 
 /**
  * Apply one command to the world.
@@ -183,6 +220,21 @@ export function apply(world: World, command: Command): void {
       fire(world, command.entityId);
       break;
     }
+    case 'EVOLVE': {
+      // The simulation decides whether the requirements are met. Refusing is
+      // normal — a replayed log can reach here with a world that has since
+      // spent the money.
+      beginConstruction(world);
+      break;
+    }
+    case 'PLACE': {
+      placeObject(world, command.objectId, command.x, command.y, navigationIntact);
+      break;
+    }
+    case 'REMOVE': {
+      removeObject(world, command.index);
+      break;
+    }
     case 'SET_PRICE': {
       /*
        * Searched rather than looked up through `menuIndexOf`, which throws. An
@@ -222,5 +274,11 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'HIRE', tick, roleId: input.roleId, skill: input.skill };
     case 'FIRE':
       return { t: 'FIRE', tick, entityId: input.entityId };
+    case 'EVOLVE':
+      return { t: 'EVOLVE', tick };
+    case 'PLACE':
+      return { t: 'PLACE', tick, objectId: input.objectId, x: input.x, y: input.y };
+    case 'REMOVE':
+      return { t: 'REMOVE', tick, index: input.index };
   }
 }

@@ -1,3 +1,4 @@
+import { layoutForStage } from '@config/layouts';
 import { ARRIVAL_EPSILON_METRES, WALK_SPEED_METRES_PER_SECOND } from '@config/customer';
 import { STATE_WALKING_TO_CAR, STATE_WALKING_TO_DOOR } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
@@ -181,9 +182,18 @@ export class NavigationSystem implements SimSystem {
    * it. Recorded here rather than assumed away.
    */
   private syncLayout(world: World): void {
-    const signature = world.layout.placed.length;
+    /*
+     * `layout.revision`, not `placed.length` — Phase 11.
+     *
+     * The old signature could not see a **move**: place then remove leaves the
+     * count identical and the navigation grid describing a world that no longer
+     * exists. PHASE_7_REPORT recorded it as a known weakness owed to this phase.
+     * The revision is bumped by every placement, every removal, every move, and
+     * by evolution.
+     */
+    const signature = world.layout.revision;
     if (signature !== this.builtFor) {
-      this.fields.rebuild(world.layout.placed);
+      this.fields.rebuild(world.layout.placed, layoutForStage(world.progression.stage));
       this.builtFor = signature;
     }
 

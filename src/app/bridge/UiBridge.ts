@@ -1,6 +1,7 @@
 import { MENU, PRICE_BAND, menuItem } from '@config/economy/menu';
 import { UPGRADES } from '@config/economy/upgrades';
 import { EMPLOYEE_ROLES, MAX_EMPLOYEES, TASK_KINDS, role } from '@config/employees';
+import { requirementFor } from '@config/progression';
 import { PASS, station } from '@config/economy/stations';
 import type { Sim } from '@sim/core/Sim';
 import type { World } from '@sim/core/World';
@@ -8,7 +9,14 @@ import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
 import { brainStateName } from '@sim/ai/EmployeeBrain';
 import { netIncomePerMinute } from '@sim/systems/EconomySystem';
+import {
+  constructionProgress,
+  constructionRemainingMs,
+  isConstructing,
+} from '@sim/systems/ConstructionSystem';
+import { MAX_PLACED_OBJECTS } from '@sim/systems/LayoutSystem';
 import { payrollPerMinute } from '@sim/systems/StaffSystem';
+import { totalUpgradeLevels } from '@sim/systems/UpgradeSystem';
 import { currentQuality } from '@sim/systems/KitchenSystem';
 import { nextUpgradeCost, previewNextLevel, upgradeLevel } from '@sim/systems/UpgradeSystem';
 import {
@@ -92,6 +100,13 @@ interface CoinPopup {
  */
 type MutableMarker = { -readonly [K in keyof WorldMarker]: WorldMarker[K] };
 type MutableEffect = { -readonly [K in keyof UpgradeEffectView]: UpgradeEffectView[K] };
+/** Reused like every other row here; `placedCount` says how much of it is live. */
+interface MutablePlaced {
+  objectId: string;
+  worldX: number;
+  worldY: number;
+}
+
 interface MutableUpgrade {
   id: string;
   level: number;
@@ -120,6 +135,8 @@ interface MutableHud {
   speedMultiplier: number;
   markers: MutableMarker[];
   markerCount: number;
+  placed: MutablePlaced[];
+  placedCount: number;
   incomePerMinute: number;
   upgrades: MutableUpgrade[];
   prices: MutablePrice[];
@@ -130,6 +147,23 @@ interface MutableHud {
   roles: MutableRole[];
   payrollPerMinute: number;
   payrollFull: boolean;
+  progression: MutableProgression;
+}
+
+interface MutableRequirement {
+  label: string;
+  have: number;
+  need: number;
+  met: boolean;
+}
+
+interface MutableProgression {
+  stage: number;
+  pendingStage: number;
+  constructionProgress: number;
+  constructionRemainingMs: number;
+  constructing: boolean;
+  requirements: MutableRequirement[];
 }
 
 export class UiBridge implements HudSource {
@@ -228,6 +262,8 @@ export class UiBridge implements HudSource {
       paused: false,
       speedMultiplier: 1,
       markers,
+      placed: Array.from({ length: MAX_PLACED_OBJECTS }, () => ({ objectId: '', worldX: 0, worldY: 0 })),
+      placedCount: 0,
       markerCount: 0,
       incomePerMinute: 0,
       upgrades,
@@ -239,6 +275,22 @@ export class UiBridge implements HudSource {
       roles,
       payrollPerMinute: 0,
       payrollFull: false,
+      progression: {
+        stage: 1,
+        pendingStage: 0,
+        constructionProgress: 0,
+        constructionRemainingMs: 0,
+        constructing: false,
+        // Five rows, allocated once — the requirement list is fixed in shape
+        // even though its numbers change every sample.
+        requirements: [
+          { label: 'cash', have: 0, need: 0, met: false },
+          { label: 'served', have: 0, need: 0, met: false },
+          { label: 'upgrades', have: 0, need: 0, met: false },
+          { label: 'staff', have: 0, need: 0, met: false },
+          { label: 'reputation', have: 0, need: 0, met: false },
+        ],
+      },
     };
   }
 
@@ -449,12 +501,81 @@ export class UiBridge implements HudSource {
 
     model.customersWaiting = waiting;
     model.markerCount = count;
+    this.refillPlaced(world);
 
     model.incomePerMinute = netIncomePerMinute(world);
     this.refillUpgrades(world);
     this.refillPrices(world);
     this.refillObjective(world);
     this.refillStaff(world);
+    this.refillProgression(world);
+  }
+
+  /**
+   * How close the player is, requirement by requirement.
+   *
+   * Each one separately rather than a single percentage, because "you need
+   * ₡140" and "you need to serve twenty-five people" are different instructions
+   * and a player who is short on one should not have to work out which.
+   */
+  private refillProgression(world: World): void {
+    const view = this.model.progression;
+    view.stage = world.progression.stage;
+    view.pendingStage = world.progression.pendingStage;
+    view.constructing = isConstructing(world);
+    view.constructionProgress = constructionProgress(world);
+    view.constructionRemainingMs = constructionRemainingMs(world);
+
+    const requirement = requirementFor(world.progression.stage);
+    const rows = view.requirements;
+    const have = [
+      world.economy.cash,
+      world.stats.customersServed,
+      totalUpgradeLevels(world),
+      world.employees.activeCount,
+      world.economy.reputation,
+    ];
+    const need =
+      requirement === null
+        ? [0, 0, 0, 0, 0]
+        : [
+            requirement.cashRequired,
+            requirement.customersServed,
+            requirement.upgradesBought,
+            requirement.employeesHired,
+            requirement.reputation,
+          ];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (row === undefined) continue;
+      row.have = have[i] ?? 0;
+      row.need = need[i] ?? 0;
+      row.met = row.have >= row.need;
+    }
+  }
+
+  /**
+   * The placed objects, for build mode's list.
+   *
+   * Copied into the reused buffer rather than handed over, like everything else
+   * here: `world.layout.placed` is the simulation's own array and an overlay
+   * holding a reference to it would be reading the world directly, one splice
+   * away from a component rendering an object that no longer exists.
+   */
+  private refillPlaced(world: World): void {
+    const model = this.model;
+    const source = world.layout.placed;
+    const count = Math.min(source.length, model.placed.length);
+    for (let i = 0; i < count; i++) {
+      const row = model.placed[i];
+      const object = source[i];
+      if (row === undefined || object === undefined) continue;
+      row.objectId = object.objectId;
+      row.worldX = object.x;
+      row.worldY = object.y;
+    }
+    model.placedCount = count;
   }
 
   private refillStaff(world: World): void {

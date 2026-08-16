@@ -116,6 +116,61 @@ export interface StageLayout {
   readonly statics: readonly StaticObject[];
   /** Extra world metres of margin the camera may show beyond the lot. */
   readonly cameraMarginMetres: number;
+
+  /**
+   * Seating — Stage 3 onward. Empty until a building exists to put it in.
+   *
+   * A table is where a customer *eats*, which is what turns delivery from an
+   * instantaneous handover into a walk somebody has to make. Three features
+   * built in Phases 8, 9 and 10 have been dormant waiting for exactly this:
+   * the pass plate indicator, the cooler upgrade and the waiter role.
+   */
+  readonly tables: readonly TableSlot[];
+
+  /**
+   * The drive-thru channel — Stage 4 only, `null` before it exists.
+   *
+   * Order post, lane and window, in the order a car meets them. Patience here is
+   * far lower than seated (GAME_EXECUTION_ROADMAP Phase 11: "the customer is in a
+   * car with an engine running"), and that asymmetry is the source of the game's
+   * central strategic tension.
+   */
+  readonly driveThru: DriveThruLayout | null;
+
+  /**
+   * How many customers can be served at the counter simultaneously.
+   *
+   * One until Stage 4's second register. It is the counter's parallelism, not
+   * the kitchen's: two registers means two people ordering at once, which is a
+   * different bottleneck from two stations cooking at once.
+   */
+  readonly registers: number;
+}
+
+/** A place to sit and eat. */
+interface TableSlot {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  /** How many customers it seats. Groups arrive from vans; see ARCHETYPE_SPECS. */
+  readonly seats: number;
+}
+
+interface DriveThruLayout {
+  /** Where a car stops to order. */
+  readonly orderPost: Point;
+  /** Where it collects, after the post. */
+  readonly window: Point;
+  /**
+   * Stopping places along the lane, from the entrance to the post.
+   *
+   * Index 0 is at the post. A car joins at the highest free index, exactly like
+   * the counter queue — so the lane backing up onto the road is visible, and
+   * ECONOMY_DESIGN §7's spillover penalty applies to it too.
+   */
+  readonly lane: readonly Point[];
+  /** Cars beyond this are spilling onto the road. */
+  readonly laneCapacity: number;
 }
 
 const LANE_EAST_Y = 3.5;
@@ -252,4 +307,19 @@ export const STAGE1_LAYOUT: StageLayout = {
   ],
 
   cameraMarginMetres: 4,
+
+  // Nobody sits down at a roadside stand; they eat standing in the waiting area.
+  tables: [],
+  driveThru: null,
+  registers: 1,
 };
+
+/**
+ * The road, shared by every stage.
+ *
+ * Evolution happens **on the same plot** (GAME_DESIGN_DOCUMENT §7) — the camera
+ * does not move and the road does not change. Exporting it rather than copying
+ * it into three more files is what keeps that true: a lane edited in Stage 4
+ * that was not edited in Stage 1 would silently teleport every car mid-evolution.
+ */
+export const SHARED_ROAD = STAGE1_LAYOUT.road;

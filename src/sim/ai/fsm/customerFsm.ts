@@ -1,3 +1,9 @@
+import {
+  STATE_DT_APPROACHING,
+  STATE_DT_COLLECTING,
+  STATE_DT_ORDERING,
+  STATE_DT_QUEUEING,
+} from './driveThruFsm';
 import { PATIENCE_SECONDS } from '@config/customer';
 
 /**
@@ -63,6 +69,19 @@ export const CUSTOMER_STATES = [
   'REJOINING_ROAD',
   /** Terminal. The record is released on the tick it reaches this. */
   'GONE',
+  /*
+   * The drive-thru branch — Phase 11, Stage 4. Appended rather than inserted:
+   * the index is hashed into the world digest and written into every save, so
+   * this array is append-only exactly like the menu and the archetypes.
+   */
+  /** In the car, driving from the road to the back of the lane. */
+  'DT_APPROACHING',
+  /** Stopped at the post, placing an order through a window. */
+  'DT_ORDERING',
+  /** In the lane, creeping toward the window. Patience runs here, and fast. */
+  'DT_QUEUEING',
+  /** At the window, collecting and paying. */
+  'DT_COLLECTING',
 ] as const;
 
 export type CustomerStateName = (typeof CUSTOMER_STATES)[number];
@@ -121,7 +140,17 @@ export interface CustomerStateSpec {
  * index is what `CustomerRecord.state` holds and what the world hash digests.
  */
 export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
-  { name: 'ENTERING', to: [STATE_SEEKING_PARKING], patienceSeconds: null, alwaysInVehicle: true },
+  {
+    /*
+     * Two ways in from Phase 11: the car park, or the drive-thru lane. The
+     * channel was chosen at conversion, so this is a branch the customer already
+     * decided rather than one they take on arrival.
+     */
+    name: 'ENTERING',
+    to: [STATE_SEEKING_PARKING, STATE_DT_APPROACHING],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
   {
     name: 'SEEKING_PARKING',
     to: [STATE_PARKING, STATE_NO_SPACE, STATE_ABANDONING],
@@ -201,6 +230,47 @@ export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
    */
   { name: 'REJOINING_ROAD', to: [STATE_GONE], patienceSeconds: null, alwaysInVehicle: true },
   { name: 'GONE', to: [], patienceSeconds: null, alwaysInVehicle: true },
+  /*
+   * The drive-thru. Every one of these is `alwaysInVehicle` — the whole point
+   * of the channel is that nobody gets out, which is why it converts traffic a
+   * car park never would and why the patience is so much shorter.
+   */
+  {
+    name: 'DT_APPROACHING',
+    to: [STATE_DT_ORDERING, STATE_LEAVING_ANGRY],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
+  /*
+   * Ordering at the post cannot fail, exactly as it cannot at the counter: they
+   * have stopped and decided. Giving it patience would let somebody drive off
+   * mid-sentence.
+   */
+  {
+    name: 'DT_ORDERING',
+    to: [STATE_DT_QUEUEING],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
+  {
+    /*
+     * The wait that makes the drive-thru a decision rather than a strict
+     * upgrade. Patience here is `DRIVE_THRU_PATIENCE_SCALE` of the counter's —
+     * an engine is running and the driver can see how far they are from the
+     * window. A slow kitchen loses these customers first, and loses the ones
+     * behind them at the same time.
+     */
+    name: 'DT_QUEUEING',
+    to: [STATE_DT_COLLECTING, STATE_ABANDONING],
+    patienceSeconds: PATIENCE_SECONDS.waitingForFood,
+    alwaysInVehicle: true,
+  },
+  {
+    name: 'DT_COLLECTING',
+    to: [STATE_PAYING, STATE_EXITING],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
 ];
 
 export function customerStateSpec(state: number): CustomerStateSpec {

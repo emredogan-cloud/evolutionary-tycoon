@@ -5,6 +5,7 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { recordExpense } from './EconomySystem';
 import { startPrep } from './KitchenSystem';
+import { deliverOrder } from './ServiceSystem';
 import { releaseEmployeeTask, releaseTask } from './TaskBoardSystem';
 
 /**
@@ -71,13 +72,12 @@ export class EmployeeFsmSystem implements SimSystem {
       applied = startPrep(world, task.subject);
     } else if (kind === 'DELIVER_ORDER') {
       /*
-       * Nothing to do. Stage 1's `ServiceSystem` hands a plate over on the same
-       * tick it reaches the pass, so a delivery task is completed by the world
-       * before a waiter can walk to it. This branch exists, is reachable in
-       * Phase 11, and is deliberately not faked into doing something now —
-       * PHASE_10_REPORT §6.
+       * Real work from Phase 11. Phase 10 left this branch returning `true`
+       * without doing anything, because Stage 1 delivery was instantaneous and
+       * no plate ever waited — PHASE_10_REPORT §6 said so and said the day it
+       * stopped being true would be this one.
        */
-      applied = true;
+      applied = deliverOrder(world, task.subject);
     } else {
       // CLEAN_TABLE — Phase 11 gives the world tables.
       applied = true;

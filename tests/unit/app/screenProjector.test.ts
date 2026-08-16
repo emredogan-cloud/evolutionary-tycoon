@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type Phaser from 'phaser';
-import { NULL_PROJECTOR, phaserProjector } from '@app/bridge/ScreenProjector';
+import {
+  NULL_PROJECTOR,
+  NULL_UNPROJECTOR,
+  phaserProjector,
+  phaserUnprojector,
+} from '@app/bridge/ScreenProjector';
 import { worldToScreen } from '@render/iso/IsoProjection';
 
 /**
@@ -163,5 +168,65 @@ describe('projecting before the renderer is ready', () => {
 
     scene.cameras.main = CAMERA;
     expect(project(5, 6, 0, { x: 0, y: 0 })).toBe(true);
+  });
+});
+
+/**
+ * And the way back — Phase 11.
+ *
+ * Build mode asks "the player pointed here, which cell is that", and the only
+ * property worth asserting is that the two directions are **inverses**. A second
+ * hand-computed expectation would be a second implementation of the transform,
+ * which is exactly the drift the round trip catches.
+ */
+describe('overlay pixels back to world metres', () => {
+  it('is the exact inverse of the projector', () => {
+    const game = fakeGame({ camera: CAMERA });
+    const project = phaserProjector(game, 'world');
+    const unproject = phaserUnprojector(game, 'world');
+
+    for (const [worldX, worldY] of [
+      [5, 6],
+      [0, 0],
+      [12.5, 3.5],
+      [23.5, 17.5],
+    ] as const) {
+      /*
+       * The return value is deliberately ignored: it answers "is this on
+       * screen", and the corners of the lot are not — but the projector writes
+       * the coordinates either way, and off-screen points are exactly what build
+       * mode's ghost has to keep straight when the camera is panned.
+       */
+      const screen = { x: 0, y: 0 };
+      project(worldX, worldY, 0, screen);
+
+      const back = unproject(screen.x, screen.y);
+      expect(back).not.toBeNull();
+      expect(back?.x).toBeCloseTo(worldX, 6);
+      expect(back?.y).toBeCloseTo(worldY, 6);
+    }
+  });
+
+  it('survives a zoomed and scrolled camera', () => {
+    // The zoom and the scroll are undone in the reverse order they are applied.
+    // Getting that order wrong is invisible at zoom 1 and at the origin, which
+    // is exactly where a careless test would look.
+    const camera = { worldView: { x: 120, y: -40 }, zoom: 2.5, width: 1280, height: 720 };
+    const game = fakeGame({ camera });
+    const project = phaserProjector(game, 'world');
+    const unproject = phaserUnprojector(game, 'world');
+
+    const screen = { x: 0, y: 0 };
+    project(9, 4, 0, screen);
+    const back = unproject(screen.x, screen.y);
+    expect(back?.x).toBeCloseTo(9, 6);
+    expect(back?.y).toBeCloseTo(4, 6);
+  });
+
+  it('answers nothing until there is a camera to answer through', () => {
+    expect(NULL_UNPROJECTOR(10, 10)).toBeNull();
+    expect(phaserUnprojector(fakeGame({ camera: CAMERA }), 'WorldScene')(10, 10)).toBeNull();
+    expect(phaserUnprojector(fakeGame({ camera: CAMERA, active: false }), 'world')(10, 10)).toBeNull();
+    expect(phaserUnprojector(fakeGame({ camera: undefined }), 'world')(10, 10)).toBeNull();
   });
 });

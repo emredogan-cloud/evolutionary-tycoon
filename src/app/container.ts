@@ -1,8 +1,11 @@
 import { UiBridge } from '@app/bridge/UiBridge';
 import type { UiCommands } from '@app/bridge/hudModel';
-import type { ScreenProjector } from '@app/bridge/ScreenProjector';
-import { NULL_PROJECTOR } from '@app/bridge/ScreenProjector';
+import type { ScreenProjector, WorldUnprojector } from '@app/bridge/ScreenProjector';
+import { NULL_PROJECTOR, NULL_UNPROJECTOR } from '@app/bridge/ScreenProjector';
 import { stageScene } from '@app/devScene';
+import type { StageNumber } from '@config/progression';
+import { navigationIntact } from '@sim/nav/reachability';
+import { previewPlacement, snapToGrid } from '@sim/systems/LayoutSystem';
 import { FrameMeter } from '@app/FrameMeter';
 import { browserScheduler, GameLoop } from '@app/GameLoop';
 import { parseRenderMode, prefersReducedMotion } from '@app/renderMode';
@@ -13,6 +16,7 @@ import type { RenderContext } from '@render/RenderContext';
 import { debugOverlayEnabled } from '@app/debug/DebugOverlay';
 import { buildInfo } from '@platform/buildInfo';
 import { Sim } from '@sim/core/Sim';
+import { constructionProgress } from '@sim/systems/ConstructionSystem';
 import { buyUpgrade, nextUpgradeCost } from '@sim/systems/UpgradeSystem';
 import { IdbAdapter } from '@persistence/idbAdapter';
 import { LocalStorageAdapter } from '@persistence/localStorageAdapter';
@@ -45,6 +49,7 @@ export interface GameContainer {
   readonly commands: UiCommands;
   /** Swapped for the real projection once Phaser has a camera. */
   setProjector(project: ScreenProjector): void;
+  setUnprojector(unproject: WorldUnprojector): void;
 }
 
 /**
@@ -118,8 +123,22 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
    * starts projecting nothing and is given the real transform when there is one.
    */
   let projector: ScreenProjector = NULL_PROJECTOR;
+  /*
+   * The inverse, installed by the same hand-off. Indirected for the same reason:
+   * the camera does not exist when the container is built, and capturing it here
+   * would freeze build mode at the boot camera.
+   */
+  let unprojector: WorldUnprojector = NULL_UNPROJECTOR;
+  const unproject = (x: number, y: number): { x: number; y: number } | null => unprojector(x, y);
   const ui = new UiBridge(sim, (x, y, z, out) => projector(x, y, z, out));
   ui.start();
+
+  /*
+   * The evolution stage, before anything runs. Visual regression only: a golden
+   * of the Stage 4 restaurant that had to play its way there would take minutes
+   * to regenerate and would photograph whatever the economy happened to do.
+   */
+  if (renderMode.stage > 1) sim.world.progression.stage = renderMode.stage as StageNumber;
 
   // Staged before the first tick, so the world hash of a staged scene is a
   // function of the scene alone.
@@ -159,6 +178,7 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     onFrame: () => {
       ui.sample(win.performance.now());
     },
+    constructionProgress: () => constructionProgress(sim.world),
     ...(renderMode.lockedCamera !== null ? { lockedCamera: renderMode.lockedCamera } : {}),
   };
 
@@ -216,6 +236,38 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       setPrice: (itemId: string, price: number) => {
         sim.dispatch({ t: 'SET_PRICE', itemId, price });
       },
+      evolve: () => {
+        sim.dispatch({ t: 'EVOLVE' });
+      },
+      place: (objectId: string, x: number, y: number) => {
+        sim.dispatch({ t: 'PLACE', objectId, x, y });
+      },
+      removePlaced: (index: number) => {
+        sim.dispatch({ t: 'REMOVE', index });
+      },
+      /*
+       * A *query*, not an intent, and the only one on this interface.
+       *
+       * Build mode's ghost has to answer "would this work" before the click, and
+       * the answer is the simulation's — a second opinion computed in the
+       * overlay would be a second implementation of the navigation check, which
+       * is precisely the class of bug where the ghost is green and the result is
+       * red. It reads the world and does not change it; `previewPlacement` puts
+       * the object back and restores the layout revision so no flow field is
+       * invalidated by a mouse move.
+       */
+      previewPlacement: (objectId: string, screenX: number, screenY: number) => {
+        const point = unproject(screenX, screenY);
+        if (point === null) return null;
+
+        const worldX = snapToGrid(point.x);
+        const worldY = snapToGrid(point.y);
+        const outcome = previewPlacement(sim.world, objectId, worldX, worldY, navigationIntact);
+
+        const projected = { x: 0, y: 0 };
+        projector(worldX, worldY, 0, projected);
+        return { outcome, worldX, worldY, screenX: projected.x, screenY: projected.y };
+      },
       hire: (roleId: string, skill: number) => {
         sim.dispatch({ t: 'HIRE', roleId, skill });
       },
@@ -226,6 +278,9 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     setProjector(next: ScreenProjector): void {
       projector = next;
       ui.refresh();
+    },
+    setUnprojector(next: WorldUnprojector): void {
+      unprojector = next;
     },
   };
 }

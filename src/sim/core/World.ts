@@ -19,6 +19,7 @@ import type {
   ControlState,
   EconomyState,
   EntityId,
+  ConstructionState,
   LayoutState,
   ProgressionState,
   SettingsState,
@@ -70,7 +71,7 @@ export class World {
     paused: false,
   };
 
-  readonly progression: ProgressionState = { stage: 1, unlocks: [], milestones: [] };
+  readonly progression: ProgressionState = { stage: 1, unlocks: [], milestones: [], pendingStage: 0 };
   readonly economy: EconomyState = {
     cash: 0,
     reputation: 0,
@@ -82,7 +83,8 @@ export class World {
     bucketIndex: 0,
     bucketElapsedMs: 0,
   };
-  readonly layout: LayoutState = { placed: [], upgrades: new Map<string, number>() };
+  readonly layout: LayoutState = { placed: [], revision: 0, upgrades: new Map<string, number>() };
+  readonly construction: ConstructionState = { targetStage: 0, elapsedMs: 0, totalMs: 0 };
   /**
    * Traffic process state — Phase 5.
    *
@@ -105,6 +107,7 @@ export class World {
     customersAbandoned: 0,
     ordersWasted: 0,
     employeesLeftUnpaid: 0,
+    driveThruServed: 0,
     vehiclesSpawned: 0,
     convertibleSpawned: 0,
     commandsApplied: 0,
@@ -231,7 +234,13 @@ export class World {
       h.writeF64(object.y);
       h.writeF64(object.z);
     }
+    h.writeU32(this.layout.revision);
     hashStringNumberMap(h, this.layout.upgrades);
+
+    h.writeU8(this.progression.pendingStage);
+    h.writeU8(this.construction.targetStage);
+    h.writeF64(this.construction.elapsedMs);
+    h.writeF64(this.construction.totalMs);
 
     h.writeU32(this.staff.hired.length);
     for (const employee of this.staff.hired) {
@@ -290,7 +299,12 @@ export class World {
     this.economy.bucketElapsedMs = 0;
 
     this.layout.placed.length = 0;
+    this.layout.revision = 0;
     this.layout.upgrades.clear();
+    this.progression.pendingStage = 0;
+    this.construction.targetStage = 0;
+    this.construction.elapsedMs = 0;
+    this.construction.totalMs = 0;
 
     this.traffic.nextCandidateMs = 0;
     this.traffic.nextDecorativeMs = 0;

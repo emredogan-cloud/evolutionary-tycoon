@@ -118,6 +118,31 @@ export interface RoleView {
   readonly affordable: boolean;
 }
 
+/** How close the player is to the next stage — Phase 11. */
+export interface ProgressionView {
+  readonly stage: number;
+  /** A stage whose requirements are met and which is waiting, or 0. */
+  readonly pendingStage: number;
+  /** 0..1 while the building grows; 0 when nothing is under construction. */
+  readonly constructionProgress: number;
+  /**
+   * Simulation milliseconds left on the build.
+   *
+   * Simulation, not wall-clock: at 4x the building genuinely goes up four times
+   * faster, and a countdown that ignored the speed multiplier would be lying
+   * about something the player can watch happening.
+   */
+  readonly constructionRemainingMs: number;
+  readonly constructing: boolean;
+  /** Each requirement, so the panel can say which one is missing. */
+  readonly requirements: readonly {
+    readonly label: string;
+    readonly have: number;
+    readonly need: number;
+    readonly met: boolean;
+  }[];
+}
+
 /** The HUD, once every hundred milliseconds. */
 export interface HudModel {
   readonly cash: number;
@@ -134,6 +159,10 @@ export interface HudModel {
    * Reading past it gives stale data from a previous sample.
    */
   readonly markers: readonly WorldMarker[];
+  /** Objects the player has placed, in placement order. Reused, like `markers`. */
+  readonly placed: readonly PlacedView[];
+  /** How much of `placed` is live; entries past it are stale. */
+  readonly placedCount: number;
   readonly markerCount: number;
 
   /** Takings less costs over the last sixty seconds, per minute — Phase 9. */
@@ -158,6 +187,9 @@ export interface HudModel {
   readonly payrollPerMinute: number;
   /** True once the payroll is full, so the panel can say why it refuses. */
   readonly payrollFull: boolean;
+
+  /** Evolution — Phase 11. */
+  readonly progression: ProgressionView;
 }
 
 /**
@@ -167,6 +199,30 @@ export interface HudModel {
  * and without `src/app` growing a framework dependency it would then have to
  * keep in step with the one `src/ui` uses.
  */
+/**
+ * The answer build mode paints its ghost with.
+ *
+ * `outcome` is the simulation's own verdict string, not a boolean, because the
+ * four ways a placement fails need four different sentences — "that is off the
+ * lot" and "that would trap your customers" are not the same mistake.
+ */
+export interface PlacementPreview {
+  readonly outcome: 'ok' | 'outside-lot' | 'blocks-navigation' | 'occupied' | 'full';
+  /** The snapped world cell, in metres. */
+  readonly worldX: number;
+  readonly worldY: number;
+  /** That cell, projected back to the overlay. */
+  readonly screenX: number;
+  readonly screenY: number;
+}
+
+/** A placed object, for build mode's list. */
+export interface PlacedView {
+  readonly objectId: string;
+  readonly worldX: number;
+  readonly worldY: number;
+}
+
 export interface HudSource {
   subscribe(run: (model: HudModel) => void): () => void;
 }
@@ -182,6 +238,20 @@ export interface HudSource {
  */
 export interface UiCommands {
   buyUpgrade(id: string): void;
+  /** Confirm the stage transition the player has been offered. */
+  evolve(): void;
+  place(objectId: string, x: number, y: number): void;
+  /** Undo a placement, by its index in `HudModel.placed`. */
+  removePlaced(index: number): void;
+  /**
+   * What a placement at this screen point *would* do — build mode's ghost.
+   *
+   * Screen coordinates in, because the caller is a pointer event; the snapped
+   * world point comes back out so the overlay can draw the ghost where the
+   * object would actually land rather than where the cursor is. Null when the
+   * camera has not booted yet.
+   */
+  previewPlacement(objectId: string, screenX: number, screenY: number): PlacementPreview | null;
   setPrice(itemId: string, price: number): void;
   hire(roleId: string, skill: number): void;
   fire(entityId: number): void;

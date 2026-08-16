@@ -34,7 +34,7 @@ import { STATE_QUEUEING_AT_COUNTER } from '@sim/ai/fsm/customerFsm';
 const TICKS_PER_MINUTE = 60_000 / TICK_MS;
 
 function system(): ConversionSystem {
-  return new ConversionSystem(new LaneGraph(STAGE1_LAYOUT), STAGE1_LAYOUT);
+  return new ConversionSystem(new LaneGraph(STAGE1_LAYOUT));
 }
 
 /**

@@ -9,8 +9,13 @@ import type {
   OrderDeliveredEvent,
   OrderPlacedEvent,
   OrderReadyEvent,
+  ConstructionStartedEvent,
   EmployeeHiredEvent,
   EmployeeLeftEvent,
+  ObjectPlacedEvent,
+  ObjectRemovedEvent,
+  StageChangedEvent,
+  StageUnlockedEvent,
   PaymentEvent,
   PriceChangedEvent,
   UpgradeAppliedEvent,
@@ -89,6 +94,16 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'EMPLOYEE_HIRED', entityId: 0, roleId: '', cost: 0 };
     case 'EMPLOYEE_LEFT':
       return { t: 'EMPLOYEE_LEFT', entityId: 0, roleId: '', reason: 'fired' };
+    case 'STAGE_UNLOCKED':
+      return { t: 'STAGE_UNLOCKED', stage: 0 };
+    case 'CONSTRUCTION_STARTED':
+      return { t: 'CONSTRUCTION_STARTED', stage: 0, durationMs: 0 };
+    case 'STAGE_CHANGED':
+      return { t: 'STAGE_CHANGED', from: 0, to: 0 };
+    case 'OBJECT_PLACED':
+      return { t: 'OBJECT_PLACED', objectId: '', x: 0, y: 0 };
+    case 'OBJECT_REMOVED':
+      return { t: 'OBJECT_REMOVED', objectId: '', x: 0, y: 0 };
   }
 }
 
@@ -314,6 +329,51 @@ export class EventQueue {
     event.entityId = entityId;
     event.roleId = roleId;
     event.reason = reason;
+    this.push(record);
+  }
+
+  emitStageUnlocked(stage: number): void {
+    const record = this.lease('STAGE_UNLOCKED');
+    if (record === null) return;
+    (record as StageUnlockedEvent).stage = stage;
+    this.push(record);
+  }
+
+  emitConstructionStarted(stage: number, durationMs: number): void {
+    const record = this.lease('CONSTRUCTION_STARTED');
+    if (record === null) return;
+    const event = record as ConstructionStartedEvent;
+    event.stage = stage;
+    event.durationMs = durationMs;
+    this.push(record);
+  }
+
+  emitStageChanged(from: number, to: number): void {
+    const record = this.lease('STAGE_CHANGED');
+    if (record === null) return;
+    const event = record as StageChangedEvent;
+    event.from = from;
+    event.to = to;
+    this.push(record);
+  }
+
+  emitObjectPlaced(objectId: string, x: number, y: number): void {
+    const record = this.lease('OBJECT_PLACED');
+    if (record === null) return;
+    const event = record as ObjectPlacedEvent;
+    event.objectId = objectId;
+    event.x = x;
+    event.y = y;
+    this.push(record);
+  }
+
+  emitObjectRemoved(objectId: string, x: number, y: number): void {
+    const record = this.lease('OBJECT_REMOVED');
+    if (record === null) return;
+    const event = record as ObjectRemovedEvent;
+    event.objectId = objectId;
+    event.x = x;
+    event.y = y;
     this.push(record);
   }
 

@@ -48,6 +48,30 @@ export interface ProgressionState {
   stage: Stage;
   unlocks: string[];
   milestones: string[];
+  /**
+   * A stage whose requirements are met and which is waiting for the player —
+   * Phase 11, GAME_DESIGN_DOCUMENT §25 S5.
+   *
+   * Zero when nothing is pending. The transition is player-confirmed rather than
+   * automatic because construction disrupts the stand for twelve to thirty
+   * seconds, and firing that automatically fires it at the moment the player is
+   * busiest.
+   */
+  pendingStage: number;
+}
+
+/**
+ * The building, growing — Phase 11.
+ *
+ * Simulation state rather than a render animation, because it *takes time in
+ * the world*: the stand is disrupted while it happens, and a construction that
+ * lived only in the renderer would be skippable by looking away.
+ */
+export interface ConstructionState {
+  /** The stage being built toward, or 0 when nothing is under construction. */
+  targetStage: number;
+  elapsedMs: number;
+  totalMs: number;
 }
 
 export interface EconomyState {
@@ -77,6 +101,16 @@ export interface EconomyState {
 
 export interface LayoutState {
   placed: PlacedObject[];
+  /**
+   * Bumped on every change to `placed`, and on every stage change.
+   *
+   * The navigation cache watches this to decide whether to rebuild. It replaces
+   * `placed.length`, which was the Phase 7 invalidation signature and which
+   * **cannot see a move**: place then remove leaves the count identical and the
+   * grid describing a world that no longer exists. Recorded as an open item in
+   * PHASE_7_REPORT and owed to Phase 11.
+   */
+  revision: number;
   /** upgradeId → level. */
   upgrades: Map<string, number>;
 }
@@ -142,6 +176,14 @@ export interface StatsState {
   ordersWasted: number;
   /** Employees who walked out because they were not paid — Phase 10. */
   employeesLeftUnpaid: number;
+  /**
+   * Of `customersServed`, how many came through the drive-thru — Phase 11.
+   *
+   * Separable because the two channels have different economics and different
+   * failure modes, and "the drive-thru is carrying the restaurant" is a thing
+   * the balance simulator has to be able to see.
+   */
+  driveThruServed: number;
   vehiclesSpawned: number;
   /**
    * Of those, how many could ever become customers.
@@ -283,4 +325,15 @@ export interface SimView {
    * forever.
    */
   readonly upgradeRevision: number;
+
+  /**
+   * The evolution stage, 1..4 — Phase 11.
+   *
+   * The renderer needs it because the lot is not the same lot at every stage:
+   * the building grows, the car park doubles, tables appear and Stage 4 adds a
+   * drive-thru lane. It cannot read `world.progression` directly (it never
+   * touches the world), and it cannot infer the stage from anything else in the
+   * view.
+   */
+  readonly stage: number;
 }

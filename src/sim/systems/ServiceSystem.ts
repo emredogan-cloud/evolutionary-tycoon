@@ -12,6 +12,8 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../stores/OrderStore';
+import { layoutForStage } from '@config/layouts';
+import { stepDriveThruCustomer } from './DriveThruSystem';
 import { recordExpense, recordRevenue } from './EconomySystem';
 import { currentQuality } from './KitchenSystem';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
@@ -50,6 +52,10 @@ export class ServiceSystem implements SimSystem {
       if (!customers.isActive(slot)) continue;
       const customer = customers.at(slot);
       if (customer.staged === 1) continue;
+
+      // The drive-thru runs its own three states and returns true when it took
+      // the customer, so the counter's switch below never sees them.
+      if (stepDriveThruCustomer(world, slot, deltaMs)) continue;
 
       switch (customer.state) {
         case STATE_QUEUEING_AT_COUNTER:
@@ -142,6 +148,22 @@ export class ServiceSystem implements SimSystem {
     const order = world.orders.at(orderSlot);
     if (order.state !== ORDER_ON_PASS) return;
 
+    /*
+     * **Somebody has to carry it — Stage 3 onward.**
+     *
+     * Until there were tables, delivery happened on the same tick the food
+     * reached the pass: the customer was standing at the counter and the
+     * handover was instantaneous. PHASE_8_REPORT §6 measured the consequence —
+     * food sat on the pass for **zero ticks out of 24 000** — and Phases 9 and
+     * 10 each inherited it, leaving the pass plate indicator, the cooler and the
+     * waiter role built and dormant.
+     *
+     * A seated customer is across the room. The order stays on the pass until a
+     * waiter's `DELIVER_ORDER` task completes, which is what finally makes hold
+     * temperature bite.
+     */
+    if (layoutForStage(world.progression.stage).tables.length > 0) return;
+
     order.state = ORDER_DELIVERED;
     order.deliveredAtMs = world.clock.simTimeMs;
     customer.state = STATE_EATING;
@@ -210,6 +232,32 @@ export class ServiceSystem implements SimSystem {
     }
     return -1;
   }
+}
+
+/**
+ * Hand a plate to the person it belongs to — what a waiter's task *does*.
+ *
+ * Exported for `EmployeeFsmSystem`, which owns when a task finishes but must
+ * not own what it means. Returns false when the plate is not actually ready,
+ * which puts the task back on the board rather than consuming it — a waiter who
+ * arrives at an empty pass should try again, not give up.
+ */
+export function deliverOrder(world: World, orderSlot: number): boolean {
+  if (orderSlot < 0 || !world.orders.isActive(orderSlot)) return false;
+
+  const order = world.orders.at(orderSlot);
+  if (order.state !== ORDER_ON_PASS) return false;
+
+  const customerSlot = order.customerSlot;
+  if (customerSlot < 0 || !world.customers.isActive(customerSlot)) return false;
+
+  const customer = world.customers.at(customerSlot);
+  order.state = ORDER_DELIVERED;
+  order.deliveredAtMs = world.clock.simTimeMs;
+  customer.state = STATE_EATING;
+  customer.timerMs = 0;
+  world.eventQueue.emitOrderDelivered(order.entityId, customer.entityId);
+  return true;
 }
 
 /**

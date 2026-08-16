@@ -20,7 +20,9 @@ import {
   VISIBILITY,
   WEATHER_FACTOR_PLACEHOLDER,
 } from '@config/conversion';
-import type { StageLayout } from '@config/layouts/stage1';
+import { DRIVE_THRU_SHARE } from '@config/driveThru';
+import { layoutForStage } from '@config/layouts';
+import { CHANNEL_COUNTER, CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
 import { queueCapacityOf } from './QueueSystem';
 import { effectValue } from './UpgradeSystem';
@@ -91,10 +93,15 @@ export class ConversionSystem implements SimSystem {
    */
   private readonly factors: FactorReport[] = [];
 
-  constructor(
-    private readonly lanes: LaneGraph,
-    private readonly layout: StageLayout,
-  ) {
+  /**
+   * No layout is captured — Phase 11.
+   *
+   * It used to be a constructor argument, which was right while there was one
+   * stage and would have been a silent bug the moment there were four: a system
+   * holding Stage 1's layout after the player evolved would pull cars in to a
+   * point that no longer exists. The stage is asked for on every use instead.
+   */
+  constructor(private readonly lanes: LaneGraph) {
     for (let i = 0; i < 10; i++) {
       this.factors.push({ value: 1, reason: REASON_JUST_PASSING, blame: true });
     }
@@ -199,14 +206,29 @@ export class ConversionSystem implements SimSystem {
     customer.vehicleSlot = vehicleSlot;
     customer.parkingSlot = -1;
     customer.queueIndex = -1;
+    customer.laneSlot = -1;
+    /*
+     * The channel, decided once and never revisited — Phase 11.
+     *
+     * Rolled from the `customer` stream, which is the stream for per-customer
+     * decisions: using `conversion` would make the channel choice change the
+     * *next* conversion roll, so building a drive-thru would silently shift
+     * every subsequent customer's odds.
+     */
+    const layoutNow = layoutForStage(world.progression.stage);
+    customer.channel =
+      layoutNow.driveThru !== null && world.rng.customer.next() < DRIVE_THRU_SHARE
+        ? CHANNEL_DRIVE_THRU
+        : CHANNEL_COUNTER;
     customer.visible = 0;
     customer.timerMs = 0;
     customer.patienceMs = 0;
     customer.patienceMaxMs = 0;
     customer.reason = REASON_JUST_PASSING;
     customer.arrivedAtMs = world.clock.simTimeMs;
-    customer.x = this.layout.pullIn.x;
-    customer.y = this.layout.pullIn.y;
+    const layout = layoutForStage(world.progression.stage);
+    customer.x = layout.pullIn.x;
+    customer.y = layout.pullIn.y;
     customer.z = 0;
 
     world.vehicles.customerSlot[vehicleSlot] = customerSlot;
@@ -234,7 +256,8 @@ export class ConversionSystem implements SimSystem {
     this.set(2, MENU_APPEAL_PLACEHOLDER * effectValue(world, 'menuAppeal'), REASON_NO_DESIRED_ITEM);
     this.set(3, PRICE_FIT_PLACEHOLDER, REASON_PRICE_TOO_HIGH);
     this.set(4, queuePenalty(queueLength), REASON_QUEUE_TOO_LONG);
-    this.set(5, spilloverPenalty(queueLength, queueCapacityOf(world, this.layout)), REASON_QUEUE_TOO_LONG);
+    const layout = layoutForStage(world.progression.stage);
+    this.set(5, spilloverPenalty(queueLength, queueCapacityOf(world, layout)), REASON_QUEUE_TOO_LONG);
     this.set(6, reputationFactor(world.economy.reputation), REASON_REPUTATION_LOW);
     this.set(7, timeOfDayFit(hour), REASON_WRONG_TIME);
     this.set(8, WEATHER_FACTOR_PLACEHOLDER, REASON_WEATHER);

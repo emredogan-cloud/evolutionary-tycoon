@@ -95,24 +95,39 @@ describe('accrual', () => {
   });
 });
 
-describe('cash never goes below zero', () => {
-  it('holds under a payroll it cannot possibly afford', () => {
-    /*
-     * The hard requirement, attempted by brute force: the maximum payroll, no
-     * income, and an hour of game time. Checked every tick rather than at the
-     * end, because a balance that dipped negative and recovered would pass an
-     * end-state assertion.
-     */
-    const sim = new Sim({ seed: 1 });
-    sim.world.economy.cash = 500;
-    for (let i = 0; i < MAX_EMPLOYEES; i++) hire(sim.world, 'cook', 1);
-    sim.world.economy.cash = 2;
+/**
+ * An hour of game time with an assertion on every one of the 72 000 ticks.
+ *
+ * That is genuinely slow — around five seconds free, and past Vitest's five-second
+ * default once the whole suite is running under coverage. Raised rather than
+ * shortened: the point of the test is that the balance never dips *at any
+ * moment*, and sampling less often is exactly the weakening that would let a
+ * transient negative through.
+ */
+const BRUTE_FORCE_TIMEOUT_MS = 60_000;
 
-    for (let tick = 0; tick < TICKS_PER_MINUTE * 60; tick++) {
-      sim.tick();
-      expect(sim.world.economy.cash, `negative at tick ${String(tick)}`).toBeGreaterThanOrEqual(0);
-    }
-  });
+describe('cash never goes below zero', () => {
+  it(
+    'holds under a payroll it cannot possibly afford',
+    () => {
+      /*
+       * The hard requirement, attempted by brute force: the maximum payroll, no
+       * income, and an hour of game time. Checked every tick rather than at the
+       * end, because a balance that dipped negative and recovered would pass an
+       * end-state assertion.
+       */
+      const sim = new Sim({ seed: 1 });
+      sim.world.economy.cash = 500;
+      for (let i = 0; i < MAX_EMPLOYEES; i++) hire(sim.world, 'cook', 1);
+      sim.world.economy.cash = 2;
+
+      for (let tick = 0; tick < TICKS_PER_MINUTE * 60; tick++) {
+        sim.tick();
+        expect(sim.world.economy.cash, `negative at tick ${String(tick)}`).toBeGreaterThanOrEqual(0);
+      }
+    },
+    BRUTE_FORCE_TIMEOUT_MS,
+  );
 
   it('leaves no debt behind when somebody walks out', () => {
     // "There is no debt or game over." An employee who leaves takes their

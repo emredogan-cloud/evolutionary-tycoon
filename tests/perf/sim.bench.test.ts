@@ -12,6 +12,7 @@ import {
   benchPopulatedTick,
   benchServiceTick,
   benchStaffedTick,
+  benchStage4Tick,
   benchSnapshot,
   buildPeakLoad,
   benchStoreChurn,
@@ -244,6 +245,18 @@ describe('simulation performance budgets', () => {
     // load it was no longer carrying.
     const result = benchStaffedTick();
     expect(result.name, `the label records the load: ${result.name}`).toContain('8 employees');
+  });
+
+  it('runs a Stage 4 tick inside the Phase 11 budget', () => {
+    /*
+     * 3.2 ms p95 at the heaviest world the game has — GAME_EXECUTION_ROADMAP
+     * Phase 11. Stage 4 adds ten tables, eight parking bays and a drive-thru
+     * lane whose compaction scans the customer pool every tick, on top of
+     * everything the earlier stages already do.
+     */
+    const result = benchStage4Tick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(3.2);
   });
 
   it('never spends more than a frame on one goal', () => {

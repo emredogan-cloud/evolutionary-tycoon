@@ -209,6 +209,40 @@ export interface EmployeeLeftEvent {
   reason: 'fired' | 'unpaid';
 }
 
+/** Requirements met — the next stage is available and awaiting confirmation. */
+export interface StageUnlockedEvent {
+  readonly t: 'STAGE_UNLOCKED';
+  stage: number;
+}
+
+/** The player confirmed; the building starts growing. */
+export interface ConstructionStartedEvent {
+  readonly t: 'CONSTRUCTION_STARTED';
+  stage: number;
+  durationMs: number;
+}
+
+/** The building finished growing and the stage actually changed. */
+export interface StageChangedEvent {
+  readonly t: 'STAGE_CHANGED';
+  from: number;
+  to: number;
+}
+
+export interface ObjectPlacedEvent {
+  readonly t: 'OBJECT_PLACED';
+  objectId: string;
+  x: number;
+  y: number;
+}
+
+export interface ObjectRemovedEvent {
+  readonly t: 'OBJECT_REMOVED';
+  objectId: string;
+  x: number;
+  y: number;
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
@@ -229,7 +263,12 @@ export type SimEvent =
   | UpgradeAppliedEvent
   | PriceChangedEvent
   | EmployeeHiredEvent
-  | EmployeeLeftEvent;
+  | EmployeeLeftEvent
+  | StageUnlockedEvent
+  | ConstructionStartedEvent
+  | StageChangedEvent
+  | ObjectPlacedEvent
+  | ObjectRemovedEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -261,6 +300,11 @@ export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'PRICE_CHANGED',
   'EMPLOYEE_HIRED',
   'EMPLOYEE_LEFT',
+  'STAGE_UNLOCKED',
+  'CONSTRUCTION_STARTED',
+  'STAGE_CHANGED',
+  'OBJECT_PLACED',
+  'OBJECT_REMOVED',
 ];
 
 /**

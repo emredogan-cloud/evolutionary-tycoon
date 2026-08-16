@@ -4,10 +4,11 @@ import { SYSTEM_ORDER } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { LaneGraph } from '../nav/LaneGraph';
 import { FlowFieldCache } from '../nav/FlowFieldCache';
-import { ManeuverTable } from '../nav/maneuvers';
+import { maneuverTableFor } from '../nav/maneuverTables';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
 import { EconomySystem } from './EconomySystem';
+import { ProgressionSystem } from './ProgressionSystem';
 import { EmployeeFsmSystem } from './EmployeeFsmSystem';
 import { TaskBoardSystem } from './TaskBoardSystem';
 import { KitchenSystem } from './KitchenSystem';
@@ -69,13 +70,13 @@ export function stage1Lanes(): LaneGraph {
 
 export function createDefaultSystems(world: World): readonly SimSystem[] {
   const lanes = stage1Lanes();
-  const maneuverSystem = stage1ManeuverSystem();
+  const maneuverSystem = stageManeuverSystem();
 
   const filled: Partial<Record<SystemName, SimSystem>> = {
     TimeSystem: new TimeSystem(),
     TrafficSpawnSystem: new TrafficSpawnSystem(lanes),
     VehicleMotionSystem: new VehicleMotionSystem(lanes, world.vehicles.capacity),
-    ConversionSystem: new ConversionSystem(lanes, STAGE1_LAYOUT),
+    ConversionSystem: new ConversionSystem(lanes),
     VehicleManeuverSystem: maneuverSystem,
     /*
      * The state machine holds the manoeuvre system rather than the other way
@@ -91,8 +92,8 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
      * noticing they are on it.
      */
     NavigationSystem: new NavigationSystem(stage1Fields(), world.customers.capacity),
-    CustomerFsmSystem: new CustomerFsmSystem(STAGE1_LAYOUT, maneuverSystem),
-    QueueSystem: new QueueSystem(STAGE1_LAYOUT),
+    CustomerFsmSystem: new CustomerFsmSystem(maneuverSystem),
+    QueueSystem: new QueueSystem(),
     /*
      * The board posts and assigns *before* the brains run, so an employee
      * assigned this tick starts walking this tick. The reverse order costs 50 ms
@@ -119,6 +120,13 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
      * lag in the rate the player is watching.
      */
     EconomySystem: new EconomySystem(),
+    /*
+     * Progression runs late, after the tick's money and service have happened,
+     * so a requirement met *this* tick is seen on the tick it was met rather
+     * than the next. It also owns construction, which is why there is no
+     * nineteenth slot for one.
+     */
+    ProgressionSystem: new ProgressionSystem(),
   };
   return SYSTEM_ORDER.map((name) => filled[name] ?? NOOP_SYSTEMS[name]);
 }
@@ -146,19 +154,24 @@ function stage1Fields(): FlowFieldCache {
   return sharedFields;
 }
 
-export function stage1ManeuverSystem(): VehicleManeuverSystem {
-  /*
-   * The manoeuvre curves are built here, once, for the same reason the lane
-   * graph is: they are a pure function of authored layout, hold no mutable
-   * state, and the benchmark constructs thousands of simulations — flattening
-   * them per `Sim` would be tens of thousands of identical polylines.
-   */
-  sharedManeuverSystem ??= new VehicleManeuverSystem(
-    stage1Lanes(),
-    new ManeuverTable(STAGE1_LAYOUT, stage1Lanes()),
-    STAGE1_LAYOUT,
-  );
-  return sharedManeuverSystem;
+/**
+ * A manoeuvre system per simulation, over manoeuvre tables shared by stage.
+ *
+ * The split matters and it was not the original shape. Until Phase 11 a single
+ * `VehicleManeuverSystem` was shared by every `Sim` — correct, because it held
+ * no mutable state and the benchmark builds thousands of simulations, so
+ * re-flattening identical polylines each time was pure waste.
+ *
+ * Phase 11 made the *system* stateful: it remembers which stage its table was
+ * built for and rebuilds on evolution. A shared instance would then have two
+ * simulations at different stages fighting over one table, which breaks the
+ * property the whole architecture rests on — same seed and same commands must
+ * give the same world.
+ *
+ * So the **tables** stay shared (they are still a pure function of layout) and
+ * the **system** is per-simulation. The optimisation survives; the hazard does
+ * not.
+ */
+export function stageManeuverSystem(): VehicleManeuverSystem {
+  return new VehicleManeuverSystem(stage1Lanes(), maneuverTableFor(1), STAGE1_LAYOUT);
 }
-
-let sharedManeuverSystem: VehicleManeuverSystem | undefined;

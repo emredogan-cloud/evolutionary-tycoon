@@ -169,6 +169,30 @@ test.describe('visual goldens', () => {
     );
     await expect(page).toHaveScreenshot('upgrades-after.png');
   });
+
+  /**
+   * The four stages — GAME_EXECUTION_ROADMAP Phase 11, "visual golden'lar: her
+   * aşama".
+   *
+   * The same lot, the same road and the same camera in all four; what changes is
+   * the building, the car park, the tables and — at Stage 4 — the drive-thru
+   * lane. That is the design constraint made photographable: put these side by
+   * side and the plot is recognisably the same place.
+   *
+   * `?stage=` sets the stage directly rather than playing to it. A golden that
+   * had to earn its way to Stage 4 would take minutes to regenerate and would
+   * photograph whatever the economy happened to do on the day.
+   *
+   * Stage 3 and 4 art is **placeholder** and registered as such — GAME_EXECUTION
+   * ROADMAP puts it in Phase 16. What these goldens protect is the *geometry*:
+   * where the bays are, where the tables are, where the lane runs.
+   */
+  for (const stage of [2, 3, 4]) {
+    test(`stage${String(stage)}-layout — the lot as it is built out`, async ({ page }) => {
+      await openFrozen(page, 'empty', 600, `&stage=${String(stage)}`);
+      await expect(page).toHaveScreenshot(`stage${String(stage)}-layout.png`);
+    });
+  }
 });
 
 test.describe('visual determinism', () => {

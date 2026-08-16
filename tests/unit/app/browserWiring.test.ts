@@ -523,3 +523,109 @@ describe('installTestHooks', () => {
     expect((await api.load()).ok).toBe(false);
   });
 });
+
+/**
+ * The intent surface, exercised through the container that builds it — Phase 11.
+ *
+ * Every entry of `UiCommands` is a closure created in `createContainer`, and
+ * none of them had ever been called by a test: the overlay calls them in a
+ * browser and the simulation is tested directly, so the *translation* between
+ * the two — the one thing this layer is for — sat in the gap between the two
+ * suites. Build mode added four more closures to that gap, which is what made
+ * it worth closing.
+ */
+describe('what the overlay is allowed to ask for', () => {
+  it('turns every intent into a command the simulation applies', () => {
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    const applied = container.sim.world.stats.commandsApplied;
+
+    container.commands.buyUpgrade('hand-painted-sign');
+    container.commands.setPrice('lemonade', 3);
+    container.commands.hire('cook', 0.5);
+    container.commands.evolve();
+    container.commands.place('ph-prop-short', 8, 16);
+    container.commands.removePlaced(0);
+
+    // Queued, not applied: commands land at the start of a tick, never on
+    // dispatch, so that wall-clock arrival time cannot change an outcome.
+    expect(container.sim.world.stats.commandsApplied).toBe(applied);
+    container.sim.advance(2);
+    expect(container.sim.world.stats.commandsApplied).toBe(applied + 6);
+  });
+
+  it('fires an employee the overlay names by entity id', () => {
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    container.sim.world.economy.cash = 500;
+    container.commands.hire('cook', 0.5);
+    container.sim.advance(2);
+    expect(container.sim.world.employees.activeCount).toBe(1);
+
+    const hired = container.sim.world.employees.at(0).entityId;
+    container.commands.fire(hired);
+    container.sim.advance(2);
+    expect(container.sim.world.employees.activeCount).toBe(0);
+  });
+
+  it('answers no placement preview until there is a camera', () => {
+    // The unprojector is installed by `main.ts` once Phaser has booted. Before
+    // that a screen point does not correspond to anywhere, and the honest answer
+    // is null rather than the origin.
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    expect(container.commands.previewPlacement('ph-prop-short', 640, 360)).toBeNull();
+  });
+
+  it('previews through the camera the moment one is installed', () => {
+    /*
+     * The whole point of the indirection: the container is built before the
+     * camera exists, so both the projector and its inverse are swapped in later
+     * and every preview from then on goes through them.
+     */
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    // A stand-in that reads screen pixels as tenths of a metre, which is enough
+    // to prove the wiring without restating the isometric transform.
+    container.setUnprojector((x, y) => ({ x: x / 10, y: y / 10 }));
+    container.setProjector((x, y, _z, out) => {
+      out.x = x * 10;
+      out.y = y * 10;
+      return true;
+    });
+
+    const preview = container.commands.previewPlacement('ph-prop-short', 83, 162);
+    expect(preview).not.toBeNull();
+    // Snapped to the half-metre navigation grid on the way through: 8.3 m
+    // becomes 8.5 and 16.2 becomes 16.0, which is the whole reason the ghost
+    // reports a cell rather than echoing the cursor back.
+    expect(preview?.worldX).toBe(8.5);
+    expect(preview?.worldY).toBe(16);
+    expect(preview?.outcome).toBe('ok');
+    // And projected back, so the ghost is drawn on the cell it would occupy.
+    expect(preview?.screenX).toBe(85);
+    expect(preview?.screenY).toBe(160);
+  });
+
+  it('reports the reason a placement would fail', () => {
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    container.setUnprojector((x, y) => ({ x: x / 10, y: y / 10 }));
+
+    expect(container.commands.previewPlacement('ph-prop-short', -500, 160)?.outcome).toBe('outside-lot');
+
+    container.commands.place('ph-prop-short', 8, 16);
+    container.sim.advance(2);
+    expect(container.commands.previewPlacement('ph-prop-short', 80, 160)?.outcome).toBe('occupied');
+  });
+
+  it('starts at the stage the query string asks for', () => {
+    // Visual regression only — `?stage=` is documented alongside `freezeAt` in
+    // renderMode. Clamped, so a golden URL asking for stage 9 photographs the
+    // last stage there is rather than crashing.
+    expect(
+      createContainer(isolatedWindow('?stage=3'), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
+    ).toBe(3);
+    expect(
+      createContainer(isolatedWindow('?stage=9'), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
+    ).toBe(4);
+    expect(
+      createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
+    ).toBe(1);
+  });
+});

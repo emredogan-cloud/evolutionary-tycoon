@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 8,
+  "buildSha": "phase11fixture",
+  "createdAt": 1700000000000,
+  "lastSeenAt": 1700000000000,
+  "lastSeenServerAt": null,
+  "playtimeMs": 303000,
+  "tick": 6061,
+  "nextEntityId": 234,
+  "clock": {
+    "simTimeMs": 303050
+  },
+  "rng": {
+    "traffic": {
+      "a": -1154256102,
+      "b": 493362430,
+      "c": -1417699519,
+      "d": -1078023091
+    },
+    "conversion": {
+      "a": -1488399289,
+      "b": -1534409752,
+      "c": -1083885587,
+      "d": -1774840310
+    },
+    "customer": {
+      "a": 1936359884,
+      "b": 175618005,
+      "c": -666903015,
+      "d": 396367544
+    },
+    "tips": {
+      "a": -2048330897,
+      "b": -1620255985,
+      "c": 2021161755,
+      "d": -1345280936
+    },
+    "events": {
+      "a": 361707646,
+      "b": -1252921798,
+      "c": 191661503,
+      "d": -130262879
+    },
+    "cosmetic": {
+      "a": 1289948761,
+      "b": 2041160955,
+      "c": -1728245038,
+      "d": 1800911822
+    }
+  },
+  "control": {
+    "speedMultiplier": 1,
+    "paused": false
+  },
+  "progression": {
+    "stage": 3,
+    "unlocks": [],
+    "milestones": [],
+    "pendingStage": 0
+  },
+  "construction": {
+    "targetStage": 0,
+    "elapsedMs": 0,
+    "totalMs": 0
+  },
+  "economy": {
+    "cash": 700.0905200000055,
+    "reputation": 0.6342400000000001,
+    "lifetimeRevenue": 17.795520000000003,
+    "lifetimeSpend": 206,
+    "prices": [],
+    "revenueWindow": [0, 0, 0, 0, 2.3248, 0, 0, 0, 2.3248, 6.0304, 0, 0],
+    "expenseWindow": [
+      0, 0.12175000000000016, 0.12175000000000016, 0.12175000000000016, 0.6217500000000001,
+      0.12175000000000016, 0.12175000000000016, 0.12175000000000016, 0.6217500000000001, 1.9217500000000003,
+      0.12175000000000016, 0.12175000000000016
+    ],
+    "bucketIndex": 0,
+    "bucketElapsedMs": 3050
+  },
+  "layout": {
+    "placed": [
+      {
+        "objectId": "ph-prop-short",
+        "x": 8,
+        "y": 17,
+        "z": 0
+      }
+    ],
+    "revision": 1,
+    "upgrades": [["hand-painted-sign", 1]]
+  },
+  "staff": {
+    "hired": [],
+    "settleElapsedMs": 3050,
+    "employees": [
+      {
+        "entityId": 1,
+        "role": 0,
+        "skill": 0.7,
+        "wagePerMinute": 0.781,
+        "accruedWages": 0.039700833333333366,
+        "unpaidMs": 0,
+        "x": 12,
+        "y": 10.799999999999999
+      },
+      {
+        "entityId": 2,
+        "role": 1,
+        "skill": 0.6,
+        "wagePerMinute": 0.6799999999999999,
+        "accruedWages": 0.03456666666666666,
+        "unpaidMs": 0,
+        "x": 19.518565560898665,
+        "y": 13.399999993858358
+      }
+    ]
+  },
+  "traffic": {
+    "nextCandidateMs": 303204.95654325583,
+    "nextDecorativeMs": 303138.63451314415
+  },
+  "stats": {
+    "customersServed": 5,
+    "conversionsSucceeded": 11,
+    "conversionsFailed": 103,
+    "turnedAwayNoParking": 3,
+    "customersAbandoned": 0,
+    "vehiclesSpawned": 208,
+    "convertibleSpawned": 114,
+    "commandsApplied": 6002
+  },
+  "settings": {
+    "audio": {
+      "master": 1,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": false,
+      "highContrast": false
+    }
+  },
+  "checksum": "e51a0dbf"
+}

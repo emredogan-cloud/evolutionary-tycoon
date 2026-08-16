@@ -6,6 +6,7 @@ import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { menuIndexOf, menuItem } from '@config/economy/menu';
 import { Sim } from '@sim/core/Sim';
 import { buyUpgrade, effectValue } from '@sim/systems/UpgradeSystem';
+import { hire } from '@sim/systems/StaffSystem';
 import { currentQuality, startPrep } from '@sim/systems/KitchenSystem';
 import { queueCapacityOf } from '@sim/systems/QueueSystem';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
@@ -301,19 +302,24 @@ describe('the cooler — hold tolerance', () => {
   });
 
   it(
-    'has no consequence a Stage 1 player can feel, and this records that',
+    'is dormant at Stage 1 and live from Stage 3, which is the whole story',
     () => {
       /*
-       * **The cooler fails the four-property rule today, and not through any
-       * fault of its own.** Stage 1 delivery is automatic: `KitchenSystem` moves
-       * a plate onto the pass and `ServiceSystem` hands it over in the same
-       * tick, so nothing is ever held. PHASE_8_REPORT §6 measured it — zero
-       * ticks out of 24 000 with a plate on the pass.
+       * **The cooler was inert for three phases, and Phase 11 fixed it.**
        *
-       * So this asserts the *absence*, deliberately. When Phase 10's waiters put
-       * a delay between ready and delivered, plates will start waiting, this
-       * test will fail, and the failure is the signal that the cooler has become
-       * a real purchase. Deleting it then is the correct fix.
+       * At Stage 1 delivery is instantaneous — the customer is standing at the
+       * counter — so nothing is ever held and the cooler changes nothing a
+       * player can feel. PHASE_8_REPORT §6 measured zero ticks out of 24 000
+       * with a plate on the pass, and Phases 9 and 10 each inherited it.
+       *
+       * Stage 3 gives the world tables. A seated customer is across the room, so
+       * the food has to be *carried*, and the pass finally holds plates —
+       * measured at 10.6% of ticks with one waiter on shift.
+       *
+       * Both halves are asserted here rather than one, because "it is dormant"
+       * and "it stopped being dormant" are the same claim seen from either end,
+       * and a test that only checked the second would pass on a build where
+       * Stage 1 had quietly started holding food too.
        */
       const sim = new Sim({ seed: 424242 });
       let ticksWithPlate = 0;
@@ -327,10 +333,28 @@ describe('the cooler — hold tolerance', () => {
       }
 
       expect(sim.world.stats.customersServed, 'nobody was served, so this proves nothing').toBeGreaterThan(0);
-      expect(
-        ticksWithPlate,
-        'food now waits on the pass — the cooler has become a real upgrade, delete this test',
-      ).toBe(0);
+      expect(ticksWithPlate, 'Stage 1 started holding food, which it should not').toBe(0);
+
+      // And at Stage 3, with somebody to carry it, the pass is genuinely used.
+      const diner = new Sim({ seed: 424242 });
+      diner.world.progression.stage = 3;
+      diner.world.economy.cash = 500;
+      expect(hire(diner.world, 'waiter', 0.6)).toBe('ok');
+      expect(hire(diner.world, 'cook', 0.7)).toBe('ok');
+
+      let heldAtStage3 = 0;
+      for (let i = 0; i < TICKS_PER_MINUTE * 10; i++) {
+        diner.tick();
+        for (let slot = 0; slot < diner.world.orders.scanLimit; slot++) {
+          if (!diner.world.orders.isActive(slot)) continue;
+          if (diner.world.orders.at(slot).state === ORDER_ON_PASS) {
+            heldAtStage3++;
+            break;
+          }
+        }
+      }
+
+      expect(heldAtStage3, 'Stage 3 still never holds food — the cooler is still inert').toBeGreaterThan(0);
     },
     LONG_RUN_TIMEOUT_MS,
   );

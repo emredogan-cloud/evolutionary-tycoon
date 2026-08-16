@@ -1,7 +1,9 @@
 <script lang="ts">
   import type {
     HudSource,
+    PlacedView,
     PriceView,
+    ProgressionView,
     RoleView,
     StaffView,
     UiCommands,
@@ -9,6 +11,8 @@
     WorldMarker,
   } from '@app/bridge/hudModel';
   import HudCash from './HudCash.svelte';
+  import EvolutionPanel from './EvolutionPanel.svelte';
+  import BuildMode from '../screens/BuildMode.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
   import StaffIcons from './StaffIcons.svelte';
@@ -65,6 +69,7 @@
   // re-key. This is the one allocation the overlay makes, and it is bounded by
   // the number of visible markers rather than by the pool size.
   let markers = $state<WorldMarker[]>([]);
+  let placed = $state<PlacedView[]>([]);
   let incomePerMinute = $state(0);
   let upgrades = $state<UpgradeView[]>([]);
   let prices = $state<PriceView[]>([]);
@@ -74,6 +79,14 @@
   let roles = $state<RoleView[]>([]);
   let payroll = $state(0);
   let payrollFull = $state(false);
+  let progression = $state<ProgressionView>({
+    stage: 1,
+    pendingStage: 0,
+    constructionProgress: 0,
+    constructionRemainingMs: 0,
+    constructing: false,
+    requirements: [],
+  });
 
   $effect(() =>
     source.subscribe((model) => {
@@ -93,6 +106,15 @@
         if (marker?.visible === true) live.push({ ...marker });
       }
       markers = live;
+      // Copied for the same reason: `model.placed` is a reused buffer.
+      /*
+       * `model.placedCount` is read through a `$state` proxy, which erases to
+       * `any` inside a Svelte component — so it is narrowed to a number here
+       * rather than handed straight to `slice`, where the type-aware lint
+       * (correctly) refuses an unsafe argument.
+       */
+      const placedCount: number = model.placedCount;
+      placed = model.placed.slice(0, placedCount).map((object): PlacedView => ({ ...object }));
 
       incomePerMinute = model.incomePerMinute;
       objective = model.objective;
@@ -108,6 +130,10 @@
       roles = model.roles.map((item): RoleView => ({ ...item }));
       payroll = model.payrollPerMinute;
       payrollFull = model.payrollFull;
+      progression = {
+        ...model.progression,
+        requirements: model.progression.requirements.map((row) => ({ ...row })),
+      };
     }),
   );
 </script>
@@ -141,6 +167,23 @@
 
   <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
   <ObjectivePanel {objective} progress={objectiveProgress} />
+  <BuildMode
+    {placed}
+    onplace={(objectId: string, x: number, y: number) => {
+      commands.place(objectId, x, y);
+    }}
+    onremove={(index: number) => {
+      commands.removePlaced(index);
+    }}
+    preview={(objectId: string, screenX: number, screenY: number) =>
+      commands.previewPlacement(objectId, screenX, screenY)}
+  />
+  <EvolutionPanel
+    {progression}
+    onevolve={() => {
+      commands.evolve();
+    }}
+  />
   <StaffPanel
     {staff}
     {roles}

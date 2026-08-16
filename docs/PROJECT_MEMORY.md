@@ -1163,7 +1163,32 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 20. Phase Exit Evidence
 
-**Son tamamlanan faz: P10 — Employee AI (TEKNİK PASS)**
+**Son tamamlanan faz: P11 — Restaurant Evolution (TEKNİK PASS)**
+
+| Kanıt         | Değer                                                                                     |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| Testler       | **1 218** unit/integration (84 dosya) · **114** E2E · **14** visual golden · **21** perf  |
+| `pnpm verify` | ✅ temiz (301 dosya typecheck 0 uyarı, depcruise 153 modül/532 bağımlılık, knip temiz)    |
+| Stage 4 tick  | **0.307 ms** p95 / bütçe 3.2 ms · ayırma **11.8 B/tick** / 32 B                           |
+| Save          | **v8**, v7→v8 migration + `save-v8.json` fixture                                          |
+| Görsel golden | 3 yeni: `stage2/3/4-layout.png` — her aşamanın **geometrisi** (sanat değil)               |
+| Dünya hash'i  | altıncı kez yenilendi: `6b9fb66d69f685fc` / `ac08da8925b9e88d` — Node ve tarayıcı birebir |
+| S4 / S5       | **karara bağlandı** (ızgaraya oturan yerleşim · oyuncu onaylı geçiş) → GDD §25.1/§25.2    |
+| Rapor         | [PHASE_11_REPORT.md](phases/PHASE_11_REPORT.md)                                           |
+| Kapı          | ✅ **TEKNİK PASS** — 15 DoD maddesinin 13'ü temiz                                         |
+
+**Dürüst kayıtlar:** renderer **Aşama 1 layout'una sabitlenmişti** — 2/3/4 simülasyonda
+vardı, ekranda yoktu · otopark **4.5 m arabaları 3 m aralıkla** park ediyordu (bu fazda
+yazılmış layout'lar; hiçbir test itiraz etmedi, çünkü park manevrayla yapılıyor) ·
+**Aşama 4 hiç yeni park yeri eklemiyor** — batı bloğu dolu, doğu yarısı restoran; kapasite
+drive-thru'nun kendisi · Aşama 1 **46.7–55.2 dk** sürüyor, tasarım **12–18 dk** (P12) ·
+S4'ün ikinci argümanı **ölçümle desteklenmedi** ve öyle kaydedildi · **WebKit bu makinede
+koşamadı** (`libevent-2.1-7t64`, root gerekiyor) — geçti denmedi · aşama silüetleri
+**YARGILANMADI, sanat yok**.
+
+---
+
+**Bir önceki: P10 — Employee AI (TEKNİK PASS)**
 
 | Kanıt         | Değer                                                                         |
 | ------------- | ----------------------------------------------------------------------------- |
@@ -1250,56 +1275,56 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🔴 DUR — P8–P10 BATCH TAMAMLANDI. P11+ YETKİSİZ.
+> ## 🟢 P11 ✅ KAPANDI — BATCH DEVAM EDİYOR, DURULMUYOR. ŞİMDİ **P12**.
 >
-> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ · P9 ✅ · P10 ✅**
+> **P2 ✅ · P3 ✅ · P4 🟡 · P5 ✅ · P6 ✅ · P7 ✅ · P8 ✅ · P9 ✅ · P10 ✅ · P11 ✅ · P12 🔵 · P13 ⏳**
 >
-> Kullanıcı 2026-08-15 yönergesiyle P8 → P9 → P10 batch'ini onaylamış ve fazlar arasında
-> durulmamasını istemişti. Üçü de kapandı. **Batch'in sonu bir kapıdır: P11+ için açık
-> onay gerekiyor.**
+> Kullanıcı 2026-08-16 yönergesiyle **P11 → P12 → P13** batch'ini onayladı ve şunu
+> yazdı: _"You MUST NOT stop for user approval after P11. You MUST NOT stop for user
+> approval after P12. You MUST stop only after P13."_ P11 kapandı; **durulmuyor**,
+> P12'ye geçiliyor. **P14+ yetkisiz.**
 >
-> ### Kullanıcının bakması gereken dört şey
+> ### P12 — yürütme yetkisi (bu faz)
 >
-> **1. 🔴 VERTICAL SLICE KAPISI AÇIK.** Projenin en önemli kapısı. Sekiz ölçütten **ikisi
-> kanıtlandı** (30 dk sıfır hata + heap sabit; kaydet/yükle idempotent), **beşi insan
-> yargısı bekliyor**, biri (gerçek cihazda FPS) ölçülmedi. Yürütücü kararıyla P10'a
-> geçildi ama **kapı geçti ilan edilmedi** — GDD onu "pazarlığa kapalı" diye tanımlıyor.
-> Beş yargının dördü üç kişi gerektiriyor; biri (**ekran görüntüsü tür ortalamasının
-> üstünde mi**) üretim sanatı olmadan verilemez. → PHASE_9_REPORT §9
+> 1. `tools/balance-sim` — Node içinde, `src/sim`'e karşı, beş politika:
+>    greedy-cheapest · roi-optimal · throughput-first · margin-first · idle-player
+> 2. ECONOMY_DESIGN §13'ün **on assertion'ı**, CI'da **merge-blocking**
+> 3. `docs/BALANCE_REPORT.md`
+> 4. **YÜRÜTÜCÜ DİREKTİFİ — trafik ve atıl personel açlığı çözülecek.** Kullanıcı
+>    P8–P10'un bulgularını (aşçı %98 BLOCKED · pass boş · düşük dönüşüm) kabul etti ve
+>    P12'de düzeltilmesini istedi: kuyruk gerçekten oluşsun, pass kullanılsın, yoğun
+>    saatte garson ve aşçı zorlansın, 60 sn verim hedefi tam yükseltilmiş koşulda
+>    **matematiksel olarak ulaşılabilir** olsun. **Mekanik değiştirilmeyecek —
+>    CONFIG sabitleri değiştirilecek** (MAX_CONVERSION, taban ilgi katsayıları, aşama
+>    çarpanları). Kararlar P12 raporuna yazılacak.
 >
-> **2. 🔴 KARAR GEREKİYOR #8 — pass hiç dolmuyor.** 24 000 tick'te 0. Üç fazda üç özellik
-> atıl: P8 pass tabağı, P9 soğutucu, P10 garson. İki yol var (Aşama 1 teslimini anlık
-> olmaktan çıkarmak, ya da Faz 11'i beklemek); hiçbiri seçilmedi. → §12
+> ### P12'nin devraldığı ölçülmüş sayılar
 >
-> **3. 🔴 AÇIK ÇELİŞKİ #7 — verim hedefi.** Roadmap "60 sn'de ≥3 müşteri" diyor, onaylı
-> ekonomi 1.8/dk'ya izin veriyor. P9'un tabelası tavanı ~2.3'e, tam yükseltilmiş tabela
-> ~3.2'ye çıkarıyor — yani ölçüt **yatırımdan sonra** karşılanabilir. "İlk dakikadan mı,
-> yatırımdan sonra mı" hâlâ karar. → §12
+> | Ölçüm                   | Değer                | Tasarım hedefi   |
+> | ----------------------- | -------------------- | ---------------- |
+> | Aşama 1 süresi (5 seed) | **46.7 – 55.2 dk**   | 12 – 18 dk       |
+> | Müşteri akışı           | **1.8 / dk**         | tavan 5.3 / dk   |
+> | Tabela sonrası tavan    | ~2.3 → tam ~3.2 / dk | ölçüt ≥3 / 60 sn |
+> | Aşçı BLOCKED oranı      | **%98**              | —                |
 >
-> **4. Sanata bağlı dört yargı hâlâ verilmedi.** P6 dönüşüm anı · P7 yaya doğallığı ·
-> P8 döngü tatmini · P10 çalışan niyeti. Dördü de **NOT JUDGED: AWAITING EXTERNAL ART**.
-> Kullanıcı 172 görseli dışarıda üretiyor; direktif gereği hiçbir faz buna bloke edilmedi
-> ve sahte sanat üretilmedi.
+> `tests/integration/stageTransitionPacing.test.ts` şu anda **yanlış olan sınırı**
+> (`> 25` dk) doğruluyor ve P12 ekonomiyi düzelttiğinde **düşmesi beklenen** bir testtir.
+> Düşmesi sinyaldir; sınır o zaman gerçek değere çekilecek.
 >
-> ### Batch'ten taşınan diğer açık maddeler
+> ### Batch boyunca açık kalan, P12'nin dokunmayacağı maddeler
 >
-> - ECONOMY_DESIGN §6.2 tablosunun iki satırı birebir okunamıyor; bir okuma seçildi → P12
-> - Aşçı vardiyanın %98'i BLOCKED — Aşama 1 hacmi hakkında bir denge girdisi → P12
-> - `staff.hired` ile `staff.employees` iki ayrı liste; uzlaştırma bir change request
+> - Vertical slice kapısı hâlâ açık: 2 kanıtlandı · 5 insan yargısı · 1 ölçülmedi
+> - Sanata bağlı beş yargı (P6, P7, P8, P10, P11) **NOT JUDGED: AWAITING EXTERNAL ART**
+> - Phaser 4 WebGL1 açıyor, dört doküman WebGL2 diyor (AÇIK ÇELİŞKİ #4)
+> - `staff.hired` / `staff.employees` iki ayrı liste — uzlaştırma bir change request
 > - Aday havuzu yok, her işe alım skill 0.5 → P13
-> - Layout invalidation `placed.length`'e bakıyor; bir **taşıma** kaçar → P11
-> - Fren lambaları aktör-karelerinin %33'ünde yanıyor → P12
-> - `globalDifficultyCurve`'ün clamp'a göre yeri: GDD §9.5 ile roadmap/ECONOMY §7 farklı → P12
-> - `priceFit` (P12), `weatherFactor` (P15) hâlâ literal 1.0
-> - Memnuniyetin dört girdisi (temizlik, atmosfer, servis, erişilebilirlik) 1.0 → P11
-> - Yayaların %57 yön değiştirmesi — sanat gelince izlenerek karara bağlanmalı
-> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1) — oyuncu fark eder
-> - Phaser 4 WebGL1 açıyor, dört doküman WebGL2 diyor (AÇIK ÇELİŞKİ #4) — karar bekliyor
-> - WebKit smoke bu makinede koşamıyor (`libevent-2.1-7t64`) — CI'da koşuyor
+> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1)
+> - WebKit smoke bu makinede koşmuyor (`libevent-2.1-7t64`) — CI'da koşuyor
+> - PR #17 (P8–P10) hâlâ açık ve merge edilmedi; `phase/11-evolution` onun üstünde
 >
 > ### Şimdi ne yapılıyor
 >
-> **HİÇBİR ŞEY.** P11 yetkisiz. Yukarıdaki dört maddeye kullanıcı bakana kadar durulur.
+> **P12 — Economy Balancing & Balance Simulator.** Batch bitmeden durulmaz.
 
 ## 22. Change Log
 
@@ -1311,6 +1336,7 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 | 2026-08-14 | **A**      | **Düzeltme 2:** Bağımlılık sürüm kilidi politikası eklendi → `WORKING_DISCIPLINE.md` §2.5 (yeni). Tam pinleme, değişiklik kaydı formatı, Dependabot auto-merge yasağı.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 2026-08-14 | **A**      | **Düzeltme 3:** Faz 4'e AI asset lisans kapısı eklendi (9 maddelik birincil-kaynak doğrulaması) → `GAME_EXECUTION_ROADMAP.md` Faz 4 START CONDITIONS (yeni), `ASSET_PIPELINE.md` §4.2, `RESEARCH_NOTES.md` §7.1 (yeni).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-08-14 | **A**      | `docs/PROJECT_MEMORY.md` oluşturuldu. Faz 1 başlangıç durumu kaydedildi.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-08-16 | **P11**    | **Faz 11 kapandı — Restaurant Evolution.** Dört aşama, drive-thru, inşaat maskesi, build mode. 1 218 test · 114 E2E · 14 golden · 21 perf bütçesi. Save **v8**. Dünya hash'i altıncı kez yenilendi (`6b9fb66d69f685fc`), Node ve tarayıcı birebir. **S4 ızgaraya oturan yerleşim**, **S5 oyuncu onaylı** olarak karara bağlandı (GDD §25.1/§25.2); S4'ün ikinci argümanı ölçümle desteklenmedi ve öyle kaydedildi. İki gerçek kusur bulundu ve düzeltildi: renderer Aşama 1 layout'una sabitlenmişti, otopark 4.5 m arabaları 3 m aralıkla park ediyordu. Aşama 1 süresi **46.7–55.2 dk** ölçüldü (tasarım 12–18) — P12'ye devredildi.                                                                                                                                                                                                                |
 | 2026-08-15 | **Q**      | **P7 TAMAMLANDI ✅ — BATCH 5–7 BİTTİ.** Yayalar yürüyor: nav grid, hedef başına flow field, steering, kuyruk slotları, A\* fallback, prosedürel yürüyüş, deadlock harness (500 senaryo × 2 000 tick, 0 kilitlenme). 907 test. Flow field bütçesi ilk ölçümde kaçtı (42.9 ms / 12 ms) — roadmap'in B planı bölmekti ama "önce ölç" diyordu; ölçüm en iç döngüdeki tuple destructure'ı gösterdi, düz typed array'lerle 9.3 ms, bölme gerekmedi. Beş kusur ölçümle bulundu (park kapısı kendi arabasının hücresinde; kuyruk dolunca on beş kişi aynı noktada). İki fikir kanıtla reddedildi ve kodda kayıtlı. Perf altyapısındaki beş kusur giderildi; kalibrasyon artık aritmetik + bellek karışımı (makineler arası sapma %19 → %5). **Yaya doğallığı yargısı verilmedi** — sanat yok; ölçülen %57 yön değişimi iyi bir sayı değil ve öyle raporlandı. |
 | 2026-08-15 | **P**      | **P6 TAMAMLANDI ✅.** Döngü kapandı — araç frene basıyor, park ediyor, sürücü tezgâha yürüyor, sıkılıp gidiyor (fazın şartnamedeki bitiş durumu). 834 test. Ölçümle yedi kusur bulundu; ikisi sessiz ve tam kilitlenmeydi: girişi "yavaş bir araç" gibi modellemek IDM'nin duruş boşluğu yüzünden aracı dönüşün 2.4 m gerisinde sonsuza kadar durdurdu (20 dakikada spawn 2 400 → 108), ve `SEEKING_PARKING`'in sabri hiç kurulmadığı için her müşteri vardığı tick'te vazgeçti (10 dakikada 17 dönüşüm, 0 park). Sabır süresi artık durumun kendi tanımında. `scanLimit` ile tick, dört sistem eklenmesine rağmen %44 ucuzladı. Save v4 → v5. **Dönüşüm anı yargısı verilmedi** — üretim sanatı yok, yerine mekanikler ölçüldü (5.61 m/s düşüş, 3.88 s yavaşlama, 334 dalga karesi).                                                                 |
 | 2026-08-15 | **O**      | **P5 KISMİ.** Trafik çekirdeği tamam ve deterministik (723 test, 10 000 spawn'da determinizm, fren dalgası yukarı yayılıyor). İki DoD maddesi karşılanmadı: yol canlı görünmüyor (ölçüldü: ortalama 1.05 araç, %40.9 tamamen boş — üç onaylı sayının çelişkisi, karar kullanıcının) ve tahsis bütçesi (29 B/tick vs 8; bütçe boş boru hattında belirlenmişti, sebep bisect edildi ama açıklanamadı, test düşük bırakıldı). Zaman ölçeği kararı verilmedi — boş yolda verilecek bir yargı değil. **P6/P7 başlatılmadı.**                                                                                                                                                                                                                                                                                                                               |

@@ -38,6 +38,15 @@ export interface RenderContext {
    * The renderer learns nothing from this. It is a function it was handed.
    */
   onFrame?(): void;
+  /**
+   * How far the building has grown, 0..1 — Phase 11.
+   *
+   * Supplied by `src/app` from the simulation rather than timed in the renderer.
+   * A locally-timed reveal drifts from the world the first time the game is
+   * paused, and construction genuinely takes simulated seconds — at 4x the
+   * building goes up four times faster and the mask has to agree.
+   */
+  constructionProgress?(): number;
   /** `prefers-reduced-motion` — disables smoothing and shake outright. */
   readonly reducedMotion: boolean;
   /** Which authored scene to stage, from `?scene=`. */

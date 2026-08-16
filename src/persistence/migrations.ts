@@ -238,7 +238,49 @@ const v6ToV7: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7];
+/**
+ * v7 to v8 — the Phase 11 evolution.
+ *
+ * A v7 save was written by a build with one stage, so: nothing pending, nothing
+ * under construction, and a layout revision of zero. Zero is the honest value
+ * for the revision in particular — it is an invalidation counter, and starting a
+ * resumed session at zero simply means the navigation cache rebuilds once on the
+ * first tick, which it would have done anyway.
+ *
+ * `stage` itself is untouched. It has been in the schema since Phase 2 and a v7
+ * save legitimately holds whichever stage it was on; inventing a transition here
+ * would evolve somebody's restaurant while they were not looking.
+ */
+const v7ToV8: Migration = {
+  from: 7,
+  to: 8,
+  up: (save) => {
+    const progression = save['progression'];
+    const layout = save['layout'];
+    const stats = save['stats'];
+    return {
+      ...save,
+      schemaVersion: 8,
+      progression: {
+        ...(typeof progression === 'object' && progression !== null
+          ? progression
+          : { stage: 1, unlocks: [], milestones: [] }),
+        pendingStage: 0,
+      },
+      construction: { targetStage: 0, elapsedMs: 0, totalMs: 0 },
+      layout: {
+        ...(typeof layout === 'object' && layout !== null ? layout : { placed: [], upgrades: [] }),
+        revision: 0,
+      },
+      stats: {
+        ...(typeof stats === 'object' && stats !== null ? stats : {}),
+        driveThruServed: 0,
+      },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8];
 
 assertContiguous(migrations);
 

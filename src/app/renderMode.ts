@@ -55,6 +55,18 @@ export interface RenderMode {
    * Nothing happens without the parameter.
    */
   readonly buy: readonly string[];
+  /**
+   * Start at this stage — visual regression only, `?stage=3`.
+   *
+   * Evolution takes minutes of play and a construction sequence; a golden of
+   * the Stage 4 restaurant that had to earn its way there would be a golden
+   * nobody could regenerate. Setting the stage directly is the same kind of
+   * affordance as `freezeAt` and is named as one.
+   *
+   * It does **not** replay the transition — the world simply starts at that
+   * stage, which is exactly what a golden of a *stage* should photograph.
+   */
+  readonly stage: number;
   readonly sceneId: string;
   /** True when any pinning parameter is present. */
   readonly visualDeterminism: boolean;
@@ -77,6 +89,8 @@ export function parseRenderMode(search: string): RenderMode {
   const fixedViewport = params.get('fixedViewport') === '1';
   const hideHud = params.get('hideHud') === '1';
   const cook = params.get('cook') === '1';
+  const stageRaw = readInt(params, 'stage');
+  const stage = stageRaw === null ? 1 : Math.min(4, Math.max(1, stageRaw));
   const buy = (params.get('buy') ?? '')
     .split(',')
     .map((id) => id.trim())
@@ -105,6 +119,7 @@ export function parseRenderMode(search: string): RenderMode {
     hideHud,
     cook,
     buy,
+    stage,
     sceneId,
     visualDeterminism: freezeAt !== null || noParticles || fixedViewport || hideHud,
     lockedCamera,

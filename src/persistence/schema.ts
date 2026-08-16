@@ -79,6 +79,13 @@ const saveFileV4Schema = z.object({
     stage: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
     unlocks: z.array(z.string()),
     milestones: z.array(z.string()),
+    // Phase 11 — evolution.
+    pendingStage: z.number().int().min(0).max(4),
+  }),
+  construction: z.object({
+    targetStage: z.number().int().min(0).max(4),
+    elapsedMs: z.number().nonnegative(),
+    totalMs: z.number().nonnegative(),
   }),
   economy: z.object({
     cash: z.number(),
@@ -94,6 +101,7 @@ const saveFileV4Schema = z.object({
   }),
   layout: z.object({
     placed: z.array(z.object({ objectId: z.string(), x: z.number(), y: z.number(), z: z.number() })),
+    revision: z.number().int().nonnegative(),
     upgrades: stringNumberEntries,
   }),
   staff: z.object({

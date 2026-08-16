@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { ACTOR_KIND_CUSTOMER, ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE, actorKindSpec } from '@config/actors';
 import { UPGRADES } from '@config/economy/upgrades';
-import { STAGE1_LAYOUT } from '@config/layouts/stage1';
+import { ConstructionMask } from '../fx/ConstructionMask';
+import { layoutForStage } from '@config/layouts';
+import type { StageLayout } from '@config/layouts/stage1';
 import { sceneFixture } from '@config/scenes';
 import { SURFACE_COLORS } from '@config/surfaces';
 import { CameraController } from '../camera/CameraController';
@@ -70,6 +72,22 @@ export class WorldScene extends Phaser.Scene {
   private context!: RenderContext;
   /** Last seen upgrade revision, so statics are rebuilt only on a purchase. */
   private upgradeRevision = -1;
+
+  /**
+   * The stage whose lot is currently drawn — Phase 11.
+   *
+   * The renderer was hardwired to Stage 1's layout, which meant the Stage 3
+   * dining room and the Stage 4 drive-thru lane existed in the simulation and
+   * nowhere on screen. Held here and compared per frame for the same reason as
+   * `upgradeRevision`: it changes a handful of times a session, so rebuilding
+   * the ground on a change beats diffing a layout sixty times a second.
+   */
+  private stage = 1;
+  private layout: StageLayout = layoutForStage(1);
+
+  /** Bay lines, table pads and the drive-thru lane. Cleared and redrawn per stage. */
+  private surfaces: Phaser.GameObjects.Graphics | null = null;
+  private construction!: ConstructionMask;
   private graph!: SceneGraph;
   private bridge!: RenderBridge;
   private camera!: CameraController;
@@ -106,8 +124,14 @@ export class WorldScene extends Phaser.Scene {
     // thing that runs out first.
     this.bridge = new RenderBridge(Math.max(64, view.actors.length));
 
+    // Before anything is drawn: a scene created at Stage 3 must draw Stage 3's
+    // lot, not draw Stage 1's and correct itself on the first frame.
+    this.stage = this.context.readView().stage;
+    this.layout = layoutForStage(this.stage);
+
     this.drawGround();
     this.drawRoad();
+    this.drawSurfaces();
     // Nothing is owned at scene creation; `update` rebuilds on the first frame
     // and on every purchase after that.
     this.registerStatics([]);
@@ -133,6 +157,22 @@ export class WorldScene extends Phaser.Scene {
       this.camera.handleResize();
     });
 
+    /*
+     * The construction reveal. Its bounds are the southern half of the lot,
+     * which is where every stage's building actually grows — the northern half
+     * is road and car park at every stage.
+     */
+    this.construction = new ConstructionMask(
+      this,
+      {
+        minX: this.layout.lot.minX,
+        minY: this.layout.lot.minY + (this.layout.lot.maxY - this.layout.lot.minY) / 2,
+        maxX: this.layout.lot.maxX,
+        maxY: this.layout.lot.maxY,
+      },
+      this.context.reducedMotion,
+    );
+
     // Announced so E2E can wait on a state rather than a timeout.
     document.documentElement.dataset['renderState'] = 'ready';
   }
@@ -141,6 +181,12 @@ export class WorldScene extends Phaser.Scene {
     this.camera.update(delta);
 
     const view = this.context.readView();
+    if (view.stage !== this.stage) {
+      this.stage = view.stage;
+      this.layout = layoutForStage(this.stage);
+      this.drawSurfaces();
+      this.registerStatics(view.upgradeLevels);
+    }
     if (view.upgradeRevision !== this.upgradeRevision) {
       this.upgradeRevision = view.upgradeRevision;
       this.registerStatics(view.upgradeLevels);
@@ -148,6 +194,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.bridge.sync(view, this.context.interpolationAlpha());
     this.syncSprites();
+    // Driven by the simulation's own figure, so a paused world holds a still
+    // half-built building rather than finishing it on wall-clock time.
+    this.construction.update(this.context.constructionProgress?.() ?? 0);
     this.context.onFrame?.();
 
     this.overlays?.update(this.bridge.visible.length);
@@ -256,8 +305,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private cameraBounds(): CameraBounds {
-    const margin = STAGE1_LAYOUT.cameraMarginMetres;
-    const lot = STAGE1_LAYOUT.lot;
+    const margin = this.layout.cameraMarginMetres;
+    const lot = this.layout.lot;
     const bounds = { left: 0, top: 0, right: 0, bottom: 0 };
     return worldRectToScreenBounds(
       lot.minX - margin,
@@ -270,7 +319,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** The lot, as a projected quadrilateral. */
   private drawGround(): void {
-    const lot = STAGE1_LAYOUT.lot;
+    const lot = this.layout.lot;
     const ground = this.add.graphics();
     ground.fillStyle(SURFACE_COLORS.ground, 1);
     ground.fillPoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
@@ -279,16 +328,72 @@ export class WorldScene extends Phaser.Scene {
     this.graph.layer('ground').add(ground);
   }
 
+  /**
+   * The markings that make a stage legible: bays, tables, the drive-thru lane.
+   *
+   * Drawn rather than modelled, like the ground and the road, until the baked
+   * surface art of ASSET_PIPELINE §5 exists. **This is the part of a stage the
+   * player reads without being told anything** — four bays became eight, the
+   * dining room appeared, there is a lane down the east side now — so leaving it
+   * undrawn made the evolution invisible even though the simulation had already
+   * changed underneath.
+   *
+   * One Graphics object, cleared and refilled, because a stage change replaces
+   * every marking at once and destroying nine objects to create eleven is churn
+   * for nothing.
+   */
+  private drawSurfaces(): void {
+    const surfaces = this.surfaces ?? this.add.graphics();
+    if (this.surfaces === null) {
+      this.surfaces = surfaces;
+      this.graph.layer('ground').add(surfaces);
+    }
+    surfaces.clear();
+
+    /*
+     * The drive-thru lane first, as asphalt from the order post to the window,
+     * so the bay outlines below draw on top of it rather than under it. One
+     * strip rather than one per lane slot: the slots are where cars stop, not a
+     * thing the player is meant to count.
+     */
+    const driveThru = this.layout.driveThru;
+    if (driveThru !== null) {
+      const minY = Math.min(driveThru.orderPost.y, driveThru.window.y) - 1.6;
+      const maxY = Math.max(driveThru.orderPost.y, driveThru.window.y) + 1.6;
+      const centreX = (driveThru.orderPost.x + driveThru.window.x) / 2;
+      surfaces.fillStyle(SURFACE_COLORS.road, 1);
+      surfaces.fillPoints(this.worldQuad(centreX - 1.5, minY, centreX + 1.5, maxY), true);
+      // A dashed edge on the lane, the same language as the road's centre line.
+      surfaces.fillStyle(SURFACE_COLORS.roadMarking, 1);
+      for (let y = minY; y < maxY; y += 2.4) {
+        surfaces.fillPoints(this.worldQuad(centreX - 1.58, y, centreX - 1.42, y + 1.2), true);
+      }
+    }
+
+    // Parking bays: an outline each, because a filled bay reads as occupied.
+    surfaces.lineStyle(2, SURFACE_COLORS.roadMarking, 0.55);
+    for (const bay of this.layout.parking) {
+      surfaces.strokePoints(this.worldQuad(bay.x - 1.2, bay.y - 2.2, bay.x + 1.2, bay.y + 2.2), true);
+    }
+
+    // Tables: a pad under each, so the dining room reads as a room rather than
+    // as a scatter of props.
+    surfaces.fillStyle(SURFACE_COLORS.groundGrid, 0.8);
+    for (const table of this.layout.tables) {
+      surfaces.fillPoints(this.worldQuad(table.x - 0.7, table.y - 0.7, table.x + 0.7, table.y + 0.7), true);
+    }
+  }
+
   private drawRoad(): void {
     const road = this.add.graphics();
-    const lanes = STAGE1_LAYOUT.road.lanes;
+    const lanes = this.layout.road.lanes;
     const first = lanes[0];
     const second = lanes[1];
     if (first === undefined || second === undefined) return;
 
     const startX = first.points[0]?.x ?? 0;
     const endX = first.points[first.points.length - 1]?.x ?? 0;
-    const halfWidth = STAGE1_LAYOUT.road.widthMetres / 2;
+    const halfWidth = this.layout.road.widthMetres / 2;
     const centreY = ((first.points[0]?.y ?? 0) + (second.points[0]?.y ?? 0)) / 2;
 
     road.fillStyle(SURFACE_COLORS.road, 1);
@@ -317,7 +422,7 @@ export class WorldScene extends Phaser.Scene {
    * order, and is there when the player looks back.
    */
   private registerStatics(levels: readonly number[]): void {
-    const statics = STAGE1_LAYOUT.statics.map((object, index) => ({
+    const statics = this.layout.statics.map((object, index) => ({
       entityId: -(index + 1),
       x: object.x,
       y: object.y,
@@ -336,7 +441,7 @@ export class WorldScene extends Phaser.Scene {
       if (item === undefined) continue;
       if ((levels[i] ?? 0) <= 0) continue;
       statics.push({
-        entityId: -(STAGE1_LAYOUT.statics.length + i + 1),
+        entityId: -(this.layout.statics.length + i + 1),
         x: item.anchor.x,
         y: item.anchor.y,
         z: 0,

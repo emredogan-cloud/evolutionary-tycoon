@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { worldToScreen } from '@render/iso/IsoProjection';
+import { screenToWorld, worldToScreen } from '@render/iso/IsoProjection';
 
 /**
  * World metres to CSS pixels on the overlay.
@@ -65,5 +65,41 @@ export function phaserProjector(game: Phaser.Game, sceneKey: string): ScreenProj
       out.x <= camera.width + CULL_MARGIN_PX &&
       out.y <= camera.height + CULL_MARGIN_PX
     );
+  };
+}
+
+/**
+ * The other direction: a point on the overlay back to a point on the ground.
+ *
+ * Build mode needs it — the player points at the lot and the game has to say
+ * which half-metre cell that is. Separate from `ScreenProjector` because it is
+ * used on a pointer event rather than on every marker of every sample, so
+ * returning an object here costs nothing and reads far better.
+ *
+ * `assumedZ` is zero and not a parameter: a screen point is a *ray*, not a
+ * place, and the only thing that makes it a place is deciding which plane it
+ * lands on. Build mode places objects on the ground, so the ground is the plane.
+ * A version that took a height would invite callers to pass one and get a
+ * silently displaced answer.
+ */
+export type WorldUnprojector = (screenX: number, screenY: number) => { x: number; y: number } | null;
+
+/** Nothing can be unprojected before the camera exists. */
+export const NULL_UNPROJECTOR: WorldUnprojector = () => null;
+
+export function phaserUnprojector(game: Phaser.Game, sceneKey: string): WorldUnprojector {
+  const scratch = { x: 0, y: 0, z: 0 };
+
+  return (screenX, screenY) => {
+    const scene = game.scene.getScene(sceneKey) as Phaser.Scene | null;
+    if (scene?.scene.isActive() !== true) return null;
+    const camera = scene.cameras.main as Phaser.Cameras.Scene2D.Camera | undefined;
+    if (camera === undefined) return null;
+
+    // The exact inverse of `phaserProjector`, in the reverse order: undo the
+    // zoom, undo the camera scroll, then undo the isometric transform.
+    const view = camera.worldView;
+    screenToWorld(screenX / camera.zoom + view.x, screenY / camera.zoom + view.y, 0, scratch);
+    return { x: scratch.x, y: scratch.y };
   };
 }

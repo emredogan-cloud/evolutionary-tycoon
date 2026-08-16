@@ -58,6 +58,14 @@ describe('parseRenderMode', () => {
     // Whitespace and empty entries are dropped rather than becoming an unknown
     // upgrade id that silently buys nothing.
     expect(parseRenderMode('?buy= a , ,b ').buy).toEqual(['a', 'b']);
+
+    // `stage` is the same kind of parameter, and clamped: a golden URL asking
+    // for stage 9 should photograph the last stage there is rather than crash.
+    expect(parseRenderMode('').stage).toBe(1);
+    expect(parseRenderMode('?stage=3').stage).toBe(3);
+    expect(parseRenderMode('?stage=9').stage).toBe(4);
+    expect(parseRenderMode('?stage=0').stage).toBe(1);
+    expect(parseRenderMode('?stage=3').visualDeterminism).toBe(false);
     expect(parseRenderMode('?scene=stress').visualDeterminism).toBe(false);
   });
 

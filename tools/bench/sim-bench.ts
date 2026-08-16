@@ -637,6 +637,68 @@ export function benchStaffedTick(): TimingResult {
 }
 
 /**
+ * A Stage 4 tick at full load — GAME_EXECUTION_ROADMAP Phase 11.
+ *
+ * 120 vehicles, 60 pedestrians and 12 employees, budget 3.2 ms p95. Stage 4 is
+ * the heaviest world the game has: the biggest layout, the most parking, tables,
+ * and a drive-thru lane whose compaction scans the customer pool every tick.
+ *
+ * The employee cap is 8, so "12 employees" is not reachable — the roadmap's
+ * figure predates that cap. This runs the maximum the world allows and says so
+ * in the label rather than quietly measuring a smaller load against a bigger
+ * number.
+ */
+export function benchStage4Tick(): TimingResult {
+  const sim = new Sim({ seed: 20260820 });
+  sim.world.progression.stage = 4;
+  const ticks = 200;
+
+  const load = (): void => {
+    populatePeakLoad(sim);
+    sim.world.progression.stage = 4;
+
+    for (let i = sim.world.customers.activeCount; i < 60; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    for (let i = 0; i < 20; i++) {
+      const orderSlot = sim.world.orders.acquire();
+      if (orderSlot < 0) break;
+      const order = sim.world.orders.at(orderSlot);
+      order.entityId = sim.world.allocateEntityId();
+      order.item = i % 3;
+      order.state = ORDER_PLACED;
+      order.station = -1;
+      order.orderedAtMs = sim.world.clock.simTimeMs;
+      order.customerSlot = i % Math.max(1, sim.world.customers.activeCount);
+    }
+
+    sim.world.economy.cash = 1_000_000;
+    for (let i = sim.world.employees.activeCount; i < MAX_EMPLOYEES; i++) {
+      hire(sim.world, i % 3 === 0 ? 'cook' : i % 3 === 1 ? 'waiter' : 'cleaner', (i % 5) / 4);
+    }
+  };
+
+  load();
+  const label = `stage 4 tick (${String(sim.world.employees.activeCount)} employees, ${String(sim.world.customers.activeCount)} pedestrians, 120 vehicles)`;
+  return timeIt(label, ticks, () => {
+    load();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
  * Reset per sample, for the same reason `benchTicksFromFresh` is: the world
  * fills as it runs, so twenty-five samples of a thousand ticks each were
  * measuring an increasingly busy simulation and the samples were describing
@@ -772,6 +834,7 @@ export function runSimBench(): BenchReport {
       benchCrowdedTick(),
       benchServiceTick(),
       benchStaffedTick(),
+      benchStage4Tick(),
       benchFlowFieldRebuild(),
       benchFlowFieldChunk(),
       benchCommandProcessing(),

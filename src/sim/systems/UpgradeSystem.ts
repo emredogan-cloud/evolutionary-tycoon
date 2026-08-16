@@ -32,6 +32,19 @@ export function upgradeLevel(world: World, id: string): number {
   return world.layout.upgrades.get(id) ?? 0;
 }
 
+/**
+ * Every level the player owns, across every family.
+ *
+ * The "upgrades bought" milestone in `src/config/progression.ts` counts levels
+ * rather than distinct upgrades, so buying the sign four times is four — which
+ * is the honest reading of "has this player engaged with upgrades at all".
+ */
+export function totalUpgradeLevels(world: World): number {
+  let total = 0;
+  for (const item of UPGRADES) total += upgradeLevel(world, item.id);
+  return total;
+}
+
 /** What the next level of an upgrade would cost, or -1 if it is maxed. */
 export function nextUpgradeCost(world: World, id: string): number {
   const item = upgrade(id);

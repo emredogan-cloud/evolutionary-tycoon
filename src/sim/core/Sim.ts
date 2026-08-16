@@ -10,7 +10,7 @@ import { SystemPipeline } from './SystemPipeline';
 import { ACTOR_KIND_VEHICLE } from '@config/actors';
 import { ARRIVAL_EPSILON_METRES } from '@config/customer';
 import { BRAKE_LIGHT_DECEL } from '@config/traffic';
-import { stage1ManeuverSystem } from '../systems/noop';
+import { stageManeuverSystem } from '../systems/noop';
 import type { VehicleManeuverSystem } from '../systems/VehicleManeuverSystem';
 import type { CustomerRecord } from '../stores/customers';
 import type { LaneSample } from '../nav/spline';
@@ -51,6 +51,14 @@ export interface SimOptions extends WorldOptions {
  * and not by those that ran before, which makes the outcome depend on wall-clock
  * arrival time — the one thing a deterministic kernel cannot tolerate.
  */
+/** The pipeline's manoeuvre system, if it has one. */
+function findManeuverSystem(pipeline: SystemPipeline): VehicleManeuverSystem | null {
+  for (const system of pipeline.systems) {
+    if (system.name === 'VehicleManeuverSystem') return system as VehicleManeuverSystem;
+  }
+  return null;
+}
+
 export class Sim {
   readonly world: World;
   readonly events = new EventBus();
@@ -75,7 +83,20 @@ export class Sim {
    * Asked where each vehicle is, because a vehicle mid-manoeuvre is not on a
    * lane at all. One authority for the projection, shared with the pipeline.
    */
-  private readonly maneuvers: VehicleManeuverSystem = stage1ManeuverSystem();
+  /**
+   * The **pipeline's** manoeuvre system, not a second one.
+   *
+   * `readView` has to project a car mid-manoeuvre, which needs the same
+   * manoeuvre table the pipeline is driving. Until Phase 11 that was guaranteed
+   * by `stage1ManeuverSystem()` returning a module-level singleton; Phase 11
+   * made the system stateful — it rebuilds its table on evolution — so the
+   * singleton had to go, and with it the accident that kept these two in step.
+   *
+   * Holding a second instance produced `RangeError: No manoeuvre for lane 1,
+   * bay 17` the first time a Stage 4 drive-thru car was projected: the
+   * pipeline's copy had rebuilt for Stage 4 and this one was still on Stage 1.
+   */
+  private readonly maneuvers: VehicleManeuverSystem;
   /** Reused by `readView`, aligned to `UPGRADES`. */
   private readonly upgradeLevelBuffer: number[] = new Array<number>(UPGRADES.length).fill(0);
   /** Reused by `copyVehicles`; sampling allocates nothing. */
@@ -84,6 +105,13 @@ export class Sim {
   constructor(options: SimOptions) {
     this.world = new World(options);
     this.pipeline = new SystemPipeline(options.systems ?? createDefaultSystems(this.world));
+    /*
+     * Found in the pipeline rather than constructed, so there is exactly one.
+     * A custom system list — which tests use — may not contain one, and a fresh
+     * instance is the right fallback there: nothing is driving it, so nothing
+     * can be out of step with it.
+     */
+    this.maneuvers = findManeuverSystem(this.pipeline) ?? stageManeuverSystem();
     this.log = new CommandLog(options.commandLogCapacity);
 
     if (options.startPaused === true) this.world.control.paused = true;
@@ -121,6 +149,7 @@ export class Sim {
       actorCount: 0,
       upgradeLevels: this.upgradeLevelBuffer,
       upgradeRevision: 0,
+      stage: 1,
     };
   }
 
@@ -178,6 +207,17 @@ export class Sim {
   }
 
   /**
+   * Where a vehicle actually is, in world metres.
+   *
+   * Exposed for tests that assert on *rendered* movement rather than on a
+   * record's stored position — the two differ for a customer riding in a car,
+   * and what a player would see teleport is the car.
+   */
+  positionOfVehicle(slot: number, out: LaneSample): LaneSample {
+    return this.maneuvers.positionOf(this.world, slot, out);
+  }
+
+  /**
    * Read-only projection for the renderer and the UI bridge.
    *
    * The same object every call, refreshed in place: allocating a snapshot per
@@ -197,6 +237,7 @@ export class Sim {
     v.employeeCount = this.world.employees.activeCount;
     v.orderCount = this.world.orders.activeCount;
     v.actorCount = this.fillActors();
+    v.stage = this.world.progression.stage;
 
     /*
      * Levels and a revision. Summing six numbers per call is cheaper than the

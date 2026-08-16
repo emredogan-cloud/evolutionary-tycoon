@@ -6,7 +6,7 @@ import { detectCapabilities, type CapabilityReport } from '@platform/capability'
 import { buildInfo } from '@platform/buildInfo';
 import { createContainer, resolveSeed, selectStorage } from '@app/container';
 import { DebugOverlay, debugOverlayEnabled } from '@app/debug/DebugOverlay';
-import { phaserProjector } from '@app/bridge/ScreenProjector';
+import { phaserProjector, phaserUnprojector } from '@app/bridge/ScreenProjector';
 import { createPhaserGame } from '@render/PhaserBootstrap';
 import { WORLD_SCENE_KEY } from '@render/scenes/WorldScene';
 import GameHud from '@ui/components/GameHud.svelte';
@@ -145,6 +145,7 @@ async function startSimulation(win: Window): Promise<void> {
     // marker was off-screen and none of them ever rendered — with no error
     // anywhere, because "not on screen" is a legitimate answer.
     container.setProjector(phaserProjector(game, WORLD_SCENE_KEY));
+    container.setUnprojector(phaserUnprojector(game, WORLD_SCENE_KEY));
 
     /*
      * The overlay mounts after the renderer, into its own host above the canvas.

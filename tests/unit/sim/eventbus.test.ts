@@ -40,6 +40,12 @@ describe('EventQueue', () => {
         // Phase 10 — employees.
         'EMPLOYEE_HIRED',
         'EMPLOYEE_LEFT',
+        // Phase 11 — evolution and the build system.
+        'STAGE_UNLOCKED',
+        'CONSTRUCTION_STARTED',
+        'STAGE_CHANGED',
+        'OBJECT_PLACED',
+        'OBJECT_REMOVED',
       ].sort(),
     );
   });

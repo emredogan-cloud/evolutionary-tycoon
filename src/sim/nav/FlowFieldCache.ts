@@ -56,9 +56,16 @@ export function parkingGoal(bay: number): string {
 }
 
 export class FlowFieldCache {
-  readonly grid: NavGrid;
+  grid: NavGrid;
   private readonly fields = new Map<string, FlowField>();
-  private readonly layout: StageLayout;
+  /**
+   * Mutable from Phase 11: evolution replaces it.
+   *
+   * A cache that kept Stage 1's layout after the building grew would route every
+   * agent around a world that no longer exists — to bays that were removed and
+   * past a counter that moved. `rebuild` takes the new one.
+   */
+  private layout: StageLayout;
   /** Bumped on every rebuild, so a caller can tell whether its lookup is stale. */
   private generation = 0;
   /** Goals queued for rebuild, oldest first. Drained one per `step`. */
@@ -88,7 +95,16 @@ export class FlowFieldCache {
    * its buffers from the grid, and a grid that changed shape would leave them
    * inconsistent in a way that shows up as an agent walking off the map.
    */
-  rebuild(placed: readonly PlacedObject[]): void {
+  rebuild(placed: readonly PlacedObject[], layout?: StageLayout): void {
+    if (layout !== undefined && layout !== this.layout) {
+      /*
+       * A new stage means a new grid, not a rebuilt one: the lot can change
+       * size, and `NavGrid` sizes its buffers at construction. Reusing the old
+       * one would leave every index pointing at the wrong cell.
+       */
+      this.layout = layout;
+      this.grid = new NavGrid(layout);
+    }
     this.grid.rebuild(placed);
     /*
      * The fields are *not* cleared. They are stale, not wrong — each routes

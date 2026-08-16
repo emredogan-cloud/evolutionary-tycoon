@@ -1,4 +1,5 @@
 import { PASS, station } from '@config/economy/stations';
+import { layoutForStage } from '@config/layouts';
 import { TASK_BASE_MS, TASK_KINDS, TASK_SCORING, role } from '@config/employees';
 import type { TaskKind } from '@config/employees';
 import { assignTask, releaseToIdle, STATE_BLOCKED, STATE_IDLE } from '../ai/EmployeeBrain';
@@ -186,14 +187,19 @@ export class TaskBoardSystem implements SimSystem {
     task.postedAtMs = world.clock.simTimeMs;
     task.durationMs = TASK_BASE_MS[kind];
 
-    const where = this.placeOf(world, kind, startable);
+    const where = this.placeOf(world, kind, startable, subject);
     task.x = where.x;
     task.y = where.y;
     stamps[key] = stamp;
   }
 
   /** Where the work happens. */
-  private placeOf(world: World, kind: TaskKind, startable: number): { x: number; y: number } {
+  private placeOf(
+    world: World,
+    kind: TaskKind,
+    startable: number,
+    subject: number,
+  ): { x: number; y: number } {
     if (kind === 'PREP_ORDER') {
       const free = startable;
       if (free >= 0 && world.orders.isActive(free)) {
@@ -204,7 +210,16 @@ export class TaskBoardSystem implements SimSystem {
       }
       return PASS;
     }
-    if (kind === 'DELIVER_ORDER') return PASS;
+    if (kind === 'DELIVER_ORDER') {
+      /*
+       * The *table*, not the pass. A waiter walks from wherever they are to the
+       * person waiting; routing them to the pass and calling it delivered would
+       * make the walk that gives this task its cost disappear.
+       */
+      const table = tableOfOrder(world, subject);
+      if (table !== null) return table;
+      return PASS;
+    }
     return PASS;
   }
 
@@ -272,6 +287,17 @@ export class TaskBoardSystem implements SimSystem {
     void employeeSlot;
     return bestSlot;
   }
+}
+
+/** Where the customer for this order is sitting, or null. */
+function tableOfOrder(world: World, orderSlot: number): { x: number; y: number } | null {
+  if (!world.orders.isActive(orderSlot)) return null;
+  const customerSlot = world.orders.at(orderSlot).customerSlot;
+  if (customerSlot < 0 || !world.customers.isActive(customerSlot)) return null;
+
+  const table = world.customers.at(customerSlot).tableSlot;
+  if (table < 0) return null;
+  return layoutForStage(world.progression.stage).tables[table] ?? null;
 }
 
 /**

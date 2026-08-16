@@ -32,6 +32,21 @@ export interface WorldSnapshot {
     readonly stage: Stage;
     readonly unlocks: readonly string[];
     readonly milestones: readonly string[];
+    /** A stage whose requirements are met, awaiting the player — Phase 11. */
+    readonly pendingStage: number;
+  };
+  /**
+   * The building mid-growth — Phase 11.
+   *
+   * Saved because it takes twelve to thirty seconds of *world* time and the
+   * stand is disrupted throughout. A player who saved during construction and
+   * found the building finished — or reset — on load would have had the one
+   * moment the progression system exists for taken away from them.
+   */
+  readonly construction: {
+    readonly targetStage: number;
+    readonly elapsedMs: number;
+    readonly totalMs: number;
   };
   readonly economy: {
     readonly cash: number;
@@ -55,6 +70,8 @@ export interface WorldSnapshot {
   };
   readonly layout: {
     readonly placed: readonly PlacedObject[];
+    /** Navigation invalidation counter — Phase 11. */
+    readonly revision: number;
     readonly upgrades: readonly (readonly [string, number])[];
   };
   readonly staff: {
@@ -197,6 +214,12 @@ export function snapshotWorld(world: World): WorldSnapshot {
       stage: world.progression.stage,
       unlocks: [...world.progression.unlocks],
       milestones: [...world.progression.milestones],
+      pendingStage: world.progression.pendingStage,
+    },
+    construction: {
+      targetStage: world.construction.targetStage,
+      elapsedMs: world.construction.elapsedMs,
+      totalMs: world.construction.totalMs,
     },
     economy: {
       cash: world.economy.cash,
@@ -217,6 +240,7 @@ export function snapshotWorld(world: World): WorldSnapshot {
     },
     layout: {
       placed: world.layout.placed.map((object) => ({ ...object })),
+      revision: world.layout.revision,
       upgrades: sortedEntries(world.layout.upgrades),
     },
     staff: {
@@ -266,6 +290,10 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.progression.stage = snapshot.progression.stage;
   world.progression.unlocks.push(...snapshot.progression.unlocks);
   world.progression.milestones.push(...snapshot.progression.milestones);
+  world.progression.pendingStage = snapshot.progression.pendingStage;
+  world.construction.targetStage = snapshot.construction.targetStage;
+  world.construction.elapsedMs = snapshot.construction.elapsedMs;
+  world.construction.totalMs = snapshot.construction.totalMs;
 
   world.economy.cash = snapshot.economy.cash;
   world.economy.reputation = snapshot.economy.reputation;
@@ -287,6 +315,7 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.economy.bucketElapsedMs = snapshot.economy.bucketElapsedMs;
 
   for (const object of snapshot.layout.placed) world.layout.placed.push({ ...object });
+  world.layout.revision = snapshot.layout.revision;
   for (const [key, value] of snapshot.layout.upgrades) world.layout.upgrades.set(key, value);
 
   for (const employee of snapshot.staff.hired) world.staff.hired.push({ ...employee });

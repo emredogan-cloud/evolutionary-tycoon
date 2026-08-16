@@ -51,8 +51,18 @@ const REFERENCE = {
    * joined the digest beside them. All of it can change an outcome, so all of
    * it is hashed.
    */
-  hashAtTick0: 'a0d410cfd8310444',
-  hashAtTick1000: 'a794e05c23dbc6cd',
+  /*
+   * A sixth time, in Phase 11. Evolution put a pending stage, a construction
+   * timer and the layout revision into the digest, customers grew a table and a
+   * service channel, and the statistics grew a drive-thru counter. Every one of
+   * them can change an outcome — which stage you are in decides the layout, and
+   * the layout decides where everybody walks — so every one of them is hashed.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here, which is the
+   * whole point: the browser is expected to agree, and it does.
+   */
+  hashAtTick0: '6b9fb66d69f685fc',
+  hashAtTick1000: 'ac08da8925b9e88d',
 } as const;
 
 interface TestApi {

@@ -850,11 +850,71 @@ Bunlar iyi fikir olabilir ama **bu roadmap'te yok**. Eklenmeleri onay ve roadmap
 
 Bunlar GATE 0'da cevaplanmadı ve ilgili fazda karara bağlanacak. Şimdi karar vermek erken olurdu.
 
-| #   | Soru                                                         | Ne zaman karara bağlanır   | Neden şimdi değil                                    |
-| --- | ------------------------------------------------------------ | -------------------------- | ---------------------------------------------------- |
-| 1   | Zaman ölçeği: 1 oyun günü = kaç gerçek dakika? (aday: 12 dk) | Faz 5 (trafik) — deneyerek | Trafik yoğunluğu hissi olmadan seçilemez             |
-| 2   | Oyuncu manuel müdahalesi Aşama 3+'ta kalmalı mı?             | Faz 10 (çalışan AI)        | Çalışanlar çalışmadan bilinemez                      |
-| 3   | Fiyat ayarı ürün başına mı, kategori başına mı?              | Faz 9 (ekonomi)            | UI karmaşıklığı vs. derinlik dengesi test gerektirir |
-| 4   | Masa yerleşimi serbest mi, ızgaraya mı oturuyor?             | Faz 11 (evrim)             | Layout sistemi yazılmadan bilinemez                  |
-| 5   | Aşama geçişi otomatik mi, oyuncu onaylı mı?                  | Faz 11                     | Pacing verisi gerekir                                |
-| 6   | Gece oynanışı ayrı bir mekanik mi, yoksa sadece görsel mi?   | Faz 15                     | Kapsam riski; ayrı mekanik olursa büyük              |
+| #   | Soru                                                         | Ne zaman karara bağlanır         | Neden şimdi değil                                    |
+| --- | ------------------------------------------------------------ | -------------------------------- | ---------------------------------------------------- |
+| 1   | Zaman ölçeği: 1 oyun günü = kaç gerçek dakika? (aday: 12 dk) | Faz 5 (trafik) — deneyerek       | Trafik yoğunluğu hissi olmadan seçilemez             |
+| 2   | Oyuncu manuel müdahalesi Aşama 3+'ta kalmalı mı?             | Faz 10 (çalışan AI)              | Çalışanlar çalışmadan bilinemez                      |
+| 3   | Fiyat ayarı ürün başına mı, kategori başına mı?              | Faz 9 (ekonomi)                  | UI karmaşıklığı vs. derinlik dengesi test gerektirir |
+| 4   | ~~Masa yerleşimi serbest mi, ızgaraya mı oturuyor?~~         | ✅ **Faz 11'de karara bağlandı** | → §25.1                                              |
+| 5   | ~~Aşama geçişi otomatik mi, oyuncu onaylı mı?~~              | ✅ **Faz 11'de karara bağlandı** | → §25.2                                              |
+| 6   | Gece oynanışı ayrı bir mekanik mi, yoksa sadece görsel mi?   | Faz 15                           | Kapsam riski; ayrı mekanik olursa büyük              |
+
+---
+
+### 25.1 S4 — Yerleştirme **ızgaraya oturur** (Faz 11, 2026-08-16)
+
+**Karar: grid-snapped.** Izgara adımı navigasyon hücresiyle _aynı sabittir_
+(`CELL_SIZE_METRES = 0.5 m`), tercihen değil kasten.
+
+**Ölçüm** (`tests/unit/sim/layout/placementMode.test.ts`, testte kalıyor):
+
+Soru "yarım hücre arayla iki tıklama farklı mı davranır" değil — her iki modda da
+davranmalı. Soru, oyuncunun bir hücreyi hedeflerken fiilen isabet ettiği ve gözle
+bölemediği **snap havzası** (bir ızgara noktasının ±0.25 m'si) içinde ne olduğu:
+
+| Mod             | Havza içindeki tıklamaların ürettiği farklı "bloke hücre kümesi" sayısı |
+| --------------- | ----------------------------------------------------------------------: |
+| Serbest         |                                                                 **> 1** |
+| Izgaraya oturan |                                                                   **1** |
+
+Yani serbest yerleştirmede, oyuncunun birbirinden ayırt edemediği iki tıklama
+komşu bir hücreyi yer ya da yemez. "Bu neyi bloke edecek?" sorusu tıklamadan
+**önce** cevaplanamaz hâle gelir.
+
+**Desteklenmeyen bir iddia, düşürülmek yerine kayda geçti:** serbest
+yerleştirmenin kabul/ret kararını da hücre-altı nişan hassasiyetine bağlayacağı
+beklenmişti. **Bağlamıyor** — bu layout'ta bir hücre boyunca süpürüldüğünde her
+ofset aynı kararı verdi. Dolayısıyla ızgara lehine argüman tamamen _hangi
+hücrelerin bloke olduğuna_ dayanıyor, kararın kararsızlığına değil. Test bu
+kararlılığı de iddia ediyor ki ileride bir layout bunu değiştirirse **kırılsın**.
+
+### 25.2 S5 — Aşama geçişi **oyuncu onaylı** (Faz 11, 2026-08-16)
+
+**Karar: player-confirmed.** `STAGE_TRANSITION_MODE = 'confirmed'`.
+Otomatik geçiş kodu duruyor ve tek bir config sabitiyle açılıyor — karar zevkle
+değil pacing verisiyle verildiği için, veri değişirse yeniden yazım gerekmesin.
+
+**Ölçüm** (`tests/integration/stageTransitionPacing.test.ts`):
+
+| Seed     | Aşama 1 koşulları karşılandığında | İşlem ortasındaki müşteri | Arsadaki araç |
+| -------- | --------------------------------: | ------------------------: | ------------: |
+| 424242   |                           55.1 dk |                         3 |             5 |
+| 909      |                           54.6 dk |                         6 |            10 |
+| 4242     |                           46.7 dk |                         3 |             6 |
+| 777      |                           48.1 dk |                         1 |             3 |
+| 20260816 |                           55.2 dk |                         4 |             7 |
+
+**Beş seed'in beşinde de koşullar servis ortasında karşılandı.** Bu tesadüf
+değil, yapısal: koşullar _insan servis ederek_ karşılanıyor, dolayısıyla
+karşılandıkları an tanım gereği insanların servis edildiği bir an.
+
+İnşaat ardından tezgâhı 12–30 saniye aksatıyor. Bunu otomatik tetiklemek, oyuncu
+**en meşgulken** tetiklemek demek — tezgâhının yıkılmasını en az istediği an.
+Onay, aynı olayı oyuncunun zamanlamasını seçtiği bir karara çeviriyor; koşullar
+karşılanmış olarak kaldığı için beklemenin bir maliyeti yok.
+
+**Aynı ölçümden çıkan ikinci ve daha rahatsız edici sayı:** Aşama 1, tasarlanan
+**12–18 dakika** yerine **46.7–55.2 dakika** sürüyor. Bu S5 kararını
+değiştirmiyor ama Faz 12'nin düzeltmesi gereken talep kıtlığının progression
+tarafındaki görüntüsü. Test bu yanlış sınırı iddia ediyor ve ekonomi ayarlandığında
+**kırılacak** — kırılması sinyalin kendisi.
