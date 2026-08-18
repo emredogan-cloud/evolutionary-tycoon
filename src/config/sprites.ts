@@ -88,7 +88,7 @@ export type RigPartName = (typeof RIG_DRAW_ORDER)[number];
 export const UNUSED_RIG_SUBJECTS = ['leg-l', 'leg-r'] as const;
 
 /** Which `char_<subject>` each drawn part comes from. */
-export const RIG_PART_SUBJECT: Readonly<Record<RigPartName, string>> = {
+const RIG_PART_SUBJECT: Readonly<Record<RigPartName, string>> = {
   armBack: 'arm-l',
   torso: 'body',
   armFront: 'arm-r',
@@ -426,8 +426,6 @@ export const WORLD_OBJECTS = [
     heightMetres: 4.5,
   },
 ] as const satisfies readonly WorldObjectSpec[];
-
-export type WorldObjectId = (typeof WORLD_OBJECTS)[number]['id'];
 
 export function worldObject(id: string): WorldObjectSpec | undefined {
   return WORLD_OBJECTS.find((entry) => entry.id === id);

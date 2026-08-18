@@ -18,6 +18,10 @@ import { buildInfo } from '@platform/buildInfo';
 import { Sim } from '@sim/core/Sim';
 import { constructionProgress } from '@sim/systems/ConstructionSystem';
 import { buyUpgrade, nextUpgradeCost } from '@sim/systems/UpgradeSystem';
+import { reserveFor } from '@sim/systems/ProgressionSystem';
+import { hire } from '@sim/systems/StaffSystem';
+import { EMPLOYEE_ROLES } from '@config/employees';
+import { requirementFor } from '@config/progression';
 import { IdbAdapter } from '@persistence/idbAdapter';
 import { LocalStorageAdapter } from '@persistence/localStorageAdapter';
 import { SaveManager } from '@persistence/SaveManager';
@@ -137,8 +141,30 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
    * The evolution stage, before anything runs. Visual regression only: a golden
    * of the Stage 4 restaurant that had to play its way there would take minutes
    * to regenerate and would photograph whatever the economy happened to do.
+   *
+   * The jump also seeds what a *legal* arrival now carries. ADR-014 made it
+   * impossible to enter a stage without its required staff being affordable, so
+   * a fixture that jumps to Stage 4 with ₡0 and no waiter creates a world no
+   * player can reach — and it behaves like one: tables that cannot be served
+   * clog the pass, the drive-thru starves behind it, and a test that trades in
+   * that world measures the clog rather than its own subject. The hires use the
+   * same paths a player does (`HIRE` through the gate would, but the world has
+   * not ticked yet), funded exactly like `?buy=` above: grant the cost, spend
+   * it, leave the reserve's wage runway in the till.
    */
-  if (renderMode.stage > 1) sim.world.progression.stage = renderMode.stage as StageNumber;
+  if (renderMode.stage > 1) {
+    sim.world.progression.stage = renderMode.stage as StageNumber;
+    const requirement = requirementFor(renderMode.stage - 1);
+    for (const roleId of requirement?.requiredRoles ?? []) {
+      const spec = EMPLOYEE_ROLES.find((role) => role.id === roleId);
+      if (spec === undefined) continue;
+      sim.world.economy.cash += spec.hireCost;
+      hire(sim.world, roleId, 0.5);
+    }
+    if (requirement !== null) {
+      sim.world.economy.cash += reserveFor(sim.world, requirement);
+    }
+  }
 
   // Staged before the first tick, so the world hash of a staged scene is a
   // function of the scene alone.

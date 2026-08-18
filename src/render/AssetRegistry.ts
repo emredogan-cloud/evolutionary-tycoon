@@ -18,14 +18,14 @@
  * where an object with no declared anchor stands.
  */
 
-export interface AtlasFrameRect {
+interface AtlasFrameRect {
   readonly x: number;
   readonly y: number;
   readonly w: number;
   readonly h: number;
 }
 
-export interface AtlasFrameEntry {
+interface AtlasFrameEntry {
   readonly filename: string;
   readonly frame: AtlasFrameRect;
   readonly sourceSize: { readonly w: number; readonly h: number };

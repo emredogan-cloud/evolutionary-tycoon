@@ -966,6 +966,15 @@ CLAUDE.md §2 gereği tek başıma uzlaştırılamaz.
 
 ---
 
+### Konsolidasyon güncellemesi (2026-08-18)
+
+- **AÇIK ÇELİŞKİ #4 (WebGL1/WebGL2) artık ölçümlü:** canlı canvas'ta `canvasIsWebgl2:false / canvasIsWebgl1:true`, tarayıcı WebGL2 sunarken. Kapı WebGL2 istiyor, motor WebGL1 kullanıyor → WebGL1-only tarayıcılar oynayabilecekleri oyundan çevriliyor. Karar seçenekleriyle **ADR-017 (Proposed)** yazıldı; CLAUDE.md gereği kapıya ve dört dokümana **dokunulmadı**. Kullanıcı kararı bekliyor.
+- **Ortalama sepet (§8.1) KAPANDI** — ADR-016 sepet modeli; iki DEĞERLENDİRİLEMEZ assertion değerlendirilebilir oldu, Aşama 3 zamanlaması ilk ölçümde yeşil.
+- **Evrim mahsur bırakma KAPANDI** — ADR-014 işletme rezervi; ₡804 senaryosu birebir regresyon testi olarak kapıda.
+- **Idle oyuncu KAPANDI** — ADR-015; ürün sınıfı belgelerden türetildi, §13 değişiklik kontrolüyle düzeltildi, dikkat merdiveni ölçüldü.
+- **Yeni açık:** Aşama 2-4 gelir kalibrasyonu hiç yapılmadı (P12 yalnız Aşama 1'i ayarlamıştı; sepet öncesi aritmetik engel bunu gizliyordu). `CALIBRATED_STAGES=[1]` — kalibre edilmemiş satırlar kapıda ölçülüp raporlanıyor. İlk ölçümler: A3 tepe ₡66/dk (tasarım tavanı 179), A4'e varış 371-379 dk (pencere ≤320), A2 girişinde dead-end 166 s. Trafik yoğunluğu kararıyla (AÇIK ÇELİŞKİ #7) birlikte sonraki ekonomi pasosunun girdisi.
+- **Drive-thru şeridi gerçek araç ölçeğine yeniden yerleşti** (1.5 m aralık → 5.5 m; şerit içi 2 araç + yolda görünür kuyruk). Dört-araçlık tam şerit, arsa/teras yeniden tasarımı istiyor — devralınan borç, ASSET_INTEGRATION_REPORT §4.
+
 ## 13. Temporary Workarounds
 
 | #   | Geçici çözüm                                          | Neden                                                                    | Ne zaman kalkar                      |
@@ -1082,18 +1091,19 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 17. Asset State
 
-|                              |                                                                                                                                                                                                                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pipeline                     | ✅ **KURULDU** (Faz 4) — `tools/asset-pipeline/`: validate (9 kontrol) · process · atlas · audio · manifest · report · contactSheet. CI'da `assets` job'ı olarak koşuyor.                                                                                       |
-| Palet                        | ✅ `docs/assets/palette.json` — 48 renk, 12 rampa × 4 basamak. Renk körlüğü simülasyonu testte.                                                                                                                                                                 |
-| Prompt bloğu                 | ✅ `docs/assets/PROMPT_BLOCK.md` v1 — SHA-256 `1c4f4b4e…`, testle zorlanıyor.                                                                                                                                                                                   |
-| Konu boyutları               | ✅ `docs/assets/subjectDimensions.json` — her konu **metre** cinsinden (nesneler hakkında olgu), sprite boyu/anchor/bölme kararı `tools/shared/spriteMetrics.ts` ile **türetiliyor**. Piksel yüksekliği elle yazılmıyor.                                        |
-| Batch listesi                | ✅ `docs/assets/productionBatches.json` — 12 batch, 172 asset. `pnpm assets:prompts` gönderilecek metni üretiyor.                                                                                                                                               |
-| **Lisans durumu**            | 🔴 **KAPI KAPANMADI** — 4 sağlayıcı birincil kaynaktan doğrulandı ([assets/LICENSES.md](../assets/LICENSES.md) §1): God Mode AI 6/9, Scenario 5/9, PixelLab 3/9, Sprixen 0/9 (ToS belgesi yok). **Madde 8 (abonelik sonrası haklar) dördünde de yazılı değil.** |
-| Üretim asset'i               | **0.** Altın referanslar dâhil hiçbir şey üretilmedi. Sessiz araç değişimi de yapılmadı.                                                                                                                                                                        |
-| Placeholder sayısı           | 7 (6 dosya + 1 prosedürel) — Faz 4'te hiçbiri değişmedi; register'da gerekçesiyle **Faz 16**'ya taşındı.                                                                                                                                                        |
-| Texture memory               | 0.79 MB (yalnızca placeholder). Gerçek kısıt: tek bir 4096² atlas sayfası RGBA8'de **64 MB** — masaüstü bütçesinin üçte biri ([PERF_LOG](PERF_LOG.md) Faz 4).                                                                                                   |
-| Doğrulanmış asset kategorisi | Yok                                                                                                                                                                                                                                                             |
+|                              |                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pipeline                     | ✅ **KURULDU** (Faz 4) — `tools/asset-pipeline/`: validate (9 kontrol) · process · atlas · audio · manifest · report · contactSheet. CI'da `assets` job'ı olarak koşuyor.                                                                                                                                                                                  |
+| Palet                        | ✅ `docs/assets/palette.json` — 48 renk, 12 rampa × 4 basamak. Renk körlüğü simülasyonu testte.                                                                                                                                                                                                                                                            |
+| Prompt bloğu                 | ✅ `docs/assets/PROMPT_BLOCK.md` v1 — SHA-256 `1c4f4b4e…`, testle zorlanıyor.                                                                                                                                                                                                                                                                              |
+| Konu boyutları               | ✅ `docs/assets/subjectDimensions.json` — her konu **metre** cinsinden (nesneler hakkında olgu), sprite boyu/anchor/bölme kararı `tools/shared/spriteMetrics.ts` ile **türetiliyor**. Piksel yüksekliği elle yazılmıyor.                                                                                                                                   |
+| Batch listesi                | ✅ `docs/assets/productionBatches.json` — 12 batch, 172 asset. `pnpm assets:prompts` gönderilecek metni üretiyor.                                                                                                                                                                                                                                          |
+| **Lisans durumu**            | 🟠 **Yönetici kararıyla açıldı** (2026-08-15, [assets/LICENSES.md](../assets/LICENSES.md) §1.5) — God Mode AI, madde 5 ve 8 bilinçli kabul. MVP kapsamlı; Faz 16 ve Faz 23'te yeniden açılacak. Kapı "geçti" değil, "karar verildi".                                                                                                                       |
+| **Üretim asset'i**           | ✅ **172/172 entegre (2026-08-18, konsolidasyon).** Kaynak: `docs/assets/sources` (153 MB drop, gitignore'lu) → `assets:import` (yeni aşama) → `assets/source` commit'li. `172 asset, 0 failing, 60 kabul edilmiş istisna, 17 off-family uyarı` (ADR-013).                                                                                                 |
+| Placeholder sayısı           | **Üretim ekranlarında 0** — `data-asset-placeholders` her karede sayılıyor, `tests/e2e/productionArt.spec.ts` dört aşamada da assert ediyor. 6 üretilmiş sprite **yalnız ağ-hatası fallback'i** olarak diskte; yol yüzeyi hâlâ prosedürel (drop'ta yol dilimi yoktu).                                                                                      |
+| Texture memory               | **21.13 MB / 96 MB** (decode edilmiş, 7 atlas — her sayfa içeriğine göre küçültülmüş power-of-two). Fill oranı ADR-013 ile _raporlanıyor_, bellek toplamı _zorlanıyor_.                                                                                                                                                                                    |
+| Doğrulanmış asset kategorisi | **Hepsi** — araç (yön atama `DIRECTION_AUDIT.json` ile), karakter (5 parçalı rig — teslim edilen gövde bacaklı, "bacak" dosyaları ikinci kol çifti; 8 dosya çizilmiyor), yapı, mobilya, doğa (split çiftler), zemin bake, yemek ikonları (DOM sipariş balonu), UI ikonları (7'si off-family), fx (yüklü, tüketen emitter yok — P13 burst'leri prosedürel). |
+| **Sanat borcu (regen)**      | 10 araç arka görünüşü · 8 gerçek bacak · 8 `_brake` karesi · 5 yemek ikonu · 7 UI ikonu (palet ailesine) · yol bake'i · aşama 2-4 zemin bake'leri — [ASSET_INTEGRATION_REPORT §5](ASSET_INTEGRATION_REPORT.md).                                                                                                                                            |
 
 ---
 
@@ -1333,59 +1343,55 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🔴 DUR — BATCH 11–13 TAMAMLANDI. P14+ YETKİSİZ.
+> ## 🔴 DUR — KONSOLİDASYON TAMAMLANDI. P14+ HÂLÂ YETKİSİZ.
 >
-> **P2–P13 tamamlandı. P14 ve sonrası için açık kullanıcı onayı gerekiyor.**
+> 2026-08-18 konsolidasyon yönergesi tamamlandı: üretim sanatı entegrasyonu, dünya
+> kurulumu, görsel QA, P11–P13 açık maddeleri, doğrulama. **P14 başlatılmadı ve
+> başlatılmayacak** — yönergenin kendisi bunu yasaklıyor.
 >
-> Kullanıcı 2026-08-16 yönergesi: _"You MUST stop only after P13 is fully completed and
-> validated. P14 and beyond are NOT authorized."_ P13 kapandı ve doğrulandı. **Durum: DUR.**
+> ### Kapanışlar (kanıtlarıyla)
 >
-> ### Kullanıcının bakması gereken beş şey
+> 1. ✅ **172/172 üretim asset'i entegre**, üretim ekranlarında **0 placeholder**
+>    (makine assert'i `productionArt.spec.ts` + tarayıcı denetimi). ADR-013.
+> 2. ✅ **Ortalama sepet** — ADR-016; iki DEĞERLENDİRİLEMEZ assertion açıldı, A3
+>    zamanlaması ilk ölçümde yeşil (58–67 dk / 28–70).
+> 3. ✅ **Evrim rezervi** — ADR-014; ₡804 senaryosu kapıda regresyon testi.
+> 4. ✅ **Idle sınıflandırması** — ADR-015; §13 değişiklik kontrolüyle düzeltildi.
+> 5. ✅ **WebKit** — pinli konteynerde 3/3 (yerelde hâlâ koşmuyor, root gerekiyor).
+> 6. ✅ **Gerçek GPU ölçümü** — 5.05 ms ortalama kare, GTX 1660 Ti (PERF_LOG).
+> 7. ✅ **Preview deploy** — `/health.json` SHA birebir, 4 aşama CDN'de temiz.
+> 8. 📋 **Playtest** — protokol + şablon hazır, **KOŞULMADI**, koşulamaz (ajan).
 >
-> **1. 🔴 DEĞİŞİKLİK TALEBİ — ortalama sepet.** ECONOMY_DESIGN §3 zarfı ₡4.50 / ₡9 / ₡18 / ₡30
-> ortalama sepet üzerine kurulu. Sipariş **tek kalem** ve kalem, aşamanın menüsünden **düzgün
-> dağılımla** seçiliyor; dolayısıyla bir aşamanın üretebileceği ortalama sepet **menüsünün
-> fiyat ortalaması**dır — ölçülen ₡4.50 / ₡5.80 / ₡9.60 / ₡15.60. §3'ün sayıları ya çok
-> kalemli sipariş ya da `appealTags` ağırlıklı seçim varsayıyor; ikisi de **mekanik** ve karar
-> gerektiriyor. Balance kapısının iki assertion'ı bu yüzden DEĞERLENDİRİLEMEZ durumda ve engel
-> koda gömülü değil, **hesaplanıyor** — karar verilince kendiliğinden açılırlar.
+> ### Kullanıcının bakması gereken üç karar
 >
-> **2. 🔴 DEĞİŞİKLİK TALEBİ — evrim oyuncuyu mahsur bırakabiliyor.** ₡804 ile ₡800'lük Aşama 3'ü
-> kabul eden stant ₡4 ile açıyor, masalara servis için gereken garsonu tutamıyor, 12 saatlik
-> koşuda **92. dakikadan sonra sıfır gelir** — geri dönüş yok. Nakit hiç eksiye düşmediği için
-> oyunun hiçbir kuralı itiraz etmiyor.
+> 1. 🔴 **ADR-017 (Proposed)** — WebGL kapısı: motor WebGL1 kullanıyor, kapı WebGL2
+>    istiyor. Öneri: kapıyı WebGL1'e indir (uyumluluk genişler). Karar sizin.
+> 2. 🔴 **Aşama 2–4 gelir kalibrasyonu görevi** — sepet açıldı, ilk ölçümler alındı
+>    (`CALIBRATED_STAGES=[1]`); trafik yoğunluğu kararınla (AÇIK ÇELİŞKİ #7) birlikte
+>    bir sonraki ekonomi pasosuna girecek.
+> 3. 🟠 **Sanat regen listesi** — ASSET_INTEGRATION_REPORT §5 (10 araç arka görünüşü,
+>    bacaklar, fren kareleri, 5 yemek + 7 UI ikonu, yol bake'i).
 >
-> **3. 🔴 DEĞİŞİKLİK TALEBİ — idle oyuncu Aşama 1'de ilerleyemiyor.** §13 her politikanın
-> Aşama 2'ye 10–22 dk'da ulaşmasını istiyor; §5.1 aşçıyı Aşama 2 rolü yapıyor, yani Aşama 1
-> otomatikleştirilemiyor. Ölçüm: idle **95 dk**, dikkatli oyuncu 21 dk.
+> ### Taşınan diğer açıklar
 >
-> **4. 🔴 3 OYUNCU İLE 1 SAATLİK OTURUM YAPILMADI.** ECONOMY_DESIGN §15'in ve roadmap P12'nin
-> açık şartı. Bir ajan playtest koşamaz ve oyun hâlâ tamamen placeholder sanatla çiziliyor.
-> Yerine hiçbir şey konulmadı.
->
-> **5. Sanata bağlı beş yargı hâlâ verilmedi.** P6 dönüşüm anı · P7 yaya doğallığı · P8 döngü
-> tatmini · P10 çalışan niyeti · P11 aşama silüetleri. Hepsi **NOT JUDGED: AWAITING EXTERNAL
-> ART**. Vertical slice kapısı da bu yüzden hâlâ açık (8 ölçütün 2'si kanıtlandı).
->
-> ### Batch'ten taşınan diğer açık maddeler
->
-> - `roadside-marker` ölçülerek zararlı bulundu ve kaldırıldı; **REACH ailesi boş**. Devralınan
->   kısıt: erişim, kapasiteyi erkenden rezerve etmemeli.
-> - `priceFit` hâlâ literal 1.0 → fiyatlandırma simülatörde denenemiyor (sömürü E2 korumasız)
-> - Phaser 4 WebGL1 açıyor, dört doküman WebGL2 diyor (AÇIK ÇELİŞKİ #4)
-> - `staff.hired` / `staff.employees` iki ayrı liste — uzlaştırma bir change request
-> - Kaydetme geçici trafiği tutmuyor (TECHNICAL_ARCHITECTURE §8.1)
-> - WebKit smoke bu makinede koşmuyor (`libevent-2.1-7t64`, root gerekiyor) — CI'da koşuyor
-> - **PR #17 (P8–P10) hâlâ açık ve merge edilmedi**; `phase/11-evolution` onun üstünde duruyor
+> - PR #17 (P8–P10) hâlâ açık; bu dal onun iki dal üstünde.
+> - 3 oyunculu playtest koşulmadı; vertical slice kapısının insan ölçütleri açık.
+> - Drive-thru tam şerit (4 araç) arsa yeniden tasarımı istiyor — 2 araçlık dürüst hâli yayında.
 >
 > ### Şimdi ne yapılıyor
 >
-> **HİÇBİR ŞEY.** P14+ yetkisiz. Yukarıdaki beş maddeye kullanıcı bakana kadar durulur.
+> **HİÇBİR ŞEY.** Raporlar: `ASSET_INTEGRATION_REPORT.md` + `FINAL_PRE_NEXT_BATCH_REPORT.md`.
 
 ## 22. Change Log
 
 | Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-18 | **T**      | **Asset entegrasyonu başladı.** 172 dosyalık drop envanterlendi (153 MB, 0 mükerrer, 0 çözümsüz ad); alpha-253 bulgusu ölçümü mümkün kıldı; `assets:import` aşaması yazıldı.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-08-18 | **U**      | **Envanter + mutabakat tamam.** 172/172 beklenen↔teslim eşleşmesi; palet çelişkisi kullanıcı kararıyla ADR-013'e bağlandı (`palette-affinity`, yön başına sprite kutusu, genişlik-esaslı oturtma, 60 isimli istisna); doğrulama `0 failing`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-08-18 | **V**      | **Dünya entegrasyonu tamam.** Render katmanı atlas tüketiyor; 5 parçalı rig (teslim edilen "bacaklar" ikinci kol çifti — çizilmiyor); yön ataması `DIRECTION_AUDIT.json`; layout'lar gerçek nesne kimlikleri; navigasyon gövde-izi ayrımı (gövde ≠ taç); tüm aşamalar tarayıcıda 0 placeholder.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 2026-08-18 | **W**      | **Ürün maddeleri kapandı.** ADR-014 (evrim rezervi, ₡804 regresyonu), ADR-015 (dikkat modeli + §13 düzeltmesi), ADR-016 (sepet — §8.1 kapandı, A3 zamanlaması ilk kez yeşil, `CALIBRATED_STAGES=[1]` sınırı), ADR-017 Proposed (WebGL ölçümü, karar kullanıcıda). Playtest protokolü yazıldı, KOŞULMADI.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2026-08-18 | **X**      | **Final tarayıcı denetimi.** Golden'lar pinli konteynerde 3 turda yenilendi (upgrade placeholder'ı, DT şerit istifi, fren boyası bulundu ve giderildi), host'ta bayt-özdeş 14/14; AGENT VISUAL REVIEW beş yargıyı verdi; gerçek GPU ölçümü PERF_LOG'a girdi.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-08-18 | **Y**      | **Konsolidasyon tamam.** `pnpm verify` + 148 E2E + WebKit (konteyner 3/3) + 14 golden + iki balance konfigürasyonu yeşil; preview deploy SHA birebir (`408eceff…`), CDN'de 4 aşama temiz; raporlar yazıldı; P14 BAŞLATILMADI.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | 2026-08-14 | —          | GATE 0 tamamlandı, 8 doküman teslim edildi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2026-08-14 | —          | **GATE 0 kullanıcı tarafından ONAYLANDI**; 6 roadmap değişikliği (D1–D6) kabul edildi; Faz 1 yetkilendirildi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-08-14 | **A**      | **Düzeltme 1:** Dead-end kapısı 120 sn → **90 sn**, merge-blocking. Değişen: `ECONOMY_DESIGN.md` §8 + §13, `GAME_EXECUTION_ROADMAP.md` §32 P12 assertion listesi, `TESTING_STRATEGY.md` §5. Uyarı bandı kapının altına (75–90 sn) taşındı.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
