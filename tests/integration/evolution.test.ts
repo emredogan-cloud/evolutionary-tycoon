@@ -357,6 +357,7 @@ describe('a stage may never ask for less than the one before it', () => {
   const base = {
     stage: 2 as const,
     cashRequired: 100,
+    requiredRoles: [],
     customersServed: 10,
     upgradesBought: 1,
     employeesHired: 0,

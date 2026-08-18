@@ -186,28 +186,50 @@ export const STAGE1_LAYOUT: StageLayout = {
     // Straight in Stage 1. It reads as a diagonal on screen because the
     // projection turns the world X axis into a down-right diagonal — the road
     // does not need to be diagonal in world space to look like one.
+    /*
+     * The lanes overshoot the lot by ten metres each side, not six. The extra
+     * four exist for the decision point below: it sits 20 m up-lane of the
+     * counter, and a lane that starts 18 m out would clamp it to the spawn edge
+     * — a car "deciding" the instant it exists. Off-lot road costs nothing
+     * visible (the camera is bounded to the lot plus margin) and moves the
+     * spawn pop-in further off screen at minimum zoom.
+     */
     lanes: [
       {
         id: 'east',
         heading: 'east',
         points: [
-          { x: -6, y: LANE_EAST_Y },
-          { x: 30, y: LANE_EAST_Y },
+          { x: -10, y: LANE_EAST_Y },
+          { x: 34, y: LANE_EAST_Y },
         ],
       },
       {
         id: 'west',
         heading: 'west',
         points: [
-          { x: 30, y: LANE_WEST_Y },
-          { x: -6, y: LANE_WEST_Y },
+          { x: 34, y: LANE_WEST_Y },
+          { x: -10, y: LANE_WEST_Y },
         ],
       },
     ],
     widthMetres: 7,
-    // Far enough out that a driver has time to decide and brake, which is what
-    // makes the conversion feel like a choice rather than a teleport.
-    decisionPointMetres: 14,
+    /*
+     * Far enough out that a driver has time to decide and brake, which is what
+     * makes the conversion feel like a choice rather than a teleport.
+     *
+     * Twenty metres, not the 14 first authored, and the number is arithmetic
+     * rather than taste. The entry is at 4 m, so the braking window is
+     * `decision - entry`; the fastest car on this road is a sedan at
+     * 13.9 x 1.12 = 15.6 m/s, and `v² = u² + 2as` at the model's 8 m/s² maximum
+     * braking over a 10 m window leaves it doing **9.1 m/s at the turn** — the
+     * approach speed is unreachable, not merely missed. A 16 m window brings the
+     * required deceleration to 7.4 m/s², inside the model's own limit. The cost
+     * this trades against is the one the roadside-marker removal documented —
+     * deciding earlier reserves a parking bay earlier — and six metres at road
+     * speed holds a bay for ~0.5 s more per conversion, which the balance gate
+     * confirms is noise.
+     */
+    decisionPointMetres: 20,
   },
 
   pullIn: { x: 12, y: 8.5 },
@@ -285,16 +307,25 @@ export const STAGE1_LAYOUT: StageLayout = {
    *
    * Eight spots so a busy stand has somewhere to put everyone. Clear of the
    * queue, which runs down the x = 12 corridor towards the road.
+   *
+   * The rows start at x = 15.5, and that number was moved once, by measurement.
+   * They were authored at 14.6 against the placeholder counter, whose blocked
+   * edge sat at x = 12.6 — two metres of approach corridor. The real counter is
+   * 3 m wide and its end is at x = 13.5, which quietly cut the corridor to
+   * 1.1 m: anyone heading for a far spot passed the first standing person at
+   * 8 cm, the exact "walk along an occupied row" failure the paragraph above
+   * records fixing the first time. Shifting the rows 0.9 m east restores the
+   * corridor the rows were designed around.
    */
   waitingArea: [
-    { x: 14.6, y: 10.0 },
     { x: 15.5, y: 10.0 },
     { x: 16.4, y: 10.0 },
     { x: 17.3, y: 10.0 },
-    { x: 14.6, y: 11.8 },
+    { x: 18.2, y: 10.0 },
     { x: 15.5, y: 11.8 },
     { x: 16.4, y: 11.8 },
     { x: 17.3, y: 11.8 },
+    { x: 18.2, y: 11.8 },
   ],
 
   /*

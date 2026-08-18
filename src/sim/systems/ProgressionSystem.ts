@@ -1,4 +1,5 @@
-import { STAGE_TRANSITION_MODE, requirementFor } from '@config/progression';
+import { STAGE_TRANSITION_MODE, operatingReserve, requirementFor } from '@config/progression';
+import { EMPLOYEE_ROLES } from '@config/employees';
 import type { StageRequirement } from '@config/progression';
 import type { Stage } from '../core/types';
 import type { SimSystem } from '../core/SystemPipeline';
@@ -107,10 +108,43 @@ export class ProgressionSystem implements SimSystem {
   }
 }
 
-/** Every requirement, checked. Exported so the UI can explain what is missing. */
+/**
+ * The reserve this world owes the incoming stage — ADR-014.
+ *
+ * `operatingReserve` is pure config arithmetic; this supplies what only the
+ * world knows: who is already employed, and what the live payroll costs per
+ * minute. Exported so the bridge shows the same number the gate enforces —
+ * two derivations of "how much cash do I need" is how a UI ends up telling the
+ * player they can afford something the simulation then refuses.
+ */
+export function reserveFor(world: World, requirement: StageRequirement): number {
+  const employees = world.employees;
+  let payrollPerMinute = 0;
+  const byRole = new Map<string, number>();
+  for (let slot = 0; slot < employees.scanLimit; slot++) {
+    if (!employees.isActive(slot)) continue;
+    const record = employees.at(slot);
+    payrollPerMinute += record.wagePerMinute;
+    const id = EMPLOYEE_ROLES[record.role]?.id ?? '';
+    byRole.set(id, (byRole.get(id) ?? 0) + 1);
+  }
+  return operatingReserve(requirement, (roleId) => byRole.get(roleId) ?? 0, payrollPerMinute);
+}
+
+/**
+ * Every requirement, checked. Exported so the UI can explain what is missing.
+ *
+ * Cash is checked against the threshold **plus the operating reserve** — the
+ * ADR-014 rule. Evolution spends the threshold, so a stand that merely touches
+ * it opens the next stage with nothing; the reserve is what it must still be
+ * holding afterwards to hire what the stage needs and keep wages settled while
+ * income restarts. The player must never enter an unrecoverable zero-income
+ * state through a normal, valid action, and accepting an evolution is the most
+ * normal action there is.
+ */
 export function meetsRequirement(world: World, requirement: StageRequirement): boolean {
   return (
-    world.economy.cash >= requirement.cashRequired &&
+    world.economy.cash >= requirement.cashRequired + reserveFor(world, requirement) &&
     world.stats.customersServed >= requirement.customersServed &&
     totalUpgradeLevels(world) >= requirement.upgradesBought &&
     world.employees.activeCount >= requirement.employeesHired &&

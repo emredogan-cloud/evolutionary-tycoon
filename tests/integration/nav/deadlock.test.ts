@@ -314,8 +314,28 @@ describe('a crowded entrance', () => {
      * matters and it did not move — a settled crowd still keeps its distance.
      */
     expect(closest, `closest approach ${closest.toFixed(3)} m`).toBeGreaterThan(0.15);
+    /*
+     * Re-baselined a second time, when the world took its real dimensions
+     * (2026-08-18, the art-integration batch). The counter grew from a 1.2 m
+     * placeholder square to its declared 3.0 x 0.8 m, which removed about five
+     * square metres from the apron this scenario packs thirty people into.
+     * Two consequences, separated because they had different fixes:
+     *
+     *  - the closest approach collapsed to 0.080 m, and that was a **layout
+     *    defect**: the waiting rows started 1.1 m from the real counter's end,
+     *    reintroducing the walk-along-an-occupied-row failure this file already
+     *    records fixing once. The rows moved 0.9 m east and the floor above
+     *    passes again — authored, not re-baselined.
+     *  - the share rose from ~0.40% to a measured **0.84%**, and that is the
+     *    same thirty people churning in a genuinely smaller pocket. There is no
+     *    layout that gives a synthetic one-point stampede its old elbow room
+     *    back without shrinking the counter, which would be lying about the
+     *    world to keep a number. Re-baselined with the same margin philosophy
+     *    as the Phase 8 entry above: the bound sits above what is actually
+     *    reached (0.84%), close enough that a regression shows.
+     */
     const share = violating / Math.max(1, pairs);
-    expect(share, `${(share * 100).toFixed(2)}% of pair-ticks were too close`).toBeLessThan(0.005);
+    expect(share, `${(share * 100).toFixed(2)}% of pair-ticks were too close`).toBeLessThan(0.012);
   }, 120_000);
 
   it('still forms a queue while the rest hold back', () => {

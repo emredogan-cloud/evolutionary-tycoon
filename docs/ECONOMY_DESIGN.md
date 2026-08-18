@@ -56,6 +56,16 @@ Tüm ekonomi bu tablodan türer. Bu tablo değişirse her şey değişir; bu yü
 **Aşamalar arası gelir oranı:** 1 → 3.7× → 3.3× → 2.7×
 **Bu azalan bir dizidir. Bu kasıtlıdır.** Üstel değil, yavaşlayan bir büyüme. Sayılar hiçbir zaman okunamaz hâle gelmez; oyunun sonunda bile dört haneli/dk gelirdeyiz, `1.2e47` değil.
 
+> **İşletme rezervi (ADR-014, 2026-08-18).** "Sonraki aşamanın maliyeti" satırı **harcanan** tutardır;
+> evrim kapısı ise `maliyet + işletme rezervi` tutmayı şart koşar. Rezerv config'ten türetilir:
+> gelecek aşamanın kazanmak için zorunlu rolleri (`requiredRoles` — Aşama 3-4'te garson) içinden
+> henüz istihdam edilmeyenlerin işe alım maliyeti + maaş sisteminin kendi tolerans penceresi
+> (`UNPAID_GRACE_MS`, 3 dk) boyunca tüm kadronun maaşı. P12'nin ölçtüğü mahsur kalma — ₡804 ile
+> ₡800'lük Aşama 3'ü kabul edip ₡4 ile açılmak, garson tutamamak, 92. dakikadan sonra sıfır gelir —
+> artık kapı tarafından reddediliyor ve `tests/integration/evolutionReserve.test.ts` bu senaryoyu
+> birebir yeniden üretiyor. Bu tablodaki hiçbir sayı değişmedi; kapı, tabloya _ek olarak_ elde
+> kalması gerekeni tanımlıyor.
+
 ---
 
 ## 4. Menü — fiyat, maliyet, süre
@@ -367,8 +377,15 @@ src/config/economy/
 
 **Assertion'lar (ihlal = build KIRMIZI):**
 
+> **ADR-015 (2026-08-18):** Aşama zamanlama assertion'ları **dört stratejik politikayı** bağlar.
+> `idle-player` §5.1 gereği Aşama 1'de otomatikleşemez (aşçı bir Aşama 2 rolüdür) ve hızı kendi
+> ziyaret aralığıyla sınırlıdır; ölçülen dikkat merdiveni (21.7 dk dikkatli → hiç, tam idle) tasarımın
+> kendisidir. Idle kitlesi P14'ün offline sistemiyle (GDD §17: %40 verim, 8 saat tavan) ödüllendirilir;
+> oturum içi Aşama 1 otomasyonu bilinçli olarak yoktur. `idle-player` politikası koşulmaya ve
+> raporlanmaya devam eder — assertion yerine dikkat yayılımı metriği olarak.
+
 ```
-✓ Aşama 2'ye geçiş:  10 dk ≤ t ≤ 22 dk   (tüm politikalar)
+✓ Aşama 2'ye geçiş:  10 dk ≤ t ≤ 22 dk   (stratejik politikalar — ADR-015)
 ✓ Aşama 3'e geçiş:   28 dk ≤ t ≤ 70 dk
 ✓ Aşama 4'e geçiş:  140 dk ≤ t ≤ 320 dk
 ✓ Her aşamada net gelir/dk, tasarlanan zarfın ±%25'i içinde

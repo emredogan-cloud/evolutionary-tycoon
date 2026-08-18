@@ -913,6 +913,16 @@ karşılandıkları an tanım gereği insanların servis edildiği bir an.
 Onay, aynı olayı oyuncunun zamanlamasını seçtiği bir karara çeviriyor; koşullar
 karşılanmış olarak kaldığı için beklemenin bir maliyeti yok.
 
+**Ek — işletme rezervi (ADR-014, 2026-08-18).** Onay kapısı artık eşiğin üstüne
+bir _işletme rezervi_ şart koşuyor: gelecek aşamanın kazanmak için zorunlu
+rolleri (Aşama 3-4'te garson) içinden eksik olanların işe alım maliyeti + maaş
+sisteminin 3 dakikalık tolerans penceresi boyunca tüm kadronun maaşı. Eşik yine
+harcanıyor; rezerv, geçişten sonra elde kalması _garanti edilen_ tutar. Sebep
+P12'nin ölçtüğü mahsur kalma: ₡804 ile ₡800'lük Aşama 3'ü kabul eden stant ₡4
+ile açılıyor, garson tutamıyor ve gelir kalıcı olarak sıfırlanıyordu. Oyuncu,
+normal ve geçerli bir eylemle telafisi olmayan bir duruma girmemeli — kapı artık
+bunu mekanik olarak imkânsız kılıyor.
+
 **Aynı ölçümden çıkan ikinci ve daha rahatsız edici sayı:** Aşama 1, tasarlanan
 **12–18 dakika** yerine **46.7–55.2 dakika** sürüyor. Bu S5 kararını
 değiştirmiyor ama Faz 12'nin düzeltmesi gereken talep kıtlığının progression

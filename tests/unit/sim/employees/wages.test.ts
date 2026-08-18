@@ -184,7 +184,20 @@ describe('unpaid wages cost an employee, deterministically', () => {
     sim.advance(Math.floor((UNPAID_GRACE_MS - WAGE_SETTLE_MS * 2) / TICK_MS));
     expect(sim.world.employees.activeCount, 'left too early').toBe(MAX_EMPLOYEES);
 
-    sim.advance(Math.ceil((WAGE_SETTLE_MS * 4) / TICK_MS));
+    /*
+     * A minute past the grace boundary, not two settles.
+     *
+     * The scenario runs in a live world, and the stand's first few customers pay
+     * enough for a settle to clear *some* arrears, which resets those clocks.
+     * That trickle's timing moved by about fifteen seconds when the counter took
+     * its real 3 m footprint (service walks are longer around it), and a
+     * checkpoint ten seconds after the boundary was passing or failing on which
+     * side of it the first coin landed. The property is "grace is respected and
+     * departure follows" — the first half is the assertion above, and this half
+     * only needs a window wide enough to see the departure, which both the old
+     * and new worlds produce within a minute of the boundary.
+     */
+    sim.advance(TICKS_PER_MINUTE);
     expect(sim.world.employees.activeCount, 'never left').toBeLessThan(MAX_EMPLOYEES);
   });
 
@@ -240,7 +253,9 @@ describe('unpaid wages cost an employee, deterministically', () => {
     sim.world.economy.cash = 0;
 
     let sawFirstDeparture = false;
-    for (let tick = 0; tick < Math.ceil(UNPAID_GRACE_MS / TICK_MS) + 200; tick++) {
+    // A full minute past the boundary, for the reason the grace-period test
+    // gives: the departure's exact tick shifts with when the first customer pays.
+    for (let tick = 0; tick < Math.ceil(UNPAID_GRACE_MS / TICK_MS) + TICKS_PER_MINUTE; tick++) {
       sim.tick();
       if (sim.world.employees.activeCount < MAX_EMPLOYEES) {
         sawFirstDeparture = true;

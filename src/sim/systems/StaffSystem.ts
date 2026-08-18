@@ -65,7 +65,15 @@ export function hire(world: World, roleId: string, skill: number): HireOutcome {
   employee.accruedWages = 0;
   employee.unpaidMs = 0;
   employee.x = PASS.x;
-  employee.y = PASS.y - 0.8;
+  /*
+   * On the **kitchen side** of the pass. `PASS.y - 0.8` put the spawn at
+   * y = 10.8, which was open ground beside the 1.2 m placeholder counter and is
+   * *inside* the real counter's 3 m footprint — a new hire materialised inside
+   * the furniture, on the customers' side of it, and had to be shoved out by
+   * the separation forces before they could take a task. Staff start where
+   * staff work.
+   */
+  employee.y = PASS.y + 0.8;
   employee.z = 0;
 
   world.eventQueue.emitEmployeeHired(employee.entityId, spec.id, spec.hireCost);

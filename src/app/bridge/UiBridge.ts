@@ -9,6 +9,7 @@ import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
 import { brainStateName } from '@sim/ai/EmployeeBrain';
 import { netIncomePerMinute } from '@sim/systems/EconomySystem';
+import { reserveFor } from '@sim/systems/ProgressionSystem';
 import {
   constructionProgress,
   constructionRemainingMs,
@@ -551,7 +552,9 @@ export class UiBridge implements HudSource {
       requirement === null
         ? [0, 0, 0, 0, 0]
         : [
-            requirement.cashRequired,
+            // Threshold plus the ADR-014 operating reserve — the same sum the
+            // gate enforces, so the bar the player watches is the truth.
+            requirement.cashRequired + reserveFor(world, requirement),
             requirement.customersServed,
             requirement.upgradesBought,
             requirement.employeesHired,

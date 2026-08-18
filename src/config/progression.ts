@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { EMPLOYEE_ROLES } from './employees';
+import { UNPAID_GRACE_MS } from './economy/wages';
 
 /**
  * The four-stage evolution — GAME_DESIGN_DOCUMENT §7, ECONOMY_DESIGN §3.
@@ -61,6 +63,18 @@ const requirementSchema = z.object({
    * construction is not.
    */
   constructionMs: z.number().int().positive(),
+  /**
+   * Roles the incoming stage cannot **earn** without — ADR-014.
+   *
+   * Not the same thing as the `employeesHired` milestone above. The milestone is
+   * a lesson check on the *outgoing* stage ("you have hired somebody"); this is
+   * an operating fact about the *incoming* one ("tables are served by a waiter,
+   * so a diner with no waiter has zero income"). The distinction is exactly the
+   * stranding found in Phase 12: a stand holding ₡804 accepted the ₡800 Stage 3,
+   * opened with ₡4, could not hire the waiter its tables needed, and flatlined
+   * from minute 92 to the end of a twelve-hour run.
+   */
+  requiredRoles: z.array(z.string()),
 });
 
 export type StageRequirement = z.infer<typeof requirementSchema>;
@@ -74,6 +88,9 @@ const REQUIREMENTS: StageRequirement[] = [
     employeesHired: 0,
     reputation: 0,
     constructionMs: 12_000,
+    // The truck's counter works exactly like the stand's; nothing new is
+    // mandatory to earn, so the reserve is wage runway alone.
+    requiredRoles: [],
   },
   {
     stage: 3,
@@ -83,6 +100,8 @@ const REQUIREMENTS: StageRequirement[] = [
     employeesHired: 1,
     reputation: 40,
     constructionMs: 20_000,
+    // The diner serves at tables, and food reaches a table in a waiter's hands.
+    requiredRoles: ['waiter'],
   },
   {
     stage: 4,
@@ -92,6 +111,9 @@ const REQUIREMENTS: StageRequirement[] = [
     employeesHired: 3,
     reputation: 55,
     constructionMs: 30_000,
+    // The restaurant keeps its tables; the drive-thru is worked from the
+    // kitchen, so the waiter remains the one role income cannot exist without.
+    requiredRoles: ['waiter'],
   },
 ];
 
@@ -127,6 +149,48 @@ export const stageRequirementListSchema = z.array(requirementSchema).superRefine
 });
 
 export const STAGE_REQUIREMENTS: readonly StageRequirement[] = stageRequirementListSchema.parse(REQUIREMENTS);
+
+/**
+ * The cash a stand must still be holding **after** it pays for an evolution —
+ * ADR-014, closing the Phase 12 stranding.
+ *
+ * Evolution *spends* the threshold, so "can afford the transition" and "can
+ * operate what it buys" were two different questions and only the first was
+ * asked. This is the second one, priced from config rather than chosen:
+ *
+ *   reserve = Σ hire costs of required roles not yet on the payroll
+ *           + the unpaid-grace window's wages for the payroll the stand will
+ *             actually have (everyone employed now, plus the missing hires at
+ *             their base wage)
+ *
+ * The grace window is the wage system's own tolerance (UNPAID_GRACE_MS): a
+ * stand that opens its new stage with exactly this much can hire what the
+ * stage needs and keep every wage settled for as long as the wage system
+ * forgives, which is the time income has to restart in. The missing hires are
+ * priced at skill 0 — the reserve guarantees the *cheapest viable* path, and a
+ * player who hires above it is making a choice with money they can see.
+ *
+ * Callers pass what the payroll currently is, because config cannot see the
+ * world: `employedOfRole` counts staff in a role, `payrollPerMinute` is the sum
+ * of live wages.
+ */
+export function operatingReserve(
+  requirement: StageRequirement,
+  employedOfRole: (roleId: string) => number,
+  payrollPerMinute: number,
+): number {
+  let hires = 0;
+  let addedWagePerMinute = 0;
+  for (const roleId of requirement.requiredRoles) {
+    if (employedOfRole(roleId) > 0) continue;
+    const spec = EMPLOYEE_ROLES.find((role) => role.id === roleId);
+    if (spec === undefined) continue;
+    hires += spec.hireCost;
+    addedWagePerMinute += spec.baseWagePerMinute;
+  }
+  const graceMinutes = UNPAID_GRACE_MS / 60_000;
+  return hires + (payrollPerMinute + addedWagePerMinute) * graceMinutes;
+}
 
 /** What the next stage needs, or null at Stage 4. */
 export function requirementFor(stage: number): StageRequirement | null {
