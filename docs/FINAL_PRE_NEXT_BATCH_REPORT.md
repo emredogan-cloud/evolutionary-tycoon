@@ -42,31 +42,45 @@ completeness and UI icon consistency.
 
 ## 3. Verification (exact, this SHA)
 
-| Gate                                                                                                                                      | Result                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm verify` (lint · format · 3×tsc+svelte · depcruise · knip · assets validate+build · coverage · balance:check · bench · build · size) | ✅ see §7 log line                                                                                                                            |
-| Unit + integration                                                                                                                        | **1 369 passed** (incl. 10 basket pins, 7 reserve scenarios)                                                                                  |
-| Determinism suite                                                                                                                         | **61/61**, world-hash pin renewed 8th time, Node ≡ browser (`4a7f9c6d7871981a`)                                                               |
-| Balance gate (120 min CI)                                                                                                                 | **5/5**; merge-blocking dead-end worst 73.8 s of 90                                                                                           |
-| Balance manual (720 min)                                                                                                                  | **5/5**; uncalibrated stages report numbers, not asserted                                                                                     |
-| Perf budgets (`bench:sim`)                                                                                                                | **21/21**                                                                                                                                     |
-| E2E Chromium + Firefox                                                                                                                    | **148 passed** (incl. 8 production-art assertions)                                                                                            |
-| WebKit smoke                                                                                                                              | local **not available** · pinned container **3/3**                                                                                            |
-| Visual goldens                                                                                                                            | **14/14**, regenerated in the container, byte-identical on host; every diff inspected, three rounds (findings in ASSET_INTEGRATION_REPORT §4) |
-| Bundle                                                                                                                                    | 456.35 kB gzip of 550 kB · CSS 3.93 kB of 30 kB                                                                                               |
-| Assets                                                                                                                                    | 172/172, 0 failing · texture memory 21.13 MB / 96 MB                                                                                          |
-| CI                                                                                                                                        | not yet run on this branch (no push during the batch); every CI job's exact command ran locally and/or in the pinned container as above       |
+| Gate                                                                                                                                      | Result                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify` (lint · format · 3×tsc+svelte · depcruise · knip · assets validate+build · coverage · balance:check · bench · build · size) | ✅ exit 0 at `a259642` (2026-08-19). The bench regression gate false-tripped once at host load ≈5 — all ten scenarios +15–52% with zero code change — and passed 21/21 at load 1.5; the mixed calibration cancels a different CPU, not a contended one                                                                          |
+| Unit + integration                                                                                                                        | **1 374 passed** (incl. 10 basket pins, 7 reserve scenarios, and 15 defensive-arm tests added to clear the config/render coverage floors)                                                                                                                                                                                       |
+| Determinism suite                                                                                                                         | **61/61**, world-hash pin renewed 8th time, Node ≡ browser (`4a7f9c6d7871981a`)                                                                                                                                                                                                                                                 |
+| Balance gate (120 min CI)                                                                                                                 | **5/5**; merge-blocking dead-end worst 73.8 s of 90                                                                                                                                                                                                                                                                             |
+| Balance manual (720 min)                                                                                                                  | **5/5**; uncalibrated stages report numbers, not asserted                                                                                                                                                                                                                                                                       |
+| Perf budgets (`bench:sim`)                                                                                                                | **21/21**                                                                                                                                                                                                                                                                                                                       |
+| E2E Chromium + Firefox                                                                                                                    | **146 passed + 12 deployment-only skips** (the header/health tests × 2 browsers run against the preview instead — §4). Includes 8 production-art assertions. Running the suite against the CDN exposed a boot race in six helpers — HUD read before the bridge went live — fixed in `e331158`; suite re-run green after the fix |
+| WebKit smoke                                                                                                                              | local **not available** · pinned container **3/3**, re-run hermetically at the final tree (read-only mount, fresh install)                                                                                                                                                                                                      |
+| Visual goldens                                                                                                                            | **14/14**, regenerated in the container, byte-identical on host; every diff inspected, three rounds (findings in ASSET_INTEGRATION_REPORT §4)                                                                                                                                                                                   |
+| Bundle                                                                                                                                    | 456.35 kB gzip of 550 kB · CSS 3.93 kB of 30 kB                                                                                                                                                                                                                                                                                 |
+| Assets                                                                                                                                    | 172/172, 0 failing · texture memory 21.13 MB / 96 MB                                                                                                                                                                                                                                                                            |
+| CI                                                                                                                                        | branch pushed 2026-08-19; `ci.yml` dispatched on the final SHA (it triggers on `main`/PR only) — result recorded in the evidence addendum commit. Every CI job's exact command also ran locally and/or in the pinned container as above                                                                                         |
 
 ## 4. Deployment (preview)
 
-| Check                    | Result                                                                      |
-| ------------------------ | --------------------------------------------------------------------------- |
-| URL                      | `https://evolutionary-tycoon-jyvl03uy2-emre30283-4955s-projects.vercel.app` |
-| `/health.json` buildSha  | `408eceff…` — **exact match** with the local HEAD it was built from         |
-| Stages 1–4 on the CDN    | `assets=loaded`, 171 frames, **0 placeholders**, each stage                 |
-| Live play (4 sim-min)    | HUD live, 0 placeholders                                                    |
-| Console errors           | **0** (vercel.live toolbar excluded, as established in P13)                 |
-| Failed / non-OK requests | **0**                                                                       |
+Two preview deployments were made and verified during the batch; the second is the deployment of
+record (`408eceff…`/`jyvl03uy2` was the mid-batch one, superseded).
+
+| Check                     | Result                                                                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| URL                       | `https://evolutionary-tycoon-bh7uneeeb-emre30283-4955s-projects.vercel.app`                                                         |
+| `/health.json` buildSha   | `a2596421c416bb5e3dc7a2e1c959cb5c0eaf8e29` — **exact match** with the HEAD it was built from                                        |
+| Stages 1–4 on the CDN     | `assets=loaded`, 171 frames, **0 placeholders**, each stage                                                                         |
+| Live play (4 sim-min)     | HUD live, 0 placeholders                                                                                                            |
+| Console errors            | **0** (vercel.live toolbar excluded, as established in P13)                                                                         |
+| Failed / non-OK requests  | **0**                                                                                                                               |
+| Load → playable, CDN cold | **5.3 s** (quiet host, ~1.4 MB/s link, software GL; raw CDN fetch of all atlases ≈3 s; localhost real-GPU numbers stay in PERF_LOG) |
+| Deployment-only E2E       | headers · caching · immutability · SPA fallback · `/api/time` — **12/12** against the CDN                                           |
+
+**Full chromium suite against the CDN, from the dev desktop: not a clean signal, and the reason is
+now known.** SwiftShader plus the game itself saturate the host, and CDN asset load then exceeds
+what the boot helpers tolerated. Before the fix the earn-loop tests blamed the economy — the HUD
+attribute sat at its initial `0.00` while the world hash advanced every probe, i.e. the deployed sim
+ticked and earned the whole time, unobserved. After `e331158` the same runs fail only at the
+readiness wait — the true bottleneck — and 72/76 passed serially. The binding verdict for this suite
+is the `preview-e2e` workflow on an isolated runner, which fires on the deployment made at the final
+SHA; its result is recorded in the evidence addendum commit.
 
 ## 5. Performance after real art
 
@@ -87,6 +101,11 @@ pre-existing budget regressed. SwiftShader figures deliberately not reported as 
 4. **Drive-thru full-length lane** wants lot/frontage redesign (two-car lane shipped, honest).
 5. **Human playtest** still zero sessions; protocol ready.
 6. **PR #17 (P8–P10) remains open on GitHub**; this branch stacks two branches above it.
+7. **The full E2E suite against a CDN target is unreliable from the dev desktop by construction** —
+   the harness generates the very load that starves it. The boot race it surfaced is fixed
+   (`e331158`); the arbiter for CDN runs is the `preview-e2e` workflow on an isolated runner. If
+   that, too, times out at the readiness wait on runner hardware, the external-target wait budget
+   is a change request, not a local edit.
 
 ## 7. Recommendation on P14+
 
