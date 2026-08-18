@@ -1,4 +1,5 @@
 import { ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE, actorKindSpec } from '@config/actors';
+import { worldObject } from '@config/sprites';
 import type { StageLayout } from '@config/layouts/stage1';
 import type { PlacedObject } from '../core/types';
 
@@ -209,13 +210,36 @@ export class NavGrid {
 }
 
 /**
- * Footprint for a placed object, by its render-catalogue texture key.
+ * Footprint for a placed object, by its id.
  *
- * Returns null for a key the catalogue does not know, rather than throwing: a
- * save written by a build with an object this one has dropped must load, and it
+ * Two catalogues, in order. `WORLD_OBJECTS` is where a production object's box
+ * lives — a bin is 0.6 m and a food truck is 6.5 m, and the grid has to know the
+ * difference. `ACTOR_KIND_SPECS` is the older, coarser placeholder catalogue,
+ * still consulted so a layout that has not been authored against the real art
+ * yet keeps blocking what it used to.
+ *
+ * Getting this wrong is silent and expensive: when the layouts moved from
+ * `ph-prop-short` to `counter-lv1`, every static stopped resolving and therefore
+ * stopped **blocking**. Nothing crashed. Pedestrians walked through the counter,
+ * A* accepted goals inside solid objects, and the crowding integration test
+ * drifted from 0.4% to 0.81% of pair-ticks too close — which is what caught it.
+ *
+ * Returns null for an id neither catalogue knows, rather than throwing: a save
+ * written by a build with an object this one has dropped must load, and it
  * should load as a gap in the scenery rather than as a crash.
  */
 function specForObject(objectId: string): { footprintX: number; footprintY: number } | null {
+  const object = worldObject(objectId);
+  if (object !== undefined) {
+    // `blocks: false` is an object that is drawn but is not in the way; the
+    // block footprint is what it puts in the way when that is not its whole box.
+    return object.blocks === false
+      ? null
+      : {
+          footprintX: object.blockFootprintX ?? object.footprintX,
+          footprintY: object.blockFootprintY ?? object.footprintY,
+        };
+  }
   for (const spec of ACTOR_KIND_SPECS) {
     if (spec.textureKey === objectId) {
       return { footprintX: spec.footprintX, footprintY: spec.footprintY };

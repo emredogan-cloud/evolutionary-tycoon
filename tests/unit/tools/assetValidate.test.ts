@@ -359,13 +359,21 @@ describe('set-level checks', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('checks the pair against the projected height, less the shared footprint', async () => {
+  /*
+   * The halves are **complementary**, so the pair's height is the plain sum —
+   * ADR-013 §.. The prompt asks for an object "cut cleanly at the split line so
+   * it stacks onto the lower half", and the delivered art does exactly that: a
+   * trunk and a canopy, neither carrying the other's ground. Subtracting a
+   * shared diamond that is not there made every tree 37.5% too tall, which is
+   * what the first browser capture showed.
+   */
+  it('checks the pair against the projected height, as the plain sum', async () => {
     await writeFixture(setDir, 'struct_sign_large_upper@2x.png', { ...base, ...SIGN });
     const result = await validateDirectory(setDir);
     const heights = result.setFindings.map((entry) => entry.detail).join(' ');
-    // Two trimmed halves of 139px sum to 278; the sign's own diamond is 38px, so
-    // the object measures 240 against a 243px expectation.
-    expect(heights).toMatch(/halves total 240px \(278 less one shared footprint\)/);
+    // Two trimmed halves of 139px sum to 278, against a 243px expectation with a
+    // 15% ceiling of 279 — inside it, and inside it for the right reason.
+    expect(heights).toMatch(/halves total 278px/);
     expect(result.setFindings.every((entry) => entry.ok)).toBe(true);
   });
 

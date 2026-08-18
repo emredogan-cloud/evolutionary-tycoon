@@ -214,6 +214,29 @@ export interface WorldObjectSpec {
   readonly footprintX: number;
   readonly footprintY: number;
   readonly heightMetres: number;
+  /**
+   * Whether the navigation grid treats this as solid. Defaults to true.
+   *
+   * An awning is four metres of canopy two metres above the ground: it is drawn
+   * over the service area and a pedestrian walks under it. Blocking on the
+   * drawn extent rather than on what is actually in the way sealed the counter
+   * off entirely the first time the real art was placed.
+   */
+  readonly blocks?: boolean;
+  /**
+   * What the object actually puts in a pedestrian's way, when that is smaller
+   * than its own box. Defaults to the footprint.
+   *
+   * CLAUDE.md states the principle for depth — "a tree's sprite middle is in the
+   * canopy; what decides whether someone walks in front of it is where its trunk
+   * meets the ground" — and it applies twice over to navigation. A mid-size tree
+   * is 3 m across at the canopy and about 0.9 m at the trunk and planter; giving
+   * the grid the canopy walled off nine square metres of verge per tree, and the
+   * economy gate measured it as **Stage 2 slipping from 21.2 to 22.0 minutes**
+   * against a 10–22 window.
+   */
+  readonly blockFootprintX?: number;
+  readonly blockFootprintY?: number;
 }
 
 export const WORLD_OBJECTS = [
@@ -224,6 +247,11 @@ export const WORLD_OBJECTS = [
     footprintX: 3.0,
     footprintY: 0.8,
     heightMetres: 1.1,
+    // The top overhangs its base. What is actually in a customer's way at knee
+    // height is the cabinet, and the 0.8 m box is the counter *surface* — which
+    // matters because the queue stands 0.8 m from the counter point and half a
+    // metre of that was being spent on an overhang nobody walks into.
+    blockFootprintY: 0.4,
   },
   {
     id: 'counter-lv2',
@@ -231,8 +259,20 @@ export const WORLD_OBJECTS = [
     footprintX: 3.0,
     footprintY: 0.8,
     heightMetres: 1.1,
+    // The top overhangs its base. What is actually in a customer's way at knee
+    // height is the cabinet, and the 0.8 m box is the counter *surface* — which
+    // matters because the queue stands 0.8 m from the counter point and half a
+    // metre of that was being spent on an overhang nobody walks into.
+    blockFootprintY: 0.4,
   },
-  { id: 'awning', frame: `struct_awning_lv1${SUFFIX}`, footprintX: 4.0, footprintY: 2.5, heightMetres: 0.9 },
+  {
+    id: 'awning',
+    frame: `struct_awning_lv1${SUFFIX}`,
+    footprintX: 4.0,
+    footprintY: 2.5,
+    heightMetres: 0.9,
+    blocks: false, // a canopy overhead; people walk under it
+  },
   {
     id: 'truck',
     frame: `struct_truck_lv1_lower${SUFFIX}`,
@@ -251,6 +291,9 @@ export const WORLD_OBJECTS = [
   { id: 'door', frame: `struct_door_default${SUFFIX}`, footprintX: 1.0, footprintY: 0.2, heightMetres: 2.1 },
   {
     id: 'sign',
+    // A sign is a post with a board on top; the board is above head height.
+    blockFootprintX: 0.4,
+    blockFootprintY: 0.4,
     frame: `struct_sign_large_lower${SUFFIX}`,
     upperFrame: `struct_sign_large_upper${SUFFIX}`,
     footprintX: 0.6,
@@ -320,6 +363,9 @@ export const WORLD_OBJECTS = [
   // --- what grows out of the ground ---------------------------------------
   {
     id: 'tree-broadleaf-01',
+    // The trunk and its planter, not the canopy — see `blockFootprintX`.
+    blockFootprintX: 0.9,
+    blockFootprintY: 0.9,
     frame: `nature_tree_broadleaf-01_lower${SUFFIX}`,
     upperFrame: `nature_tree_broadleaf-01_upper${SUFFIX}`,
     footprintX: 3.0,
@@ -328,6 +374,9 @@ export const WORLD_OBJECTS = [
   },
   {
     id: 'tree-broadleaf-02',
+    // The trunk and its planter, not the canopy — see `blockFootprintX`.
+    blockFootprintX: 0.9,
+    blockFootprintY: 0.9,
     frame: `nature_tree_broadleaf-02_lower${SUFFIX}`,
     upperFrame: `nature_tree_broadleaf-02_upper${SUFFIX}`,
     footprintX: 3.0,
@@ -336,6 +385,9 @@ export const WORLD_OBJECTS = [
   },
   {
     id: 'tree-conifer-01',
+    // The trunk and its planter, not the canopy — see `blockFootprintX`.
+    blockFootprintX: 0.9,
+    blockFootprintY: 0.9,
     frame: `nature_tree_conifer-01_lower${SUFFIX}`,
     upperFrame: `nature_tree_conifer-01_upper${SUFFIX}`,
     footprintX: 3.0,
@@ -365,6 +417,8 @@ export const WORLD_OBJECTS = [
   },
   {
     id: 'lamp',
+    blockFootprintX: 0.3,
+    blockFootprintY: 0.3,
     frame: `nature_pole_lamp_lower${SUFFIX}`,
     upperFrame: `nature_pole_lamp_upper${SUFFIX}`,
     footprintX: 0.3,
