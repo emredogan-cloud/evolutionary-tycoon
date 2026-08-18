@@ -210,6 +210,11 @@ test.describe('visual determinism', () => {
   test('renders the same scene byte-identically ten times', async ({ browser }) => {
     // The precondition for every golden above. If this fails, a golden diff
     // means nothing, and the roadmap makes it a phase-completion condition.
+    //
+    // Ten full boots, each decoding every atlas — a 4-core CI runner spends
+    // 5-8 s per boot where this machine spends ~1.5 s, and the default thirty
+    // seconds covered the loop only before boot carried real art.
+    test.setTimeout(180_000);
     const hashes: string[] = [];
 
     for (let run = 0; run < 10; run++) {
