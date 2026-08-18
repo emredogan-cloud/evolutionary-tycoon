@@ -9,6 +9,7 @@ import type { EmployeeRecord } from '../stores/employees';
 import { UNCLAIMED } from '../stores/TaskStore';
 import { ORDER_ON_PASS, ORDER_PLACED } from '../stores/OrderStore';
 import { nextStartable } from './KitchenSystem';
+import { basketReady, firstOrderOf } from './orderBasket';
 
 /**
  * The one place work is decided — GAME_EXECUTION_ROADMAP Phase 10.
@@ -139,7 +140,18 @@ export class TaskBoardSystem implements SimSystem {
         // the ones that can be done.
         if (startable >= 0) this.ensureTask(world, 'PREP_ORDER', slot, startable, stamps, stamp);
       } else if (order.state === ORDER_ON_PASS) {
-        this.ensureTask(world, 'DELIVER_ORDER', slot, startable, stamps, stamp);
+        /*
+         * One delivery per **tray**, not per plate — ADR-016. A basket is
+         * carried complete (`deliverOrder` refuses a partial one), so posting a
+         * task per plate would send a second waiter to a table whose food the
+         * first is already carrying. The task is posted on the basket's handle
+         * — the customer's lowest order slot — and only once the whole tray is
+         * assembled, which is also what stops a waiter walking to a pass that
+         * cannot be served from yet.
+         */
+        if (basketReady(world, order.customerSlot) && firstOrderOf(world, order.customerSlot) === slot) {
+          this.ensureTask(world, 'DELIVER_ORDER', slot, startable, stamps, stamp);
+        }
       }
     }
   }

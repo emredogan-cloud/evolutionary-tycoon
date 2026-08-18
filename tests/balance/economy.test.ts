@@ -148,10 +148,15 @@ describe('the economy stays inside its designed envelope', () => {
        * run gets there. What must never happen is a *new* assertion quietly
        * joining the list — that is what this catches.
        */
+      /*
+       * Pruned by ADR-016, exactly as this test demanded. The §8.1 ticket
+       * arithmetic stopped blocking anything the day the basket landed; what
+       * may legitimately skip now is stage-3/4 timing (their feeder stages'
+       * income awaits the calibration pass — CALIBRATED_STAGES in the
+       * assertions), stage-4 timing on runs shorter than its own window, and
+       * the twelve-hour assertions on short runs.
+       */
       const ALLOWED_BLOCKED = new Set([
-        // No Stage 2/3/4 menu items or upgrades exist yet — Phase 13, and a menu
-        // change request recorded in docs/BALANCE_REPORT.md.
-        'stage-2-timing',
         'stage-3-timing',
         'stage-4-timing',
         // Need a twelve-hour run; `pnpm balance:long` evaluates them.
@@ -165,8 +170,8 @@ describe('the economy stays inside its designed envelope', () => {
       /*
        * At least one must be blocked and named, or the allow-list above is
        * describing a situation that no longer exists — which is its own kind of
-       * stale. Phase 13 filled the content holes, so what remains blocked is the
-       * ticket arithmetic of change request §8.1.
+       * stale. What remains blocked is the stage-2/3 calibration debt ADR-016
+       * measured and handed on.
        */
       expect(blocked.length, 'nothing is blocked any more — prune the allow-list').toBeGreaterThan(0);
     },
@@ -180,8 +185,22 @@ describe('the economy stays inside its designed envelope', () => {
       // *simulation speed* — not the number of policies or the length of the
       // run." Asserted so that a slowdown is caught as a slowdown rather than
       // fixed by quietly simulating less.
+      //
+      // The budget is CI's, so it binds CI's run length. `BALANCE_MINUTES=720`
+      // — the manual report run — simulates six times the gate's horizon and
+      // was never inside a budget written for the gate; asserting it there
+      // failed the *configuration*, not the speed.
       const { wallClockMs } = balance();
-      expect(wallClockMs, `balance run took ${(wallClockMs / 1000).toFixed(1)} s`).toBeLessThan(CI_BUDGET_MS);
+      if (MINUTES <= 120) {
+        expect(wallClockMs, `balance run took ${(wallClockMs / 1000).toFixed(1)} s`).toBeLessThan(
+          CI_BUDGET_MS,
+        );
+      } else {
+        expect(
+          wallClockMs,
+          `manual ${String(MINUTES)}-minute run took ${(wallClockMs / 1000).toFixed(1)} s`,
+        ).toBeLessThan(CI_BUDGET_MS * (MINUTES / 120) * 2);
+      }
     },
     SUITE_TIMEOUT_MS,
   );

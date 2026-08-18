@@ -1,4 +1,5 @@
-import { PRICE_BAND, menuForStage, menuIndexOf, menuItem } from '@config/economy/menu';
+import { PRICE_BAND, menuItem } from '@config/economy/menu';
+import { basketReady, firstOrderOf, rollBasket } from './orderBasket';
 import { EATING_MS, ORDERING_MS, REPUTATION } from '@config/satisfaction';
 import {
   STATE_EATING,
@@ -43,6 +44,9 @@ import { effectValue } from './UpgradeSystem';
 export class ServiceSystem implements SimSystem {
   readonly name = 'ServiceSystem' as const;
 
+  /** Reused by every basket roll — WORKING_DISCIPLINE §2.3, zero steady-state allocation. */
+  private readonly basketScratch: number[] = [];
+
   run(world: World, deltaMs: number): void {
     if (deltaMs <= 0) return;
     const customers = world.customers;
@@ -82,7 +86,7 @@ export class ServiceSystem implements SimSystem {
   /** The front of the queue steps up. */
   private takeOrder(world: World, customer: CustomerRecord, slot: number): void {
     if (customer.queueIndex !== 0) return;
-    if (this.orderOf(world, slot) >= 0) return;
+    if (firstOrderOf(world, slot) >= 0) return;
     customer.state = STATE_ORDERING;
     customer.timerMs = 0;
   }
@@ -103,51 +107,53 @@ export class ServiceSystem implements SimSystem {
     if (customer.timerMs < ORDERING_MS * effectValue(world, 'orderSpeed')) return;
     customer.timerMs = 0;
 
-    const orderSlot = world.orders.acquire();
-    if (orderSlot < 0) {
-      /*
-       * The order pool is full. They go back to queueing rather than being lost:
-       * a customer who reached the counter and was silently discarded is the
-       * kind of bug that shows up as an unexplained revenue shortfall, and the
-       * queue is where they would actually be standing.
-       */
+    /*
+     * The whole basket at once — ADR-016. The base item is chosen from **this
+     * stage's menu** exactly as Phase 13 fixed it; the extras are the mechanic
+     * ECONOMY_DESIGN §3's rising ticket always assumed and change request §8.1
+     * carried until this batch resolved it.
+     */
+    const count = rollBasket(world, world.progression.stage, this.basketScratch);
+    if (count === 0) {
       customer.state = STATE_QUEUEING_AT_COUNTER;
       return;
     }
 
-    /*
-     * Chosen from **this stage's menu**, not from the whole table — Phase 13.
-     *
-     * `MenuItem.stage` had existed since Phase 8 and nothing read it, so a
-     * lemonade stand with three items and a Stage 4 restaurant with thirteen
-     * were the same shop: the later items simply did not exist, and when they
-     * were added a Stage 1 stand would have started selling family meals.
-     *
-     * The choice within the stage is still uniform. Weighting it by the
-     * `appealTags` each item already carries is what ECONOMY_DESIGN §3's rising
-     * average ticket really assumes, and that is a change request rather than
-     * something to slip in here (docs/BALANCE_REPORT.md).
-     */
-    const available = menuForStage(world.progression.stage);
-    const roll = world.rng.customer.next();
-    const chosen = available[Math.min(available.length - 1, Math.floor(roll * available.length))];
-    const item = chosen === undefined ? 0 : menuIndexOf(chosen.id);
+    let placed = 0;
+    for (let index = 0; index < count; index++) {
+      const item = this.basketScratch[index] ?? 0;
+      const orderSlot = world.orders.acquire();
+      if (orderSlot < 0) {
+        /*
+         * The pool filled mid-basket. The base item matters more than the
+         * extras: with nothing placed they go back to the queue (a customer who
+         * reached the counter and was silently discarded shows up later as an
+         * unexplained revenue shortfall); with the base placed the basket is
+         * simply smaller, which is what a till running out of fries does.
+         */
+        break;
+      }
+      const order = world.orders.at(orderSlot);
+      order.entityId = world.allocateEntityId();
+      order.customerSlot = slot;
+      order.item = item;
+      order.orderedAtMs = world.clock.simTimeMs;
+      /*
+       * The price is captured now, not looked up at payment. The player can
+       * change prices mid-service, and charging somebody more than they agreed
+       * to is both unfair and an exploit — raise the price the instant before
+       * every payment and the ±50% band means nothing.
+       */
+      order.price = priceOf(world, item);
+      world.eventQueue.emitOrderPlaced(order.entityId, customer.entityId, item);
+      placed++;
+    }
 
-    const order = world.orders.at(orderSlot);
-    order.entityId = world.allocateEntityId();
-    order.customerSlot = slot;
-    order.item = item;
-    order.orderedAtMs = world.clock.simTimeMs;
-    /*
-     * The price is captured now, not looked up at payment. The player can change
-     * prices mid-service, and charging somebody more than they agreed to is both
-     * unfair and an exploit — raise the price the instant before every payment
-     * and the ±50% band means nothing.
-     */
-    order.price = priceOf(world, item);
-
+    if (placed === 0) {
+      customer.state = STATE_QUEUEING_AT_COUNTER;
+      return;
+    }
     customer.state = STATE_WAITING_FOR_FOOD;
-    world.eventQueue.emitOrderPlaced(order.entityId, customer.entityId, item);
   }
 
   /**
@@ -158,10 +164,12 @@ export class ServiceSystem implements SimSystem {
    * replace this method and nothing around it.
    */
   private deliver(world: World, customer: CustomerRecord, slot: number): void {
-    const orderSlot = this.orderOf(world, slot);
-    if (orderSlot < 0) return;
-    const order = world.orders.at(orderSlot);
-    if (order.state !== ORDER_ON_PASS) return;
+    /*
+     * The whole tray or nothing — ADR-016. A basket is handed over complete, so
+     * the first-cooked item genuinely waits on the pass for the last, which is
+     * what finally makes multi-item hold temperature a real cost.
+     */
+    if (!basketReady(world, slot)) return;
 
     /*
      * **Somebody has to carry it — Stage 3 onward.**
@@ -179,11 +187,16 @@ export class ServiceSystem implements SimSystem {
      */
     if (layoutForStage(world.progression.stage).tables.length > 0) return;
 
-    order.state = ORDER_DELIVERED;
-    order.deliveredAtMs = world.clock.simTimeMs;
+    for (let each = 0; each < world.orders.scanLimit; each++) {
+      if (!world.orders.isActive(each)) continue;
+      const plate = world.orders.at(each);
+      if (plate.customerSlot !== slot || plate.state !== ORDER_ON_PASS) continue;
+      plate.state = ORDER_DELIVERED;
+      plate.deliveredAtMs = world.clock.simTimeMs;
+      world.eventQueue.emitOrderDelivered(plate.entityId, customer.entityId);
+    }
     customer.state = STATE_EATING;
     customer.timerMs = 0;
-    world.eventQueue.emitOrderDelivered(order.entityId, customer.entityId);
   }
 
   private eat(world: World, customer: CustomerRecord, deltaMs: number): void {
@@ -203,49 +216,66 @@ export class ServiceSystem implements SimSystem {
    * flickers upward before settling is worse than one that simply moves.
    */
   private pay(world: World, customer: CustomerRecord, slot: number): void {
-    const orderSlot = this.orderOf(world, slot);
-    if (orderSlot < 0) {
-      // No order to pay for. Reachable if the pool recycled it; they leave.
+    /*
+     * One payment for the whole basket — ADR-016.
+     *
+     * The sums are per plate (each item's price was captured at ordering and
+     * each plate's quality decayed on its own clock), but everything that is
+     * *about the person* happens once: satisfaction is the mean over their
+     * plates, the tip rides on the whole bill, reputation moves once, and
+     * `customersServed` counts people. Counting per plate would have doubled
+     * reputation gain at Stage 2 and tripled it at Stage 4 purely because the
+     * baskets grew — a recalibration nobody asked for, hidden inside a payment
+     * loop.
+     */
+    let bill = 0;
+    let costs = 0;
+    let satisfactionSum = 0;
+    let plates = 0;
+
+    for (let each = 0; each < world.orders.scanLimit; each++) {
+      if (!world.orders.isActive(each)) continue;
+      const order = world.orders.at(each);
+      if (order.customerSlot !== slot) continue;
+
+      const item = menuItem(order.item);
+      const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
+      satisfactionSum += evaluateSatisfaction(order, quality, world.clock.simTimeMs, world);
+      bill += order.price;
+      costs += item.baseCost;
+      plates++;
+
+      order.state = ORDER_PAID;
+      // The order's work is done; the record goes back to the pool immediately
+      // so a busy service does not exhaust it while paid orders linger.
+      world.orders.release(each);
+    }
+
+    if (plates === 0) {
+      // Nothing to pay for. Reachable if the pool recycled it; they leave.
       customer.state = STATE_WALKING_TO_CAR;
       return;
     }
 
-    const order = world.orders.at(orderSlot);
-    const item = menuItem(order.item);
-    const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
-    const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs, world);
-    const tip = order.price * tipFraction(satisfaction);
+    const satisfaction = satisfactionSum / plates;
+    const tip = bill * tipFraction(satisfaction);
 
-    world.economy.cash += order.price + tip - item.baseCost;
-    world.economy.lifetimeRevenue += order.price + tip;
+    world.economy.cash += bill + tip - costs;
+    world.economy.lifetimeRevenue += bill + tip;
     // Both sides of the transaction go into the sixty-second window, so the
     // rate on the HUD is net of what the food cost to make.
-    recordRevenue(world, order.price + tip);
-    recordExpense(world, item.baseCost);
+    recordRevenue(world, bill + tip);
+    recordExpense(world, costs);
     world.economy.reputation = Math.min(
       REPUTATION.max,
       Math.max(REPUTATION.min, world.economy.reputation + reputationDelta(satisfaction) * 100),
     );
     world.stats.customersServed++;
 
-    order.state = ORDER_PAID;
-    world.eventQueue.emitPayment(customer.entityId, order.price, tip, satisfaction);
-
-    // The order's work is done; the record goes back to the pool immediately so
-    // a busy service does not exhaust it while paid orders linger.
-    world.orders.release(orderSlot);
+    world.eventQueue.emitPayment(customer.entityId, bill, tip, satisfaction);
 
     customer.state = STATE_WALKING_TO_CAR;
     customer.queueIndex = -1;
-  }
-
-  /** The live order belonging to a customer slot, or -1. */
-  private orderOf(world: World, customerSlot: number): number {
-    for (let slot = 0; slot < world.orders.scanLimit; slot++) {
-      if (!world.orders.isActive(slot)) continue;
-      if (world.orders.at(slot).customerSlot === customerSlot) return slot;
-    }
-    return -1;
   }
 }
 
@@ -266,12 +296,26 @@ export function deliverOrder(world: World, orderSlot: number): boolean {
   const customerSlot = order.customerSlot;
   if (customerSlot < 0 || !world.customers.isActive(customerSlot)) return false;
 
+  /*
+   * The whole tray, one trip — ADR-016. A waiter sent per plate would cross the
+   * room three times for one table, and the second trip would find a customer
+   * already eating. The task board posts one delivery per *basket* (see
+   * `TaskBoardSystem`), and completing it hands over everything that is ready —
+   * which, by the tray rule, is everything.
+   */
+  if (!basketReady(world, customerSlot)) return false;
+
   const customer = world.customers.at(customerSlot);
-  order.state = ORDER_DELIVERED;
-  order.deliveredAtMs = world.clock.simTimeMs;
+  for (let each = 0; each < world.orders.scanLimit; each++) {
+    if (!world.orders.isActive(each)) continue;
+    const plate = world.orders.at(each);
+    if (plate.customerSlot !== customerSlot || plate.state !== ORDER_ON_PASS) continue;
+    plate.state = ORDER_DELIVERED;
+    plate.deliveredAtMs = world.clock.simTimeMs;
+    world.eventQueue.emitOrderDelivered(plate.entityId, customer.entityId);
+  }
   customer.state = STATE_EATING;
   customer.timerMs = 0;
-  world.eventQueue.emitOrderDelivered(order.entityId, customer.entityId);
   return true;
 }
 

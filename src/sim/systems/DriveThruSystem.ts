@@ -1,6 +1,6 @@
 import { DRIVE_THRU_ORDER_MS, DRIVE_THRU_WINDOW_MS } from '@config/driveThru';
 import { layoutForStage } from '@config/layouts';
-import { menuItem, MENU } from '@config/economy/menu';
+import { menuItem } from '@config/economy/menu';
 import { REPUTATION } from '@config/satisfaction';
 import {
   CHANNEL_DRIVE_THRU,
@@ -13,6 +13,7 @@ import type { World } from '../core/World';
 import { ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../stores/OrderStore';
 import { recordExpense, recordRevenue } from './EconomySystem';
 import { currentQuality } from './KitchenSystem';
+import { basketReady, rollBasket } from './orderBasket';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
 import { effectValue } from './UpgradeSystem';
 import { VEHICLE_DT_ADVANCING, VEHICLE_PARKED } from './VehicleManeuverSystem';
@@ -161,6 +162,9 @@ export function stepDriveThruCustomer(world: World, customerSlot: number, deltaM
   }
 }
 
+/** Reused by every basket roll at the post — the same zero-allocation rule as the counter. */
+const dtBasketScratch: number[] = [];
+
 /** Place the order at the post, after a beat. */
 function order(world: World, customerSlot: number, deltaMs: number): void {
   const customer = world.customers.at(customerSlot);
@@ -175,25 +179,37 @@ function order(world: World, customerSlot: number, deltaMs: number): void {
   if (customer.timerMs < orderMs) return;
   customer.timerMs = 0;
 
-  const orderSlot = world.orders.acquire();
-  if (orderSlot < 0) {
-    // The pool is full. They wait in the lane rather than being dropped — the
-    // car is physically there and cannot be made to vanish.
-    return;
+  /*
+   * The same basket the counter rolls — ADR-016 — which also closes a defect
+   * found while wiring it: this function chose from **the whole menu**, not the
+   * stage's. Phase 13 fixed the counter and the drive-thru kept selling a
+   * Stage 1 stand's lemonade alongside family meals nothing had unlocked.
+   */
+  const count = rollBasket(world, world.progression.stage, dtBasketScratch);
+  if (count === 0) return;
+
+  let placed = 0;
+  for (let index = 0; index < count; index++) {
+    const item = dtBasketScratch[index] ?? 0;
+    const orderSlot = world.orders.acquire();
+    if (orderSlot < 0) {
+      // The pool filled mid-basket. With nothing placed the car waits at the
+      // post and tries again — it is physically there and cannot be made to
+      // vanish; with the base placed, the basket is simply smaller.
+      break;
+    }
+    const record = world.orders.at(orderSlot);
+    record.entityId = world.allocateEntityId();
+    record.customerSlot = customerSlot;
+    record.item = item;
+    record.orderedAtMs = world.clock.simTimeMs;
+    record.price = priceOfItem(world, item);
+    world.eventQueue.emitOrderPlaced(record.entityId, customer.entityId, item);
+    placed++;
   }
-
-  const roll = world.rng.customer.next();
-  const item = Math.min(MENU.length - 1, Math.floor(roll * MENU.length));
-
-  const record = world.orders.at(orderSlot);
-  record.entityId = world.allocateEntityId();
-  record.customerSlot = customerSlot;
-  record.item = item;
-  record.orderedAtMs = world.clock.simTimeMs;
-  record.price = priceOfItem(world, item);
+  if (placed === 0) return;
 
   customer.state = STATE_DT_QUEUEING;
-  world.eventQueue.emitOrderPlaced(record.entityId, customer.entityId, item);
 }
 
 /**
@@ -207,16 +223,19 @@ function checkWindow(world: World, customerSlot: number): void {
   const customer = world.customers.at(customerSlot);
   if (customer.laneSlot !== 0) return;
 
-  const orderSlot = orderOf(world, customerSlot);
-  if (orderSlot < 0) return;
-  const order = world.orders.at(orderSlot);
-  if (order.state !== ORDER_ON_PASS) return;
+  // The whole bag through the window at once — the tray rule, drive-thru shaped.
+  if (!basketReady(world, customerSlot)) return;
 
-  order.state = ORDER_DELIVERED;
-  order.deliveredAtMs = world.clock.simTimeMs;
+  for (let slot = 0; slot < world.orders.scanLimit; slot++) {
+    if (!world.orders.isActive(slot)) continue;
+    const order = world.orders.at(slot);
+    if (order.customerSlot !== customerSlot || order.state !== ORDER_ON_PASS) continue;
+    order.state = ORDER_DELIVERED;
+    order.deliveredAtMs = world.clock.simTimeMs;
+    world.eventQueue.emitOrderDelivered(order.entityId, customer.entityId);
+  }
   customer.state = STATE_DT_COLLECTING;
   customer.timerMs = 0;
-  world.eventQueue.emitOrderDelivered(order.entityId, customer.entityId);
 }
 
 /**
@@ -233,23 +252,42 @@ function collect(world: World, customerSlot: number, deltaMs: number): void {
   if (customer.timerMs < DRIVE_THRU_WINDOW_MS * effectValue(world, 'windowSpeed')) return;
   customer.timerMs = 0;
 
-  const orderSlot = orderOf(world, customerSlot);
-  if (orderSlot < 0) {
+  /*
+   * One payment for the whole bag — the same per-person accounting as the
+   * counter's `pay` (ADR-016): sums per plate, satisfaction as the mean,
+   * reputation and the served counters moving once.
+   */
+  let bill = 0;
+  let costs = 0;
+  let satisfactionSum = 0;
+  let plates = 0;
+  for (let slot = 0; slot < world.orders.scanLimit; slot++) {
+    if (!world.orders.isActive(slot)) continue;
+    const order = world.orders.at(slot);
+    if (order.customerSlot !== customerSlot) continue;
+    const item = menuItem(order.item);
+    const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
+    satisfactionSum += evaluateSatisfaction(order, quality, world.clock.simTimeMs, world);
+    bill += order.price;
+    costs += item.baseCost;
+    plates++;
+    order.state = ORDER_PAID;
+    world.orders.release(slot);
+  }
+
+  if (plates === 0) {
     customer.laneSlot = -1;
     customer.state = STATE_EXITING;
     return;
   }
 
-  const order = world.orders.at(orderSlot);
-  const item = menuItem(order.item);
-  const quality = currentQuality(order, world.clock.simTimeMs, effectValue(world, 'holdToleranceMs'));
-  const satisfaction = evaluateSatisfaction(order, quality, world.clock.simTimeMs, world);
-  const tip = order.price * tipFraction(satisfaction);
+  const satisfaction = satisfactionSum / plates;
+  const tip = bill * tipFraction(satisfaction);
 
-  world.economy.cash += order.price + tip - item.baseCost;
-  world.economy.lifetimeRevenue += order.price + tip;
-  recordRevenue(world, order.price + tip);
-  recordExpense(world, item.baseCost);
+  world.economy.cash += bill + tip - costs;
+  world.economy.lifetimeRevenue += bill + tip;
+  recordRevenue(world, bill + tip);
+  recordExpense(world, costs);
   world.economy.reputation = Math.min(
     REPUTATION.max,
     Math.max(REPUTATION.min, world.economy.reputation + reputationDelta(satisfaction) * 100),
@@ -257,9 +295,7 @@ function collect(world: World, customerSlot: number, deltaMs: number): void {
   world.stats.customersServed++;
   world.stats.driveThruServed++;
 
-  order.state = ORDER_PAID;
-  world.eventQueue.emitPayment(customer.entityId, order.price, tip, satisfaction);
-  world.orders.release(orderSlot);
+  world.eventQueue.emitPayment(customer.entityId, bill, tip, satisfaction);
 
   /*
    * Out of the lane before the exit manoeuvre starts, so the car behind can
@@ -269,14 +305,6 @@ function collect(world: World, customerSlot: number, deltaMs: number): void {
    */
   customer.laneSlot = -1;
   customer.state = STATE_EXITING;
-}
-
-function orderOf(world: World, customerSlot: number): number {
-  for (let slot = 0; slot < world.orders.scanLimit; slot++) {
-    if (!world.orders.isActive(slot)) continue;
-    if (world.orders.at(slot).customerSlot === customerSlot) return slot;
-  }
-  return -1;
 }
 
 function priceOfItem(world: World, itemIndex: number): number {

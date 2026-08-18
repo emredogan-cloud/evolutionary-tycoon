@@ -56,6 +56,19 @@ Tüm ekonomi bu tablodan türer. Bu tablo değişirse her şey değişir; bu yü
 **Aşamalar arası gelir oranı:** 1 → 3.7× → 3.3× → 2.7×
 **Bu azalan bir dizidir. Bu kasıtlıdır.** Üstel değil, yavaşlayan bir büyüme. Sayılar hiçbir zaman okunamaz hâle gelmez; oyunun sonunda bile dört haneli/dk gelirdeyiz, `1.2e47` değil.
 
+> **Sepet modeli (ADR-016, 2026-08-18).** "Ortalama ticket" satırı artık mekanik olarak
+> üretilebilir: sipariş bir **sepettir** — aşama menüsünden üniform seçilen ana ürün + yan ürün ve
+> içecek çekilişleri (`src/config/economy/basket.ts`). Şanslar bu tablonun ticket'larına karşı
+> **çözülmüştür**, ayarlanmamıştır: A2 %39/%39×1, A3 %75/%75×1, A4 %64/%64×2 çekiliş →
+> E[ticket] = ₡9.01 / ₡18.01 / ₡29.98. Aşama 1 bilinçli olarak sıfır (tek kalem ticket'ı zaten
+> tasarımda). Tepsi kuralı: sepet eksiksiz teslim edilir; sıcak tutma ilk pişen kalem için gerçek
+> maliyete dönüşür. P12'nin §8.1 değişiklik talebi bununla kapandı; balance kapısındaki iki
+> DEĞERLENDİRİLEMEZ assertion değerlendirilebilir hâle geldi (Aşama 3 zamanlaması ilk ölçümde
+> 58–67 dk / pencere 28–70 ✅). Aşama 2–4 **gelir kalibrasyonu** hâlâ yapılmadı — P12 yalnız
+> Aşama 1'i ayarlamıştı — bu yüzden kalibre edilmemiş aşamaların zarf/dead-end/zamanlama satırları
+> kapıda _ölçülüp raporlanır, assert edilmez_ (`CALIBRATED_STAGES`, ADR-016). Bu kalibrasyon
+> pasosu, kullanıcının bekleyen trafik yoğunluğu kararıyla birlikte sonraki ekonomi işinin girdisidir.
+
 > **İşletme rezervi (ADR-014, 2026-08-18).** "Sonraki aşamanın maliyeti" satırı **harcanan** tutardır;
 > evrim kapısı ise `maliyet + işletme rezervi` tutmayı şart koşar. Rezerv config'ten türetilir:
 > gelecek aşamanın kazanmak için zorunlu rolleri (`requiredRoles` — Aşama 3-4'te garson) içinden
