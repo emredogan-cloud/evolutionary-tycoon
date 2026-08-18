@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { isoSpriteMetrics } from '../shared/spriteMetrics.ts';
+import { isoSpriteMetrics, isoSpriteMetricsFacing } from '../shared/spriteMetrics.ts';
 import type { WorldBox } from '../shared/spriteMetrics.ts';
 import { SPLIT_HEIGHT_LIMIT_PX } from '../../src/config/assets.ts';
 import { PATHS } from './paths.ts';
@@ -76,12 +76,26 @@ export type Expectation =
 export function resolveExpectation(
   subjectKey: string,
   table: SubjectDimensions = loadSubjectDimensions(),
+  /**
+   * Which of the eight facings, for a directional sprite.
+   *
+   * A car seen side-on is 407 x 182 px and the same car seen corner-on is
+   * 336 x 317 — one subject, two correct heights. Checking every facing against
+   * the axis-aligned projection rejects the six that are not axis-aligned, which
+   * is the same failure mode PHASE_4_REPORT §12 records for world-versus-sprite
+   * heights, one level down. `null` keeps the axis-aligned box, which is right
+   * for everything that has no facing.
+   */
+  directionIndex: number | null = null,
 ): Expectation | null {
   const category = subjectKey.split('/')[0] ?? '';
 
   const world = table.worldObjects.subjects[subjectKey];
   if (world !== undefined) {
-    const metrics = isoSpriteMetrics(world, table.scale);
+    const metrics =
+      directionIndex === null
+        ? isoSpriteMetrics(world, table.scale)
+        : isoSpriteMetricsFacing(world, directionIndex, table.scale);
     return {
       mode: 'reference',
       height: metrics.height,
@@ -114,7 +128,15 @@ export interface SubjectSprite {
 export function spriteFor(
   subjectKey: string,
   table: SubjectDimensions = loadSubjectDimensions(),
+  directionIndex: number | null = null,
 ): SubjectSprite | null {
   const world = table.worldObjects.subjects[subjectKey];
-  return world === undefined ? null : { box: world, metrics: isoSpriteMetrics(world, table.scale) };
+  if (world === undefined) return null;
+  return {
+    box: world,
+    metrics:
+      directionIndex === null
+        ? isoSpriteMetrics(world, table.scale)
+        : isoSpriteMetricsFacing(world, directionIndex, table.scale),
+  };
 }

@@ -65,6 +65,14 @@ type PackConfig = Parameters<typeof packAsync>[1];
 const WEBP_OPTIONS = { lossless: true, effort: 6, quality: 100 } as const;
 const PNG_OPTIONS = { compressionLevel: 9, effort: 10 } as const;
 
+/**
+ * Smallest page the shrink search will consider.
+ *
+ * Below this the search spends more time failing than it saves in memory: a
+ * 32-square page holds one padded icon.
+ */
+const MIN_PAGE_SIZE = 64;
+
 export interface AtlasFrame {
   readonly filename: string;
   readonly frame: { x: number; y: number; w: number; h: number };
@@ -95,6 +103,10 @@ export interface PackedAtlas {
   readonly files: readonly string[];
   /** Used frame area over page area, 0-1. ASSET_PIPELINE §7 requires >= 0.7. */
   readonly fill: number;
+  /** Empty page area, as RGBA8 bytes — what the fill floor is really about. */
+  readonly wastedBytes: number;
+  /** Decoded page area, as RGBA8 bytes. This is what a GPU actually holds. */
+  readonly textureBytes: number;
   readonly frames: number;
   readonly bytes: number;
 }
@@ -130,12 +142,90 @@ export async function packAtlas(
 
   const input = [...files].sort().map((file) => ({ path: basename(file), contents: readFileSync(file) }));
 
-  const result = await packAsync(input, {
-    ...PACK_OPTIONS,
-    textureName: spec.id,
-    width: spec.maxWidth,
-    height: spec.maxHeight,
-  } as unknown as PackConfig);
+  const pack = async (width: number, height: number): Promise<Awaited<ReturnType<typeof packAsync>>> =>
+    packAsync(input, {
+      ...PACK_OPTIONS,
+      textureName: spec.id,
+      width,
+      height,
+    } as unknown as PackConfig);
+
+  /*
+   * Shrink the page to the content.
+   *
+   * `powerOfTwo` picks a power-of-two page that *fits*, not the smallest one:
+   * given a 2048 square to work in, 68 character parts landed on a 256 x 2048
+   * strip at **9.5% fill** against §7's 70% floor. Empty atlas area is not free
+   * — it is texture memory on the GPU, where a page costs `w * h * 4` bytes
+   * whether or not anything is drawn on it, and 256 x 2048 is 2 MB of which
+   * 1.8 MB is nothing.
+   *
+   * So every power-of-two page the content could possibly fit in is tried, in
+   * increasing area and then decreasing squareness, and the first that packs
+   * into no more pages than the maximum-size attempt wins. Halving one axis at a
+   * time is not enough: `structures` needed 4096 x 512 to become 1024 x 2048,
+   * which is the same area reached through a shape no sequence of halvings
+   * visits. Enumeration is deterministic, so the layout stays as reproducible as
+   * the packer it wraps.
+   */
+  const maximal = await pack(spec.maxWidth, spec.maxHeight);
+  const pagesIn = (packed: Awaited<ReturnType<typeof packAsync>>): number =>
+    packed.filter((entry) => entry.name.endsWith('.png')).length;
+  const targetPages = pagesIn(maximal);
+
+  /** Distinct packed rectangle area across every page of a pack result. */
+  const frameArea = (packed: Awaited<ReturnType<typeof packAsync>>): number => {
+    let total = 0;
+    for (const entry of packed.filter((item) => item.name.endsWith('.json'))) {
+      const sheet = JSON.parse(entry.buffer.toString('utf8')) as AtlasSheet;
+      const rects = new Set<string>();
+      for (const frame of sheet.textures[0]?.frames ?? []) {
+        const key = `${frame.frame.x},${frame.frame.y},${frame.frame.w},${frame.frame.h}`;
+        if (rects.has(key)) continue;
+        rects.add(key);
+        total += frame.frame.w * frame.frame.h;
+      }
+    }
+    return total;
+  };
+
+  const powers = (limit: number): number[] => {
+    const out: number[] = [];
+    for (let size = MIN_PAGE_SIZE; size <= limit; size *= 2) out.push(size);
+    return out;
+  };
+  const candidates: { width: number; height: number }[] = [];
+  for (const width of powers(spec.maxWidth)) {
+    for (const height of powers(spec.maxHeight)) candidates.push({ width, height });
+  }
+  candidates.sort((a, b) => {
+    const area = a.width * a.height - b.width * b.height;
+    if (area !== 0) return area;
+    // Squarer first: a square page wastes less on the next sprite that arrives.
+    const squareness =
+      Math.abs(Math.log2(a.width) - Math.log2(a.height)) - Math.abs(Math.log2(b.width) - Math.log2(b.height));
+    if (squareness !== 0) return squareness;
+    return a.width - b.width;
+  });
+
+  // A page can never be smaller than the pixels it has to hold. Pruning by that
+  // bound turns the search from a minute into a second on this set.
+  const neededArea = frameArea(maximal);
+
+  let result = maximal;
+  for (const candidate of candidates) {
+    const area = candidate.width * candidate.height;
+    if (area < neededArea) continue;
+    if (area >= spec.maxWidth * spec.maxHeight) break;
+    try {
+      const packed = await pack(candidate.width, candidate.height);
+      if (pagesIn(packed) > targetPages) continue;
+      result = packed;
+      break;
+    } catch {
+      // The packer throws when the input cannot fit; try the next size up.
+    }
+  }
 
   const sheets = result.filter((entry) => entry.name.endsWith('.json'));
   const images = result.filter((entry) => entry.name.endsWith('.png'));
@@ -208,6 +298,8 @@ export async function packAtlas(
     pages: images.length,
     files: written,
     fill: pageArea === 0 ? 0 : usedArea / pageArea,
+    wastedBytes: Math.max(0, pageArea - usedArea) * 4,
+    textureBytes: pageArea * 4,
     frames,
     bytes,
   };

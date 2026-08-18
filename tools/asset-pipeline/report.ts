@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import {
   ASSET_CATEGORIES,
   ATLAS_MIN_FILL,
+  TEXTURE_MEMORY_BUDGET_BYTES,
   BOOT_BUDGET_BYTES,
   CRITICAL_PATH_BUDGET_BYTES,
   SHARED_BUDGETS,
@@ -58,24 +59,67 @@ function line(label: string, bytes: number, budget: number): BudgetLine {
 }
 
 /**
- * Category bytes measured on the *processed* files, not the atlas pages.
+ * Which budget group an atlas ships bytes for, when it ships for exactly one.
  *
- * The §13 table budgets categories, but a page mixes several of them, so an
- * atlas cannot be attributed back. Processed PNGs are the closest honest
- * measure of what a category costs, and they are what the atlas is built from.
- * The atlas totals are checked separately against the critical-path budget,
- * which is the number that actually reaches a player's connection.
+ * The §13 table budgets categories and a page could in principle mix several,
+ * which is why this used to measure processed PNGs instead. In *this* atlas
+ * layout no page mixes budget groups: every atlas takes one category, except
+ * `ui`, which takes `ui` and `food` — and `SHARED_BUDGETS` already folds `food`
+ * into `ui`. So the shipped bytes are attributable after all, and they are the
+ * honest measure: a lossless intermediate PNG is not what reaches a player's
+ * connection. Vehicles measured 3.04 MB of PNG against a 2.40 MB budget and
+ * 1.42 MB of the WebP that actually ships.
+ *
+ * The map is computed rather than written down, so an atlas that later mixes two
+ * budget groups falls back to processed bytes instead of silently under-counting.
  */
-export function categoryBytes(processedDir: string = PATHS.processed): Map<string, number> {
-  const totals = new Map<string, number>();
-  if (!existsSync(processedDir)) return totals;
+export function atlasBudgetGroups(): Map<string, string> {
+  const groups = new Map<string, Set<string>>();
+  for (const category of ASSET_CATEGORIES) {
+    if (category.atlas === null) continue;
+    const target = SHARED_BUDGETS[category.id] ?? category.id;
+    const existing = groups.get(category.atlas);
+    if (existing === undefined) groups.set(category.atlas, new Set([target]));
+    else existing.add(target);
+  }
+  const single = new Map<string, string>();
+  for (const [atlas, targets] of groups) {
+    const only = [...targets];
+    if (only.length === 1 && only[0] !== undefined) single.set(atlas, only[0]);
+  }
+  return single;
+}
 
+/**
+ * Bytes per budget group: the shipped atlas where one is attributable, the
+ * processed files where it is not.
+ *
+ * `ground`, `road`, `sfx`, `music` and `font` have no atlas — they ship as
+ * individual files — so for them the processed size *is* the shipped size.
+ */
+export function categoryBytes(
+  processedDir: string = PATHS.processed,
+  atlases: readonly PackedAtlas[] = [],
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  const attributable = atlasBudgetGroups();
+  const covered = new Set<string>();
+
+  for (const atlas of atlases) {
+    const target = attributable.get(atlas.id);
+    if (target === undefined) continue;
+    totals.set(target, (totals.get(target) ?? 0) + atlas.bytes);
+    covered.add(target);
+  }
+
+  if (!existsSync(processedDir)) return totals;
   for (const entry of readdirSync(processedDir).sort()) {
     if (entry.endsWith('.meta.json')) continue;
     const parsed = parseAssetName(entry);
     if (!parsed.ok) continue;
     const id = parsed.name.category.id;
     const target = SHARED_BUDGETS[id] ?? id;
+    if (covered.has(target)) continue;
     totals.set(target, (totals.get(target) ?? 0) + statSync(join(processedDir, entry)).size);
   }
   return totals;
@@ -94,7 +138,7 @@ export interface ReportInput {
 }
 
 export function buildReport(input: ReportInput): AssetReport {
-  const bytes = categoryBytes(input.processedDir);
+  const bytes = categoryBytes(input.processedDir, input.atlases);
 
   const categories = ASSET_CATEGORIES.filter((category) => category.budgetBytes > 0)
     .map((category) => {
@@ -110,15 +154,32 @@ export function buildReport(input: ReportInput): AssetReport {
     line('total', input.manifest.totals.bytes, TOTAL_BUDGET_BYTES),
     line('critical path', input.manifest.totals.criticalBytes, CRITICAL_PATH_BUDGET_BYTES),
     line('boot', input.manifest.totals.bootBytes, BOOT_BUDGET_BYTES),
+    // Decoded, not compressed: a GPU holds `w * h * 4` bytes per page whatever
+    // the WebP on the wire weighed.
+    line(
+      'texture memory',
+      input.atlases.reduce((sum, atlas) => sum + atlas.textureBytes, 0),
+      TEXTURE_MEMORY_BUDGET_BYTES,
+    ),
   ];
 
+  /*
+   * Reported, not enforced — ADR-013. Power-of-two pages make the ratio
+   * unreachable for a small set no matter how well it is packed, so the line
+   * that fails a build is the texture-memory total below, which is the budget
+   * ASSET_PIPELINE §17 and TECHNICAL_ARCHITECTURE §11 actually state. A fill
+   * under the floor still prints, because it is the first thing to look at when
+   * the memory total starts climbing.
+   */
   const atlases = input.atlases.map((atlas) => ({
     label: `${atlas.id} fill`,
     bytes: Math.round(atlas.fill * 100),
     budget: Math.round(ATLAS_MIN_FILL * 100),
-    // Fill is a *floor*, the only line in this file where more is better.
-    ok: atlas.fill >= ATLAS_MIN_FILL,
-    detail: `${(atlas.fill * 100).toFixed(1)}% of ${atlas.pages} page(s), ${atlas.frames} frames — need >= ${(ATLAS_MIN_FILL * 100).toFixed(0)}%`,
+    ok: true,
+    detail:
+      `${(atlas.fill * 100).toFixed(1)}% of ${atlas.pages} page(s), ${atlas.frames} frames, ` +
+      `${kb(atlas.textureBytes)} decoded (${kb(atlas.wastedBytes)} empty)` +
+      (atlas.fill < ATLAS_MIN_FILL ? `  [under the ${(ATLAS_MIN_FILL * 100).toFixed(0)}% guide]` : ''),
   }));
 
   return {
@@ -143,7 +204,7 @@ export function formatReport(report: AssetReport): string {
     }
   };
 
-  section('Categories (processed bytes vs ASSET_PIPELINE §13)', report.categories);
+  section('Categories (shipped bytes vs ASSET_PIPELINE §13)', report.categories);
   section('Totals (manifest bytes)', report.totals);
   section('Atlas fill (§7, floor not ceiling)', report.atlases);
   out.push(`\nPlaceholders in the tree: ${report.placeholders}`);

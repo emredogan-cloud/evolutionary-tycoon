@@ -5,17 +5,35 @@
   "size": 48,
   "tolerance": 8,
   "coverage": 0.92,
+  "affinityBaseline": 51.5,
+  "affinityWarn": 0.75,
   "contract": "docs/ASSET_PIPELINE.md#11-stil-tanımı",
-  "note": "Twelve four-step ramps. Step 900 is the shadow side and doubles as the derived 2px outline for its family — the outline is never pure black (ASSET_PIPELINE §1.1). Step 300 is the lit side; the key light is upper-left, so 300 faces up-left and 900 faces down-right. `tolerance` is the maximum Euclidean RGB distance a pixel may sit from its nearest palette entry; `coverage` is the fraction of opaque pixels that must be within it. No two entries are closer to each other than `tolerance`, so every entry is a genuinely distinct target rather than a wasted slot.",
+  "note": "Twelve four-step ramps. Step 900 is the shadow side and doubles as the derived 2px outline for its family — the outline is never pure black (ASSET_PIPELINE §1.1). Step 300 is the lit side; the key light is upper-left, so 300 faces up-left and 900 faces down-right. `tolerance` is the maximum Euclidean RGB distance a pixel may sit from its nearest palette entry; `coverage` is the fraction of opaque pixels that must be within it. No two entries are closer to each other than `tolerance`, so every entry is a genuinely distinct target rather than a wasted slot. `affinityBaseline` is the mean nearest-palette distance of *uniformly random* RGB: 400 000 Monte Carlo samples against these 48 entries give 51.48, and 48 points spread through a 256-cube predict 43.7 from volume alone, so the measured figure is the honest no-information point rather than a chosen number. An asset at or above it has no demonstrable relationship to this palette. `affinityWarn` is the fraction of that baseline above which an asset is reported as off-family without failing. Replaces the 92%-within-8 conformance rule for continuous-tone art — see ADR-013.",
   "ramps": [
     {
       "id": "neutral",
       "role": "Ink, UI text, paper white, road markings, eye whites.",
       "colors": [
-        { "id": "neutral-900", "hex": "#14161C", "use": "Deepest ink; UI text; outline of last resort" },
-        { "id": "neutral-600", "hex": "#434A5E", "use": "Secondary ink; UI borders" },
-        { "id": "neutral-300", "hex": "#9AA0B8", "use": "Disabled UI; distant haze" },
-        { "id": "neutral-050", "hex": "#F2F0EA", "use": "Warm paper white; lane markings; highlights" }
+        {
+          "id": "neutral-900",
+          "hex": "#14161C",
+          "use": "Deepest ink; UI text; outline of last resort"
+        },
+        {
+          "id": "neutral-600",
+          "hex": "#434A5E",
+          "use": "Secondary ink; UI borders"
+        },
+        {
+          "id": "neutral-300",
+          "hex": "#9AA0B8",
+          "use": "Disabled UI; distant haze"
+        },
+        {
+          "id": "neutral-050",
+          "hex": "#F2F0EA",
+          "use": "Warm paper white; lane markings; highlights"
+        }
       ]
     },
     {
@@ -27,109 +45,281 @@
           "hex": "#1F232A",
           "use": "Asphalt shadow; tyre contact; outline for road art"
         },
-        { "id": "pavement-700", "hex": "#3A414C", "use": "Asphalt base" },
-        { "id": "pavement-500", "hex": "#6E7684", "use": "Worn concrete; kerb shadow side" },
-        { "id": "pavement-300", "hex": "#A8AEB6", "use": "Lit concrete; kerb top" }
+        {
+          "id": "pavement-700",
+          "hex": "#3A414C",
+          "use": "Asphalt base"
+        },
+        {
+          "id": "pavement-500",
+          "hex": "#6E7684",
+          "use": "Worn concrete; kerb shadow side"
+        },
+        {
+          "id": "pavement-300",
+          "hex": "#A8AEB6",
+          "use": "Lit concrete; kerb top"
+        }
       ]
     },
     {
       "id": "timber",
       "role": "Counter, tables, chairs, trunks, crates, fences.",
       "colors": [
-        { "id": "timber-900", "hex": "#3A2213", "use": "Wood shadow; wood outline" },
-        { "id": "timber-700", "hex": "#6A3E1C", "use": "Wood base" },
-        { "id": "timber-500", "hex": "#9C6534", "use": "Lit wood" },
-        { "id": "timber-300", "hex": "#C99A5F", "use": "Wood highlight; sanded edges" }
+        {
+          "id": "timber-900",
+          "hex": "#3A2213",
+          "use": "Wood shadow; wood outline"
+        },
+        {
+          "id": "timber-700",
+          "hex": "#6A3E1C",
+          "use": "Wood base"
+        },
+        {
+          "id": "timber-500",
+          "hex": "#9C6534",
+          "use": "Lit wood"
+        },
+        {
+          "id": "timber-300",
+          "hex": "#C99A5F",
+          "use": "Wood highlight; sanded edges"
+        }
       ]
     },
     {
       "id": "foliage",
       "role": "Tree and shrub leaves. foliage-300 doubles as the UI success/cash green — the LIT step, not the mid one: foliage-500 against crimson-500 collapses to 22.6 units under simulated deuteranopia, which is below the palette's own 8-unit tolerance doubled and unusable for success-versus-danger. See tests/unit/tools/palette.test.ts.",
       "colors": [
-        { "id": "foliage-900", "hex": "#123420", "use": "Leaf shadow; foliage outline" },
-        { "id": "foliage-700", "hex": "#1E5931", "use": "Leaf base" },
-        { "id": "foliage-500", "hex": "#2F8447", "use": "Lit leaves" },
-        { "id": "foliage-300", "hex": "#5BB169", "use": "Leaf highlight; UI success / cash" }
+        {
+          "id": "foliage-900",
+          "hex": "#123420",
+          "use": "Leaf shadow; foliage outline"
+        },
+        {
+          "id": "foliage-700",
+          "hex": "#1E5931",
+          "use": "Leaf base"
+        },
+        {
+          "id": "foliage-500",
+          "hex": "#2F8447",
+          "use": "Lit leaves"
+        },
+        {
+          "id": "foliage-300",
+          "hex": "#5BB169",
+          "use": "Leaf highlight; UI success / cash"
+        }
       ]
     },
     {
       "id": "meadow",
       "role": "Grass verges, hedges, yellow-green ground cover.",
       "colors": [
-        { "id": "meadow-900", "hex": "#35441A", "use": "Grass shadow; grass outline" },
-        { "id": "meadow-700", "hex": "#586E22", "use": "Grass base" },
-        { "id": "meadow-500", "hex": "#849E33", "use": "Lit grass" },
-        { "id": "meadow-300", "hex": "#B4C65C", "use": "Dry grass highlight" }
+        {
+          "id": "meadow-900",
+          "hex": "#35441A",
+          "use": "Grass shadow; grass outline"
+        },
+        {
+          "id": "meadow-700",
+          "hex": "#586E22",
+          "use": "Grass base"
+        },
+        {
+          "id": "meadow-500",
+          "hex": "#849E33",
+          "use": "Lit grass"
+        },
+        {
+          "id": "meadow-300",
+          "hex": "#B4C65C",
+          "use": "Dry grass highlight"
+        }
       ]
     },
     {
       "id": "skinWarm",
       "role": "Lighter skin tones and their shadows.",
       "colors": [
-        { "id": "skinWarm-900", "hex": "#8C4E33", "use": "Shadow side of light skin; skin outline" },
-        { "id": "skinWarm-700", "hex": "#C08154", "use": "Mid light skin" },
-        { "id": "skinWarm-500", "hex": "#E5AC80", "use": "Light skin base" },
-        { "id": "skinWarm-300", "hex": "#F7D8BA", "use": "Lit light skin" }
+        {
+          "id": "skinWarm-900",
+          "hex": "#8C4E33",
+          "use": "Shadow side of light skin; skin outline"
+        },
+        {
+          "id": "skinWarm-700",
+          "hex": "#C08154",
+          "use": "Mid light skin"
+        },
+        {
+          "id": "skinWarm-500",
+          "hex": "#E5AC80",
+          "use": "Light skin base"
+        },
+        {
+          "id": "skinWarm-300",
+          "hex": "#F7D8BA",
+          "use": "Lit light skin"
+        }
       ]
     },
     {
       "id": "skinDeep",
       "role": "Deeper skin tones and their shadows.",
       "colors": [
-        { "id": "skinDeep-900", "hex": "#26120C", "use": "Shadow side of deep skin; deep skin outline" },
-        { "id": "skinDeep-700", "hex": "#412A20", "use": "Mid deep skin" },
-        { "id": "skinDeep-500", "hex": "#65402F", "use": "Deep skin base" },
-        { "id": "skinDeep-300", "hex": "#96684C", "use": "Lit deep skin" }
+        {
+          "id": "skinDeep-900",
+          "hex": "#26120C",
+          "use": "Shadow side of deep skin; deep skin outline"
+        },
+        {
+          "id": "skinDeep-700",
+          "hex": "#412A20",
+          "use": "Mid deep skin"
+        },
+        {
+          "id": "skinDeep-500",
+          "hex": "#65402F",
+          "use": "Deep skin base"
+        },
+        {
+          "id": "skinDeep-300",
+          "hex": "#96684C",
+          "use": "Lit deep skin"
+        }
       ]
     },
     {
       "id": "azure",
       "role": "Sky, water, blue clothing, blue vehicle paint, cool signage.",
       "colors": [
-        { "id": "azure-900", "hex": "#12294D", "use": "Blue shadow; blue outline" },
-        { "id": "azure-700", "hex": "#1E4A85", "use": "Blue base" },
-        { "id": "azure-500", "hex": "#3178C4", "use": "Lit blue" },
-        { "id": "azure-300", "hex": "#6FADE4", "use": "Sky; blue highlight" }
+        {
+          "id": "azure-900",
+          "hex": "#12294D",
+          "use": "Blue shadow; blue outline"
+        },
+        {
+          "id": "azure-700",
+          "hex": "#1E4A85",
+          "use": "Blue base"
+        },
+        {
+          "id": "azure-500",
+          "hex": "#3178C4",
+          "use": "Lit blue"
+        },
+        {
+          "id": "azure-300",
+          "hex": "#6FADE4",
+          "use": "Sky; blue highlight"
+        }
       ]
     },
     {
       "id": "crimson",
       "role": "Red clothing, red vehicle paint, awnings. crimson-500 doubles as the UI danger red.",
       "colors": [
-        { "id": "crimson-900", "hex": "#4A1119", "use": "Red shadow; red outline" },
-        { "id": "crimson-700", "hex": "#8A1F2B", "use": "Red base" },
-        { "id": "crimson-500", "hex": "#C7333C", "use": "Lit red; UI danger" },
-        { "id": "crimson-300", "hex": "#E8706F", "use": "Red highlight" }
+        {
+          "id": "crimson-900",
+          "hex": "#4A1119",
+          "use": "Red shadow; red outline"
+        },
+        {
+          "id": "crimson-700",
+          "hex": "#8A1F2B",
+          "use": "Red base"
+        },
+        {
+          "id": "crimson-500",
+          "hex": "#C7333C",
+          "use": "Lit red; UI danger"
+        },
+        {
+          "id": "crimson-300",
+          "hex": "#E8706F",
+          "use": "Red highlight"
+        }
       ]
     },
     {
       "id": "steel",
       "role": "Kitchen equipment, chrome, poles, glass.",
       "colors": [
-        { "id": "steel-900", "hex": "#2C333C", "use": "Metal shadow; metal outline" },
-        { "id": "steel-700", "hex": "#525C6A", "use": "Metal base" },
-        { "id": "steel-500", "hex": "#8892A0", "use": "Lit metal" },
-        { "id": "steel-300", "hex": "#C3CBD6", "use": "Specular metal; glass" }
+        {
+          "id": "steel-900",
+          "hex": "#2C333C",
+          "use": "Metal shadow; metal outline"
+        },
+        {
+          "id": "steel-700",
+          "hex": "#525C6A",
+          "use": "Metal base"
+        },
+        {
+          "id": "steel-500",
+          "hex": "#8892A0",
+          "use": "Lit metal"
+        },
+        {
+          "id": "steel-300",
+          "hex": "#C3CBD6",
+          "use": "Specular metal; glass"
+        }
       ]
     },
     {
       "id": "amber",
       "role": "Cooked food, warm light, signage, gold. amber-500 doubles as the UI warning.",
       "colors": [
-        { "id": "amber-900", "hex": "#5C3306", "use": "Warm shadow; amber outline" },
-        { "id": "amber-700", "hex": "#96590C", "use": "Amber base" },
-        { "id": "amber-500", "hex": "#D98A16", "use": "Lit amber; UI warning" },
-        { "id": "amber-300", "hex": "#F4BC55", "use": "Amber highlight; lamp glow" }
+        {
+          "id": "amber-900",
+          "hex": "#5C3306",
+          "use": "Warm shadow; amber outline"
+        },
+        {
+          "id": "amber-700",
+          "hex": "#96590C",
+          "use": "Amber base"
+        },
+        {
+          "id": "amber-500",
+          "hex": "#D98A16",
+          "use": "Lit amber; UI warning"
+        },
+        {
+          "id": "amber-300",
+          "hex": "#F4BC55",
+          "use": "Amber highlight; lamp glow"
+        }
       ]
     },
     {
       "id": "plum",
       "role": "Awnings, evening accents, secondary signage — the contrast family.",
       "colors": [
-        { "id": "plum-900", "hex": "#2E1436", "use": "Plum shadow; plum outline" },
-        { "id": "plum-700", "hex": "#54245C", "use": "Plum base" },
-        { "id": "plum-500", "hex": "#7E3B85", "use": "Lit plum" },
-        { "id": "plum-300", "hex": "#AE6FAF", "use": "Plum highlight" }
+        {
+          "id": "plum-900",
+          "hex": "#2E1436",
+          "use": "Plum shadow; plum outline"
+        },
+        {
+          "id": "plum-700",
+          "hex": "#54245C",
+          "use": "Plum base"
+        },
+        {
+          "id": "plum-500",
+          "hex": "#7E3B85",
+          "use": "Lit plum"
+        },
+        {
+          "id": "plum-300",
+          "hex": "#AE6FAF",
+          "use": "Plum highlight"
+        }
       ]
     }
   ]

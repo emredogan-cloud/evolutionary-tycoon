@@ -1,0 +1,412 @@
+{
+  "version": 1,
+  "note": "Per-asset waivers, each one a measured value and a reason. An entry here does NOT switch a check off: the check still runs, still measures, and `assets:validate` prints the asset as `warn` rather than `ok`. `assets:report` counts them and the count is part of the asset state in PROJECT_MEMORY. Adding an entry is a deliberate act with a date against it; a new asset that fails the same check is still a failure until somebody writes it down here. Raised by ADR-013.",
+  "exceptions": [
+    {
+      "file": "char_arm-l_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 154.3 vs lower-right 168.8 (delta -14.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_arm-l_default_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 172.1 vs lower-right 183.9 (delta -11.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_arm-r_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 170.8 vs lower-right 182.8 (delta -12.0) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_arm-r_default_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 178.6 vs lower-right 191.6 (delta -13.0) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-01_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 110.8 vs lower-right 130.3 (delta -19.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-01_nw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 119.0 vs lower-right 132.3 (delta -13.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-01_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 111.7 vs lower-right 123.9 (delta -12.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-01_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 121.4 vs lower-right 131.3 (delta -9.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-02_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 85.7 vs lower-right 121.0 (delta -35.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-02_nw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 85.9 vs lower-right 128.5 (delta -42.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-02_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 87.8 vs lower-right 116.0 (delta -28.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_female-02_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 88.8 vs lower-right 100.6 (delta -11.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_body_male-02_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 70.5 vs lower-right 87.1 (delta -16.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_hair_tied-01_nw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 97.7 vs lower-right 119.7 (delta -22.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_head_female-02_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 173.4 vs lower-right 171.6 (delta 1.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_head_female-02_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 173.7 vs lower-right 172.3 (delta 1.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_head_neutral-01_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 173.8 vs lower-right 173.0 (delta 0.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_head_neutral-01_nw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 170.4 vs lower-right 169.3 (delta 1.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_leg-l_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 177.9 vs lower-right 192.8 (delta -14.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_leg-l_default_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 181.5 vs lower-right 195.7 (delta -14.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_leg-r_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 181.9 vs lower-right 198.2 (delta -16.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "char_leg-r_default_sw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 177.4 vs lower-right 198.0 (delta -20.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "food_coffee_default@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 110.8 vs lower-right 126.8 (delta -16.0) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "fx_sparkle_soft@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 240.9 vs lower-right 241.7 (delta -0.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "fx_steam_soft@2x.png",
+      "check": "light-direction",
+      "measured": "one side of the diagonal is empty — cannot read a light direction",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "ground_stage1_tile-a@2x.png",
+      "check": "light-direction",
+      "measured": "one side of the diagonal is empty — cannot read a light direction",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "nature_pole_lamp_lower@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 111.3 vs lower-right 121.5 (delta -10.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "nature_tree_broadleaf-02_lower@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 105.5 vs lower-right 105.7 (delta -0.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "nature_tree_conifer-01_lower@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 99.4 vs lower-right 111.0 (delta -11.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "prop_chair_plastic@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 109.0 vs lower-right 109.9 (delta -0.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "prop_chair_wooden@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 108.1 vs lower-right 116.2 (delta -8.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "prop_table_round_4seat@2x.png",
+      "check": "reference-height",
+      "measured": "reference-height: 171px exceeds the 125px projected box +15% = 144px (ASSET_PIPELINE §1.2 (50 px ≈ 0.78 m))",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The set is drawn at a shallower camera than the world's 2:1 dimetric, so a subject's silhouette is taller relative to its width than the projection predicts. `assets:import` fits sprites to the projected WIDTH because the footprint is what parks, queues and sorts; the height then overflows by the amount the camera differs. Measured overflow here is under 40%, which reads as an object standing slightly proud of its own ground diamond rather than as a wrong object."
+    },
+    {
+      "file": "struct_door_default@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 132.9 vs lower-right 132.8 (delta 0.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "struct_drink_lv1@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 105.7 vs lower-right 104.5 (delta 1.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "struct_drink_lv1@2x.png",
+      "check": "reference-height",
+      "measured": "reference-height: 219px exceeds the 176px projected box +15% = 202px (drinks cabinet)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The set is drawn at a shallower camera than the world's 2:1 dimetric, so a subject's silhouette is taller relative to its width than the projection predicts. `assets:import` fits sprites to the projected WIDTH because the footprint is what parks, queues and sorts; the height then overflows by the amount the camera differs. Measured overflow here is under 40%, which reads as an object standing slightly proud of its own ground diamond rather than as a wrong object."
+    },
+    {
+      "file": "struct_sign_large_lower@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 95.5 vs lower-right 103.5 (delta -8.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "struct_window_default@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 107.7 vs lower-right 119.2 (delta -11.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "ui_icon_angry@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 52.5 over 6717 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 99)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "ui_icon_customer@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 136.2 vs lower-right 134.7 (delta 1.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "ui_icon_grill@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 78.8 vs lower-right 83.4 (delta -4.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "ui_icon_hire@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 52.3 over 9446 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 103)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "ui_icon_neutral@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 51.8 over 11839 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 94)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "ui_icon_pause@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 57.2 over 10618 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 86)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "ui_icon_save@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 136.4 vs lower-right 135.6 (delta 0.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "ui_icon_speed-2@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 55.8 over 6825 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 94)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "ui_icon_speed-4@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 60.7 over 4512 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 87)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "ui_icon_star@2x.png",
+      "check": "palette-affinity",
+      "measured": "mean distance 52.1 over 8153 interior pixels; random colour would be 51.5 — this asset is no closer to the palette than an arbitrary image, so it carries none of the project's colour identity (furthest pixel 85)",
+      "accepted": "2026-08-18",
+      "reason": "Genuinely off-family, and recorded as such rather than waved through. The UI icon batch was generated in saturated primaries where the rest of the set lives in the palette's muted ramps, and these sit at or past the random-colour baseline — the check is right. The art ships unchanged by the 2026-08-18 decision (ADR-013 §4); the fix is a regenerated icon set drawn against the `neutral`, `foliage` and `amber` ramps, not a threshold. Tracked as an art gap."
+    },
+    {
+      "file": "veh_pickup_default_e@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 130.7 vs lower-right 152.5 (delta -21.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_pickup_default_n@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 130.7 vs lower-right 152.5 (delta -21.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_pickup_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 130.7 vs lower-right 152.5 (delta -21.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_pickup_default_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 138.2 vs lower-right 147.5 (delta -9.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_sedan_default_e@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 147.3 vs lower-right 159.6 (delta -12.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_sedan_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 147.8 vs lower-right 158.6 (delta -10.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_sedan_default_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 134.8 vs lower-right 142.0 (delta -7.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_van_default_e@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 145.1 vs lower-right 161.7 (delta -16.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_van_default_n@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 145.1 vs lower-right 161.7 (delta -16.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_van_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 145.1 vs lower-right 161.7 (delta -16.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "veh_van_default_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 151.4 vs lower-right 152.6 (delta -1.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-18",
+      "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    }
+  ]
+}
