@@ -57,6 +57,13 @@ async function readCash(page: Page): Promise<number> {
 async function boot(page: Page, seed = 424242): Promise<void> {
   await page.goto(`/?e2e=1&seed=${String(seed)}&paused=1`);
   await expect(page.locator('html')).toHaveAttribute('data-sim-state', 'running');
+  /*
+   * The HUD publishes only once the bridge goes live, and the bridge waits for
+   * assets. Reading `data-cash` before that races a slow load — proven against
+   * the CDN, where the sim ticked and earned for a full test's length while the
+   * attribute sat at its initial 0.00. Same window as build mode's ghost race.
+   */
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
 }
 
