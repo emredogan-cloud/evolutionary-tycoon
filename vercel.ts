@@ -71,14 +71,14 @@ const rewrites: Rewrite[] = [
   // SPA fallback. Anything that is not a function, a build asset, or one of the
   // known root files renders the app shell.
   {
-    source: '/((?!api/|assets/|health\\.json|favicon\\.svg).*)',
+    source: '/((?!api/|assets/|atlas/|health\\.json|favicon\\.svg).*)',
     destination: '/index.html',
   },
 ];
 
 const config: VercelConfig = {
   framework: 'vite',
-  buildCommand: 'pnpm build',
+  buildCommand: 'pnpm assets:build && pnpm build',
   installCommand: 'pnpm install --frozen-lockfile',
   outputDirectory: 'dist',
   headers,
