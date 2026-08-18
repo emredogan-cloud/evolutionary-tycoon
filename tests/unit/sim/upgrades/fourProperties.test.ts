@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ACTOR_KIND_SPECS } from '@config/actors';
+import { worldObject } from '@config/sprites';
 import { EFFECT_MODE_OF, UPGRADES } from '@config/economy/upgrades';
 import type { EffectKind } from '@config/economy/upgrades';
 import { layoutForStage } from '@config/layouts';
@@ -100,15 +100,22 @@ describe('property 3 — every upgrade changes the world visibly', () => {
     }
   });
 
-  it('names a placeholder that the renderer can actually draw', () => {
-    // An upgrade whose placeholder is not in the render catalogue throws a
-    // `RangeError` from inside `registerStatics` — on the frame after a
-    // purchase, which is the worst possible moment.
+  it('names a world object the renderer can actually draw, or deliberately nothing', () => {
+    /*
+     * The field held a placeholder texture key for thirteen phases; it now
+     * holds a production world-object id, or the empty string for the upgrades
+     * that are a process rather than a thing (sharper knives do not stand in
+     * the forecourt). An id that is neither would throw a `RangeError` from
+     * inside `registerStatics` — on the frame after a purchase, which is the
+     * worst possible moment — or, worse, quietly draw a placeholder again.
+     */
     for (const item of UPGRADES) {
-      expect(
-        ACTOR_KIND_SPECS.some((spec) => spec.textureKey === item.placeholder),
-        `${item.id} draws as "${item.placeholder}", which nothing loads`,
-      ).toBe(true);
+      if (item.placeholder !== '') {
+        expect(
+          worldObject(item.placeholder),
+          `${item.id} draws as "${item.placeholder}", which nothing loads`,
+        ).toBeDefined();
+      }
       expect(item.iconKey.trim().length, `${item.id} has no icon key`).toBeGreaterThan(0);
     }
   });

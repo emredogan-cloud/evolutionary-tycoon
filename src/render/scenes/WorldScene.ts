@@ -59,16 +59,6 @@ export const WORLD_SCENE_KEY = 'world';
 const PATIENCE_TINTS = { calm: 0xffffff, restless: 0xffd479, angry: 0xff8080 } as const;
 
 /**
- * The brake-light stand-in, applied to a whole vehicle.
- *
- * Nearly white on purpose. A multiplicative tint on art that is already
- * near-white shows up at a very small distance from 0xffffff, and the previous
- * value — chosen against a flat grey placeholder quad — turned every braking car
- * bright pink. Registered as an art gap: the real fix is the `_brake` frames.
- */
-const BRAKE_TINT = 0xffe4e4;
-
-/**
  * How far a chair sits from its table's centre, in metres.
  *
  * A metre, from a 1.2 m table with 0.5 m chairs. Closer and the chair vanishes
@@ -436,16 +426,18 @@ export class WorldScene extends Phaser.Scene {
      * it is registered as an art gap rather than left to look intentional.
      */
     /*
-     * A hint, not a wash.
+     * No tint at all — and that is a recorded gap, not an oversight.
      *
-     * `0xffb0b0` over a near-white car body turned the whole vehicle pink in the
-     * first capture — it was chosen as deliberately-obvious placeholder feedback
-     * against an untextured quad, and against production art it reads as a
-     * repaint. The delivered set has no `_brake` frame (the batch list asks for
-     * one per side-on facing and none arrived), so this stays a tint; it is now
-     * subtle enough to be a change of state rather than of colour.
+     * The placeholder era showed braking as a loud `0xffb0b0` wash, deliberately
+     * obvious against a grey quad. On the delivered near-white bodies every
+     * strength of that wash reads as *paint*: the first golden with real art
+     * froze what looks like a rose-pink sedan, which misleads harder than a
+     * missing indicator does. Deceleration still reads through the nose-dip
+     * `vehicleBodyMotion` applies; the honest fix is the `_brake` frames the
+     * batch list asked for and the drop did not contain — listed with the other
+     * regeneration work in docs/ASSET_INTEGRATION_REPORT.md.
      */
-    if (view.braking) sprite.setTint(BRAKE_TINT);
+
     this.place(sprite, frame, view.screenX, view.screenY + this.bodyMotion.bobY);
     return index + 1;
   }
@@ -687,9 +679,15 @@ export class WorldScene extends Phaser.Scene {
       surfaces.strokePoints(this.worldQuad(bay.x - 1.2, bay.y - 2.2, bay.x + 1.2, bay.y + 2.2), true);
     }
 
-    // Tables: a pad under each, so the dining room reads as a room rather than
-    // as a scatter of props.
-    surfaces.fillStyle(SURFACE_COLORS.groundGrid, 0.8);
+    /*
+     * Tables: a pad under each, so the dining room reads as a room rather than
+     * as a scatter of props. Quarter strength now that the tables are real art:
+     * at 0.8 the pads read as painted parking bays under the furniture — the
+     * first golden with production tables showed a terrace that looked like a
+     * car park — and at 0.2 they are a terrace shadow that groups the room
+     * without competing with it.
+     */
+    surfaces.fillStyle(SURFACE_COLORS.groundGrid, 0.2);
     for (const table of this.layout.tables) {
       surfaces.fillPoints(this.worldQuad(table.x - 0.7, table.y - 0.7, table.x + 0.7, table.y + 0.7), true);
     }
@@ -800,6 +798,9 @@ export class WorldScene extends Phaser.Scene {
       const item = UPGRADES[i];
       if (item === undefined) continue;
       if ((levels[i] ?? 0) <= 0) continue;
+      // The empty id is an upgrade that is a process, not a thing — nothing to
+      // place, and nothing counted as missing. Its visible change is the burst.
+      if (item.placeholder === '') continue;
       const variant = worldObjectIndex(item.placeholder);
       statics.push({
         entityId: -(this.layout.statics.length + i + 1),

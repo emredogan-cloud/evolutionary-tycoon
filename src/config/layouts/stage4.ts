@@ -91,20 +91,33 @@ export const STAGE4_LAYOUT: StageLayout = {
     orderPost: { x: 22.6, y: 5.2 },
     window: { x: 23.0, y: 11.4 },
     /*
-     * Six places, of which four are "in the lane" — the last two are on the
-     * approach and count as spilled, exactly like the counter queue's last two
-     * slots. That is what makes a backed-up drive-thru cost conversions on the
-     * road: a driver can see the tail.
+     * **Respaced to car scale when the real art landed** — the same defect
+     * class Phase 11 fixed in the car park, one lane over. The six slots were
+     * authored at 1.5-metre centres for 4.5-metre cars, so every neighbouring
+     * pair overlapped by three metres; nothing objected because a lane car is
+     * placed by its slot rather than pathfound, and it surfaced in the first
+     * stage-4 capture with production vehicles as a pile of sedans occupying
+     * one another.
+     *
+     * At a 5.5-metre pitch (the car park's own bumper-to-bumper spacing) the
+     * corridor between the road and the window physically holds **two** cars —
+     * that is a fact about this lot, not a tuning choice. The third point is
+     * the visible tail on the road apron, exactly the "driver can see the
+     * queue" spill the original comment designed; the extension upgrade grows
+     * capacity onto it. Anything longer queues on the carriageway through the
+     * ordinary follower model, which is the accordion the road has always run.
+     *
+     * The deeper geometry — a lane long enough for four cars wholly off the
+     * road wants a bigger lot or an L along the frontage, and both collide
+     * with the terrace and the parking row — is recorded as inherited debt in
+     * docs/ASSET_INTEGRATION_REPORT.md rather than half-solved here.
      */
     lane: [
       { x: 23.0, y: 11.4 },
-      { x: 23.0, y: 9.9 },
-      { x: 23.0, y: 8.4 },
-      { x: 22.8, y: 6.9 },
-      { x: 22.6, y: 5.2 },
-      { x: 22.2, y: 3.6 },
+      { x: 23.0, y: 5.9 },
+      { x: 22.8, y: 2.2 },
     ],
-    laneCapacity: 4,
+    laneCapacity: 2,
   },
 
   /** Two registers — GAME_DESIGN_DOCUMENT §7, "2 kasa". */

@@ -243,3 +243,49 @@ Command:  <e.g. ?bench=1&seed=42>
 | JS heap after 30 min | |
 | Draw calls | |
 ```
+
+---
+
+## Consolidation batch — production art — 2026-08-18
+
+The first entry in this log measured on a **real GPU with real assets**. Every earlier number was
+taken against placeholder art (0.79 MB of texture), so this is the before/after the batch exists to
+record.
+
+```
+Device:   desktop, NVIDIA GeForce GTX 1660 Ti (ANGLE OpenGL 4.5)
+OS:       Linux 7.0.0-28-generic
+Browser:  Chromium 145 (Playwright build), HEADED, hardware GL — not SwiftShader
+Scene:    /?e2e=1&seed=424242, stage 1 after 6 000 ticks (5 sim-minutes of traffic and service)
+Method:   600 consecutive rAF deltas; load timed from navigation to the data attributes
+```
+
+| Metric                         |                                                       Value |
+| ------------------------------ | ----------------------------------------------------------: |
+| Frame time mean                |                                                     5.05 ms |
+| Frame time p50 / p95 / p99     |                                          5.0 / 5.1 / 5.1 ms |
+| Effective FPS (uncapped rAF)   |                                                        ~198 |
+| Navigation → assets loaded     |                                                    1 191 ms |
+| Navigation → world scene ready |                                                    1 204 ms |
+| JS heap after load + 5 sim-min |                                                       29 MB |
+| Stage-switch cost              | not measurable (no test hook; visually instant in captures) |
+
+**Asset pipeline, after integration (shipped bytes, from `pnpm assets:report`):**
+
+| Budget                 | Before (placeholders) |                           After (production) |
+| ---------------------- | --------------------: | -------------------------------------------: |
+| Total shipped          |                 ~0 MB |                           3.36 MB / 27.30 MB |
+| Critical path          |                  0 MB |                            2.22 MB / 4.00 MB |
+| Decoded texture memory |               0.79 MB |                         **21.13 MB** / 96 MB |
+| Bundle (js, gzip)      |               ~455 kB |                           456.35 kB / 550 kB |
+| Atlas pages            |                     0 | 7 (each shrunk to its smallest power-of-two) |
+
+**Reading.** The renderer's whole frame is ~5 ms on a mid-range 2019 GPU with every production atlas
+resident — the art is not the constraint, and no earlier budget regressed. Texture memory rose from
+under a megabyte to 21.13 MB, which is 22% of the mobile budget the documents bind (ASSET_PIPELINE
+§17 / TECHNICAL_ARCHITECTURE §11); the fill-ratio floor those pages fail is reported rather than
+enforced by ADR-013, because power-of-two pages make the ratio unreachable for small sets while the
+memory total — the number a device actually runs out of — stays the enforced gate. Load-to-playable
+is 1.2 s on localhost; the number to re-measure on the deployed CDN is in the deployment
+verification section of the final report. SwiftShader CI numbers are deliberately not quoted here —
+CLAUDE.md's rule stands, and this entry exists because a real GPU was available.

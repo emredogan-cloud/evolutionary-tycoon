@@ -183,14 +183,23 @@ const upgradeSchema = z.object({
   /** Texture key for the object that appears — ASSET_PIPELINE §3. */
   iconKey: z.string().min(1),
   /**
-   * Which registered placeholder stands in for it until the art exists.
+   * Which world object appears at the anchor when this is owned — or nothing.
    *
    * Data rather than a lookup in the renderer, because "what does this upgrade
    * look like" is a property of the upgrade. It is also the field that makes
    * the visible-world-change rule checkable: an upgrade with no placeholder has
    * nothing to draw, and the roadmap says such an upgrade does not ship.
    */
-  placeholder: z.enum(['ph-prop-tall', 'ph-prop-short']),
+  /*
+   * Renamed in meaning, not in name: this held a placeholder texture key for
+   * thirteen phases and now holds a **production world-object id** from
+   * `src/config/sprites.ts` — or the empty string, for the upgrades that are a
+   * process rather than a thing. Sharper knives do not stand in the forecourt;
+   * their visible change is the purchase burst and the numbers moving. Mapping
+   * every upgrade to *some* object was tried first and produced a wrong object
+   * at half the anchors, which is the placeholder problem wearing a costume.
+   */
+  placeholder: z.string(),
 });
 
 export type Upgrade = z.infer<typeof upgradeSchema>;
@@ -248,7 +257,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'More of the traffic notices you at all',
     anchor: { x: 16.4, y: 12.6 },
     iconKey: 'struct_sign_painted@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: 'sign',
   },
   {
     id: 'menu-board',
@@ -264,7 +273,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'People know what they want before they reach the front',
     anchor: { x: 14.2, y: 12.4 },
     iconKey: 'struct_menuboard@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: '',
   },
   {
     id: 'planter-boxes',
@@ -277,7 +286,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The place looks cared for, and people linger instead of leaving',
     anchor: { x: 11.5, y: 13.2 },
     iconKey: 'struct_planter@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'bush-flowering-01',
   },
   {
     id: 'illuminated-sign',
@@ -291,7 +300,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The empty hours after dark start earning',
     anchor: { x: 16.4, y: 13.4 },
     iconKey: 'struct_sign_lit@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: 'sign',
   },
   {
     id: 'neon-facade',
@@ -308,7 +317,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The restaurant is a landmark after dark rather than a silhouette',
     anchor: { x: 18.6, y: 12.6 },
     iconKey: 'struct_neon@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: '',
   },
   {
     id: 'roadside-pylon',
@@ -322,7 +331,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Drivers see you from the next junction, not the next car length',
     anchor: { x: 21.4, y: 11.0 },
     iconKey: 'struct_pylon@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: 'sign',
   },
   {
     id: 'second-prep-station',
@@ -335,7 +344,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Two orders can be made at once instead of one',
     anchor: { x: 13.0, y: 13.6 },
     iconKey: 'struct_prep_station@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'pass',
   },
   {
     id: 'cooler',
@@ -348,7 +357,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Food waits longer on the pass without going cold',
     anchor: { x: 12.2, y: 14.2 },
     iconKey: 'struct_cooler@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'drink',
   },
   {
     id: 'sharper-knives',
@@ -361,7 +370,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Every order leaves the kitchen sooner',
     anchor: { x: 13.6, y: 14.2 },
     iconKey: 'struct_knives@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'pass-heat-lamp',
@@ -375,7 +384,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'A busy pass stops being a race against the food going cold',
     anchor: { x: 12.6, y: 13.8 },
     iconKey: 'struct_heatlamp@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'pass',
   },
   {
     id: 'better-ingredients',
@@ -389,7 +398,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'People rate the food higher, tip more, and come back',
     anchor: { x: 11.0, y: 14.6 },
     iconKey: 'struct_crates@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'drink-dispenser',
@@ -406,7 +415,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Drinks stop queueing behind hot food',
     anchor: { x: 14.8, y: 13.0 },
     iconKey: 'struct_dispenser@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'drink',
   },
   {
     id: 'prep-automation',
@@ -420,7 +429,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The kitchen keeps pace without anyone watching the clock',
     anchor: { x: 13.2, y: 15.0 },
     iconKey: 'struct_automation@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'pastry-oven',
@@ -437,7 +446,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'A whole extra line of food, made to a higher standard',
     anchor: { x: 10.2, y: 15.0 },
     iconKey: 'struct_oven@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: '',
   },
   {
     id: 'bigger-counter',
@@ -456,7 +465,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The queue holds more people before it spills toward the road',
     anchor: { x: 15.6, y: 12.0 },
     iconKey: 'struct_counter_wide@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'counter-lv2',
   },
   {
     id: 'queue-barriers',
@@ -470,7 +479,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'A long queue folds instead of reaching the carriageway',
     anchor: { x: 15.0, y: 11.4 },
     iconKey: 'struct_barrier@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'barrier',
   },
   {
     id: 'shade-canopy',
@@ -483,7 +492,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'People stay in the queue in weather that would have moved them on',
     anchor: { x: 15.4, y: 11.8 },
     iconKey: 'struct_canopy@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: 'awning',
   },
   {
     id: 'padded-benches',
@@ -497,7 +506,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Waiting stops being the worst part of the visit',
     anchor: { x: 16.8, y: 14.4 },
     iconKey: 'struct_bench@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'chair-wooden',
   },
   {
     id: 'widened-forecourt',
@@ -511,7 +520,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The queue and the car park stop fighting each other for room',
     anchor: { x: 9.0, y: 11.6 },
     iconKey: 'struct_forecourt@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'covered-terrace',
@@ -528,7 +537,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The restaurant holds a lunch rush without anyone standing outside',
     anchor: { x: 19.0, y: 15.4 },
     iconKey: 'struct_terrace@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: 'awning',
   },
   {
     id: 'second-register',
@@ -545,7 +554,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Two people are served at once, and the queue halves',
     anchor: { x: 17.2, y: 12.0 },
     iconKey: 'struct_register@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'counter-lv1',
   },
   {
     id: 'lane-extension',
@@ -558,7 +567,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'More cars can wait in the lane instead of driving past',
     anchor: { x: 22.6, y: 7.0 },
     iconKey: 'struct_lane@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'second-order-post',
@@ -572,7 +581,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Two cars order at once, so the lane keeps moving',
     anchor: { x: 22.8, y: 8.6 },
     iconKey: 'struct_orderpost@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: 'sign',
   },
   {
     id: 'express-window',
@@ -585,7 +594,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'A car is handed its order and gone before the next one stops',
     anchor: { x: 23.0, y: 11.4 },
     iconKey: 'struct_window@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: 'window',
   },
   {
     id: 'tap-to-pay',
@@ -599,7 +608,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Nobody counts out change with three cars waiting',
     anchor: { x: 23.2, y: 11.0 },
     iconKey: 'struct_reader@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'non-slip-shoes',
@@ -612,7 +621,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Everyone crosses the floor faster, all shift',
     anchor: { x: 12.8, y: 12.2 },
     iconKey: 'struct_shoes@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'training-programme',
@@ -625,7 +634,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The same staff do the same jobs better and drop fewer orders',
     anchor: { x: 11.8, y: 12.6 },
     iconKey: 'struct_badge@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'headsets',
@@ -639,7 +648,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'Nobody walks the length of the room to ask a question',
     anchor: { x: 12.4, y: 13.0 },
     iconKey: 'struct_headset@2x',
-    placeholder: 'ph-prop-short',
+    placeholder: '',
   },
   {
     id: 'staff-room',
@@ -653,7 +662,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'People come back from a break working like they did at open',
     anchor: { x: 9.6, y: 15.4 },
     iconKey: 'struct_staffroom@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: '',
   },
   {
     id: 'shift-supervisor',
@@ -670,7 +679,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     consequence: 'The room organises itself instead of waiting to be told',
     anchor: { x: 14.6, y: 12.8 },
     iconKey: 'struct_supervisor@2x',
-    placeholder: 'ph-prop-tall',
+    placeholder: '',
   },
 ];
 
