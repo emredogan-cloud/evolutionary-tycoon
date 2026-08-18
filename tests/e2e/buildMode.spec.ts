@@ -22,6 +22,16 @@ interface TestApi {
 async function boot(page: Page): Promise<void> {
   await page.goto('/?e2e=1&seed=424242&paused=1');
   await expect(page.locator('html')).toHaveAttribute('data-sim-state', 'running');
+  /*
+   * And the *world*, not only the simulation. Build mode's ghost asks the
+   * camera to unproject the pointer, and the projector answers null until the
+   * world scene is active — which used to be the same instant as the HUD,
+   * because the placeholder path had nothing to load. Real atlases opened a
+   * window where the HUD is up, the sim runs, and a pointer move lands in a
+   * world that does not exist yet; this test found it by moving the mouse
+   * exactly once, in that window.
+   */
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
 }
 

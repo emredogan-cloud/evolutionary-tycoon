@@ -449,20 +449,25 @@ export function worldObjectIndexOf(id: string): number {
 }
 
 /**
- * Menu item id to the food icon that stands for it.
+ * Menu item id to the food icon that truthfully stands for it.
  *
- * Six icons for thirteen menu items, so several items share one: a cheeseburger
- * and a double both read as "burger" at the size an order bubble is drawn, and
- * inventing a distinct icon for every price point would be inventing art.
- * Anything unmapped falls back to the burger, which is the one every stage sells.
+ * Six icons exist for thirteen menu items — `productionBatches.json` planned the
+ * icon set before Phase 13 grew the menu — so this maps only where the icon
+ * *is* the item at bubble size: both burgers read as the burger, both cold
+ * drinks as the cup, chips as fries. The five unmapped items (breakfast set,
+ * chicken meal, dessert, salad, family meal) keep their text bubbles, because a
+ * wrong icon is a placeholder wearing a costume; the missing five are recorded
+ * as an art gap in the integration report. The wrap icon ships unmapped for the
+ * same reason from the other side — no menu item is a wrap.
  */
 export const FOOD_ICONS: Readonly<Record<string, string>> = {
-  burger: `food_burger_default${SUFFIX}`,
+  lemonade: `food_soda_default${SUFFIX}`,
+  cola: `food_soda_default${SUFFIX}`,
+  chips: `food_fries_default${SUFFIX}`,
   fries: `food_fries_default${SUFFIX}`,
   hotdog: `food_hotdog_default${SUFFIX}`,
-  wrap: `food_wrap_default${SUFFIX}`,
-  soda: `food_soda_default${SUFFIX}`,
-  lemonade: `food_soda_default${SUFFIX}`,
+  hamburger: `food_burger_default${SUFFIX}`,
+  'premium-burger': `food_burger_default${SUFFIX}`,
   coffee: `food_coffee_default${SUFFIX}`,
 };
 

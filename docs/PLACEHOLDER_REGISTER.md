@@ -11,20 +11,26 @@ Every temporary asset or stand-in, and when it gets replaced.
 > The build counts placeholders and reports the number. From Phase 22 onward, a production build
 > containing any placeholder is a hard error.
 
-## Current count: 8 (6 sprite files + 1 procedural + 1 DOM)
+## Current count on production screens: **0** — asserted by `tests/e2e/productionArt.spec.ts`
+
+The production art landed in the consolidation batch (2026-08-18) and `WorldScene` publishes
+`data-asset-placeholders`, the number of quads drawn from a placeholder this frame; the E2E suite
+asserts it is `0` on every stage, busy and idle. The six generated sprites remain **on disk as the
+degraded-network fallback** — an atlas that fails to fetch costs its sprites, not the session — and
+that is a fallback role, not a production appearance.
 
 ## Register
 
-| File                                    | Stands in for                                            | Size (2x)   | Introduced | Replaced in  | Status  |
-| --------------------------------------- | -------------------------------------------------------- | ----------- | ---------- | ------------ | ------- |
-| `ph-customer__PLACEHOLDER__.png`        | Customer character (Doll rig, 6–10 parts)                | 64×144      | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-employee__PLACEHOLDER__.png`        | Employee character                                       | 64×144      | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-vehicle__PLACEHOLDER__.png`         | `SEDAN_COMMUTER` and the other 3 archetypes              | 410×301     | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-prop-short__PLACEHOLDER__.png`      | Counter, bin, low props                                  | 154×134     | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-prop-tall__PLACEHOLDER__.png`       | Sign post, tree, tall props                              | 102×205     | Phase 3    | **Phase 16** | 🟠 live |
-| `ph-scale-reference__PLACEHOLDER__.png` | A 2 m scale figure — a measuring stick, not art          | 128×192     | Phase 3    | **Phase 16** | 🟠 live |
-| `OrderBubble.svelte` text label         | Food icon in the order bubble (lemonade, hot dog, chips) | DOM, ~50×16 | Phase 8    | **Phase 16** | 🟠 live |
-| _(procedural)_ ground + road shapes     | Stage-1 ground **bake** and road surface                 | —           | Phase 3    | **Phase 16** | 🟠 live |
+| File                                    | Stood in for                                    | Size (2x)   | Introduced | Replaced       | Status                                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------- | ----------- | ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ph-customer__PLACEHOLDER__.png`        | Customer character (doll rig)                   | 64×144      | Phase 3    | **2026-08-18** | 🟢 fallback only                                                                                                                                    |
+| `ph-employee__PLACEHOLDER__.png`        | Employee character                              | 64×144      | Phase 3    | **2026-08-18** | 🟢 fallback only                                                                                                                                    |
+| `ph-vehicle__PLACEHOLDER__.png`         | `SEDAN_COMMUTER` and the other 3 archetypes     | 410×301     | Phase 3    | **2026-08-18** | 🟢 fallback only                                                                                                                                    |
+| `ph-prop-short__PLACEHOLDER__.png`      | Counter, bin, low props                         | 154×134     | Phase 3    | **2026-08-18** | 🟢 fallback only                                                                                                                                    |
+| `ph-prop-tall__PLACEHOLDER__.png`       | Sign post, tree, tall props                     | 102×205     | Phase 3    | **2026-08-18** | 🟢 fallback only                                                                                                                                    |
+| `ph-scale-reference__PLACEHOLDER__.png` | A 2 m scale figure — a measuring stick, not art | 128×192     | Phase 3    | **2026-08-18** | 🟢 debug only — no layout places it                                                                                                                 |
+| `OrderBubble.svelte` text label         | Food icon in the order bubble                   | DOM, ~50×16 | Phase 8    | **2026-08-18** | 🟢 replaced (icon from the ui atlas; five menu items keep a _labelled_ text bubble because no truthful icon exists — an art gap, not a placeholder) |
+| _(procedural)_ ground + road shapes     | Stage-1 ground **bake** and road surface        | —           | Phase 3    | **2026-08-18** | 🟡 ground bake live; the **road** is still drawn procedurally from the palette — no road slice was in the delivered set                             |
 
 ### Phase 4 did not replace any of these
 

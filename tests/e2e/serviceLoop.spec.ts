@@ -92,6 +92,15 @@ test.describe('the service loop, end to end', () => {
 
   test('shows what a waiting customer asked for, over their head', async ({ page }) => {
     /*
+     * Sixty seconds of budget for the sampling loop below. Three hundred
+     * evaluate-round-trips were comfortable inside the default thirty when the
+     * boot was placeholder-instant and a tick was pre-basket cheap; with real
+     * atlases to load and ADR-016's extra orders to step, Chromium's round
+     * trips landed at ~100 ms each and the loop itself became the timeout. The
+     * assertion is unchanged — this is wall-clock for the same work.
+     */
+    test.setTimeout(60_000);
+    /*
      * The order bubble is DOM rather than canvas precisely so this assertion can
      * exist. A bubble drawn into the WebGL context would be unreachable from a
      * test, and "the player can see what the customer wants" would be a claim

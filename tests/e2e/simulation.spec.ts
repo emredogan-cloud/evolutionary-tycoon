@@ -77,7 +77,18 @@ const REFERENCE = {
    * the only Phase 12 change visible at tick 0 is the starting reputation, and
    * that was already in the Phase 11 figure above.
    */
-  hashAtTick1000: '717754535b879a4e',
+  /*
+   * An eighth time, in the consolidation batch — ADR-016's baskets. A customer
+   * consumes a variable number of `customer`-stream rolls at the counter now
+   * (base, then side and drink draws), so every roll after the first order of
+   * the run lands differently and the thousandth tick is a different world.
+   * Tick 0 did not move: nothing about the world's starting state changed.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here; the browser
+   * produced this value independently before the pin was updated, which is the
+   * agreement this test exists to prove.
+   */
+  hashAtTick1000: '4a7f9c6d7871981a',
 } as const;
 
 interface TestApi {
