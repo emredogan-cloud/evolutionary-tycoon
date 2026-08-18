@@ -26,6 +26,14 @@ export interface EmployeeRecord {
 
   /** Index into `EMPLOYEE_ROLES`. */
   role: number;
+  /**
+   * Packed appearance — see `CustomerRecord.appearance`.
+   *
+   * Rolled from the cosmetic stream when the employee is hired, and not hashed.
+   * Without it every member of staff is the same person, which reads as a bug
+   * long before it reads as a style.
+   */
+  appearance: number;
   /** Index into `BRAIN_STATES`. */
   state: number;
 
@@ -77,6 +85,7 @@ function createEmployee(defaultKind: number): EmployeeRecord {
     role: 0,
     state: 0,
     taskSlot: -1,
+    appearance: 0,
     targetX: 0,
     targetY: 0,
     progressMs: 0,
@@ -97,6 +106,7 @@ function resetEmployee(record: EmployeeRecord, defaultKind: number): void {
   record.role = 0;
   record.state = 0;
   record.taskSlot = -1;
+  record.appearance = 0;
   record.targetX = 0;
   record.targetY = 0;
   record.progressMs = 0;

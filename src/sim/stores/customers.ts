@@ -33,6 +33,15 @@ export interface CustomerRecord {
   state: number;
   /** Vehicle archetype of the car they arrived in — drives patience. */
   archetype: number;
+  /**
+   * Packed appearance — which body, head and hair the renderer draws.
+   *
+   * Rolled from the **cosmetic** RNG stream at spawn, and deliberately **not
+   * hashed**: `World.hash()` excludes that stream precisely so visual variation
+   * cannot move an outcome, and hashing the result here would put it back in
+   * through the side door. `tests/unit/determinism` proves the exclusion holds.
+   */
+  appearance: number;
   /** Slot of their vehicle, or -1 once it has gone. */
   vehicleSlot: number;
   /** Parking bay they used, or -1. */
@@ -124,6 +133,7 @@ function createCustomer(): CustomerRecord {
     kind: ACTOR_KIND_CUSTOMER,
     state: 0,
     archetype: 0,
+    appearance: 0,
     vehicleSlot: -1,
     parkingSlot: -1,
     queueIndex: -1,
@@ -153,6 +163,7 @@ function resetCustomer(record: CustomerRecord): void {
   record.kind = ACTOR_KIND_CUSTOMER;
   record.state = 0;
   record.archetype = 0;
+  record.appearance = 0;
   record.vehicleSlot = -1;
   record.parkingSlot = -1;
   record.queueIndex = -1;

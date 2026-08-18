@@ -166,15 +166,21 @@ describe('progress', () => {
     await loader.loadPriority('boot');
     // 1000 then 1200 — the manifest's own byte counts, not a frame counter.
     expect(seen).toEqual([1000, 1200]);
-    expect(loader.progress.fraction).toBeCloseTo(1200 / 4000, 5);
+    expect(loader.progress.fraction).toBeCloseTo(1200 / manifest.totals.bytes, 5);
   });
 
-  it('measures against the critical path, not the whole download', async () => {
-    // The bar should reach 100% when the game is playable. Counting the lazy
-    // atlases would leave it stuck at two thirds on a screen that is ready.
+  /*
+   * Against the whole download, because `LoadScene` fetches every priority
+   * before the world starts — three of the four lazy atlases are needed by
+   * Stage 1, and a world that assembles itself after the first frame cannot
+   * have a byte-exact golden. A denominator of `criticalBytes` under that
+   * arrangement puts the bar at 100% with two atlases still coming, which is
+   * the same dishonesty §14 forbids from the other direction.
+   */
+  it('measures against everything it is going to fetch', async () => {
     const loader = new AssetLoader({ fetch: () => Promise.resolve(respondWith(manifest)), sleep: noSleep });
     await loader.loadManifest();
-    expect(loader.totalBytes).toBe(4000);
+    expect(loader.totalBytes).toBe(manifest.totals.bytes);
   });
 
   it('never reports more than complete', async () => {

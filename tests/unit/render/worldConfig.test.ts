@@ -1,3 +1,4 @@
+import { worldObject } from '@config/sprites';
 import { describe, expect, it } from 'vitest';
 import { ACTOR_KIND_SPECS, actorKindSpec } from '@config/actors';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
@@ -118,10 +119,21 @@ describe('the stage-1 layout', () => {
     }
   });
 
-  it('references only textures that exist in the catalogue', () => {
-    const keys = new Set(ACTOR_KIND_SPECS.map((spec) => spec.textureKey));
+  /*
+   * Every static now names a **production** object rather than a placeholder
+   * texture key. That is the whole point of the change: `ph-prop-tall` with a
+   * comment saying "tree" drew a grey box, and `tree-broadleaf-01` draws a tree.
+   * An id that resolves to neither is a static that will not appear at all.
+   */
+  it('references only world objects that exist in the catalogue', () => {
     for (const object of STAGE1_LAYOUT.statics) {
-      expect(keys.has(object.objectId), `no texture for ${object.objectId}`).toBe(true);
+      expect(worldObject(object.objectId), `no world object for ${object.objectId}`).toBeDefined();
+    }
+  });
+
+  it('has no placeholder left in it', () => {
+    for (const object of STAGE1_LAYOUT.statics) {
+      expect(object.objectId.startsWith('ph-'), `${object.objectId} is a placeholder`).toBe(false);
     }
   });
 

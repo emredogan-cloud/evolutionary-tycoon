@@ -79,19 +79,28 @@ export const STAGE2_LAYOUT: StageLayout = {
   statics: [
     // The truck, where the counter used to be — the counter point itself is
     // unchanged, so every system that aims at it still works.
-    { objectId: 'ph-prop-short', x: 12, y: 11, z: 0 },
-    { objectId: 'ph-prop-tall', x: 10.6, y: 11.6, z: 0 }, // the truck's body
-    { objectId: 'ph-prop-tall', x: 9.5, y: 11.5, z: 0 }, // the lit sign
+    { objectId: 'counter-lv1', x: 12, y: 11, z: 0 },
+    { objectId: 'truck', x: 10.6, y: 11.6, z: 0 }, // the truck's body
+    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the lit sign
+    { objectId: 'grill-lv1', x: 13.2, y: 11.9, z: 0 }, // the kitchen, now visible
+    { objectId: 'fryer', x: 14.1, y: 11.9, z: 0 },
     /*
      * The original hand-painted stand, kept. GAME_DESIGN_DOCUMENT §7: "oyuncu,
      * ilk günkü limonata tezgâhının hâlâ bir köşede durduğunu görebilmelidir".
      * It is decorative from here on and it is the single clearest signal that
      * this is the same place rather than a new level.
      */
-    { objectId: 'ph-prop-short', x: 22.2, y: 15.6, z: 0 },
-    { objectId: 'ph-prop-tall', x: 20, y: 14, z: 0 },
-    { objectId: 'ph-prop-tall', x: 4, y: 15, z: 0 },
-    { objectId: 'ph-prop-short', x: 16, y: 13, z: 0 },
+    { objectId: 'counter-lv1', x: 22.2, y: 15.6, z: 0 },
+
+    // The roadside, unchanged from Stage 1. Same trees, same corner, same lamp:
+    // this is the continuity the evolution is measured against.
+    { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
+    { objectId: 'tree-broadleaf-02', x: 4, y: 15, z: 0 },
+    { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
+    { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
+    { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 },
+    { objectId: 'bin', x: 16, y: 13, z: 0 },
+    { objectId: 'barrier', x: 8.2, y: 8.4, z: 0 }, // the lot edge, where the traffic passes
   ],
 
   tables: [],

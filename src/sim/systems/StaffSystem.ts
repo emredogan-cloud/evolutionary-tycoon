@@ -1,3 +1,4 @@
+import { APPEARANCE_COUNT } from '@config/sprites';
 import { PASS } from '@config/economy/stations';
 import { EMPLOYEE_ROLES, MAX_EMPLOYEES, role } from '@config/employees';
 import { STATE_IDLE } from '../ai/EmployeeBrain';
@@ -52,6 +53,9 @@ export function hire(world: World, roleId: string, skill: number): HireOutcome {
   const employee = world.employees.at(slot);
   employee.entityId = world.allocateEntityId();
   employee.role = roleIndex;
+  // From the cosmetic stream, so a second cook is a different person and the
+  // world digest does not notice. Same reasoning as `ConversionSystem`.
+  employee.appearance = world.rng.cosmetic.int(APPEARANCE_COUNT);
   employee.state = STATE_IDLE;
   employee.taskSlot = -1;
   // Clamped rather than trusted: `skill` arrives on a command, and a command

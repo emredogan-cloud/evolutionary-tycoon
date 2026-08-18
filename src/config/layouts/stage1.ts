@@ -297,13 +297,25 @@ export const STAGE1_LAYOUT: StageLayout = {
     { x: 17.3, y: 11.8 },
   ],
 
+  /*
+   * The stand, and just enough roadside to say where it is.
+   *
+   * Stage 1 is a lemonade stand on a verge and it has to read as one — sparse on
+   * purpose, because everything added here is something Stage 2 cannot add to
+   * make the place feel like it grew. The scale-reference figure is gone: it was
+   * a ruler for judging placeholder sizes and it has no business on a production
+   * screen (PLACEHOLDER_REGISTER).
+   */
   statics: [
-    { objectId: 'ph-prop-short', x: 12, y: 11, z: 0 }, // the counter itself
-    { objectId: 'ph-prop-tall', x: 9.5, y: 11.5, z: 0 }, // sign post
-    { objectId: 'ph-prop-tall', x: 20, y: 14, z: 0 }, // tree
-    { objectId: 'ph-prop-tall', x: 4, y: 15, z: 0 }, // tree
-    { objectId: 'ph-prop-short', x: 16, y: 13, z: 0 }, // bin
-    { objectId: 'ph-scale-reference', x: 14, y: 11, z: 0 }, // 2 m scale figure
+    { objectId: 'counter-lv1', x: 12, y: 11, z: 0 }, // the stand itself
+    { objectId: 'awning', x: 12, y: 10.2, z: 0 }, // over the counter, behind it in depth
+    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the hand-painted sign by the road
+    { objectId: 'bin', x: 16, y: 13, z: 0 },
+    { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
+    { objectId: 'tree-broadleaf-02', x: 4, y: 15, z: 0 },
+    { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
+    { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
+    { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 }, // roadside, north-west corner
   ],
 
   cameraMarginMetres: 4,

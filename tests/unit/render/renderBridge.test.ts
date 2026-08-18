@@ -86,8 +86,8 @@ describe('RenderBridge', () => {
     const sim = simWithCustomers([[10, 10, 0]]);
     const bridge = new RenderBridge(16);
     bridge.setStatics([
-      { entityId: -1, x: 4, y: 4, z: 0, kind: ACTOR_KIND_PROP_TALL },
-      { entityId: -2, x: 16, y: 16, z: 0, kind: ACTOR_KIND_PROP_TALL },
+      { entityId: -1, x: 4, y: 4, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
+      { entityId: -2, x: 16, y: 16, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
     ]);
 
     bridge.sync(sim.readView(), 0);
@@ -183,9 +183,9 @@ describe('RenderBridge', () => {
     const sim = new Sim({ seed: 1 });
     const bridge = new RenderBridge(2);
     bridge.setStatics([
-      { entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL },
-      { entityId: -2, x: 2, y: 2, z: 0, kind: ACTOR_KIND_PROP_TALL },
-      { entityId: -3, x: 3, y: 3, z: 0, kind: ACTOR_KIND_PROP_TALL },
+      { entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
+      { entityId: -2, x: 2, y: 2, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
+      { entityId: -3, x: 3, y: 3, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
     ]);
     bridge.sync(sim.readView(), 0);
     expect(bridge.visible).toHaveLength(2);
@@ -197,7 +197,7 @@ describe('RenderBridge', () => {
     // a scene that silently renders without its people.
     const sim = simWithCustomers([[5, 5, 0]]);
     const bridge = new RenderBridge(1);
-    bridge.setStatics([{ entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL }]);
+    bridge.setStatics([{ entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 }]);
     bridge.sync(sim.readView(), 0);
     expect(bridge.visible).toHaveLength(1);
     expect(bridge.visible[0]?.entityId).toBe(-1);

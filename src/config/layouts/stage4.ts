@@ -110,16 +110,42 @@ export const STAGE4_LAYOUT: StageLayout = {
   /** Two registers — GAME_DESIGN_DOCUMENT §7, "2 kasa". */
   registers: 2,
 
+  /*
+   * The restaurant, plus the lane down the east side.
+   *
+   * Everything Stage 3 has, and the drive-thru's two ends: an order post where
+   * the lane starts and a serving window where it meets the building. The
+   * roadside is still Stage 1's roadside — same two trees, same lamp, same bush
+   * — which is what makes this legible as the same corner rather than a fourth map.
+   */
   statics: [
-    { objectId: 'ph-prop-short', x: 12, y: 11, z: 0 }, // the counter
-    { objectId: 'ph-prop-tall', x: 10.6, y: 11.6, z: 0 },
-    { objectId: 'ph-prop-tall', x: 9.5, y: 11.5, z: 0 }, // the sign
-    { objectId: 'ph-prop-tall', x: 13.4, y: 12.6, z: 0 },
-    { objectId: 'ph-prop-tall', x: 21.4, y: 12.6, z: 0 },
-    { objectId: 'ph-prop-tall', x: 22.6, y: 5.2, z: 0 }, // the order post
-    { objectId: 'ph-prop-short', x: 23.0, y: 11.4, z: 0 }, // the window
+    { objectId: 'counter-lv2', x: 12, y: 11, z: 0 }, // the counter
+    { objectId: 'door', x: 10.6, y: 11.6, z: 0 },
+    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 },
+    { objectId: 'window', x: 13.4, y: 12.6, z: 0 },
+    { objectId: 'window', x: 21.4, y: 12.6, z: 0 },
+
+    // The kitchen, now two of everything the menu leans on.
+    { objectId: 'grill-lv2', x: 13.2, y: 10.1, z: 0 },
+    { objectId: 'grill-lv2', x: 14.1, y: 10.1, z: 0 },
+    { objectId: 'fryer', x: 15.0, y: 10.1, z: 0 },
+    { objectId: 'drink', x: 15.9, y: 10.1, z: 0 },
+    { objectId: 'pass', x: 12.9, y: 11.6, z: 0 },
+
+    // The drive-thru: where a car orders, and where it collects.
+    { objectId: 'sign', x: 22.6, y: 5.2, z: 0 }, // the order post
+    { objectId: 'window', x: 23.0, y: 11.4, z: 0 }, // the serving window
+    { objectId: 'barrier', x: 24.6, y: 8.4, z: 0 }, // the lane's outer edge
+
     // Still there, four stages later.
-    { objectId: 'ph-prop-short', x: 22.2, y: 15.6, z: 0 },
-    { objectId: 'ph-prop-short', x: 6, y: 13, z: 0 },
+    { objectId: 'counter-lv1', x: 22.2, y: 15.6, z: 0 },
+    { objectId: 'bin', x: 6, y: 13, z: 0 },
+
+    // Stage 1's roadside, unmoved.
+    { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
+    { objectId: 'tree-broadleaf-02', x: 1.5, y: 9.6, z: 0 },
+    { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
+    { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
+    { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 },
   ],
 };

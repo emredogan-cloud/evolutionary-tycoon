@@ -286,6 +286,21 @@ export interface ActorSnapshot {
    * on every customer is exactly the kind of thing nobody can point at.
    */
   readonly moving: boolean;
+  /**
+   * Which one of this kind — a vehicle's archetype, a person's appearance.
+   *
+   * The renderer needs it to pick a frame, and it has nowhere else to get it:
+   * `src/render` may not reach into a store, and a sedan and a van are the same
+   * `kind` because they are the same *physical* thing to the simulation. Meaning
+   * depends on `kind`, which is the same arrangement `kind` itself already has
+   * with the render catalogue.
+   *
+   * For people this is a packed `Appearance` (`src/config/sprites.ts`) rolled
+   * from the **cosmetic** RNG stream, which `World.hash()` deliberately excludes
+   * — so two runs that differ only in who is wearing what still agree on the
+   * world digest, which is the entire reason that stream exists.
+   */
+  readonly variant: number;
 }
 
 export interface SimView {

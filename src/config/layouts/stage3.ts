@@ -83,18 +83,39 @@ export const STAGE3_LAYOUT: StageLayout = {
     { id: 't6', x: 19.6, y: 15.6, seats: 6 },
   ],
 
+  /*
+   * A diner: a room with a door, a counter you order at and tables you sit at.
+   *
+   * The kitchen line moves inside and gains the drinks cabinet the menu needs;
+   * the truck is gone, because Stage 3 is where the building replaces it. Chairs
+   * are placed around the table pads `tables` already declares rather than being
+   * scattered, so the dining room reads as seating rather than as furniture.
+   */
   statics: [
-    { objectId: 'ph-prop-short', x: 12, y: 11, z: 0 }, // the counter
-    { objectId: 'ph-prop-tall', x: 10.6, y: 11.6, z: 0 },
-    { objectId: 'ph-prop-tall', x: 9.5, y: 11.5, z: 0 }, // the sign
-    { objectId: 'ph-prop-tall', x: 13.4, y: 12.6, z: 0 }, // building corner
-    { objectId: 'ph-prop-tall', x: 21.4, y: 12.6, z: 0 }, // building corner
+    { objectId: 'counter-lv2', x: 12, y: 11, z: 0 }, // the counter, now indoors
+    { objectId: 'door', x: 10.6, y: 11.6, z: 0 },
+    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 },
+    { objectId: 'window', x: 13.4, y: 12.6, z: 0 }, // building frontage
+    { objectId: 'window', x: 21.4, y: 12.6, z: 0 },
+
+    // The kitchen line, behind the counter.
+    { objectId: 'grill-lv2', x: 13.2, y: 10.1, z: 0 },
+    { objectId: 'fryer', x: 14.1, y: 10.1, z: 0 },
+    { objectId: 'drink', x: 15.0, y: 10.1, z: 0 },
+    { objectId: 'pass', x: 12.9, y: 11.6, z: 0 },
+
     // The original stand, still there.
-    { objectId: 'ph-prop-short', x: 22.2, y: 15.6, z: 0 },
+    { objectId: 'counter-lv1', x: 22.2, y: 15.6, z: 0 },
     // Moved from (4, 15): it stood on p8's door and `navigationIntact` said so.
-    { objectId: 'ph-prop-tall', x: 1.5, y: 9.6, z: 0 },
+    { objectId: 'tree-broadleaf-02', x: 1.5, y: 9.6, z: 0 },
     // And moved from (6, 13), which was inside the respaced p6.
-    { objectId: 'ph-prop-short', x: 11.8, y: 17.2, z: 0 },
+    { objectId: 'bin', x: 11.8, y: 17.2, z: 0 },
+
+    // The roadside, carried through from Stage 1 unchanged.
+    { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
+    { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
+    { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
+    { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 },
   ],
 
   driveThru: null,

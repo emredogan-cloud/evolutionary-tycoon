@@ -1,8 +1,17 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, join, relative } from 'node:path';
-import { ATLASES } from '../../src/config/assets.ts';
+import { ATLASES, PRODUCTION_SCALE } from '../../src/config/assets.ts';
 import type { LoadPriority } from '../../src/config/assets.ts';
+import { parseAssetName } from './naming.ts';
 import { loadPalette } from './palette.ts';
 import { PATHS, REPO_ROOT } from './paths.ts';
 import { readPromptBlock } from './promptBlock.ts';
@@ -155,6 +164,42 @@ export function buildManifest(options: BuildManifestOptions = {}): AssetManifest
 
 function byUrl(a: ManifestFile, b: ManifestFile): number {
   return a.url.localeCompare(b.url);
+}
+
+/**
+ * Copy the categories that have no atlas into the served root.
+ *
+ * `ground`, `road` and the audio categories declare `atlas: null` in
+ * `src/config/assets.ts` — they are too large or too unlike a sprite to pack —
+ * which means nothing else in the pipeline ever puts them where a browser can
+ * reach them. Before this, `assets/processed/ground_stage1_tile-a@2x.png`
+ * existed, counted against its budget, and was **unreachable**: the manifest's
+ * `singles` list was empty and the lot had no surface art at run time.
+ *
+ * Returns the copied paths so `buildManifest` can record them, which is what
+ * makes them fetchable and gives them a content hash like everything else.
+ */
+export function publishSingles(
+  processedDir: string = PATHS.processed,
+  publicDir: string = join(REPO_ROOT, 'public'),
+): string[] {
+  if (!existsSync(processedDir)) return [];
+  const target = join(publicDir, 'assets');
+  mkdirSync(target, { recursive: true });
+
+  const published: string[] = [];
+  for (const entry of readdirSync(processedDir).sort()) {
+    if (entry.endsWith('.meta.json')) continue;
+    const parsed = parseAssetName(entry);
+    if (!parsed.ok || parsed.name.category.atlas !== null) continue;
+    // Only the production scale ships; the 1x companions are for devices that
+    // opt into them, and nothing does yet.
+    if (parsed.name.scale !== PRODUCTION_SCALE) continue;
+    const destination = join(target, entry);
+    copyFileSync(join(processedDir, entry), destination);
+    published.push(destination);
+  }
+  return published;
 }
 
 /** Write the manifest and return its own content hash. */

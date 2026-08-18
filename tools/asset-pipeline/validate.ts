@@ -8,7 +8,7 @@ import type { ParsedName } from './naming.ts';
 import { loadPalette, nearest } from './palette.ts';
 import type { LoadedPalette } from './palette.ts';
 import { PATHS } from './paths.ts';
-import { loadSubjectDimensions, resolveExpectation, spriteFor } from './subjectDimensions.ts';
+import { loadSubjectDimensions, resolveExpectation } from './subjectDimensions.ts';
 import type { SubjectDimensions } from './subjectDimensions.ts';
 
 /**
@@ -780,21 +780,23 @@ function checkSplitPairs(assets: readonly AssetValidation[], table: SubjectDimen
     }
 
     /*
-     * The halves overlap: each is drawn complete on its own ground diamond, so
-     * summing their sprite heights double-counts one diamond. The object's
-     * projected height is the sum minus the shared footprint — which is exactly
-     * the diamond the derivation already computes.
+     * The halves are complementary, so the pair's height is the plain sum.
+     *
+     * This used to subtract one ground diamond, on the reading that each half is
+     * drawn complete on its own. The prompt asks for the opposite — "cut cleanly
+     * at the split line so it stacks onto the lower half" — and the delivered art
+     * does that: the lower half is a trunk, the upper half is a canopy, and
+     * neither repeats the other's ground. Subtracting a diamond that is not
+     * there let a 5 m tree through at 7 m, which is what it looked like next to
+     * the stand.
      */
-    const summed = halves.reduce((sum, half) => sum + (half.bounds?.height ?? 0), 0);
-    const sprite = spriteFor(first.subjectKey, table, directionIndexOf(first));
-    const total = summed - (sprite?.metrics.footprintHeight ?? 0);
+    const total = halves.reduce((sum, half) => sum + (half.bounds?.height ?? 0), 0);
     const high = entry.height * (1 + entry.tolerance);
     findings.push(
       total <= high
         ? ok(
             'reference-height',
-            `${group}: halves total ${total}px (${summed} less one shared footprint), ` +
-              `within the ${entry.height}px projected box`,
+            `${group}: halves total ${total}px, within the ${entry.height}px projected box`,
           )
         : fail(
             'reference-height',

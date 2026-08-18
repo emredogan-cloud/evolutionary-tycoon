@@ -126,6 +126,7 @@ export class Sim {
         y: 0,
         z: 0,
         kind: 0,
+        variant: 0,
         headingX: 1,
         headingY: 0,
         braking: false,
@@ -294,8 +295,23 @@ export class Sim {
       out.y = record.y;
       out.z = record.z;
       out.kind = record.kind;
-      out.headingX = 1;
-      out.headingY = 0;
+      out.variant = record.appearance;
+      /*
+       * Facing, from where they are going.
+       *
+       * Employees used to be hardwired to `(1, 0)`, which was invisible while
+       * every actor drew as the same untextured quad and is a staff member
+       * moonwalking to the grill the moment they have a front and a back. A
+       * standing employee keeps the last heading the store holds, because a
+       * zero vector would snap them north mid-shift.
+       */
+      const towardX = record.targetX - record.x;
+      const towardY = record.targetY - record.y;
+      const distance = Math.hypot(towardX, towardY);
+      if (distance > ARRIVAL_EPSILON_METRES) {
+        out.headingX = towardX / distance;
+        out.headingY = towardY / distance;
+      }
       out.braking = false;
       out.patience = 0;
       out.moving = record.state === 1;
@@ -329,6 +345,8 @@ export class Sim {
       target.y = this.laneSample.y;
       target.z = 0;
       target.kind = ACTOR_KIND_VEHICLE;
+      // Which car, so the renderer can draw a van as a van.
+      target.variant = vehicles.archetype[slot] ?? 0;
       target.headingX = this.laneSample.tangentX;
       target.headingY = this.laneSample.tangentY;
       target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
@@ -363,6 +381,8 @@ export class Sim {
       target.y = record.y;
       target.z = record.z;
       target.kind = record.kind;
+      // Who this is, visually. Rolled once from the cosmetic stream at spawn.
+      target.variant = record.appearance;
       target.headingX = record.headingX;
       target.headingY = record.headingY;
       target.braking = false;

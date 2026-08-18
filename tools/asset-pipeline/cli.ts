@@ -4,7 +4,7 @@ import { buildAtlases } from './atlas.ts';
 import { buildContactSheets } from './contactSheet.ts';
 import { convertAudioDirectory } from './audio.ts';
 import { importStaging } from './import.ts';
-import { buildManifest, writeManifest } from './manifest.ts';
+import { buildManifest, publishSingles, writeManifest } from './manifest.ts';
 import { emitPrompts } from './prompts.ts';
 import { exportPromptHtml } from './promptExport.ts';
 import { PATHS } from './paths.ts';
@@ -184,10 +184,15 @@ function runAudio(): boolean {
 }
 
 function runManifest(): boolean {
-  const manifest = buildManifest();
+  // Non-atlased categories are copied into the served root first: a file the
+  // browser cannot reach has no URL, and until this ran the ground bake was
+  // built, budgeted and invisible.
+  const singles = publishSingles();
+  const manifest = buildManifest({ singles });
   const hash = writeManifest(manifest);
   console.log(
     `${PATHS.manifest}\n  schema ${manifest.schemaVersion}, ${manifest.atlases.length} atlases, ` +
+      `${manifest.singles.length} single(s), ` +
       `prompt block ${manifest.promptBlockHash.slice(0, 12)}, palette v${manifest.paletteVersion}\n  manifest hash ${hash}`,
   );
   return true;

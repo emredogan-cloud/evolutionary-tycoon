@@ -10,6 +10,16 @@ import type { CameraState } from './camera/cameraMath';
 export const RENDER_CONTEXT_KEY = 'renderContext';
 
 /**
+ * Registry key the world scene reads the loaded frame catalogue from.
+ *
+ * The load scene builds it and the world scene consumes it, and neither may
+ * import the other's module for the same reason as above. It is not part of
+ * `RenderContext` because `src/app` does not build it — the renderer does, out
+ * of what it managed to fetch.
+ */
+export const ASSET_REGISTRY_KEY = 'assetRegistry';
+
+/**
  * What the renderer needs from the outside world.
  *
  * Declared here and implemented by `src/app`, so the dependency points from the

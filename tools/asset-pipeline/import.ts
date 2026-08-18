@@ -75,21 +75,31 @@ export const MARGIN_PX = 2;
  * frame. Scaling each part to the assembled envelope would give a person a head
  * as tall as their legs.
  *
- * These come from `src/render/rig/DollRig.ts`'s REST table, which places the
- * parts on a 1.75 m adult: legs centred at 0.45, torso at 0.95, arms at 1.00,
- * head at 1.55. The spans below are those rest positions expanded to the extent
- * each part covers, and they sum to the adult `subjectDimensions.json` already
- * declares. Anatomy, not art direction — the same standard `src/config/actors.ts`
- * applies to a person being 1.75 m tall.
+ * These are the spans each delivered part actually covers on a 1.75 m adult, and
+ * they sum to the adult `subjectDimensions.json` already declares. Anatomy, not
+ * art direction — the same standard `src/config/actors.ts` applies to a person
+ * being 1.75 m tall.
+ *
+ * Duplicated from `src/config/sprites.ts` rather than imported, for the reason
+ * `tools/shared/spriteMetrics.ts` gives: this module runs under plain Node from
+ * the pipeline CLI, which cannot resolve `src/**`'s extensionless imports.
+ * `tests/unit/config/sprites.test.ts` asserts the two tables are identical, so
+ * the duplication cannot drift.
  */
 export const RIG_PART_HEIGHT_METRES: Readonly<Record<string, number>> = {
-  body: 0.7, //   hips 0.6 to shoulder 1.3, centred on REST.torso 0.95
-  head: 0.35, //  neck 1.375 to crown 1.725, centred on REST.head 1.55
-  hair: 0.24, //  the crown cap, drawn over the head
-  'arm-l': 0.65, // shoulder 1.325 down to hand 0.675, centred on REST.armLeft 1.0
-  'arm-r': 0.65,
-  'leg-l': 0.9, // ground 0 to hip 0.9, centred on REST.legLeft 0.45
-  'leg-r': 0.9,
+  // The delivered `body` is the whole figure from the neck to the boots — torso,
+  // hips, legs and shoes — not a torso. Sizing it as a 0.7 m torso gave a person
+  // whose legs ended at their own knees, which is what the first browser capture
+  // showed. See `src/config/sprites.ts` RIG_DRAW_ORDER for the full finding.
+  body: 1.45, //  ground 0 to neck 1.45
+  head: 0.3, //   neck 1.45 to crown 1.75
+  hair: 0.18, //  the crown cap, drawn over the head
+  'arm-l': 0.6, // shoulder 1.35 down to hand 0.75
+  'arm-r': 0.6,
+  // Delivered as a second pair of arms rather than as legs. Nothing draws them;
+  // they are sized as what they are so they import and validate honestly.
+  'leg-l': 0.6,
+  'leg-r': 0.6,
 };
 
 /** ASSET_PIPELINE §1.2: world height in art pixels is `metres x TILE_Z x ART_SCALE`. */
@@ -261,11 +271,16 @@ export function targetFor(
       throw new Error(`import: ${name.filename} is a split half but no partner bounds were supplied`);
     }
     /*
-     * s * (lower + upper) - footprint = expected  =>  s = (expected + footprint) / (lower + upper)
-     * Exactly the sum `checkSplitPairs` computes, solved for the scale, so the
-     * set-level check passes by construction rather than by luck.
+     * The halves are **complementary**, not overlapping.
+     *
+     * The generation prompt asks for an object "cut cleanly at the split line so
+     * it stacks onto the lower half", so the pair's height is the plain sum and
+     * the scale is `expected / (lower + upper)`. Solving for a shared ground
+     * diamond instead — `(expected + footprint) / (lower + upper)` — makes the
+     * pair 37.5% too tall, which drew a roadside tree five times the height of
+     * the stand beside it. Measured in the browser, not reasoned about.
      */
-    const scale = (metrics.height + metrics.footprintHeight) / (bounds.height + partnerBoundsHeight);
+    const scale = metrics.height / (bounds.height + partnerBoundsHeight);
     const height = Math.max(1, Math.round(bounds.height * scale));
     const width = Math.max(1, Math.round(bounds.width * scale));
     const anchor =

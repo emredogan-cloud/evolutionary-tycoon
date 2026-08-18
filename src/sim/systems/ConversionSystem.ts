@@ -1,4 +1,5 @@
 import { ARCHETYPE_SPECS } from '@config/archetypes';
+import { APPEARANCE_COUNT } from '@config/sprites';
 import {
   GLOBAL_DIFFICULTY_CURVE,
   MAX_CONVERSION,
@@ -203,6 +204,15 @@ export class ConversionSystem implements SimSystem {
     customer.entityId = world.allocateEntityId();
     customer.state = STATE_ENTERING;
     customer.archetype = archetype;
+    /*
+     * Who they look like, from the **cosmetic** stream.
+     *
+     * That stream exists so visual variation can never move the economy, and it
+     * is excluded from the world digest for the same reason. Rolling appearance
+     * from `customer` instead would make the hash depend on hair, and every
+     * later per-customer decision shift when a new hairstyle was added.
+     */
+    customer.appearance = world.rng.cosmetic.int(APPEARANCE_COUNT);
     customer.vehicleSlot = vehicleSlot;
     customer.parkingSlot = -1;
     customer.queueIndex = -1;

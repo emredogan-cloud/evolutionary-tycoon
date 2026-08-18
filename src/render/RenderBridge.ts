@@ -57,6 +57,8 @@ export interface StaticItem {
   readonly y: number;
   readonly z: number;
   readonly kind: number;
+  /** Which one of this kind — for a static, an index into `WORLD_OBJECTS`. */
+  readonly variant: number;
 }
 
 export class RenderBridge {
@@ -121,6 +123,7 @@ export class RenderBridge {
       if (target === null) break;
       target.entityId = item.entityId;
       target.kind = item.kind;
+      target.variant = item.variant;
       target.headingX = 1;
       target.headingY = 0;
       target.braking = false;
@@ -158,6 +161,7 @@ export class RenderBridge {
 
       target.entityId = actor.entityId;
       target.kind = actor.kind;
+      target.variant = actor.variant;
       target.headingX = actor.headingX;
       target.headingY = actor.headingY;
       target.braking = actor.braking;

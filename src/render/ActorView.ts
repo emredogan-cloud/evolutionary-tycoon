@@ -17,6 +17,13 @@ export interface ActorView extends DepthSortable {
   worldZ: number;
   /** Index into the render catalogue (`src/config/actors.ts`). */
   kind: number;
+  /**
+   * Which one of this kind — vehicle archetype, or a packed person appearance.
+   *
+   * Carried straight through from `ActorSnapshot.variant`; the renderer turns it
+   * into a frame name in `src/config/sprites.ts`.
+   */
+  variant: number;
   /** Written by the depth sorter. */
   depth: number;
   /** Projected position, refreshed each frame. */
@@ -55,6 +62,7 @@ function createActorView(): ActorView {
     worldY: 0,
     worldZ: 0,
     kind: 0,
+    variant: 0,
     depth: 0,
     screenX: 0,
     screenY: 0,
