@@ -199,6 +199,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      # The atlases are pipeline output, not tracked files — a clean checkout
+      # has none, and since the render layer started fetching them at runtime
+      # a dist built without this step boots into placeholder mode. Same order
+      # pnpm verify uses.
+      - name: Asset pipeline
+        run: pnpm assets:build
+
       - name: Build
         run: pnpm build
 
