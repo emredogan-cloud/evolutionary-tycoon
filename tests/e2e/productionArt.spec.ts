@@ -26,7 +26,9 @@ function frozen(stage: number, tick = 600): string {
 
 async function openStage(page: Page, stage: number, tick?: number): Promise<void> {
   await page.goto(frozen(stage, tick));
-  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
 }
 
 test.describe('production art', () => {

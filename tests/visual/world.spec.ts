@@ -40,7 +40,9 @@ async function openFrozen(page: Page, scene: string, freezeAt = 0, extra = ''): 
   await page.goto(frozenUrl(scene, freezeAt, extra));
   // Wait on a state attribute, never a timeout — the difference between a suite
   // that is stable and one that lives in docs/FLAKY.md.
-  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
   await expect(page.locator('html')).toHaveAttribute('data-visual-mode', '1');
   await page.waitForTimeout(250);
 }
@@ -235,7 +237,9 @@ test.describe('visual determinism', () => {
       .digest('hex');
 
     await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+    await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+      timeout: 30_000,
+    });
     await page.waitForTimeout(250);
     const second = createHash('sha256')
       .update(await page.screenshot())

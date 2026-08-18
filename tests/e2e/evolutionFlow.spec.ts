@@ -34,7 +34,9 @@ async function boot(page: Page, seed = 424242): Promise<void> {
    * the CDN, where the sim ticked and earned for a full test's length while the
    * attribute sat at its initial 0.00. Same window as build mode's ghost race.
    */
-  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
 }
 

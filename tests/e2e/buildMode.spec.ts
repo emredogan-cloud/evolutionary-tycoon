@@ -31,7 +31,9 @@ async function boot(page: Page): Promise<void> {
    * world that does not exist yet; this test found it by moving the mouse
    * exactly once, in that window.
    */
-  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
 }
 

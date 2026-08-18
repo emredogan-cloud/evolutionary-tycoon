@@ -55,7 +55,9 @@ async function boot(page: Page, seed = 424242): Promise<void> {
    * the CDN, where the sim ticked and earned for a full test's length while the
    * attribute sat at its initial 0.00. Same window as build mode's ghost race.
    */
-  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
 }
 
@@ -99,14 +101,15 @@ test.describe('the service loop, end to end', () => {
 
   test('shows what a waiting customer asked for, over their head', async ({ page }) => {
     /*
-     * Sixty seconds of budget for the sampling loop below. Three hundred
+     * Two minutes of budget for the sampling loop below. Three hundred
      * evaluate-round-trips were comfortable inside the default thirty when the
      * boot was placeholder-instant and a tick was pre-basket cheap; with real
      * atlases to load and ADR-016's extra orders to step, Chromium's round
-     * trips landed at ~100 ms each and the loop itself became the timeout. The
-     * assertion is unchanged — this is wall-clock for the same work.
+     * trips landed at ~100 ms each (42.9 s locally) and a 4-core CI runner
+     * needs roughly double that. The assertion is unchanged — this is
+     * wall-clock for the same work.
      */
-    test.setTimeout(60_000);
+    test.setTimeout(120_000);
     /*
      * The order bubble is DOM rather than canvas precisely so this assertion can
      * exist. A bubble drawn into the WebGL context would be unreachable from a
