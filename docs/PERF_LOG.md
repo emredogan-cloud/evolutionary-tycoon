@@ -365,3 +365,12 @@ The bake _reduced_ draw calls: the tiles batch with the texture pipeline and
 the procedural marking `Graphics` they replace is gone. Shipped-bytes and
 texture-memory budgets unchanged in class (`pnpm assets:report` — all within
 limits; the slice is one single file, SW precache 30 entries).
+
+### 2026-08-20 — the absolute fresh-world backstop has no cross-runner margin
+
+Identical code across four CI dispatches: p50 3.092 (p95 5.274) → 5.660 (FAIL)
+→ 3.944 (p95 7.763) against the Phase-2-era `< 5 ms` absolute. Host baseline
+after the §11 phase15 re-record is 3.58 ms. The calibrated 1.15× relative gate
+never fired — the flap is the stale absolute, not the code. Resize (5 → 8 ms)
+filed as a change request in PHASE_16_REPORT §7.4; **not applied** pending the
+user's decision.

@@ -78,9 +78,12 @@ precache 30 entries.
 3. **Game start hour** — the world boots at midnight; now that night paints,
    the first session opens dark and thin against §19's first-car-in-8 s target.
    One config line; renews hashes and seed fixtures.
-4. **Stage 2–4 income calibration** — unchanged (`CALIBRATED_STAGES=[1]`),
+4. **Absolute sim-perf backstop resize (5 → 8 ms)** — the Phase-2 reference now
+   flips on CI runner lottery after P15's §11-recorded cost (PHASE_16_REPORT
+   §7.4 has the numbers). Proposed with the old value retained; not applied.
+5. **Stage 2–4 income calibration** — unchanged (`CALIBRATED_STAGES=[1]`),
    protected this batch by the two §9.6 scoping fixes.
-5. **Road slice provenance** — confirm tool/licence (LICENSES appendix).
+6. **Road slice provenance** — confirm tool/licence (LICENSES appendix).
 
 ## 6. Human playtest
 

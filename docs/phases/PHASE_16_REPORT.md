@@ -101,9 +101,54 @@ worst observed green duration ~50% headroom (default 30 s → 45 s,
 serviceLoop 120 s → 180 s); external targets still double. Assertions
 untouched, evidence in `tests/helpers/budget.ts`.
 
+**One gate remains structurally marginal, and it is a change request, not an
+edit.** With everything above green, the same SHA's CI drew a slow runner and
+failed the _absolute_ simulation-perf backstop — "1000 ticks from a fresh
+world in under 5 ms" measured 5.660 (run 32381294123, attempt 1) — a test
+that identical code passed at bf3ec1a, 315bf6d and f9f2aae (p50 3.092,
+p95 5.274 in run 32377261705). The 5 ms is the Phase 2 reference; P15's
+§11-recorded cost put the host baseline at 3.58 ms and runner draws at
+3.1–5.7 ms, so the backstop now flips on runner lottery, not on code. The
+calibrated 1.15× regression gate beside it is the instrument that actually
+catches drift. Per WORKING_DISCIPLINE ("a threshold edit to make a batch
+pass is a change request"), the proposed resize — absolute backstop 5 → 8 ms,
+restoring ~2.2× headroom over the recorded baseline, old value retained in
+the comment — is **filed as an open decision below, not applied**. The job
+was re-run once, transparently: both attempts are in the run's own history
+and both are recorded here.
+
 ## 4. CI / DEPLOYMENT EVIDENCE
 
-> ⏳ Appended after push.
+The push chain and what each link proved:
+
+| SHA       | Change                                                   | CI                                                                                                                                                                                                             | Preview E2E                                                                |
+| --------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `bf3ec1a` | the road slice, end to end                               | run 32373098618 — **11/11**                                                                                                                                                                                    | run 32373400210 — **FAILED twice** (§3.1)                                  |
+| `315bf6d` | fix part 1: instrumented sessions skip the worker        | run 32377261705 — **11/11**                                                                                                                                                                                    | run 32377554728 — FAILED (console test green, four long tests over budget) |
+| `f9f2aae` | fix part 2: external budgets ×2                          | run 32379447490 — **10/11** (localhost chromium tripped the same undersized watchdogs)                                                                                                                         | run 32379888474 — **GREEN**                                                |
+| `8ed164b` | fix part 3: watchdogs sized to the §11-recorded sim cost | run 32381294123 — attempt 1 **10/11** (the absolute perf backstop drew a slow runner — §3.1, filed as §7.4), attempt 2 **11/11** (p50 3.944 — and p95 7.763 even while green, the §7.4 evidence in one number) | run 32381594323 — **GREEN**                                                |
+
+**Deployment** (f9f2aae artefact — `dist/` is byte-identical at 8ed164b apart
+from `health.json`'s own SHA, since parts 2–3 touch only test files):
+`https://evolutionary-tycoon-eyw87eiy3-emre30283-4955s-projects.vercel.app`,
+`health.json` buildSha `f9f2aae87cdee2e0eeaae27f6ded57caf197e640`, schemaVersion 10.
+Final deployment at 8ed164b (the one Preview E2E run 32381594323 tested):
+`https://evolutionary-tycoon-r243gdgxh-emre30283-4955s-projects.vercel.app`,
+buildSha `8ed164bbede25c4c38d76f9e5d0120e388278f87`, schemaVersion 10.
+
+**CDN, measured from the host on the final artefact** — cold fresh context
+6 718 ms to render-ready, 7.67 MB wire (page + the worker's precache riding
+the same context, 30 requests); warm second visit **1 643 ms, ~0 network
+bytes** — 20 of 30 requests served by the worker, controller `activated`.
+The road file serves 200 / 1 634 993 B.
+
+**Five-minute live play on the deployment** (`?e2e=1`, seed 424242):
+`{"minutes":5,"tick":6113,"gameHour":10.19,"weather":1,"cash":"0.00","droppedTicks":0,"frames":7550,"errors":[]}`
+— rain arrived from the P15 calendar mid-session, zero dropped ticks, zero
+console errors, and the cash floor held at exactly 0.00, which is the
+invariant, not a defect.
+
+**Production smoke:** skipped at every SHA — no production deployment exists.
 
 ## 5. NOT RUN / NOT POSSIBLE — the honest core of this phase
 
@@ -144,3 +189,10 @@ untouched, evidence in `tests/helpers/budget.ts`.
    dashes read as 2×2 at a glance) while the sim road is 1×2 — adjacent to the
    standing road-width/traffic-density/lane-change user decision; if the road
    ever widens, this art is already the right art.
+4. **CHANGE REQUEST — absolute sim-perf backstop.** `sim.bench.test.ts`'s
+   "under 5 ms" is the Phase 2 reference; after P15's §11-recorded cost it
+   flips on CI runner lottery with zero code change (§3.1). Proposal: 5 → 8 ms
+   with the old value retained in the comment — same recorded form as the
+   32 B/tick allocation raise of 2026-08-15 — leaving the calibrated 1.15×
+   regression gate as the sharp instrument. **Needs the user's yes; not
+   applied.**
