@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { e2eBudget } from '../helpers/budget';
 import type { Page } from '@playwright/test';
 
 /**
@@ -109,7 +110,7 @@ test.describe('the service loop, end to end', () => {
      * needs roughly double that. The assertion is unchanged — this is
      * wall-clock for the same work.
      */
-    test.setTimeout(120_000);
+    test.setTimeout(e2eBudget(120_000));
     /*
      * The order bubble is DOM rather than canvas precisely so this assertion can
      * exist. A bubble drawn into the WebGL context would be unreachable from a

@@ -66,12 +66,28 @@ pushed marginal tests past their timeouts. The road slice did not break
 anything — its 1.6 MB merely tipped a contention pattern that had been near
 the edge since P14 over the runner's threshold.
 
-**Fix:** `?e2e=1` sessions do not register the worker — the same rule that
+**Fix, part 1:** `?e2e=1` sessions do not register the worker — the same rule that
 already keeps instrumented sessions off persistence, extracted as the pure
 `shouldRegisterServiceWorker(search, visualDeterminism)` with unit tests. The
 service-worker spec runs on the plain URL and keeps full coverage of
 install/claim/offline/second-visit; players only ever have the plain URL. No
 test was weakened and no timeout was raised.
+
+That fix was necessary but not sufficient. At 315bf6d the console test went
+green, but four long tests still timed out on the runner (34.2 s / 33.7 s /
+36.3 s / 2.2 m against 30 s and 120 s budgets) — while **all four passed from
+the host against the very same deployment** (20.0 s / 24.3 s / 60 s), proving
+the code and the deployment healthy and the margin the only problem. The
+30 s per-test default was sized for localhost, where a fresh context boots in
+under two seconds; against the CDN the same boot costs a measured 6–13 s and
+the runner adds SwiftShader plus four-worker contention on top.
+
+**Fix, part 2:** `tests/helpers/budget.ts` — an external target doubles the
+per-test watchdog (30 s → 60 s, and the three specs with their own long
+budgets scale the same way); localhost budgets are unchanged, so the local
+suite's discipline is exactly what it was. Not one assertion changed. This is
+the same recorded discipline as the readiness budgets sized for a runner that
+decodes atlases the slow way (P13 consolidation).
 
 ## 4. CI / DEPLOYMENT EVIDENCE
 

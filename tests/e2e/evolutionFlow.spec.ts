@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { e2eBudget } from '../helpers/budget';
 import type { Page } from '@playwright/test';
 
 /**
@@ -23,7 +24,7 @@ interface TestApi {
 }
 
 /** Long enough for the run below; see `playTheThreshold`. */
-const SLOW_TEST_MS = 180_000;
+const SLOW_TEST_MS = e2eBudget(180_000);
 
 async function boot(page: Page, seed = 424242): Promise<void> {
   await page.goto(`/?e2e=1&seed=${String(seed)}&paused=1`);

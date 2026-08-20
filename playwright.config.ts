@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { e2eBudget } from './tests/helpers/budget';
 
 const isCI = Boolean(process.env['CI']);
 
@@ -23,7 +24,7 @@ export default defineConfig({
   // be used to paper over an unstable test (docs/TESTING_STRATEGY.md §11).
   retries: isCI ? 1 : 0,
   ...(isCI ? { workers: 4 } : {}),
-  timeout: 30_000,
+  timeout: e2eBudget(30_000),
   expect: { timeout: 10_000 },
 
   /**

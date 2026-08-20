@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { e2eBudget } from '../helpers/budget';
 import type { Page } from '@playwright/test';
 
 /**
@@ -207,7 +208,7 @@ test('one upgrade from four families, at the stage where they open', async ({ pa
    * simulation about half as fast as Chromium — the default thirty seconds is a
    * measurement of SpiderMonkey rather than of the tree.
    */
-  test.setTimeout(120_000);
+  test.setTimeout(e2eBudget(120_000));
   /*
    * The roadmap's line — _"her ailenin bir yükseltmesi"_ — for the four families
    * that exist by Stage 2. The fifth is the drive-thru, which only exists at
@@ -228,7 +229,7 @@ test('one upgrade from four families, at the stage where they open', async ({ pa
 });
 
 test('and one from the drive-thru, which only exists at Stage 4', async ({ page }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(e2eBudget(120_000));
   /*
    * The fifth family. A Stage 4 restaurant needs waiters to serve its tables, so
    * two are hired before anything is measured — without them nothing is
