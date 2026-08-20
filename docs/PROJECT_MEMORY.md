@@ -14,17 +14,17 @@
 
 ## 1. Project Identity
 
-|                    |                                                                                |
-| ------------------ | ------------------------------------------------------------------------------ |
-| **Proje adı**      | Evolutionary Tycoon                                                            |
-| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)         |
-| **Sürüm**          | 0.1.0                                                                          |
-| **Mevcut faz**     | **PHASE 4 — Art Direction & Asset Pipeline v1** (BATCH P2→P4'ün son fazı)      |
-| **Mevcut kapı**    | GATE 0 ✅ · GATE 1 ✅ (kullanıcı 2026-08-14'te P2+P3+P4'ü toplu yetkilendirdi) |
-| **Durum**          | 🔴 **BATCH BİTTİ — DURULDU.** P2 ✅ · P3 ✅ · P4 🟡 PARTIAL. P5–P7 yetkisiz.   |
-| **Son güncelleme** | 2026-08-15 — CHECKPOINT L (P4 tamamlandı, kısmi)                               |
-| **Son commit SHA** | `9b2570f667115537a98c85bfb3de3370e5709e90` (main, `git rev-parse HEAD`)        |
-| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                     |
+|                    |                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| **Proje adı**      | Evolutionary Tycoon                                                                  |
+| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)               |
+| **Sürüm**          | 0.1.0                                                                                |
+| **Mevcut faz**     | **PHASE 14 — Offline Progression** (BATCH P14→P16'nın ilk fazı)                      |
+| **Mevcut kapı**    | Kullanıcı 2026-08-20'de P14+P15+P16'yı toplu yetkilendirdi (otonom, P16 sonunda DUR) |
+| **Durum**          | 🟢 **BATCH P14–P16 YÜRÜTÜLÜYOR.** P0–P13 ✅ + konsolidasyon ✅. P17+ yetkisiz.       |
+| **Son güncelleme** | 2026-08-20 — CHECKPOINT Z (P14–P16 batch başlangıcı)                                 |
+| **Son commit SHA** | `4394acfc1463252f8e7d724f79c792ed72faf53e` (phase/consolidation-art)                 |
+| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                           |
 
 ---
 
@@ -92,14 +92,27 @@ Detay: [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md)
 
 ## 5. Phase State
 
-| Faz                      | Durum                | Başlangıç  | Bitiş      | Commit/PR                 | Kapı                    | Kanıt                                                                                          |
-| ------------------------ | -------------------- | ---------- | ---------- | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
-| P0 Research & Design     | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime                                                                         |
-| P1 Foundation            | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`     | **GATE 1 ✅ ONAYLANDI** | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md)                                                     |
-| P2 Sim Core              | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-15 | PR #8, main `4643d88`     | Batch içi kapı ✅       | [PHASE_2_REPORT](phases/PHASE_2_REPORT.md)                                                     |
-| P3 Iso Render            | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | main `a60b641`            | Batch içi kapı ✅       | [PHASE_3_REPORT](phases/PHASE_3_REPORT.md)                                                     |
-| **P4 Asset Pipeline v1** | 🟡 **KISMİ**         | 2026-08-15 | 2026-08-15 | `phase/04-asset-pipeline` | **BATCH ÇIKIŞ KAPISI**  | [PHASE_4_REPORT](phases/PHASE_4_REPORT.md) — pipeline ✅, sanat üretimi lisans kapısında bloke |
-| P5–P24                   | ⬜ Yetkilendirilmedi | —          | —          | —                         | —                       | —                                                                                              |
+| Faz                     | Durum                | Başlangıç  | Bitiş      | Commit/PR                 | Kapı                    | Kanıt                                                                                                                                        |
+| ----------------------- | -------------------- | ---------- | ---------- | ------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0 Research & Design    | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime                                                                                                                       |
+| P1 Foundation           | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`     | **GATE 1 ✅ ONAYLANDI** | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md)                                                                                                   |
+| P2 Sim Core             | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-15 | PR #8, main `4643d88`     | Batch içi kapı ✅       | [PHASE_2_REPORT](phases/PHASE_2_REPORT.md)                                                                                                   |
+| P3 Iso Render           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | main `a60b641`            | Batch içi kapı ✅       | [PHASE_3_REPORT](phases/PHASE_3_REPORT.md)                                                                                                   |
+| P4 Asset Pipeline v1    | ✅ TAMAMLANDI\*      | 2026-08-15 | 2026-08-15 | `phase/04-asset-pipeline` | Batch içi kapı ✅       | [PHASE_4_REPORT](phases/PHASE_4_REPORT.md) — pipeline ✅; sanat 2026-08-18 konsolidasyonda entegre (ADR-013)                                 |
+| P5 Traffic              | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/05-traffic`        | Batch içi kapı ✅       | [PHASE_5_REPORT](phases/PHASE_5_REPORT.md) — yoğunluk çelişkisi #7 hâlâ açık                                                                 |
+| P6 Customer             | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/6-customer-system` | Batch içi kapı ✅       | [PHASE_6_REPORT](phases/PHASE_6_REPORT.md)                                                                                                   |
+| P7 Navigation           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/7-navigation`      | Batch çıkış kapısı ✅   | [PHASE_7_REPORT](phases/PHASE_7_REPORT.md)                                                                                                   |
+| P8 Service Loop         | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch içi kapı ✅       | [PHASE_8_REPORT](phases/PHASE_8_REPORT.md)                                                                                                   |
+| P9 Economy v1           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch içi kapı ✅       | [PHASE_9_REPORT](phases/PHASE_9_REPORT.md) — vertical slice insan ölçütleri açık                                                             |
+| P10 Employee AI         | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch çıkış kapısı ✅   | [PHASE_10_REPORT](phases/PHASE_10_REPORT.md)                                                                                                 |
+| P11 Evolution           | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch içi kapı ✅       | [PHASE_11_REPORT](phases/PHASE_11_REPORT.md)                                                                                                 |
+| P12 Balancing           | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch içi kapı ✅       | [PHASE_12_REPORT](phases/PHASE_12_REPORT.md) — `CALIBRATED_STAGES=[1]`                                                                       |
+| P13 Upgrade v2          | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch çıkış kapısı ✅   | [PHASE_13_REPORT](phases/PHASE_13_REPORT.md)                                                                                                 |
+| — Konsolidasyon (sanat) | ✅ TAMAMLANDI        | 2026-08-18 | 2026-08-19 | `phase/consolidation-art` | Yönerge kapısı ✅       | [ASSET_INTEGRATION_REPORT](ASSET_INTEGRATION_REPORT.md) · [FINAL_PRE_NEXT_BATCH_REPORT](FINAL_PRE_NEXT_BATCH_REPORT.md) — CI yeşil `d720a3f` |
+| **P14 Offline**         | 🟦 **YÜRÜTÜLÜYOR**   | 2026-08-20 | —          | `phase/14-offline`        | Batch içi kapı          | —                                                                                                                                            |
+| P15 Events/Weather      | 🟨 Yetkili, sırada   | —          | —          | —                         | Batch içi kapı          | —                                                                                                                                            |
+| P16 Asset v2            | 🟨 Yetkili, sırada   | —          | —          | —                         | **BATCH ÇIKIŞ KAPISI**  | —                                                                                                                                            |
+| P17–P24                 | ⬜ Yetkilendirilmedi | —          | —          | —                         | —                       | —                                                                                                                                            |
 
 **Onaylı roadmap:** 25 faz (P0–P24). Orijinal 22 fazlık yapıya **dönülmeyecek**.
 Onaylı 6 değişiklik: D1 (yeni P2 Sim Core) · D2 (Pathfinding→P7) · D3 (Asset P4+P16) · D4 (Economy P9+P12+P13) · D5 (Employee AI, Evolution'dan önce) · D6 (P9 sonunda Vertical Slice Kapısı).
@@ -1343,11 +1356,18 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🔴 DUR — KONSOLİDASYON TAMAMLANDI. P14+ HÂLÂ YETKİSİZ.
+> ## 🟢 BATCH P14 → P15 → P16 YÜRÜTÜLÜYOR (kullanıcı yetkisi 2026-08-20)
+>
+> Kullanıcı 2026-08-20'de üç fazı toplu yetkilendirdi: **P14 Offline Progression →
+> P15 Advanced Traffic/Events/Weather → P16 Asset Pipeline v2**. Fazlar arası kapı
+> tam DoD ister; onay sorulmaz. **P16 sonunda DUR — P17+ yetkisiz.**
+>
+> Aşağıdaki blok, konsolidasyonun kapanış kaydıdır (tarihsel):
+>
+> ### (Tarihsel) 2026-08-19 konsolidasyon kapanışı
 >
 > 2026-08-18 konsolidasyon yönergesi tamamlandı: üretim sanatı entegrasyonu, dünya
-> kurulumu, görsel QA, P11–P13 açık maddeleri, doğrulama. **P14 başlatılmadı ve
-> başlatılmayacak** — yönergenin kendisi bunu yasaklıyor.
+> kurulumu, görsel QA, P11–P13 açık maddeleri, doğrulama.
 >
 > ### Kapanışlar (kanıtlarıyla)
 >
@@ -1380,12 +1400,14 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 >
 > ### Şimdi ne yapılıyor
 >
-> **HİÇBİR ŞEY.** Raporlar: `ASSET_INTEGRATION_REPORT.md` + `FINAL_PRE_NEXT_BATCH_REPORT.md`.
+> **P14 yürütülüyor** — dal `phase/14-offline` (`phase/consolidation-art` üstünde).
+> Konsolidasyon raporları: `ASSET_INTEGRATION_REPORT.md` + `FINAL_PRE_NEXT_BATCH_REPORT.md`.
 
 ## 22. Change Log
 
 | Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ---------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-20 | **Z**      | **BATCH P14–P16 başladı.** Kullanıcı üç fazı toplu yetkilendirdi (otonom; P16'da DUR, P17+ yasak). Bağlam kurtarma ölçümle yeniden kuruldu: HEAD `4394acf` = origin/phase/consolidation-art; CI yeşil `d720a3f` (run 32195375649, 11/11) + preview-e2e yeşil (32195593116, 32196290411); kayıtlı deploy `3hj8n0ir3` canlı, health SHA `d720a3f…`, schemaVersion 8; balance: her değerlendirilebilir assertion ✅, `CALIBRATED_STAGES=[1]`, S3/S4 zamanları ⊘ ölçülüyor; placeholder üretim ekranlarında 0; playtest KOŞULMADI; ADR-017 (WebGL) kararı hâlâ kullanıcıda — kapıya dokunulmayacak. Yeni girdi: kullanıcı `assets/source/Pasted image.png` bıraktı (1774×887 RGBA, izometrik **yol yüzeyi dilimi** — regen listesindeki "road bake" kalemi; P16'da işlenecek). Dal açıldı: `phase/14-offline`.                                            |
 | 2026-08-18 | **T**      | **Asset entegrasyonu başladı.** 172 dosyalık drop envanterlendi (153 MB, 0 mükerrer, 0 çözümsüz ad); alpha-253 bulgusu ölçümü mümkün kıldı; `assets:import` aşaması yazıldı.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-08-18 | **U**      | **Envanter + mutabakat tamam.** 172/172 beklenen↔teslim eşleşmesi; palet çelişkisi kullanıcı kararıyla ADR-013'e bağlandı (`palette-affinity`, yön başına sprite kutusu, genişlik-esaslı oturtma, 60 isimli istisna); doğrulama `0 failing`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-08-18 | **V**      | **Dünya entegrasyonu tamam.** Render katmanı atlas tüketiyor; 5 parçalı rig (teslim edilen "bacaklar" ikinci kol çifti — çizilmiyor); yön ataması `DIRECTION_AUDIT.json`; layout'lar gerçek nesne kimlikleri; navigasyon gövde-izi ayrımı (gövde ≠ taç); tüm aşamalar tarayıcıda 0 placeholder.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
