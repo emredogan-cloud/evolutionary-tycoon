@@ -5,6 +5,9 @@ import type { CurrentSaveFile } from './schema';
 import { CURRENT_SCHEMA_VERSION, currentSaveSchema, saveHeaderSchema } from './schema';
 import type { StorageAdapter } from './StorageAdapter';
 
+/** The offline envelope, exactly as the schema stores it. */
+export type OfflineEnvelope = CurrentSaveFile['offline'];
+
 /**
  * Save, load, rotate, recover.
  *
@@ -29,6 +32,14 @@ export interface SaveMeta {
   readonly lastSeenServerAt: number | null;
   /** Preserved across writes so "when did this player start" survives. */
   readonly createdAt?: number;
+  /**
+   * The offline measurement and any unclaimed report — Phase 14.
+   *
+   * Supplied by the caller because both halves are app-level facts: the meter
+   * summary is read from the live world at the moment of the write, and the
+   * pending report was priced against wall clocks this layer never sees.
+   */
+  readonly offline: OfflineEnvelope;
 }
 
 export type LoadFailureReason = 'empty' | 'corrupt' | 'future-version';
@@ -70,6 +81,7 @@ export class SaveManager {
       lastSeenAt: meta.nowMs,
       lastSeenServerAt: meta.lastSeenServerAt,
       playtimeMs: meta.playtimeMs,
+      offline: meta.offline,
       ...snapshot,
     };
     // Zod's inferred type includes `checksum`; it is computed from everything else,

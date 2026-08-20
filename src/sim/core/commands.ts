@@ -1,4 +1,5 @@
 import { MENU, PRICE_BAND } from '@config/economy/menu';
+import { MINIMUM_CASH } from '@config/economy/wages';
 import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
 import { navigationIntact } from '../nav/reachability';
@@ -129,6 +130,28 @@ interface PlaceCommand {
   readonly y: number;
 }
 
+/**
+ * Collect the offline report — Phase 14.
+ *
+ * Carries the settled amounts rather than recomputing them, and that is the
+ * point, not a shortcut: the amounts derive from wall clocks and a server
+ * header, which the simulation may not consult. By the time this command
+ * lands, the outside world has been reduced to numbers, the log carries them,
+ * and a replay applies exactly what the player was shown.
+ *
+ * `net` may be negative — expenses accrue offline by design (ECONOMY_DESIGN
+ * §10) — and cash still never goes below zero. The claim-once property does
+ * not live here: it lives in the save flow, which consumes the window before
+ * the report is ever shown.
+ */
+interface CollectOfflineCommand {
+  readonly t: 'COLLECT_OFFLINE';
+  readonly tick: number;
+  readonly gross: number;
+  readonly expenses: number;
+  readonly net: number;
+}
+
 /** Take one back. */
 interface RemoveCommand {
   readonly t: 'REMOVE';
@@ -146,7 +169,8 @@ export type Command =
   | FireCommand
   | EvolveCommand
   | PlaceCommand
-  | RemoveCommand;
+  | RemoveCommand
+  | CollectOfflineCommand;
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
@@ -159,7 +183,8 @@ export type CommandInput =
   | Omit<FireCommand, 'tick'>
   | Omit<EvolveCommand, 'tick'>
   | Omit<PlaceCommand, 'tick'>
-  | Omit<RemoveCommand, 'tick'>;
+  | Omit<RemoveCommand, 'tick'>
+  | Omit<CollectOfflineCommand, 'tick'>;
 
 /**
  * Apply one command to the world.
@@ -235,6 +260,16 @@ export function apply(world: World, command: Command): void {
       removeObject(world, command.index);
       break;
     }
+    case 'COLLECT_OFFLINE': {
+      /*
+       * Only the *net* moves the till, and the floor is the same MINIMUM_CASH
+       * every other drain respects. Deliberately not lifetimeRevenue: that
+       * counter feeds progression milestones, and hours away must not walk a
+       * player toward an evolution they did not play toward.
+       */
+      world.economy.cash = Math.max(MINIMUM_CASH, world.economy.cash + command.net);
+      break;
+    }
     case 'SET_PRICE': {
       /*
        * Searched rather than looked up through `menuIndexOf`, which throws. An
@@ -280,5 +315,13 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'PLACE', tick, objectId: input.objectId, x: input.x, y: input.y };
     case 'REMOVE':
       return { t: 'REMOVE', tick, index: input.index };
+    case 'COLLECT_OFFLINE':
+      return {
+        t: 'COLLECT_OFFLINE',
+        tick,
+        gross: input.gross,
+        expenses: input.expenses,
+        net: input.net,
+      };
   }
 }

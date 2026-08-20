@@ -16,6 +16,7 @@ import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../st
 import { layoutForStage } from '@config/layouts';
 import { stepDriveThruCustomer } from './DriveThruSystem';
 import { recordExpense, recordRevenue } from './EconomySystem';
+import { recordOfflineSale } from './offlineMeter';
 import { currentQuality } from './KitchenSystem';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
 import { effectValue } from './UpgradeSystem';
@@ -266,6 +267,7 @@ export class ServiceSystem implements SimSystem {
     // rate on the HUD is net of what the food cost to make.
     recordRevenue(world, bill + tip);
     recordExpense(world, costs);
+    recordOfflineSale(world, bill + tip, costs);
     world.economy.reputation = Math.min(
       REPUTATION.max,
       Math.max(REPUTATION.min, world.economy.reputation + reputationDelta(satisfaction) * 100),

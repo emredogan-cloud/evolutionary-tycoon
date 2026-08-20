@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Plugin } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json' with { type: 'json' };
 // Explicit extension: Vite's native config loader cannot resolve extensionless
 // relative imports, and it is planned to become the default.
@@ -62,7 +63,82 @@ export default defineConfig(({ command }) => {
   const builtAt = new Date().toISOString();
 
   return {
-    plugins: [svelte(), healthEndpointPlugin(buildSha, builtAt)],
+    plugins: [
+      svelte(),
+      healthEndpointPlugin(buildSha, builtAt),
+      /*
+       * The service worker — Phase 14, approved stack (TECHNICAL_ARCHITECTURE
+       * §3: vite-plugin-pwa 1.3.0). generateSW with the workbox runtime
+       * inlined, so the emitted sw.js is one self-contained same-origin file
+       * and the CSP stays `script-src 'self'` with nothing added.
+       *
+       * Registration is manual (src/app/registerServiceWorker.ts) —
+       * `injectRegister: null` keeps library code out of the runtime bundle.
+       */
+      VitePWA({
+        injectRegister: null,
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg'],
+        manifest: {
+          name: 'Evolutionary Tycoon',
+          short_name: 'EvoTycoon',
+          description:
+            'Yol kenarındaki minicik bir tezgâhı, önünden akan trafiği müşteriye çevirerek bir restoran imparatorluğuna dönüştür.',
+          lang: 'tr',
+          start_url: '/',
+          display: 'standalone',
+          background_color: '#12161d',
+          theme_color: '#12161d',
+          icons: [
+            { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          inlineWorkboxRuntime: true,
+          sourcemap: false,
+          /*
+           * Everything static is precached with a content revision — the
+           * hashed bundle, the atlases, the ground bake, the icons. This is
+           * the "second visit ~0 bandwidth" requirement, which is a Vercel
+           * cost constraint (100 GB/month) before it is a performance one.
+           */
+          globPatterns: ['**/*.{js,css,html,svg,png,webp,json,webmanifest}'],
+          globIgnores: [
+            /*
+             * health.json is the deployment's identity probe — serving it from
+             * a cache would make "which build is live" unanswerable, which is
+             * exactly the question it exists to answer. It is also no-store on
+             * the CDN for the same reason.
+             */
+            '**/health.json',
+            // Vite emits sourcemaps beside the bundle; nobody replays offline.
+            '**/*.map',
+          ],
+          /*
+           * ~5 MB of atlases is the point of the exercise; the default 2 MB
+           * cap would silently drop the biggest wins. The bundle's own budget
+           * is enforced by size-limit, not here.
+           */
+          maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
+          cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [
+            // The one real function, and the identity probe.
+            /^\/api\//,
+            /^\/health\.json$/,
+          ],
+          /*
+           * No runtimeCaching entries, deliberately. Anything not precached —
+           * /api/time above all — goes straight to the network; a cached Date
+           * header is a stale Date header.
+           */
+        },
+      }),
+    ],
 
     resolve: {
       alias: {
@@ -92,8 +168,10 @@ export default defineConfig(({ command }) => {
       // which is what a player actually downloads. Leaving this at 700 kB would
       // warn on every single build from Phase 3 onward, and a warning that is
       // always on is a warning nobody reads. Set just above today's measured
-      // size so real growth still trips it.
-      chunkSizeWarningLimit: 1650,
+      // size so real growth still trips it. Phase 14 tripped it legitimately
+      // (offline flow + report screen, 1717 kB raw / 466 kB gzip) and it moves
+      // up the same margin it was given before.
+      chunkSizeWarningLimit: 1750,
       rollupOptions: {
         output: {
           // Content hashing is what makes the immutable cache header in vercel.ts safe.

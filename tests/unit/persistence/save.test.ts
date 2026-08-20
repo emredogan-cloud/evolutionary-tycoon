@@ -15,6 +15,7 @@ const META: SaveMeta = {
   nowMs: 1_770_000_000_000,
   playtimeMs: 60_000,
   lastSeenServerAt: null,
+  offline: { meter: null, pending: null },
 };
 
 function snapshotAfter(ticks: number, seed = 42): WorldSnapshot {
@@ -98,6 +99,7 @@ describe('SaveManager round trip', () => {
       lastSeenAt,
       lastSeenServerAt,
       playtimeMs,
+      offline,
       checksum,
       ...world
     } = result.save;
@@ -108,6 +110,7 @@ describe('SaveManager round trip', () => {
     expect(lastSeenServerAt).toBeNull();
     expect(playtimeMs).toBe(META.playtimeMs);
     expect(checksum).toMatch(/^[0-9a-f]{8}$/);
+    expect(offline).toEqual(META.offline);
     expect(world).toEqual(snapshot);
   });
 

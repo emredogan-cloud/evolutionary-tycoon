@@ -289,3 +289,25 @@ memory total — the number a device actually runs out of — stays the enforced
 is 1.2 s on localhost; the number to re-measure on the deployed CDN is in the deployment
 verification section of the final report. SwiftShader CI numbers are deliberately not quoted here —
 CLAUDE.md's rule stands, and this entry exists because a real GPU was available.
+
+---
+
+## Phase 14 — offline progression + service worker — 2026-08-20
+
+```
+Device:   dev desktop (Linux 7.0.0-28-generic), localhost preview (vite preview :4173)
+Browser:  Chromium 145 (Playwright build), headless, SwiftShader — load timing only, no FPS claims
+Method:   Playwright probe; SW-controlled reload measured with response.fromServiceWorker()
+```
+
+| Metric                                          |                                                                                                                                            Value |
+| ----------------------------------------------- | -----------------------------------------------------------------------------------------------------------------------------------------------: |
+| `computeOffline` (the boot-time settlement)     |                                                                                              **190 ns/call** (100 000 iterations; budget < 5 ms) |
+| Cold first visit → sim running                  |                                                                                                                 486 ms · **1.76 MB** transferred |
+| Warm second visit (SW-controlled) → sim running |                                                         **227 ms** · network **1 315 B** (yalnızca `/api/time` sınıfı istekler) · 5 istek SW'den |
+| Service worker precache                         |                                                                                                  29 entries, 8.98 MB (atlaslar + bundle + shell) |
+| Sim perf budgets after the offline meter        | **21/21** — per-tick meter sampling first measured **+57%** on the empty-world bench; moved to 5 s bucket-boundary sampling, budgets green again |
+
+**Reading.** "İkinci ziyaret ~0 bant genişliği" localhost'ta ölçüldü: 1.3 KB (yalnızca no-store
+uçları). CDN'deki karşılığı deployment doğrulamasında ölçülür ve faz raporuna girer. SwiftShader
+sayıları FPS iddiası değildir (CLAUDE.md kuralı); bu giriş yalnızca yükleme/bant genişliği kaydıdır.

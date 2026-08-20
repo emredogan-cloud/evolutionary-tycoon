@@ -328,6 +328,13 @@ cash       = max(0, cash + net)
 
 **Rapor "sınırlayıcıyı" gösterir:** `limiter = argmax(utilization)` — park, mutfak, masa, personel, kuyruk arasından en çok doluluk yaşayan. Bu, offline ekranını bir ödül ekranından bir **yatırım tavsiyesi** ekranına çevirir.
 
+> **Faz 14 uygulama düzeltmesi (2026-08-20):** argmax tek başına yalan söyleyebiliyor — erken oyunda
+> en yoğun kaynak %9 doluluktayken "park alanı seni sınırladı" yazmak, oyuncunun gözüyle görebildiği
+> bir saçmalık (tarayıcı denetiminde yakalandı). `OFFLINE_LIMITER_SIGNIFICANCE = 0.5` eşiği eklendi:
+> en yoğun kaynak bile eşiğin altındaysa sınırlayıcı **talep**tir (`demand`) ve rapor bunu söyler —
+> "kapasiten boş kaldı; görünürlük ve menü çekiciliği dönüşümü artırır". Kapasite gerçekten
+> bağlayıcıyken davranış değişmedi.
+
 ---
 
 ## 11. Kilometre taşı ve hedef ödülleri

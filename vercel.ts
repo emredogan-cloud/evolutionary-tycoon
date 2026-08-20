@@ -65,6 +65,17 @@ const headers: HeaderRule[] = [
   { source: '/', headers: NO_CACHE },
   { source: '/index.html', headers: NO_CACHE },
   { source: '/health.json', headers: NO_STORE },
+
+  /*
+   * The service worker script is the one file that must always revalidate —
+   * Phase 14. It is the key to every other cache: a CDN-stale sw.js would pin
+   * clients to an old precache manifest long after a deployment, which is the
+   * exact failure ("service worker'ın eski asset servis etmesi") the roadmap
+   * lists as this phase's top deployment risk. The registration also sets
+   * updateViaCache: 'none'; this header covers the CDN's half.
+   */
+  { source: '/sw.js', headers: NO_CACHE },
+  { source: '/manifest.webmanifest', headers: NO_CACHE },
 ];
 
 const rewrites: Rewrite[] = [

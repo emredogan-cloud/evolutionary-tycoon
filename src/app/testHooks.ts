@@ -1,4 +1,6 @@
 import type { FrameStats } from '@app/FrameMeter';
+import { checksumOf } from '@persistence/checksum';
+import type { StorageAdapter } from '@persistence/StorageAdapter';
 import type { GameLoop } from '@app/GameLoop';
 import type { SaveService } from '@app/SaveService';
 import type { CommandInput } from '@sim/core/commands';
@@ -51,6 +53,14 @@ export interface EvoTycoonTestApi {
   save(): Promise<TestSaveResult>;
   load(): Promise<TestLoadResult>;
   clearSaves(): Promise<void>;
+  /**
+   * Rewrite fields of the stored primary save — the door the offline abuse
+   * scenarios walk through (Phase 14). `patch` is deep-merged onto the stored
+   * JSON; the checksum is recomputed unless `corrupt` asks for a stale one, in
+   * which case the file is a corruption fixture rather than a manipulation one.
+   * Returns false when no save exists to tamper with.
+   */
+  tamperSave(patch: Record<string, unknown>, options?: { corrupt?: boolean }): Promise<boolean>;
 }
 
 const TEST_HOOK_KEY = '__EVOTYCOON__';
@@ -64,12 +74,31 @@ export function shouldExposeTestHooks(search: string): boolean {
   return new URLSearchParams(search).get('e2e') === '1';
 }
 
+function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(patch)) {
+    const existing = base[key];
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      typeof existing === 'object' &&
+      existing !== null &&
+      !Array.isArray(existing)
+    ) {
+      deepMerge(existing as Record<string, unknown>, value as Record<string, unknown>);
+    } else {
+      base[key] = value;
+    }
+  }
+}
+
 export function installTestHooks(
   target: Window,
   sim: Sim,
   loop: GameLoop,
   saves: SaveService,
   frames: { stats(): FrameStats; reset(): void },
+  storage: StorageAdapter,
 ): void {
   // Events are pooled and reused, so the buffer holds copies. Keeping the
   // records themselves would hand the test whatever the next tick wrote into them.
@@ -126,6 +155,19 @@ export function installTestHooks(
     },
 
     clearSaves: () => saves.clear(),
+
+    tamperSave: async (patch, options) => {
+      const raw = await storage.read('save');
+      if (raw === null) return false;
+      const decoded = JSON.parse(raw) as Record<string, unknown>;
+      deepMerge(decoded, patch);
+      if (options?.corrupt !== true) {
+        delete decoded['checksum'];
+        decoded['checksum'] = checksumOf(decoded);
+      }
+      await storage.write('save', JSON.stringify(decoded));
+      return true;
+    },
   };
 
   // Non-configurable so a page script cannot swap the hook for one that lies.

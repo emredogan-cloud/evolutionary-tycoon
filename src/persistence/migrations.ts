@@ -280,7 +280,35 @@ const v7ToV8: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5, v5ToV6, v6ToV7, v7ToV8];
+/**
+ * v9 — Phase 14, offline progression.
+ *
+ * `meter: null` rather than a zeroed summary, and the distinction is the
+ * honest one: a v8 save measured nothing, and a zeroed summary would read as
+ * "measured zero throughput", which prices the away window as pure wage loss.
+ * A migrated player's first return simply has no offline report; measurement
+ * starts with their next session.
+ */
+const v8ToV9: Migration = {
+  from: 8,
+  to: 9,
+  up: (save) => ({
+    ...save,
+    schemaVersion: 9,
+    offline: { meter: null, pending: null },
+  }),
+};
+
+export const migrations: readonly Migration[] = [
+  v1ToV2,
+  v2ToV3,
+  v3ToV4,
+  v4ToV5,
+  v5ToV6,
+  v6ToV7,
+  v7ToV8,
+  v8ToV9,
+];
 
 assertContiguous(migrations);
 

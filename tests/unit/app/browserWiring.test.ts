@@ -398,7 +398,7 @@ describe('installTestHooks', () => {
   it('installs a frozen, non-enumerable API', () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
 
     const descriptor = Object.getOwnPropertyDescriptor(target, '__EVOTYCOON__');
     expect(descriptor?.enumerable).toBe(false);
@@ -409,7 +409,7 @@ describe('installTestHooks', () => {
   it('exposes state, hash, system order and loop statistics', () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.advanceTicks(20);
@@ -422,7 +422,7 @@ describe('installTestHooks', () => {
   it('dispatches commands through the same door the player uses', () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.dispatch({ t: 'SET_SPEED', mult: 2 });
@@ -436,7 +436,7 @@ describe('installTestHooks', () => {
     // whatever the next tick wrote into them.
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.dispatch({ t: 'SET_SPEED', mult: 4 });
@@ -454,7 +454,7 @@ describe('installTestHooks', () => {
   it('saves and loads through the real persistence stack', async () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     /*
@@ -496,7 +496,7 @@ describe('installTestHooks', () => {
   it('reports a load failure instead of throwing', async () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     const loaded = await api.load();
@@ -516,7 +516,7 @@ describe('installTestHooks', () => {
     const saves = new SaveService(sim, new SaveManager(hostile), 'sha', () => 0);
 
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
 
     const result = await hooksOn(target).save();
     expect(result.ok).toBe(false);
@@ -526,7 +526,7 @@ describe('installTestHooks', () => {
   it('clearSaves empties the store', async () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.advanceTicks(10);

@@ -215,7 +215,7 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
   const benchmarking = new URLSearchParams(search).get('bench') === '1';
 
   if (shouldExposeTestHooks(search)) {
-    installTestHooks(win, sim, loop, saves, frames);
+    installTestHooks(win, sim, loop, saves, frames, storage);
   }
 
   if (benchmarking) {

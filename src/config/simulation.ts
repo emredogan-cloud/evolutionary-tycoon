@@ -66,4 +66,13 @@ export const EVENT_QUEUE_CAPACITY = 512;
  * v2 (Phase 3): placed objects gained `z`, because the renderer sorts on height
  * and an object on a counter has to draw in front of the counter.
  */
-export const SAVE_SCHEMA_VERSION = 8;
+export const SAVE_SCHEMA_VERSION = 9;
+
+/**
+ * Wall-clock autosave cadence — TECHNICAL_ARCHITECTURE §8.2, wired in Phase 14.
+ *
+ * Thirty real seconds, plus a write on `visibilitychange`(hidden) and
+ * `pagehide`. Wall-clock rather than simulation time on purpose: the save's
+ * job is bounding what a crash can lose, and a paused game can still crash.
+ */
+export const AUTOSAVE_INTERVAL_MS = 30_000;

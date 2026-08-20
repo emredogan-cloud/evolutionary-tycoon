@@ -1,6 +1,7 @@
 import { STARTING_REPUTATION } from '@config/satisfaction';
 import { CONVERSION_REASONS } from '@config/conversion';
 import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
+import { OFFLINE_LIMITERS, OFFLINE_METER_BUCKET_COUNT } from '@config/economy/offline';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
 import type { OrderRecord } from '../stores/OrderStore';
@@ -22,6 +23,7 @@ import type {
   EntityId,
   ConstructionState,
   LayoutState,
+  OfflineMeterState,
   ProgressionState,
   SettingsState,
   StaffState,
@@ -81,6 +83,20 @@ export class World {
     prices: new Map<string, number>(),
     revenueWindow: new Float64Array(ECONOMY_BUCKET_COUNT),
     expenseWindow: new Float64Array(ECONOMY_BUCKET_COUNT),
+    bucketIndex: 0,
+    bucketElapsedMs: 0,
+  };
+  /**
+   * The offline measurement window — Phase 14. Not hashed, not snapshotted;
+   * see the interface's own comment and the exclusion test beside the
+   * cosmetic stream's.
+   */
+  readonly offline: OfflineMeterState = {
+    servedWindow: new Float64Array(OFFLINE_METER_BUCKET_COUNT),
+    salesRevenueWindow: new Float64Array(OFFLINE_METER_BUCKET_COUNT),
+    salesCogsWindow: new Float64Array(OFFLINE_METER_BUCKET_COUNT),
+    turnedAwayWindow: new Float64Array(OFFLINE_METER_BUCKET_COUNT),
+    utilizationWindow: new Float64Array(OFFLINE_LIMITERS.length * OFFLINE_METER_BUCKET_COUNT),
     bucketIndex: 0,
     bucketElapsedMs: 0,
   };
@@ -298,6 +314,14 @@ export class World {
     this.economy.expenseWindow.fill(0);
     this.economy.bucketIndex = 0;
     this.economy.bucketElapsedMs = 0;
+
+    this.offline.servedWindow.fill(0);
+    this.offline.salesRevenueWindow.fill(0);
+    this.offline.salesCogsWindow.fill(0);
+    this.offline.turnedAwayWindow.fill(0);
+    this.offline.utilizationWindow.fill(0);
+    this.offline.bucketIndex = 0;
+    this.offline.bucketElapsedMs = 0;
 
     this.layout.placed.length = 0;
     this.layout.revision = 0;

@@ -479,6 +479,16 @@ interface SaveFileV1 {
 - **`objectives`/`archetypesSeen` v1'de yok.** İlgili sistemler henüz yok; alanı boş taşımak yerine
   migration zinciriyle eklenecekler (Faz 11 ve Faz 6).
 
+**v9 (Faz 14) — offline zarfı.** Envelope'a `offline: { meter, pending }` eklendi. `meter`,
+kayıt anında canlı dünyadan okunan **beş dakikalık ölçüm özeti**dir (müşteri/dk, ortalama sepet,
+ortalama malzeme maliyeti, geri dönen/dk, beş kaynağın doluluk örneklemesi) — ECONOMY_DESIGN §10'un
+"son 5 dakikanın ölçülen değeri" dediği şeyin somut hâli. `pending`, fiyatlanmış ama toplanmamış
+"Uzaktayken" raporudur; pencere fiyatlandığı anda tüketilir (lastSeen ileri yazılır) ve rapor
+toplanana kadar her kayıtta taşınır — aynı pencere iki kez ödenemez. Sayaç penceresinin kendisi
+(`world.offline`) **hash'lenmez ve snapshot'a girmez**: hiçbir sistem onu okuyarak karar vermez;
+simülasyona tek girişi, açık tutarları taşıyan ve loglanan `COLLECT_OFFLINE` komutudur. Dışlama,
+cosmetic stream'inkiyle aynı biçimde test altındadır.
+
 **Transient state kaydedilmez.** Yoldaki araçlar, yarım siparişler, yürüyen müşteriler — hepsi yeniden başlangıçta temiz olarak oluşturulur. Save yalnızca **kalıcı** durumu tutar. Bu, save boyutunu ~15 KB'ta tutar ve migration'ları basitleştirir.
 
 ### 8.2 Kalıcılık stratejisi

@@ -136,6 +136,47 @@ export interface StaffState {
  * `dependency-cruiser` rejects. State shapes belong to the core; the systems
  * that advance them do not.
  */
+/**
+ * The offline meter — Phase 14.
+ *
+ * A five-minute sliding window over *active play*, in the image of
+ * `EconomyState`'s sixty-second one: sixty five-second buckets, the bucket
+ * under the cursor always the oldest, cleared as the cursor arrives. It is
+ * what "son 5 dakikanın ölçülen müşteri/dk değeri" (ECONOMY_DESIGN §10)
+ * concretely is — the offline reward derives from this measurement, never
+ * from simulating the absence.
+ *
+ * **Deliberately excluded from `World.hash()`, and never persisted as a
+ * window.** Nothing in a tick reads it back: it is a pure observer, and its
+ * only route into an outcome is the `COLLECT_OFFLINE` command, which carries
+ * explicit amounts and is logged like any other input. Hashing it would add
+ * nothing to replay safety; the exclusion is proven by test the same way the
+ * cosmetic stream's is.
+ */
+export interface OfflineMeterState {
+  /** Customers who paid, per bucket — counter and drive-thru both. */
+  servedWindow: Float64Array;
+  /** Gross takings from those sales, per bucket. Tips included. */
+  salesRevenueWindow: Float64Array;
+  /** Ingredient cost of those sales, per bucket. */
+  salesCogsWindow: Float64Array;
+  /** Customers turned away by a full resource, per bucket. */
+  turnedAwayWindow: Float64Array;
+  /**
+   * Occupancy fractions, per limiter, sampled once per bucket boundary.
+   *
+   * One flat array of `OFFLINE_LIMITERS.length × bucketCount`, indexed
+   * `limiter * bucketCount + bucket`, so the whole meter stays five typed
+   * arrays rather than a nest of them. A sample, not an integral — the
+   * per-tick integral cost the empty-world benchmark 57% (offlineMeter.ts).
+   */
+  utilizationWindow: Float64Array;
+  /** Which bucket is being written. Advances every OFFLINE_METER_BUCKET_MS. */
+  bucketIndex: number;
+  /** Simulation ms accumulated into the current bucket. */
+  bucketElapsedMs: number;
+}
+
 export interface TrafficState {
   /**
    * Sim time of the next **convertible** Poisson candidate, in ms.

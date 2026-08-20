@@ -12,6 +12,7 @@ import { STATE_EXITING } from '../ai/fsm/customerFsm';
 import type { World } from '../core/World';
 import { ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../stores/OrderStore';
 import { recordExpense, recordRevenue } from './EconomySystem';
+import { recordOfflineSale } from './offlineMeter';
 import { currentQuality } from './KitchenSystem';
 import { basketReady, rollBasket } from './orderBasket';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
@@ -288,6 +289,7 @@ function collect(world: World, customerSlot: number, deltaMs: number): void {
   world.economy.lifetimeRevenue += bill + tip;
   recordRevenue(world, bill + tip);
   recordExpense(world, costs);
+  recordOfflineSale(world, bill + tip, costs);
   world.economy.reputation = Math.min(
     REPUTATION.max,
     Math.max(REPUTATION.min, world.economy.reputation + reputationDelta(satisfaction) * 100),

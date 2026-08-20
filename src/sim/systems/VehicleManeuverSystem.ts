@@ -26,6 +26,7 @@ import {
 } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
+import { recordOfflineTurnaway } from './offlineMeter';
 import { at } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
 import type { ManeuverTable } from '../nav/maneuvers';
@@ -221,6 +222,7 @@ export class VehicleManeuverSystem implements SimSystem {
        */
       customer.reason = REASON_NO_PARKING;
       world.stats.turnedAwayNoParking++;
+      recordOfflineTurnaway(world);
       world.stats.failureReasons[REASON_NO_PARKING] =
         (world.stats.failureReasons[REASON_NO_PARKING] ?? 0) + 1;
       return;

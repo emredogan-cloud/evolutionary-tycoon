@@ -9,8 +9,9 @@ import {
   STATE_WALKING_TO_DOOR,
 } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
-import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
+// Moved to capacity.ts in Phase 14 (cycle with the offline meter); same contract.
+import { queueCapacityOf } from './capacity';
 import type { CustomerRecord } from '../stores/customers';
 
 /**
@@ -392,6 +393,4 @@ function seatCustomers(world: World): void {
   }
 }
 
-export function queueCapacityOf(world: World, layout: StageLayout): number {
-  return Math.min(layout.queue.length, layout.queueCapacity + effectValue(world, 'queueCapacity'));
-}
+export { queueCapacityOf };

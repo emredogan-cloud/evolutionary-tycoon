@@ -1,6 +1,7 @@
 import { ECONOMY_BUCKET_COUNT, ECONOMY_BUCKET_MS, ECONOMY_WINDOW_MS } from '@config/economy/tuning';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
+import { advanceOfflineMeter } from './offlineMeter';
 
 /**
  * Cash, and the rate it is moving at — GAME_EXECUTION_ROADMAP Phase 9.
@@ -50,6 +51,13 @@ export class EconomySystem implements SimSystem {
       economy.revenueWindow[economy.bucketIndex] = 0;
       economy.expenseWindow[economy.bucketIndex] = 0;
     }
+
+    /*
+     * The offline meter advances from this slot too — Phase 14. It is economic
+     * measurement, which is this system's remit, and giving it a slot of its
+     * own would change the eighteen-slot architecture for a pure observer.
+     */
+    advanceOfflineMeter(world, deltaMs);
   }
 }
 

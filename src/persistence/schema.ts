@@ -21,7 +21,7 @@ import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 z.config({ jitless: true });
 
 /**
- * The save file — schema version 4.
+ * The save file — schema version 9.
  *
  * v2 added `z` to placed objects. Phase 3 sorts the world by height, so an
  * object on a counter has to draw in front of the counter, and a stored layout
@@ -53,7 +53,7 @@ const rngStatesSchema = z.object({
 
 const stringNumberEntries = z.array(z.tuple([z.string(), z.number()]));
 
-const saveFileV4Schema = z.object({
+const saveFileV9Schema = z.object({
   /*
    * From the constant, never a literal. It was written out by hand until Phase 6
    * bumped the version and the composer started emitting saves its own schema
@@ -154,6 +154,46 @@ const saveFileV4Schema = z.object({
     a11y: z.object({ reducedMotion: z.boolean(), highContrast: z.boolean() }),
   }),
 
+  /*
+   * Offline progression — Phase 14, schema v9.
+   *
+   * Envelope fields, not world state: the meter summary is a *measurement*
+   * taken at save time, and the pending report is an unclaimed IOU. Neither
+   * enters `World.hash()` — their only route into the simulation is the
+   * COLLECT_OFFLINE command, which carries explicit amounts and is logged.
+   *
+   * `meter: null` means "this save never measured" — the v8→v9 migration
+   * writes that, so a pre-P14 save's first return computes no reward instead
+   * of a fabricated one. `pending: null` means nothing is owed.
+   */
+  offline: z.object({
+    meter: z
+      .object({
+        throughputPerMin: z.number().nonnegative(),
+        avgTicket: z.number().nonnegative(),
+        avgCogs: z.number().nonnegative(),
+        turnedAwayPerMin: z.number().nonnegative(),
+        utilization: z.array(z.number().min(0).max(1)).length(5),
+      })
+      .nullable(),
+    pending: z
+      .object({
+        /** Local wall clock when the window was consumed and priced. */
+        computedAtMs: z.number(),
+        awayMs: z.number().nonnegative(),
+        creditedMs: z.number().nonnegative(),
+        customersServed: z.number().int().nonnegative(),
+        gross: z.number().nonnegative(),
+        expenses: z.number().nonnegative(),
+        net: z.number(),
+        limiter: z.enum(['parking', 'kitchen', 'tables', 'staff', 'queue', 'demand']),
+        limiterUtilization: z.number().min(0).max(1),
+        turnedAway: z.number().int().nonnegative(),
+        capHalved: z.boolean(),
+      })
+      .nullable(),
+  }),
+
   checksum: z.string(),
 });
 
@@ -162,10 +202,10 @@ const saveFileV4Schema = z.object({
  *
  * Call sites use the version-neutral names, so bumping the schema is an edit
  * here rather than a sweep across the codebase. The versioned schema stays
- * private: nothing outside this module should be able to pin itself to v4.
+ * private: nothing outside this module should be able to pin itself to v9.
  */
-export const currentSaveSchema = saveFileV4Schema;
-export type CurrentSaveFile = z.infer<typeof saveFileV4Schema>;
+export const currentSaveSchema = saveFileV9Schema;
+export type CurrentSaveFile = z.infer<typeof saveFileV9Schema>;
 
 /** The version this build writes. Any stored save at a lower version is migrated first. */
 export const CURRENT_SCHEMA_VERSION = SAVE_SCHEMA_VERSION;
