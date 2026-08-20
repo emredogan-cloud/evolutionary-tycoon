@@ -33,13 +33,19 @@ const VIEWPORT = { width: 1280, height: 720 };
  */
 function frozenUrl(scene: string, freezeAt = 0, extra = ''): string {
   /*
-   * `forceHour=12` — Phase 15. The world's clock starts at midnight, and until
-   * the lighting pass existed that fact was invisible: every golden was
-   * unknowingly photographing 00:30. Now that hour paints, the daytime
-   * showcase intent these scenes always had is written down. The environment
-   * goldens below force their own hours and skies instead.
+   * Pin the hour **at the frozen moment**, not at boot — Phase 15. The clock
+   * starts at midnight and 600 ticks are one game hour, so a long freeze
+   * travels: the first draft forced 12 at boot and `stage1-serving`
+   * (freezeAt 8280 → +13.8 h) faithfully photographed 18:54 dusk, headlight
+   * cones and all. Solving the start hour backwards lands every frozen frame
+   * within half an hour of noon — anywhere in the ambient curve's flat
+   * daylight band — which is the daytime-showcase intent these scenes always
+   * had, now written down. The environment goldens below force their own
+   * hours and skies instead.
    */
-  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&forceHour=12${extra}`;
+  const hoursTravelled = freezeAt / 600;
+  const startHour = Math.round((((12 - hoursTravelled) % 24) + 24) % 24) % 24;
+  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&forceHour=${String(startHour)}${extra}`;
 }
 
 async function openFrozen(page: Page, scene: string, freezeAt = 0, extra = ''): Promise<void> {
@@ -143,7 +149,14 @@ test.describe('visual goldens', () => {
    * a stricter check than a screenshot and does not go stale when a font does.
    */
   test('stage1-serving — the stand mid-service, cooking and paid', async ({ page }) => {
-    await openFrozen(page, 'empty', 8280, '&cook=1');
+    /*
+     * Re-derived (third time) at 13284 for the Phase 15 stream: the noon-pin
+     * rule gives this freeze a start hour of 14, and the busiest self-
+     * consistent moment in its window holds two customers with an order
+     * cooking — the subject the golden is named after. The old 8280, replayed
+     * under the new stream, photographed an empty counter.
+     */
+    await openFrozen(page, 'empty', 13284, '&cook=1');
     await expect(page).toHaveScreenshot('stage1-serving.png');
   });
 

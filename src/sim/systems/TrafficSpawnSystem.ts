@@ -50,17 +50,29 @@ import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
  */
 
 /**
- * Convertible vehicles per real second at the day's peak, before thinning.
+ * The event headroom the candidate envelope must carry at this stage.
  *
- * Phase 15 widened the envelope by MAX_EVENT_TRAFFIC_FACTOR: thinning is only
- * exact while the candidate rate covers the true rate, and a festival
- * multiplies the true rate by three. The acceptance below divides by the same
- * widened envelope, so ordinary days simply reject more candidates — more rng
- * draws, identical accepted process.
+ * Thinning is only exact while the candidate rate covers the true rate, and a
+ * festival multiplies the true rate by three — **at Stage 4, where events
+ * exist** (GDD §9.6, `minStage`). Charging every stage for that headroom
+ * tripled the candidate stream on the empty Stage 1 world and pushed CI's
+ * absolute fresh-tick budget from green to 5.32 ms of 5; a stage without
+ * events gets an envelope of exactly its own rate — which is also exactly the
+ * pre-P15 candidate stream.
+ *
+ * The one seam: the gap in flight when the stand evolves to Stage 4 was drawn
+ * from the narrower envelope, so for that single inter-arrival a same-tick
+ * festival could be under-thinned. Bounded to one draw per playthrough,
+ * deterministic, and of the same class as the cursor snap on load.
  */
+function eventHeadroom(stage: number): number {
+  return stage >= 4 ? MAX_EVENT_TRAFFIC_FACTOR : 1;
+}
+
+/** Convertible vehicles per real second at the day's peak, before thinning. */
 function convertiblePeakPerSecond(stage: number): number {
   const stageMultiplier = atIn(STAGE_TRAFFIC_MULTIPLIER, stage, 1);
-  return (BASE_SPAWN_PER_REAL_MINUTE / 60) * DAY_CURVE_PEAK * stageMultiplier * MAX_EVENT_TRAFFIC_FACTOR;
+  return (BASE_SPAWN_PER_REAL_MINUTE / 60) * DAY_CURVE_PEAK * stageMultiplier * eventHeadroom(stage);
 }
 
 /** Decorative vehicles per real second at the day's peak, before thinning. */
@@ -136,7 +148,8 @@ export class TrafficSpawnSystem implements SimSystem {
        * would cost far more than the half-tick of precision buys.
        */
       const environmentFactor = environmentTrafficFactor(world);
-      const acceptance = (dayCurveAt(hour) * environmentFactor) / (DAY_CURVE_PEAK * MAX_EVENT_TRAFFIC_FACTOR);
+      const acceptance =
+        (dayCurveAt(hour) * environmentFactor) / (DAY_CURVE_PEAK * eventHeadroom(world.progression.stage));
       if (acceptRoll < acceptance) {
         this.trySpawn(world, laneRoll, archetypeRoll, speedRoll, hour, decorative);
       }

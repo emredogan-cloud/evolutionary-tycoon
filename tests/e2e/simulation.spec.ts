@@ -96,7 +96,13 @@ const REFERENCE = {
    * produced this value independently before the pin was updated, which is the
    * agreement this test exists to prove.
    */
-  hashAtTick1000: 'b2a80a514a666780',
+  /*
+   * Renewed within Phase 15 when the spawn envelope became stage-aware: only
+   * Stage 4 pays the festival's ×3 candidate headroom, so Stage 1's stream is
+   * the pre-P15 one again and the thousandth tick moved with it. Tick 0 is
+   * unchanged — the calendar state at tick 0 is the same either way.
+   */
+  hashAtTick1000: 'd0a614d057d0da66',
 } as const;
 
 interface TestApi {
