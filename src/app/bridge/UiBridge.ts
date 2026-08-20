@@ -1,4 +1,7 @@
 import { MENU, PRICE_BAND, menuItem } from '@config/economy/menu';
+import { EVENT_SPECS } from '@config/events';
+import { WEATHER_STATES } from '@config/weather';
+import { activeEventSlot, currentWeather } from '@sim/systems/EventSystem';
 import { UPGRADES } from '@config/economy/upgrades';
 import { EMPLOYEE_ROLES, MAX_EMPLOYEES, TASK_KINDS, role } from '@config/employees';
 import { requirementFor } from '@config/progression';
@@ -137,6 +140,11 @@ interface MutableHud {
   customersWaiting: number;
   gameDay: number;
   gameHour: number;
+  weatherId: string;
+  weatherLabel: string;
+  eventId: string;
+  eventLabel: string;
+  eventRemainingMs: number;
   paused: boolean;
   speedMultiplier: number;
   markers: MutableMarker[];
@@ -272,6 +280,11 @@ export class UiBridge implements HudSource {
       customersWaiting: 0,
       gameDay: 0,
       gameHour: 0,
+      weatherId: 'CLEAR',
+      weatherLabel: 'Açık',
+      eventId: '',
+      eventLabel: '',
+      eventRemainingMs: 0,
       paused: false,
       speedMultiplier: 1,
       markers,
@@ -403,6 +416,19 @@ export class UiBridge implements HudSource {
     model.ordersActive = world.orders.activeCount;
     model.gameDay = world.clock.gameDay;
     model.gameHour = world.clock.gameHour;
+    {
+      // Phase 15 — the sky and the calendar, derived exactly as the sim does.
+      const weather = WEATHER_STATES[currentWeather(world)];
+      model.weatherId = weather?.id ?? 'CLEAR';
+      model.weatherLabel = weather?.label ?? 'Açık';
+      const activeSlot = activeEventSlot(world);
+      const kind = activeSlot >= 0 ? (world.environment.eventTypes[activeSlot] ?? -1) : -1;
+      const event = kind >= 0 ? EVENT_SPECS[kind] : undefined;
+      model.eventId = event?.id ?? '';
+      model.eventLabel = event?.label ?? '';
+      model.eventRemainingMs =
+        activeSlot < 0 ? 0 : Math.max(0, (world.environment.eventEndMs[activeSlot] ?? 0) - nowMs);
+    }
     model.paused = world.control.paused;
     model.speedMultiplier = world.control.speedMultiplier;
 

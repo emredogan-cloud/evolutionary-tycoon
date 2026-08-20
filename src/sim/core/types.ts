@@ -177,6 +177,55 @@ export interface OfflineMeterState {
   bucketElapsedMs: number;
 }
 
+/**
+ * The day's environment — Phase 15.
+ *
+ * A deterministic calendar, planned once per game day from `rng.events` in a
+ * **fixed number of draws** (four weather segments + three per event type),
+ * which is the entire determinism argument: (seed, day) → one calendar,
+ * regardless of when anybody looks. What is *currently* true — which weather,
+ * which event — is derived from this plan and the clock rather than stored,
+ * so it cannot drift; the two `last*` fields exist only so transitions can be
+ * detected and announced once.
+ *
+ * Hashed and saved: an event that multiplies traffic is simulation outcome by
+ * definition.
+ */
+/**
+ * Per-tick derivation of the calendar — a cache, not state.
+ *
+ * Same standing as the offline meter: lives on the world for locality, never
+ * hashed, never snapshotted, cannot change an outcome (every field is a pure
+ * function of hashed state; the tick key makes staleness structural). It
+ * exists because deriving per consumer priced at +47% on the empty-world
+ * bench, and a WeakMap variant still cost a lookup per call.
+ */
+export interface EnvironmentDerived {
+  tick: number;
+  activeSlot: number;
+  weather: number;
+  trafficFactor: number;
+  conversionFactor: number;
+  speedCap: number;
+  seatedBias: number;
+  truckShareFactor: number;
+}
+
+export interface EnvironmentState {
+  /** Game day the plan below belongs to. -1 = never planned. */
+  plannedDay: number;
+  /** One weather index per six-hour segment. */
+  weatherSegments: Int32Array;
+  /** Scheduled event type per slot, or -1 when the day skipped that type. */
+  eventTypes: Int32Array;
+  /** Absolute sim ms bounds per slot; meaningless where type is -1. */
+  eventStartMs: Float64Array;
+  eventEndMs: Float64Array;
+  /** For transition detection only — see above. */
+  lastWeather: number;
+  lastActiveEvent: number;
+}
+
 export interface TrafficState {
   /**
    * Sim time of the next **convertible** Poisson candidate, in ms.
@@ -352,6 +401,12 @@ export interface SimView {
   readonly speedMultiplier: SpeedMultiplier;
   readonly paused: boolean;
   readonly vehicleCount: number;
+  /** Current weather state index — Phase 15. Derived, never stale. */
+  readonly weather: number;
+  /** Active calendar event type index, or -1 — Phase 15. */
+  readonly activeEventKind: number;
+  /** When the active event ends, sim ms. 0 when none. */
+  readonly activeEventEndsAtMs: number;
   readonly customerCount: number;
   readonly employeeCount: number;
   readonly orderCount: number;

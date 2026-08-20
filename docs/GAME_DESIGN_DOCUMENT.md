@@ -850,14 +850,14 @@ Bunlar iyi fikir olabilir ama **bu roadmap'te yok**. Eklenmeleri onay ve roadmap
 
 Bunlar GATE 0'da cevaplanmadı ve ilgili fazda karara bağlanacak. Şimdi karar vermek erken olurdu.
 
-| #   | Soru                                                         | Ne zaman karara bağlanır         | Neden şimdi değil                                    |
-| --- | ------------------------------------------------------------ | -------------------------------- | ---------------------------------------------------- |
-| 1   | Zaman ölçeği: 1 oyun günü = kaç gerçek dakika? (aday: 12 dk) | Faz 5 (trafik) — deneyerek       | Trafik yoğunluğu hissi olmadan seçilemez             |
-| 2   | Oyuncu manuel müdahalesi Aşama 3+'ta kalmalı mı?             | Faz 10 (çalışan AI)              | Çalışanlar çalışmadan bilinemez                      |
-| 3   | Fiyat ayarı ürün başına mı, kategori başına mı?              | Faz 9 (ekonomi)                  | UI karmaşıklığı vs. derinlik dengesi test gerektirir |
-| 4   | ~~Masa yerleşimi serbest mi, ızgaraya mı oturuyor?~~         | ✅ **Faz 11'de karara bağlandı** | → §25.1                                              |
-| 5   | ~~Aşama geçişi otomatik mi, oyuncu onaylı mı?~~              | ✅ **Faz 11'de karara bağlandı** | → §25.2                                              |
-| 6   | Gece oynanışı ayrı bir mekanik mi, yoksa sadece görsel mi?   | Faz 15                           | Kapsam riski; ayrı mekanik olursa büyük              |
+| #   | Soru                                                           | Ne zaman karara bağlanır         | Neden şimdi değil                                    |
+| --- | -------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------- |
+| 1   | Zaman ölçeği: 1 oyun günü = kaç gerçek dakika? (aday: 12 dk)   | Faz 5 (trafik) — deneyerek       | Trafik yoğunluğu hissi olmadan seçilemez             |
+| 2   | Oyuncu manuel müdahalesi Aşama 3+'ta kalmalı mı?               | Faz 10 (çalışan AI)              | Çalışanlar çalışmadan bilinemez                      |
+| 3   | Fiyat ayarı ürün başına mı, kategori başına mı?                | Faz 9 (ekonomi)                  | UI karmaşıklığı vs. derinlik dengesi test gerektirir |
+| 4   | ~~Masa yerleşimi serbest mi, ızgaraya mı oturuyor?~~           | ✅ **Faz 11'de karara bağlandı** | → §25.1                                              |
+| 5   | ~~Aşama geçişi otomatik mi, oyuncu onaylı mı?~~                | ✅ **Faz 11'de karara bağlandı** | → §25.2                                              |
+| 6   | ~~Gece oynanışı ayrı bir mekanik mi, yoksa sadece görsel mi?~~ | ✅ **Faz 15'te karara bağlandı** | → §25.3                                              |
 
 ---
 
@@ -928,3 +928,29 @@ bunu mekanik olarak imkânsız kılıyor.
 değiştirmiyor ama Faz 12'nin düzeltmesi gereken talep kıtlığının progression
 tarafındaki görüntüsü. Test bu yanlış sınırı iddia ediyor ve ekonomi ayarlandığında
 **kırılacak** — kırılması sinyalin kendisi.
+
+### 25.3 S6 — Gece **zaten onaylı mekaniklerin saatidir**; yeni bir mekanik eklenmedi (Faz 15, 2026-08-20)
+
+**Karar:** Gece, ayrı bir oynanış sistemi değil — §9.5 ve §13.2'nin **zaten onayladığı** mekaniklerin
+görünür saatidir, artı Faz 15'in ışıklandırma pasosu. Yeni hiçbir kural eklenmedi; kapsam artışı yok,
+değişiklik talebi gerekmiyor.
+
+**Kanıtla:** karar anında kodda ölçülebilir hâlde duran gece mekanikleri sayıldı:
+
+1. **Görünürlük çarpanı** gece farklıdır (`VISIBILITY.night`, §9.5 faktör 2) — dönüşüm gece
+   kendiliğinden düşer.
+2. **`nightVisibility` yükseltme etkisi** (§13.2 tabela ailesi, Faz 13'ten beri canlı) yalnızca gece
+   çarpar — ışıklı tabela ailesinin değeri geceleri artar, tam §9.6'nın istediği gibi.
+3. **Arketip saat-iştahı** (Faz 15, `hourAffinity`): uzun yol kamyoncusunun gece dönüşümü yüksek
+   (§9.4 satırının kendisi) — ve gece kamyoncu akını olayı bu payı çarpar.
+4. Gün eğrisi geceyi zaten inceltir (§9.3).
+
+Bu dördü birlikte "gece farklı oynanır"ı üretir; ayrıca bir "gece modu" icat etmek, §24'ün kapsam
+disiplinine aykırı bir büyütme olurdu. Faz 15 geceye **görünürlüğünü** verdi (ambiyans tintı, farlar,
+tabela ışıması, neon titremesi) — mekaniği değil, mekaniğin sahnesini.
+
+**Açık uç (kayıt):** Oyun saati 00:00'da başlıyor. Işıklandırma gelmeden önce bunun görünür bir
+sonucu yoktu; artık ilk oturum karanlıkta ve ince trafikle açılıyor (gün eğrisi 00:00'da 0.1×), bu da
+§19'un "ilk araç 8 saniye içinde" hedefiyle gerilim içinde. Başlangıç saatini (ör. 08:00) seçmek
+hash'leri ve tohuma bağlı tüm fixture'ları yenileyen tek satırlık bir config kararı — **kullanıcıya
+bırakıldı** (PHASE_15_REPORT açık maddeler).

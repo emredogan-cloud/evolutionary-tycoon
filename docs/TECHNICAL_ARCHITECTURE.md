@@ -489,6 +489,13 @@ toplanana kadar her kayıtta taşınır — aynı pencere iki kez ödenemez. Say
 simülasyona tek girişi, açık tutarları taşıyan ve loglanan `COLLECT_OFFLINE` komutudur. Dışlama,
 cosmetic stream'inkiyle aynı biçimde test altındadır.
 
+**v10 (Faz 15) — takvim.** `environment` bloğu eklendi: günün hava segmentleri ve olay programı,
+`rng.events`'ten günde sabit sayıda çekilişle planlanır ve **plan** olduğu için kaydedilir — yükleme
+sonrası yeniden planlamak, ilerlemiş bir stream'den taze sayılar çekmek olurdu ve kaydedilen öğleden
+sonra başka bir hava alırdı. Aktif durum (şu an hangi hava, hangi olay) saklanmaz; plandan ve
+saatten türetilir, bu yüzden bayatlayamaz. Çevre durumu hash'e girer: trafiği çarpan bir olay tanım
+gereği simülasyon sonucudur.
+
 **Transient state kaydedilmez.** Yoldaki araçlar, yarım siparişler, yürüyen müşteriler — hepsi yeniden başlangıçta temiz olarak oluşturulur. Save yalnızca **kalıcı** durumu tutar. Bu, save boyutunu ~15 KB'ta tutar ve migration'ları basitleştirir.
 
 ### 8.2 Kalıcılık stratejisi

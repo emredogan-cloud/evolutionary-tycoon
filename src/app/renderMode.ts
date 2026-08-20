@@ -68,6 +68,16 @@ export interface RenderMode {
    */
   readonly stage: number;
   readonly sceneId: string;
+  /**
+   * Pin the calendar for a golden — Phase 15. `?forceWeather=rain` plans the
+   * whole of day 0 as that state; `?forceHour=22` starts the clock there;
+   * `?forceEvent=FESTIVAL` schedules that event across the day. Fixture
+   * instruments in the exact sense `?stage` is: they construct a world a
+   * screenshot needs without photographing the hours that reach it.
+   */
+  readonly forceWeather: string | null;
+  readonly forceHour: number | null;
+  readonly forceEvent: string | null;
   /** True when any pinning parameter is present. */
   readonly visualDeterminism: boolean;
   /** Fixed camera transform; input is ignored while set. */
@@ -96,6 +106,10 @@ export function parseRenderMode(search: string): RenderMode {
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
   const sceneId = params.get('scene') ?? 'empty';
+  const forceWeather = params.get('forceWeather');
+  const forceHourRaw = readInt(params, 'forceHour');
+  const forceHour = forceHourRaw === null ? null : Math.min(23, Math.max(0, forceHourRaw));
+  const forceEvent = params.get('forceEvent');
 
   // The camera is locked whenever the clock is frozen. A golden taken through a
   // camera the player can nudge is a golden that fails the first time someone
@@ -121,6 +135,9 @@ export function parseRenderMode(search: string): RenderMode {
     buy,
     stage,
     sceneId,
+    forceWeather,
+    forceHour,
+    forceEvent,
     visualDeterminism: freezeAt !== null || noParticles || fixedViewport || hideHud,
     lockedCamera,
   };

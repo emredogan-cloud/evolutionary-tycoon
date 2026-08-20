@@ -16,6 +16,17 @@ import { at } from '../math/typedArray';
  * Phase 5. They exist now because the store's layout, capacity and free-list
  * behaviour are what the determinism and allocation tests need to pin down.
  */
+/**
+ * Values of `decision` — moved here in Phase 15 from `ConversionSystem`,
+ * which stays their conceptual home (its docs explain the one-roll rule).
+ * The store is the natural leaf: three systems read the field, and importing
+ * the constants from the system that writes it closed a dependency cycle the
+ * moment the manoeuvre system needed them too.
+ */
+export const DECISION_PENDING = 0;
+export const DECISION_NO = 1;
+export const DECISION_YES = 2;
+
 export class VehicleStore {
   readonly capacity: number;
 

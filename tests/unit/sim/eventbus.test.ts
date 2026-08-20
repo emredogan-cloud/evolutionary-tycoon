@@ -18,6 +18,10 @@ describe('EventQueue', () => {
         'DAY_STARTED',
         'PAUSE_CHANGED',
         'SPEED_CHANGED',
+        // Phase 15 — the calendar.
+        'WEATHER_CHANGED',
+        'ROAD_EVENT_STARTED',
+        'ROAD_EVENT_ENDED',
         // Phase 5 — traffic.
         'VEHICLE_SPAWNED',
         'VEHICLE_BRAKED',

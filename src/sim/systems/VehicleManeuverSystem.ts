@@ -29,6 +29,8 @@ import type { World } from '../core/World';
 import { recordOfflineTurnaway } from './offlineMeter';
 import { at } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
+import { LEFT_TURN } from '@config/traffic';
+import { DECISION_YES } from '../stores/VehicleStore';
 import type { ManeuverTable } from '../nav/maneuvers';
 import { maneuverTableFor } from '../nav/maneuverTables';
 import type { LaneSample } from '../nav/spline';
@@ -81,6 +83,11 @@ export const VEHICLE_EXITING = 3;
  */
 export const VEHICLE_DT_ADVANCING = 4;
 
+/** How far upstream of the mouth a holder still reads as "at the mouth". */
+const HELD_TURNER_SLACK_METRES = 1.5;
+/** Below this, a holder counts as standing. Matches the motion pin's floor. */
+const HELD_TURNER_SPEED_EPSILON = 0.5;
+
 export class VehicleManeuverSystem implements SimSystem {
   readonly name = 'VehicleManeuverSystem' as const;
 
@@ -120,7 +127,7 @@ export class VehicleManeuverSystem implements SimSystem {
 
       switch (at(vehicles.state, slot)) {
         case VEHICLE_ON_ROAD:
-          this.considerHandover(world, slot);
+          this.considerHandover(world, slot, deltaMs);
           break;
         case VEHICLE_ENTERING:
           this.advanceEntry(world, slot, seconds);
@@ -155,7 +162,7 @@ export class VehicleManeuverSystem implements SimSystem {
     this.maneuvers = maneuverTableFor(stage);
   }
 
-  private considerHandover(world: World, slot: number): void {
+  private considerHandover(world: World, slot: number, deltaMs: number): void {
     const vehicles = world.vehicles;
     const customerSlot = at(vehicles.customerSlot, slot);
     if (customerSlot < 0) return;
@@ -165,6 +172,22 @@ export class VehicleManeuverSystem implements SimSystem {
     if (laneIndex >= this.lanes.laneCount) return;
     const lane = this.lanes.lane(laneIndex);
     if (at(vehicles.laneS, slot) < lane.entryS) return;
+
+    /*
+     * The left turn — Phase 15. A far-lane pull-in crosses the near lane, and
+     * a driver does not cross through traffic: they hold at the mouth until a
+     * gap is acceptable. The comfort gap shrinks with the wait toward a floor
+     * (same shape as the exit-merge), so the turn always eventually happens —
+     * the jam GDD §9.1 wants both forms and clears. `waitMs` is reused from
+     * the exit-merge: a car is never waiting for both at once.
+     */
+    if (lane.crossesOnEntry && world.progression.stage >= LEFT_TURN.minStage) {
+      if (!this.oncomingClear(world, at(vehicles.waitMs, slot))) {
+        vehicles.waitMs[slot] = at(vehicles.waitMs, slot) + deltaMs;
+        return;
+      }
+      vehicles.waitMs[slot] = 0;
+    }
 
     const customer = world.customers.at(customerSlot);
 
@@ -623,6 +646,33 @@ export class VehicleManeuverSystem implements SimSystem {
   }
 
   /**
+   * Room to cross the near lane, judged at its own entry mouth.
+   *
+   * The conflict point is the near lane's `entryS`: both pull-ins converge on
+   * the same apron, so the box a crossing car sweeps sits at the near lane's
+   * turn. Oncoming means "upstream of the box within the current gap" —
+   * distance-based like `rejoinClear`, because at these speeds a distance is a
+   * time and one fewer moving part is one fewer way to disagree with the IDM.
+   */
+  private oncomingClear(world: World, waitedMs: number): boolean {
+    const nearIndex = this.lanes.nearEntryLane;
+    const near = this.lanes.lane(nearIndex);
+    const t = Math.min(1, Math.max(0, waitedMs / LEFT_TURN.patienceMs));
+    const required = LEFT_TURN.comfortGapMetres + (LEFT_TURN.minGapMetres - LEFT_TURN.comfortGapMetres) * t;
+
+    const vehicles = world.vehicles;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!vehicles.isActive(slot)) continue;
+      if (at(vehicles.state, slot) !== VEHICLE_ON_ROAD) continue;
+      if (at(vehicles.lane, slot) !== nearIndex) continue;
+      const delta = near.entryS - at(vehicles.laneS, slot);
+      // Approaching within the gap, or still inside the conflict box.
+      if (delta > -LEFT_TURN.conflictBoxMetres && delta < required) return false;
+    }
+    return true;
+  }
+
+  /**
    * Room to merge at `rejoinS`, with `comfort` metres of margin behind.
    *
    * The margin ahead is never negotiable — it is the leader's own length, and
@@ -639,6 +689,26 @@ export class VehicleManeuverSystem implements SimSystem {
       const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
       const length = spec?.lengthMetres ?? 4.5;
       const delta = at(vehicles.laneS, slot) - rejoinS;
+
+      /*
+       * A held left-turner is not oncoming — Phase 15. On a crossing lane the
+       * entry mouth sits a few metres upstream of the merge point, and a car
+       * standing there waiting for its gap is *leaving* the lane: it will
+       * never reach the merger, and the road ahead of it is exactly the space
+       * the merger is entering. Counting it produced a measured 18-minute
+       * merge starvation the first time Stage 4's continuous converts kept a
+       * rolling holder at the mouth. Narrow on purpose: on the road, committed
+       * to the turn, at the mouth, and essentially stopped.
+       */
+      const lane = this.lanes.lane(laneIndex);
+      if (
+        lane.crossesOnEntry &&
+        at(vehicles.decision, slot) === DECISION_YES &&
+        at(vehicles.laneS, slot) >= lane.entryS - HELD_TURNER_SLACK_METRES &&
+        at(vehicles.speed, slot) < HELD_TURNER_SPEED_EPSILON
+      ) {
+        continue;
+      }
 
       // Ahead of the merge point: the merging car must clear its back bumper.
       if (delta > 0 && delta < length + MERGE_CLEARANCE_METRES) return false;

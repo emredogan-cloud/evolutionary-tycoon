@@ -8,6 +8,7 @@ import { maneuverTableFor } from '../nav/maneuverTables';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
 import { EconomySystem } from './EconomySystem';
+import { EventSystem } from './EventSystem';
 import { ProgressionSystem } from './ProgressionSystem';
 import { EmployeeFsmSystem } from './EmployeeFsmSystem';
 import { TaskBoardSystem } from './TaskBoardSystem';
@@ -74,6 +75,11 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
 
   const filled: Partial<Record<SystemName, SimSystem>> = {
     TimeSystem: new TimeSystem(),
+    /*
+     * The calendar plans on the first tick of each day and derives every tick
+     * after — Phase 15 fills the slot Phase 2 reserved for it.
+     */
+    EventSystem: new EventSystem(),
     TrafficSpawnSystem: new TrafficSpawnSystem(lanes),
     VehicleMotionSystem: new VehicleMotionSystem(lanes, world.vehicles.capacity),
     ConversionSystem: new ConversionSystem(lanes),

@@ -179,3 +179,35 @@ export const BRAKE_LIGHT_DECEL = 0.6;
 
 /** Sim clamps: a vehicle may never reverse, and never exceed this. */
 export const MAX_SPEED_METRES_PER_SECOND = 30;
+
+/**
+ * Left-turn gap acceptance — Phase 15, GDD §9.1: the far lane's pull-in
+ * crosses opposing traffic and is a *designed* congestion source.
+ *
+ * The comfort gap shrinks with waiting time toward the minimum, exactly the
+ * shape the exit-merge already uses: a driver waits for a comfortable gap,
+ * and after long enough takes a small one. The floor guarantees the turn
+ * always eventually happens — a jam must form AND clear, and "clear" cannot
+ * depend on oncoming traffic ever pausing entirely.
+ */
+export const LEFT_TURN = {
+  /**
+   * First stage the discipline applies — GDD §9.1 scopes the left turn to
+   * Stage 4 in as many words ("Aşama 4'te: sola dönüş…"). Before it, far-lane
+   * cars cross as they have since Phase 5. Measured before this gate existed:
+   * with the decorative layer's opposing flow, holding for gaps at Stage 1
+   * starved delivered demand from 23.7 to **14.7/min** — a recalibration of
+   * the entire economy hiding inside a realism feature. Stage 4's income is
+   * explicitly uncalibrated (`CALIBRATED_STAGES=[1]`), which is exactly where
+   * the design put this cost.
+   */
+  minStage: 4,
+  /** Oncoming clearance a fresh waiter wants, metres upstream of the box. */
+  comfortGapMetres: 16,
+  /** The floor the gap shrinks to. */
+  minGapMetres: 5,
+  /** How long the shrink takes, ms of waiting. */
+  patienceMs: 8_000,
+  /** Metres past the conflict point still counted as occupying it. */
+  conflictBoxMetres: 5,
+} as const;

@@ -59,6 +59,8 @@ export interface RenderContext {
   constructionProgress?(): number;
   /** `prefers-reduced-motion` — disables smoothing and shake outright. */
   readonly reducedMotion: boolean;
+  /** `?noParticles=1` — the weather layers are not even created. */
+  readonly noParticles: boolean;
   /** Which authored scene to stage, from `?scene=`. */
   readonly sceneId: string;
   /** Development overlays: grid, coordinates, depth colouring. */

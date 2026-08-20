@@ -73,6 +73,9 @@ function assertBoardConsistent(sim: Sim): void {
   }
 }
 
+// Coverage instrumentation slows a long advance ~5x; same convention as motion.test.ts.
+const LONG_RUN_TIMEOUT_MS = 60_000;
+
 describe('one task, one employee', () => {
   it('never sends two employees to the same task', () => {
     /*
@@ -182,22 +185,26 @@ describe('scoring', () => {
     expect(staleFar).toBeGreaterThan(freshNear);
   });
 
-  it('caps urgency, so an ancient task cannot dominate forever', () => {
-    // Without the cap, one unreachable task eventually outscores everything and
-    // the whole staff walks toward it — a livelock that looks like a strike.
-    const sim = new Sim({ seed: 1 });
-    staff(sim, 'cook');
-    const employee = sim.world.employees.at(0);
-    employee.x = 0;
-    employee.y = 0;
+  it(
+    'caps urgency, so an ancient task cannot dominate forever',
+    () => {
+      // Without the cap, one unreachable task eventually outscores everything and
+      // the whole staff walks toward it — a livelock that looks like a strike.
+      const sim = new Sim({ seed: 1 });
+      staff(sim, 'cook');
+      const employee = sim.world.employees.at(0);
+      employee.x = 0;
+      employee.y = 0;
 
-    const kind = TASK_KINDS.indexOf('PREP_ORDER');
-    sim.advance(3600 * (1000 / TICK_MS));
+      const kind = TASK_KINDS.indexOf('PREP_ORDER');
+      sim.advance(3600 * (1000 / TICK_MS));
 
-    const ancient = scoreTask(sim.world, kind, 0, 0, 0, employee);
-    const ceiling = (1 + TASK_SCORING.maxUrgency) * TASK_SCORING.reward.PREP_ORDER;
-    expect(ancient).toBeLessThanOrEqual(ceiling + 1e-9);
-  });
+      const ancient = scoreTask(sim.world, kind, 0, 0, 0, employee);
+      const ceiling = (1 + TASK_SCORING.maxUrgency) * TASK_SCORING.reward.PREP_ORDER;
+      expect(ancient).toBeLessThanOrEqual(ceiling + 1e-9);
+    },
+    LONG_RUN_TIMEOUT_MS,
+  );
 });
 
 describe('roles take only their own work', () => {

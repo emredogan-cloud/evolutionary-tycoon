@@ -1,4 +1,6 @@
 import { UiBridge } from '@app/bridge/UiBridge';
+import { EVENT_SPECS } from '@config/events';
+import { WEATHER_STATES } from '@config/weather';
 import type { UiCommands } from '@app/bridge/hudModel';
 import type { ScreenProjector, WorldUnprojector } from '@app/bridge/ScreenProjector';
 import { NULL_PROJECTOR, NULL_UNPROJECTOR } from '@app/bridge/ScreenProjector';
@@ -166,6 +168,39 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     }
   }
 
+  /*
+   * The calendar pins — Phase 15 fixture instruments, applied before the first
+   * tick exactly like the stage jump above. `forceHour` moves the clock;
+   * `forceWeather` writes the whole of day 0 as one state; `forceEvent`
+   * schedules its event across the day. Planning is marked done for day 0 so
+   * the first tick draws nothing from the events stream — the golden's world
+   * is a function of the URL alone.
+   */
+  if (renderMode.forceHour !== null || renderMode.forceWeather !== null || renderMode.forceEvent !== null) {
+    const env = sim.world.environment;
+    env.plannedDay = 0;
+    env.eventTypes.fill(-1);
+    if (renderMode.forceHour !== null) {
+      sim.world.clock.setState({ simTimeMs: (renderMode.forceHour / 24) * sim.world.clock.msPerGameDay });
+    }
+    if (renderMode.forceWeather !== null) {
+      const index = WEATHER_STATES.findIndex(
+        (state) => state.id.toLowerCase() === renderMode.forceWeather?.toLowerCase(),
+      );
+      if (index >= 0) env.weatherSegments.fill(index);
+    }
+    if (renderMode.forceEvent !== null) {
+      const kind = EVENT_SPECS.findIndex(
+        (spec) => spec.id.toLowerCase() === renderMode.forceEvent?.toLowerCase(),
+      );
+      if (kind >= 0) {
+        env.eventTypes[kind] = kind;
+        env.eventStartMs[kind] = 0;
+        env.eventEndMs[kind] = sim.world.clock.msPerGameDay;
+      }
+    }
+  }
+
   // Staged before the first tick, so the world hash of a staged scene is a
   // function of the scene alone.
   stageScene(sim, renderMode.sceneId);
@@ -199,6 +234,7 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     readView: () => sim.readView(),
     interpolationAlpha: () => (renderMode.freezeAt !== null ? 0 : loop.interpolationAlpha),
     reducedMotion: prefersReducedMotion(win),
+    noParticles: renderMode.noParticles,
     sceneId: renderMode.sceneId,
     showDevOverlays: debugOverlayEnabled() && !renderMode.visualDeterminism,
     onFrame: () => {

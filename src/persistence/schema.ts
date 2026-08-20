@@ -21,7 +21,7 @@ import { SAVE_SCHEMA_VERSION } from '@config/simulation';
 z.config({ jitless: true });
 
 /**
- * The save file — schema version 9.
+ * The save file — schema version 10.
  *
  * v2 added `z` to placed objects. Phase 3 sorts the world by height, so an
  * object on a counter has to draw in front of the counter, and a stored layout
@@ -53,7 +53,7 @@ const rngStatesSchema = z.object({
 
 const stringNumberEntries = z.array(z.tuple([z.string(), z.number()]));
 
-const saveFileV9Schema = z.object({
+const saveFileV10Schema = z.object({
   /*
    * From the constant, never a literal. It was written out by hand until Phase 6
    * bumped the version and the composer started emitting saves its own schema
@@ -144,6 +144,20 @@ const saveFileV9Schema = z.object({
     nextCandidateMs: z.number().nonnegative(),
     nextDecorativeMs: z.number().nonnegative(),
   }),
+  /*
+   * The day's calendar — Phase 15, schema v10. Plan, not derivation: a reload
+   * that replanned would draw from a stream that has moved and hand the
+   * afternoon different weather from the one that was saved.
+   */
+  environment: z.object({
+    plannedDay: z.number().int().min(-1),
+    weatherSegments: z.array(z.number().int().min(0).max(3)).length(4),
+    eventTypes: z.array(z.number().int().min(-1)).length(6),
+    eventStartMs: z.array(z.number()).length(6),
+    eventEndMs: z.array(z.number()).length(6),
+    lastWeather: z.number().int().min(-1),
+    lastActiveEvent: z.number().int().min(-1),
+  }),
   settings: z.object({
     audio: z.object({
       master: z.number().min(0).max(1),
@@ -202,10 +216,10 @@ const saveFileV9Schema = z.object({
  *
  * Call sites use the version-neutral names, so bumping the schema is an edit
  * here rather than a sweep across the codebase. The versioned schema stays
- * private: nothing outside this module should be able to pin itself to v9.
+ * private: nothing outside this module should be able to pin itself to v10.
  */
-export const currentSaveSchema = saveFileV9Schema;
-export type CurrentSaveFile = z.infer<typeof saveFileV9Schema>;
+export const currentSaveSchema = saveFileV10Schema;
+export type CurrentSaveFile = z.infer<typeof saveFileV10Schema>;
 
 /** The version this build writes. Any stored save at a lower version is migrated first. */
 export const CURRENT_SCHEMA_VERSION = SAVE_SCHEMA_VERSION;

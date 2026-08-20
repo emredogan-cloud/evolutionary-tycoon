@@ -108,6 +108,24 @@ export interface WorldSnapshot {
     readonly nextCandidateMs: number;
     readonly nextDecorativeMs: number;
   };
+  /**
+   * The day's calendar — Phase 15.
+   *
+   * Saved because it is *plan*, not derivation: replanning on load would draw
+   * fresh numbers from a stream that has moved, and a reloaded afternoon would
+   * get different weather from the afternoon that was saved. The two `last*`
+   * fields ride along so a resumed session does not re-announce the state it
+   * was already in.
+   */
+  readonly environment: {
+    readonly plannedDay: number;
+    readonly weatherSegments: readonly number[];
+    readonly eventTypes: readonly number[];
+    readonly eventStartMs: readonly number[];
+    readonly eventEndMs: readonly number[];
+    readonly lastWeather: number;
+    readonly lastActiveEvent: number;
+  };
   readonly stats: {
     readonly customersServed: number;
     readonly conversionsSucceeded: number;
@@ -132,6 +150,13 @@ export interface WorldSnapshot {
 function sortedEntries(map: ReadonlyMap<string, number>): (readonly [string, number])[] {
   // Map keys are unique, so a two-way comparison is a total order here.
   return [...map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+}
+
+/** Int32 variant of `copyOut`, for the calendar's index arrays. */
+function copyOutInts(source: Int32Array): number[] {
+  const out = new Array<number>(source.length);
+  for (let i = 0; i < source.length; i++) out[i] = source[i] ?? 0;
+  return out;
 }
 
 /** A plain array from a typed one, without the iterator protocol. */
@@ -252,6 +277,15 @@ export function snapshotWorld(world: World): WorldSnapshot {
       nextCandidateMs: world.traffic.nextCandidateMs,
       nextDecorativeMs: world.traffic.nextDecorativeMs,
     },
+    environment: {
+      plannedDay: world.environment.plannedDay,
+      weatherSegments: copyOutInts(world.environment.weatherSegments),
+      eventTypes: copyOutInts(world.environment.eventTypes),
+      eventStartMs: copyOut(world.environment.eventStartMs),
+      eventEndMs: copyOut(world.environment.eventEndMs),
+      lastWeather: world.environment.lastWeather,
+      lastActiveEvent: world.environment.lastActiveEvent,
+    },
     stats: {
       customersServed: world.stats.customersServed,
       conversionsSucceeded: world.stats.conversionsSucceeded,
@@ -322,6 +356,14 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.staff.settleElapsedMs = snapshot.staff.settleElapsedMs;
   restoreEmployees(world, snapshot.staff.employees);
 
+  world.environment.plannedDay = snapshot.environment.plannedDay;
+  copyIntoInts(world.environment.weatherSegments, snapshot.environment.weatherSegments);
+  copyIntoInts(world.environment.eventTypes, snapshot.environment.eventTypes);
+  copyInto(world.environment.eventStartMs, snapshot.environment.eventStartMs);
+  copyInto(world.environment.eventEndMs, snapshot.environment.eventEndMs);
+  world.environment.lastWeather = snapshot.environment.lastWeather;
+  world.environment.lastActiveEvent = snapshot.environment.lastActiveEvent;
+
   world.traffic.nextCandidateMs = snapshot.traffic.nextCandidateMs;
   world.traffic.nextDecorativeMs = snapshot.traffic.nextDecorativeMs;
   // Diagnostics only, never persisted: a resumed session counts its own drops.
@@ -361,4 +403,14 @@ function normaliseSpeed(value: number): SpeedMultiplier {
     if (value === allowed) return allowed;
   }
   return SPEED_MULTIPLIERS[0];
+}
+
+/** Fill a typed array from a saved plain one; missing entries become zero. */
+function copyInto(target: Float64Array, source: readonly number[]): void {
+  for (let i = 0; i < target.length; i++) target[i] = source[i] ?? 0;
+}
+
+/** Int32 variant; missing entries become -1, the calendar's own "empty". */
+function copyIntoInts(target: Int32Array, source: readonly number[]): void {
+  for (let i = 0; i < target.length; i++) target[i] = source[i] ?? -1;
 }

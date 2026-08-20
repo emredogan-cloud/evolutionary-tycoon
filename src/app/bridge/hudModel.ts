@@ -215,6 +215,16 @@ export interface HudModel {
 
   /** Evolution — Phase 11. */
   readonly progression: ProgressionView;
+
+  // ── The sky and the calendar — Phase 15 ─────────────────────────────────
+  /** `CLEAR` | `OVERCAST` | `RAIN` | `SNOW`, plus its Türkçe label. */
+  readonly weatherId: string;
+  readonly weatherLabel: string;
+  /** Active event's id and label, or empty strings when the road is ordinary. */
+  readonly eventId: string;
+  readonly eventLabel: string;
+  /** Sim ms remaining on the event, for the strip's countdown. 0 when none. */
+  readonly eventRemainingMs: number;
 }
 
 /**

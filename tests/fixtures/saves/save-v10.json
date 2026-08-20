@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 10,
+  "buildSha": "fixture-v10",
+  "createdAt": 1776000000000,
+  "lastSeenAt": 1776000000000,
+  "lastSeenServerAt": 1776000000500,
+  "playtimeMs": 300000,
+  "offline": {
+    "meter": {
+      "throughputPerMin": 1.2,
+      "avgTicket": 4.804488,
+      "avgCogs": 1.1716666666666666,
+      "turnedAwayPerMin": 0,
+      "utilization": [0.10833333333333334, 0.005555555555555555, 0, 0, 0.029166666666666667]
+    },
+    "pending": null
+  },
+  "tick": 6000,
+  "nextEntityId": 135,
+  "clock": {
+    "simTimeMs": 300000
+  },
+  "rng": {
+    "traffic": {
+      "a": -861571625,
+      "b": 801809307,
+      "c": -1308967236,
+      "d": -1078026151
+    },
+    "conversion": {
+      "a": -675045033,
+      "b": 1378715722,
+      "c": 1296838686,
+      "d": -1774840367
+    },
+    "customer": {
+      "a": 1936359884,
+      "b": 175618005,
+      "c": -666903015,
+      "d": 396367544
+    },
+    "tips": {
+      "a": -2048330897,
+      "b": -1620255985,
+      "c": 2021161755,
+      "d": -1345280936
+    },
+    "events": {
+      "a": -560777425,
+      "b": 873691877,
+      "c": -1379985638,
+      "d": -130262853
+    },
+    "cosmetic": {
+      "a": -785050398,
+      "b": 165012152,
+      "c": -78082040,
+      "d": 1800911828
+    }
+  },
+  "control": {
+    "speedMultiplier": 1,
+    "paused": false
+  },
+  "progression": {
+    "stage": 1,
+    "unlocks": [],
+    "milestones": [],
+    "pendingStage": 0
+  },
+  "construction": {
+    "targetStage": 0,
+    "elapsedMs": 0,
+    "totalMs": 0
+  },
+  "economy": {
+    "cash": 21.796928,
+    "reputation": 50.04288,
+    "lifetimeRevenue": 28.826928000000002,
+    "lifetimeSpend": 0,
+    "prices": [],
+    "revenueWindow": [0, 0, 0, 3.1384800000000004, 0, 0, 4.802976, 0, 0, 0, 0, 0],
+    "expenseWindow": [0, 0, 0, 0.68, 0, 0, 1.08, 0, 0, 0, 0, 0],
+    "bucketIndex": 0,
+    "bucketElapsedMs": 0
+  },
+  "layout": {
+    "placed": [],
+    "revision": 0,
+    "upgrades": []
+  },
+  "staff": {
+    "hired": [],
+    "settleElapsedMs": 0,
+    "employees": []
+  },
+  "traffic": {
+    "nextCandidateMs": 300245.4695829305,
+    "nextDecorativeMs": 300276.73026832973
+  },
+  "environment": {
+    "plannedDay": 0,
+    "weatherSegments": [0, 1, 0, 0],
+    "eventTypes": [-1, -1, -1, -1, -1, -1],
+    "eventStartMs": [0, 0, 0, 0, 0, 0],
+    "eventEndMs": [0, 0, 0, 0, 0, 0],
+    "lastWeather": 1,
+    "lastActiveEvent": -1
+  },
+  "stats": {
+    "customersServed": 6,
+    "conversionsSucceeded": 6,
+    "conversionsFailed": 51,
+    "turnedAwayNoParking": 0,
+    "customersAbandoned": 0,
+    "vehiclesSpawned": 122,
+    "convertibleSpawned": 57,
+    "commandsApplied": 6000
+  },
+  "settings": {
+    "audio": {
+      "master": 1,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": false,
+      "highContrast": false
+    }
+  },
+  "checksum": "e763ff42"
+}

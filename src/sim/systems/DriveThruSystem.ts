@@ -13,6 +13,7 @@ import type { World } from '../core/World';
 import { ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../stores/OrderStore';
 import { recordExpense, recordRevenue } from './EconomySystem';
 import { recordOfflineSale } from './offlineMeter';
+import { ARCHETYPE_SPECS } from '@config/archetypes';
 import { currentQuality } from './KitchenSystem';
 import { basketReady, rollBasket } from './orderBasket';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
@@ -283,7 +284,8 @@ function collect(world: World, customerSlot: number, deltaMs: number): void {
   }
 
   const satisfaction = satisfactionSum / plates;
-  const tip = bill * tipFraction(satisfaction);
+  // Phase 15: per-archetype tip factor — see ServiceSystem's identical note.
+  const tip = bill * tipFraction(satisfaction) * (ARCHETYPE_SPECS[customer.archetype]?.tipFactor ?? 1);
 
   world.economy.cash += bill + tip - costs;
   world.economy.lifetimeRevenue += bill + tip;

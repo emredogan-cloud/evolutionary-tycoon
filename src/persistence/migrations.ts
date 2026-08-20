@@ -299,6 +299,32 @@ const v8ToV9: Migration = {
   }),
 };
 
+/**
+ * v10 — Phase 15, the environment calendar.
+ *
+ * `plannedDay: -1` means "never planned": the first tick after load plans the
+ * *current* day from the events stream exactly as a fresh world would. That
+ * consumes stream draws a v9 session never made — acceptable and honest,
+ * because a v9 session never had a calendar to preserve in the first place.
+ */
+const v9ToV10: Migration = {
+  from: 9,
+  to: 10,
+  up: (save) => ({
+    ...save,
+    schemaVersion: 10,
+    environment: {
+      plannedDay: -1,
+      weatherSegments: [0, 0, 0, 0],
+      eventTypes: [-1, -1, -1, -1, -1, -1],
+      eventStartMs: [0, 0, 0, 0, 0, 0],
+      eventEndMs: [0, 0, 0, 0, 0, 0],
+      lastWeather: -1,
+      lastActiveEvent: -1,
+    },
+  }),
+};
+
 export const migrations: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -308,6 +334,7 @@ export const migrations: readonly Migration[] = [
   v6ToV7,
   v7ToV8,
   v8ToV9,
+  v9ToV10,
 ];
 
 assertContiguous(migrations);

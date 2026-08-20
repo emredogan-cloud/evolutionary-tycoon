@@ -7,6 +7,7 @@ import { apply, stampCommand } from './commands';
 import { EventBus } from './EventBus';
 import type { SimSystem } from './SystemPipeline';
 import { SystemPipeline } from './SystemPipeline';
+import { activeEventSlot, currentWeather } from '../systems/EventSystem';
 import { ACTOR_KIND_VEHICLE } from '@config/actors';
 import { ARRIVAL_EPSILON_METRES } from '@config/customer';
 import { BRAKE_LIGHT_DECEL } from '@config/traffic';
@@ -140,6 +141,9 @@ export class Sim {
       simTimeMs: 0,
       gameDay: 0,
       gameHour: 0,
+      weather: 0,
+      activeEventKind: -1,
+      activeEventEndsAtMs: 0,
       speedMultiplier: this.world.control.speedMultiplier,
       paused: false,
       vehicleCount: 0,
@@ -232,6 +236,10 @@ export class Sim {
     v.gameDay = this.world.clock.gameDay;
     v.gameHour = this.world.clock.gameHour;
     v.speedMultiplier = this.world.control.speedMultiplier;
+    v.weather = currentWeather(this.world);
+    const activeSlot = activeEventSlot(this.world);
+    v.activeEventKind = activeSlot >= 0 ? (this.world.environment.eventTypes[activeSlot] ?? -1) : -1;
+    v.activeEventEndsAtMs = activeSlot >= 0 ? (this.world.environment.eventEndMs[activeSlot] ?? 0) : 0;
     v.paused = this.world.control.paused;
     v.vehicleCount = this.world.vehicles.activeCount;
     v.customerCount = this.world.customers.activeCount;

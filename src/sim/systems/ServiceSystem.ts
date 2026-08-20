@@ -17,6 +17,7 @@ import { layoutForStage } from '@config/layouts';
 import { stepDriveThruCustomer } from './DriveThruSystem';
 import { recordExpense, recordRevenue } from './EconomySystem';
 import { recordOfflineSale } from './offlineMeter';
+import { ARCHETYPE_SPECS } from '@config/archetypes';
 import { currentQuality } from './KitchenSystem';
 import { evaluateSatisfaction, reputationDelta, tipFraction } from './SatisfactionSystem';
 import { effectValue } from './UpgradeSystem';
@@ -259,7 +260,12 @@ export class ServiceSystem implements SimSystem {
     }
 
     const satisfaction = satisfactionSum / plates;
-    const tip = bill * tipFraction(satisfaction);
+    /*
+     * Phase 15: who is tipping matters — GDD §9.4 gives the sports car and the
+     * limousine outsized tips. ×1 for the everyday four, so nothing measured
+     * before this factor existed has moved.
+     */
+    const tip = bill * tipFraction(satisfaction) * (ARCHETYPE_SPECS[customer.archetype]?.tipFactor ?? 1);
 
     world.economy.cash += bill + tip - costs;
     world.economy.lifetimeRevenue += bill + tip;

@@ -1,4 +1,5 @@
 import { ARCHETYPE_SPECS } from '@config/archetypes';
+import type { ArchetypeSpec } from '@config/archetypes';
 import {
   BASE_SPAWN_PER_REAL_MINUTE,
   DECORATIVE_TRAFFIC_MULTIPLIER,
@@ -11,7 +12,9 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { at, atIn } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
+import { MAX_EVENT_TRAFFIC_FACTOR } from '@config/events';
 import { DAY_CURVE_PEAK, dayCurveAt } from './TimeSystem';
+import { environmentTrafficFactor, environmentTruckShareFactor } from './EventSystem';
 import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
 
 /**
@@ -46,10 +49,18 @@ import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
  * intact and let the decorative layer absorb every refusal.
  */
 
-/** Convertible vehicles per real second at the day's peak, before thinning. */
+/**
+ * Convertible vehicles per real second at the day's peak, before thinning.
+ *
+ * Phase 15 widened the envelope by MAX_EVENT_TRAFFIC_FACTOR: thinning is only
+ * exact while the candidate rate covers the true rate, and a festival
+ * multiplies the true rate by three. The acceptance below divides by the same
+ * widened envelope, so ordinary days simply reject more candidates — more rng
+ * draws, identical accepted process.
+ */
 function convertiblePeakPerSecond(stage: number): number {
   const stageMultiplier = atIn(STAGE_TRAFFIC_MULTIPLIER, stage, 1);
-  return (BASE_SPAWN_PER_REAL_MINUTE / 60) * DAY_CURVE_PEAK * stageMultiplier;
+  return (BASE_SPAWN_PER_REAL_MINUTE / 60) * DAY_CURVE_PEAK * stageMultiplier * MAX_EVENT_TRAFFIC_FACTOR;
 }
 
 /** Decorative vehicles per real second at the day's peak, before thinning. */
@@ -116,7 +127,17 @@ export class TrafficSpawnSystem implements SimSystem {
       const speedRoll = world.rng.traffic.next();
 
       const hour = hourAt(world, candidateMs);
-      if (acceptRoll < dayCurveAt(hour) / DAY_CURVE_PEAK) {
+      /*
+       * The environment scales the acceptance, not the candidate stream —
+       * weather thins the road, a festival packs it, and the draw count stays
+       * a function of simulation state alone. The factor is read at the
+       * *current* tick rather than at candidateMs: a candidate never lies more
+       * than one tick in the past, and re-deriving the calendar per candidate
+       * would cost far more than the half-tick of precision buys.
+       */
+      const environmentFactor = environmentTrafficFactor(world);
+      const acceptance = (dayCurveAt(hour) * environmentFactor) / (DAY_CURVE_PEAK * MAX_EVENT_TRAFFIC_FACTOR);
+      if (acceptRoll < acceptance) {
         this.trySpawn(world, laneRoll, archetypeRoll, speedRoll, hour, decorative);
       }
 
@@ -170,7 +191,12 @@ export class TrafficSpawnSystem implements SimSystem {
       return;
     }
 
-    const archetype = pickArchetype(archetypeRoll, hour);
+    const archetype = pickArchetype(
+      archetypeRoll,
+      hour,
+      world.economy.reputation,
+      environmentTruckShareFactor(world),
+    );
     const spec = ARCHETYPE_SPECS[archetype];
     if (spec === undefined) return;
 
@@ -235,20 +261,41 @@ function hourAt(world: World, simTimeMs: number): number {
  * multiplications and a scan of four entries is cheaper than the invalidation
  * logic a cache would need.
  */
-export function pickArchetype(roll: number, hour: number): number {
+export function pickArchetype(
+  roll: number,
+  hour: number,
+  reputation = 100,
+  truckShareFactor = 1,
+  specs: readonly ArchetypeSpec[] = ARCHETYPE_SPECS,
+): number {
   const bucket = Math.floor(((hour % 24) + 24) % 24);
   let total = 0;
-  for (const spec of ARCHETYPE_SPECS) {
-    total += spec.baseShare * atIn(spec.hourBias, bucket, 1);
+  for (const spec of specs) {
+    total += shareOf(spec, bucket, reputation, truckShareFactor);
   }
+  if (total <= 0) return 0;
 
   let cursor = roll * total;
-  for (let i = 0; i < ARCHETYPE_SPECS.length; i++) {
-    const spec = ARCHETYPE_SPECS[i];
+  for (let i = 0; i < specs.length; i++) {
+    const spec = specs[i];
     if (spec === undefined) continue;
-    cursor -= spec.baseShare * atIn(spec.hourBias, bucket, 1);
+    cursor -= shareOf(spec, bucket, reputation, truckShareFactor);
     if (cursor <= 0) return i;
   }
   // Floating-point drift can leave a sliver at the top of the range.
-  return ARCHETYPE_SPECS.length - 1;
+  return specs.length - 1;
+}
+
+/**
+ * One archetype's effective share this hour.
+ *
+ * The VIP gate lives here — GDD §9.4: "İtibar eşiği üstünde belirir". Below
+ * the threshold the archetype simply is not on the road, which is cleaner and
+ * more honest than spawning it and refusing conversion: the player's first
+ * limousine should be an arrival, not a statistic.
+ */
+function shareOf(spec: ArchetypeSpec, bucket: number, reputation: number, truckShareFactor: number): number {
+  if (reputation < spec.minReputation) return 0;
+  const truck = spec.id === 'TRUCK_LONGHAUL' ? truckShareFactor : 1;
+  return spec.baseShare * atIn(spec.hourBias, bucket, 1) * truck;
 }

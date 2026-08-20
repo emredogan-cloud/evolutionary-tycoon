@@ -29,6 +29,9 @@ import type {
   VehicleDespawnedEvent,
   VehicleParkedEvent,
   VehicleSpawnedEvent,
+  WeatherChangedEvent,
+  RoadEventStartedEvent,
+  RoadEventEndedEvent,
 } from './events';
 import { SIM_EVENT_TYPES } from './events';
 
@@ -56,6 +59,12 @@ function createRecord(type: SimEventType): SimEvent {
   switch (type) {
     case 'DAY_STARTED':
       return { t: 'DAY_STARTED', day: 0 };
+    case 'WEATHER_CHANGED':
+      return { t: 'WEATHER_CHANGED', state: 0 };
+    case 'ROAD_EVENT_STARTED':
+      return { t: 'ROAD_EVENT_STARTED', kind: 0, endsAtMs: 0 };
+    case 'ROAD_EVENT_ENDED':
+      return { t: 'ROAD_EVENT_ENDED', kind: 0 };
     case 'SPEED_CHANGED':
       return { t: 'SPEED_CHANGED', mult: 1 };
     case 'PAUSE_CHANGED':
@@ -150,6 +159,29 @@ export class EventQueue {
     const record = this.lease('DAY_STARTED');
     if (record === null) return;
     (record as DayStartedEvent).day = day;
+    this.push(record);
+  }
+
+  emitWeatherChanged(state: number): void {
+    const record = this.lease('WEATHER_CHANGED');
+    if (record === null) return;
+    (record as WeatherChangedEvent).state = state;
+    this.push(record);
+  }
+
+  emitRoadEventStarted(kind: number, endsAtMs: number): void {
+    const record = this.lease('ROAD_EVENT_STARTED');
+    if (record === null) return;
+    const typed = record as RoadEventStartedEvent;
+    typed.kind = kind;
+    typed.endsAtMs = endsAtMs;
+    this.push(record);
+  }
+
+  emitRoadEventEnded(kind: number): void {
+    const record = this.lease('ROAD_EVENT_ENDED');
+    if (record === null) return;
+    (record as RoadEventEndedEvent).kind = kind;
     this.push(record);
   }
 

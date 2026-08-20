@@ -18,6 +18,7 @@ import { CameraController } from '../camera/CameraController';
 import type { CameraBounds } from '../camera/cameraMath';
 import { DevOverlays } from '../debug/DevOverlays';
 import { worldRectToScreenBounds, worldToScreen } from '../iso/IsoProjection';
+import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import type { Point2 } from '../iso/IsoProjection';
 import { placeholderTextures } from '../placeholderTextures';
 import { patienceRing } from '../views/CustomerView';
@@ -162,6 +163,7 @@ export class WorldScene extends Phaser.Scene {
   private bridge!: RenderBridge;
   private camera!: CameraController;
   private overlays: DevOverlays | null = null;
+  private environment: EnvironmentLayer | null = null;
 
   /**
    * The frames that actually loaded, and where each one's feet are.
@@ -238,6 +240,16 @@ export class WorldScene extends Phaser.Scene {
       this.camera.centreOn(focus.x, focus.y, fixture.cameraZoom);
     }
 
+    /*
+     * The lighting-and-weather pass — Phase 15, on the layer Phase 3 reserved
+     * for it. Created after the graph so its quads land above the world and
+     * beneath the world-space UI.
+     */
+    this.environment = new EnvironmentLayer(this, this.graph, {
+      reducedMotion: this.context.reducedMotion,
+      noParticles: this.context.noParticles,
+    });
+
     if (this.context.showDevOverlays) {
       this.overlays = new DevOverlays(this, this.graph);
     }
@@ -285,6 +297,7 @@ export class WorldScene extends Phaser.Scene {
     }
 
     this.bridge.sync(view, this.context.interpolationAlpha());
+    this.environment?.update(view, this.bridge.visible);
     this.placeholderQuads = 0;
     this.syncSprites();
     /*

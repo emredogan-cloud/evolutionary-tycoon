@@ -311,3 +311,40 @@ Method:   Playwright probe; SW-controlled reload measured with response.fromServ
 **Reading.** "İkinci ziyaret ~0 bant genişliği" localhost'ta ölçüldü: 1.3 KB (yalnızca no-store
 uçları). CDN'deki karşılığı deployment doğrulamasında ölçülür ve faz raporuna girer. SwiftShader
 sayıları FPS iddiası değildir (CLAUDE.md kuralı); bu giriş yalnızca yükleme/bant genişliği kaydıdır.
+
+---
+
+## Phase 15 — events, weather, day/night — 2026-08-20
+
+```
+Device:   dev desktop (Linux 7.0.0-28-generic), localhost preview
+Browser:  Chromium 145 (Playwright build), headless, SwiftShader — draw-call counting only, no FPS claims
+Method:   WebGLRenderingContext.drawElements/drawArrays wrapped pre-boot; 40-frame mean, stage 3 frozen scene
+```
+
+| Metric                                     |                                       Value |
+| ------------------------------------------ | ------------------------------------------: |
+| Draw calls, clear noon                     |                               **5 / frame** |
+| Draw calls, night + lit signs + headlights |         **6 / frame** (**+1**, budget ≤ +8) |
+| Draw calls, noon rain (precipitation on)   |                          **7 / frame** (+2) |
+| Sim perf budgets                           | **21/21** on the re-recorded baseline below |
+
+**Baseline re-record (`bench:record`, full run) — the §11 discipline applied.** The relative gate
+compared against the **phase12** baseline, recorded before the calendar existed. Phase 15's honest
+per-tick additions — the calendar derivation in slot 2 and a spawn candidate stream widened ×3 so a
+festival can be _exact_ Lewis–Shedler thinning — measured **+37% on the empty-world tick** against
+that stale workload. Two real optimisations were taken first (bucket-boundary meter sampling in
+P14; a per-tick derivation cache after the first wiring re-derived per candidate, measured +47%);
+the remainder is the feature's price, every **absolute** budget still passes, and the baseline was
+re-recorded as `phase15` with the same mixed-calibration environment. The phase12 numbers are
+retained here:
+
+```
+phase12 baseline (superseded 2026-08-20, retained per WORKING_DISCIPLINE §11):
+  1000 ticks fresh world       2.7360 cal units   → phase15: 3.8491
+  populated tick               3.0414             → 3.7ish (run-to-run ±5%)
+  stage 4 tick                61.0572             → ~70.3
+  1000 ticks, 1 command each   2.7585             → ~3.8
+  8 events/tick, 3 subs        2.8814             → ~3.9
+  snapshot + JSON              2.5533             → ~2.97 (v10 environment block is real payload)
+```

@@ -28,15 +28,15 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 9, with eight registered migrations', () => {
+  it('the current version is 10, with nine registered migrations', () => {
     /*
      * Both halves matter. The first says the schema constant and the save layer
      * agree; the second is a deliberate speed bump — bumping the version means
      * coming here, which means noticing that a migration and a fixture are owed.
      */
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(9);
-    expect(migrations).toHaveLength(8);
+    expect(CURRENT_SCHEMA_VERSION).toBe(10);
+    expect(migrations).toHaveLength(9);
   });
 
   it('a save already at the current version needs no steps', () => {
@@ -104,15 +104,15 @@ describe('migration chain', () => {
     });
   });
 
-  it('v1 → v9 runs every step in order', () => {
+  it('v1 → v10 runs every step in order', () => {
     const outcome = migrateToCurrent(
       { schemaVersion: 1, layout: { placed: [{ objectId: 'a', x: 0, y: 0 }] } },
       1,
     );
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(8);
-    expect(outcome.save['schemaVersion']).toBe(9);
+    expect(outcome.steps).toBe(9);
+    expect(outcome.save['schemaVersion']).toBe(10);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'a', x: 0, y: 0, z: 0 },
     ]);
@@ -303,7 +303,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(8);
+    expect(result.migrationSteps).toBe(9);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
@@ -318,7 +318,7 @@ describe('committed save fixtures', () => {
     // Was zero until Phase 5 added the traffic cursor. The fixture is a
     // historical record and is never regenerated, so this number grows by one
     // with every schema change — which is the point of keeping it.
-    expect(result.migrationSteps).toBe(7);
+    expect(result.migrationSteps).toBe(8);
   });
 
   it('save-v3.json migrates to the current version', async () => {
@@ -329,7 +329,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(6);
+    expect(result.migrationSteps).toBe(7);
   });
 
   it('save-v4.json migrates three steps to the current version', async () => {
@@ -340,7 +340,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(5);
+    expect(result.migrationSteps).toBe(6);
   });
 
   it('save-v5.json migrates three steps to the current version', async () => {
@@ -351,7 +351,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(4);
+    expect(result.migrationSteps).toBe(5);
   });
 
   it('save-v6.json migrates two steps to the current version', async () => {
@@ -362,7 +362,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(3);
+    expect(result.migrationSteps).toBe(4);
   });
 
   it('save-v7.json migrates one step to the current version', async () => {
@@ -373,10 +373,10 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(2);
+    expect(result.migrationSteps).toBe(3);
   });
 
-  it('save-v8.json migrates one step, arriving with a null offline envelope', async () => {
+  it('save-v8.json migrates two steps, arriving with a null offline envelope', async () => {
     const storage = new MemoryStorageAdapter();
     await storage.write('save', readFixture('save-v8.json'));
 
@@ -384,7 +384,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(1);
+    expect(result.migrationSteps).toBe(2);
     /*
      * `meter: null`, not a zeroed summary: a v8 save measured nothing, and the
      * distinction is what keeps a migrated player's first return from being
@@ -415,14 +415,31 @@ describe('committed save fixtures', () => {
     const outcome = migrateToCurrent({ schemaVersion: 8, economy: { cash: 12 } }, 8);
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(1);
-    expect(outcome.save['schemaVersion']).toBe(9);
+    expect(outcome.steps).toBe(2);
+    expect(outcome.save['schemaVersion']).toBe(10);
     expect(outcome.save['offline']).toEqual({ meter: null, pending: null });
     // Everything else is left exactly as it was.
     expect(outcome.save['economy']).toEqual({ cash: 12 });
   });
 
-  it('save-v9.json loads with no migration at all', async () => {
+  it('a v9 save arrives with an unplanned calendar, to be planned on first tick', () => {
+    const outcome = migrateToCurrent({ schemaVersion: 9, economy: { cash: 12 } }, 9);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(1);
+    expect(outcome.save['schemaVersion']).toBe(10);
+    expect(outcome.save['environment']).toEqual({
+      plannedDay: -1,
+      weatherSegments: [0, 0, 0, 0],
+      eventTypes: [-1, -1, -1, -1, -1, -1],
+      eventStartMs: [0, 0, 0, 0, 0, 0],
+      eventEndMs: [0, 0, 0, 0, 0, 0],
+      lastWeather: -1,
+      lastActiveEvent: -1,
+    });
+  });
+
+  it('save-v9.json migrates one step to the current version', async () => {
     const storage = new MemoryStorageAdapter();
     await storage.write('save', readFixture('save-v9.json'));
 
@@ -430,7 +447,31 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
+    expect(result.migrationSteps).toBe(1);
+  });
+
+  it('save-v10.json loads with no migration at all', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v10.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
     expect(result.migrationSteps).toBe(0);
+  });
+
+  it('save-v10.json carries a calendar a session actually planned', () => {
+    /*
+     * The Phase 15 fixture is a played session like every one before it: the
+     * calendar — the field this version exists for — holds a genuinely planned
+     * day, so the round-trip proves values survive, not just shape.
+     */
+    const save = JSON.parse(readFixture('save-v10.json')) as {
+      environment: { plannedDay: number; weatherSegments: number[] };
+    };
+    expect(save.environment.plannedDay).toBeGreaterThanOrEqual(0);
+    expect(save.environment.weatherSegments).toHaveLength(4);
   });
 
   it('save-v9.json carries a measurement somebody actually played', () => {

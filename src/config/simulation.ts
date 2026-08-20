@@ -66,7 +66,7 @@ export const EVENT_QUEUE_CAPACITY = 512;
  * v2 (Phase 3): placed objects gained `z`, because the renderer sorts on height
  * and an object on a counter has to draw in front of the counter.
  */
-export const SAVE_SCHEMA_VERSION = 9;
+export const SAVE_SCHEMA_VERSION = 10;
 
 /**
  * Wall-clock autosave cadence — TECHNICAL_ARCHITECTURE §8.2, wired in Phase 14.

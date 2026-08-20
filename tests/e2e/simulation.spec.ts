@@ -70,7 +70,15 @@ const REFERENCE = {
    *
    * Recomputed by the Node suite for seed 424242 and asserted here.
    */
-  hashAtTick0: 'aa11223a7612b6ff',
+  /*
+   * A ninth time, in Phase 15 — the calendar. `EnvironmentState` (the day's
+   * weather segments and event schedule, plus the transition markers) entered
+   * the digest, because an event that multiplies traffic is a simulation
+   * outcome by definition; and the spawn envelope widened by the festival
+   * factor, so the thousandth tick rides a resampled — equally distributed —
+   * arrival stream. Both figures recomputed by the Node suite, as always.
+   */
+  hashAtTick0: '0e732b19df6e2aab',
   /*
    * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
    * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
@@ -88,7 +96,7 @@ const REFERENCE = {
    * produced this value independently before the pin was updated, which is the
    * agreement this test exists to prove.
    */
-  hashAtTick1000: '4a7f9c6d7871981a',
+  hashAtTick1000: 'b2a80a514a666780',
 } as const;
 
 interface TestApi {

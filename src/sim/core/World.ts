@@ -2,6 +2,8 @@ import { STARTING_REPUTATION } from '@config/satisfaction';
 import { CONVERSION_REASONS } from '@config/conversion';
 import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { OFFLINE_LIMITERS, OFFLINE_METER_BUCKET_COUNT } from '@config/economy/offline';
+import { EVENT_SPECS } from '@config/events';
+import { WEATHER_SEGMENTS_PER_DAY } from '@config/weather';
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { Hasher } from '../math/hash';
 import type { OrderRecord } from '../stores/OrderStore';
@@ -21,6 +23,8 @@ import type {
   ControlState,
   EconomyState,
   EntityId,
+  EnvironmentDerived,
+  EnvironmentState,
   ConstructionState,
   LayoutState,
   OfflineMeterState,
@@ -116,6 +120,27 @@ export class World {
     droppedDecorative: 0,
   };
   readonly staff: StaffState = { hired: [], settleElapsedMs: 0 };
+  /** Calendar derivation cache — see EnvironmentDerived. Not hashed, not saved. */
+  readonly environmentDerived: EnvironmentDerived = {
+    tick: -1,
+    activeSlot: -1,
+    weather: 0,
+    trafficFactor: 1,
+    conversionFactor: 1,
+    speedCap: 1,
+    seatedBias: 0,
+    truckShareFactor: 1,
+  };
+  /** The deterministic calendar — Phase 15. Hashed and saved. */
+  readonly environment: EnvironmentState = {
+    plannedDay: -1,
+    weatherSegments: new Int32Array(WEATHER_SEGMENTS_PER_DAY),
+    eventTypes: new Int32Array(EVENT_SPECS.length).fill(-1),
+    eventStartMs: new Float64Array(EVENT_SPECS.length),
+    eventEndMs: new Float64Array(EVENT_SPECS.length),
+    lastWeather: -1,
+    lastActiveEvent: -1,
+  };
   readonly stats: StatsState = {
     customersServed: 0,
     conversionsSucceeded: 0,
@@ -265,6 +290,14 @@ export class World {
       h.writeString(employee.roleId);
     }
 
+    h.writeU32(this.environment.plannedDay >>> 0);
+    for (const segment of this.environment.weatherSegments) h.writeU32(segment >>> 0);
+    for (const type of this.environment.eventTypes) h.writeU32(type >>> 0);
+    for (const start of this.environment.eventStartMs) h.writeF64(start);
+    for (const end of this.environment.eventEndMs) h.writeF64(end);
+    h.writeU32(this.environment.lastWeather >>> 0);
+    h.writeU32(this.environment.lastActiveEvent >>> 0);
+
     h.writeU32(this.stats.customersServed);
     h.writeU32(this.stats.conversionsSucceeded);
     h.writeU32(this.stats.conversionsFailed);
@@ -338,6 +371,15 @@ export class World {
 
     this.staff.hired.length = 0;
     this.staff.settleElapsedMs = 0;
+
+    this.environment.plannedDay = -1;
+    this.environment.weatherSegments.fill(0);
+    this.environment.eventTypes.fill(-1);
+    this.environment.eventStartMs.fill(0);
+    this.environment.eventEndMs.fill(0);
+    this.environment.lastWeather = -1;
+    this.environment.lastActiveEvent = -1;
+    this.environmentDerived.tick = -1;
 
     this.stats.customersServed = 0;
     this.stats.conversionsSucceeded = 0;

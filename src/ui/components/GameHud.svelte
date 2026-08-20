@@ -10,6 +10,7 @@
     UpgradeView,
     WorldMarker,
   } from '@app/bridge/hudModel';
+  import EnvironmentStrip from './EnvironmentStrip.svelte';
   import HudCash from './HudCash.svelte';
   import EvolutionPanel from './EvolutionPanel.svelte';
   import BuildMenu from '../screens/BuildMenu.svelte';
@@ -66,6 +67,11 @@
   let customersWaiting = $state(0);
   let gameDay = $state(0);
   let gameHour = $state(0);
+  let weatherId = $state('CLEAR');
+  let weatherLabel = $state('Açık');
+  let eventId = $state('');
+  let eventLabel = $state('');
+  let eventRemainingMs = $state(0);
   // A fresh array per sample, because `{#each}` needs a new reference to
   // re-key. This is the one allocation the overlay makes, and it is bounded by
   // the number of visible markers rather than by the pool size.
@@ -97,6 +103,11 @@
       customersWaiting = model.customersWaiting;
       gameDay = model.gameDay;
       gameHour = model.gameHour;
+      weatherId = model.weatherId;
+      weatherLabel = model.weatherLabel;
+      eventId = model.eventId;
+      eventLabel = model.eventLabel;
+      eventRemainingMs = model.eventRemainingMs;
 
       const live: WorldMarker[] = [];
       for (let i = 0; i < model.markerCount; i++) {
@@ -140,6 +151,7 @@
 </script>
 
 <div class="overlay" data-testid="game-hud">
+  <EnvironmentStrip {gameHour} {weatherId} {weatherLabel} {eventId} {eventLabel} {eventRemainingMs} />
   <WorldMarkers {markers} />
 
   <StaffIcons {staff} />

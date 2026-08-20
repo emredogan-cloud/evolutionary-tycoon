@@ -79,8 +79,17 @@ describe('the sprite catalogue', () => {
     }
   });
 
-  withAtlas('names a real frame for all eight facings of every vehicle archetype', () => {
+  withAtlas('names a real frame for all eight facings of every archetype on the road', () => {
+    /*
+     * Live archetypes only. The Phase 15 six exist as behaviour with zero
+     * spawn share precisely because their art does not — asserting frames for
+     * a sprite nobody has drawn would either fail forever or force a van to
+     * impersonate a bus. `archetypes.test.ts` pins the zero shares; the day
+     * their art lands and a share flips, this loop starts covering them
+     * automatically.
+     */
     for (let archetype = 0; archetype < ARCHETYPE_SPECS.length; archetype++) {
+      if ((ARCHETYPE_SPECS[archetype]?.baseShare ?? 0) <= 0) continue;
       for (const direction of SPRITE_DIRECTIONS) {
         const frame = vehicleFrame(archetype, direction);
         expect(FRAMES?.has(frame), frame).toBe(true);

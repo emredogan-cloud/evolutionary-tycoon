@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HudModel } from '@app/bridge/hudModel';
 import { createContainer } from '@app/container';
 import { FrameMeter } from '@app/FrameMeter';
 import { GameLoop } from '@app/GameLoop';
@@ -445,7 +446,11 @@ describe('installTestHooks', () => {
     api.advanceTicks(1);
 
     expect(api.drainEvents()).toEqual([
+      // Commands land at the start of the tick, before the systems run — so
+      // the dispatched speed change precedes the calendar's first-tick
+      // weather announcement (Phase 15), which precedes the next dispatch.
       { t: 'SPEED_CHANGED', mult: 4 },
+      { t: 'WEATHER_CHANGED', state: expect.any(Number) as number },
       { t: 'PAUSE_CHANGED', paused: true },
     ]);
     expect(api.drainEvents()).toEqual([]);
@@ -640,5 +645,72 @@ describe('what the overlay is allowed to ask for', () => {
     expect(
       createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
     ).toBe(1);
+  });
+});
+
+describe('the calendar pins — Phase 15 fixture instruments', () => {
+  it('forceHour starts the clock at the named hour', () => {
+    const container = createContainer(isolatedWindow('?forceHour=22'), 7, new MemoryStorageAdapter());
+    expect(container.sim.world.clock.gameHour).toBeCloseTo(22, 5);
+  });
+
+  it('forceWeather writes the whole of day 0 as that state, planned', () => {
+    const container = createContainer(isolatedWindow('?forceWeather=snow'), 7, new MemoryStorageAdapter());
+    expect(container.sim.world.environment.plannedDay).toBe(0);
+    expect([...container.sim.world.environment.weatherSegments]).toEqual([3, 3, 3, 3]);
+    // An unknown state changes nothing but still pins the plan.
+    const bogus = createContainer(isolatedWindow('?forceWeather=hailstorm'), 7, new MemoryStorageAdapter());
+    expect([...bogus.sim.world.environment.weatherSegments]).toEqual([0, 0, 0, 0]);
+  });
+
+  it('forceEvent schedules that event across the day', () => {
+    const container = createContainer(
+      isolatedWindow('?forceEvent=festival&stage=4'),
+      7,
+      new MemoryStorageAdapter(),
+    );
+    const env = container.sim.world.environment;
+    expect(env.eventTypes[2]).toBe(2);
+    expect(env.eventEndMs[2]).toBe(container.sim.world.clock.msPerGameDay);
+  });
+});
+
+describe('the HUD strip fields — Phase 15', () => {
+  it('samples weather and the active event into the model', () => {
+    const container = createContainer(
+      isolatedWindow('?forceWeather=rain&forceEvent=festival&stage=4'),
+      7,
+      new MemoryStorageAdapter(),
+    );
+    let model: HudModel | null = null;
+    const unsubscribe = container.ui.subscribe((m) => {
+      model = m;
+    });
+    container.sim.advance(2);
+    container.ui.refresh();
+    unsubscribe();
+
+    expect(model).not.toBeNull();
+    const hud = model as unknown as HudModel;
+    expect(hud.weatherId).toBe('RAIN');
+    expect(hud.weatherLabel).toBe('Yağmur');
+    expect(hud.eventId).toBe('FESTIVAL');
+    expect(hud.eventLabel).toBe('Festival');
+    expect(hud.eventRemainingMs).toBeGreaterThan(0);
+  });
+
+  it('reads an ordinary road as no event and clear skies', () => {
+    const container = createContainer(isolatedWindow('?forceWeather=clear'), 7, new MemoryStorageAdapter());
+    let model: HudModel | null = null;
+    const unsubscribe = container.ui.subscribe((m) => {
+      model = m;
+    });
+    container.sim.advance(2);
+    container.ui.refresh();
+    unsubscribe();
+    const hud = model as unknown as HudModel;
+    expect(hud.weatherId).toBe('CLEAR');
+    expect(hud.eventId).toBe('');
+    expect(hud.eventRemainingMs).toBe(0);
   });
 });

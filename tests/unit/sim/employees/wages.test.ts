@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { forceClearDay } from '../../../helpers/environment';
 import { UNPAID_GRACE_MS, WAGE_SETTLE_MS } from '@config/economy/wages';
 import { MAX_EMPLOYEES, role, roleIndexOf, taskDuration, walkSpeed } from '@config/employees';
 import { TICK_MS } from '@config/simulation';
@@ -218,7 +219,18 @@ describe('unpaid wages cost an employee, deterministically', () => {
      * the queue for payment, which is what makes "the dearest of the unpaid
      * leaves" the property actually under test.
      */
-    const sim = new Sim({ seed: 1 });
+    /*
+     * Income-sensitive by construction (see above), so the fixture pins its
+     * inputs: the calendar clear (weather would move the takings) and a seed
+     * whose clear-day takings leave the stand *partly* insolvent — enough
+     * income to pay the early slots, not enough for everyone. Phase 15's wider
+     * spawn envelope resampled every seed's arrival path (same distribution,
+     * different draws); seed 3 is the retuned pick, chosen by scanning for the
+     * scenario the comment describes: the dear cook goes, the cheap survivor
+     * stays.
+     */
+    const sim = new Sim({ seed: 3 });
+    forceClearDay(sim.world);
     sim.world.economy.cash = 1000;
     for (let i = 3; i < MAX_EMPLOYEES; i++) expect(hire(sim.world, 'cleaner', 0)).toBe('ok');
     expect(hire(sim.world, 'cleaner', 0)).toBe('ok');

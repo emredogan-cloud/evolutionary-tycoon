@@ -26,6 +26,8 @@ import { layoutForStage } from '@config/layouts';
 import { CHANNEL_COUNTER, CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
 import { queueCapacityOf } from './QueueSystem';
+import { environmentConversionFactor, environmentSeatedBias } from './EventSystem';
+import { upgradeLevel } from './UpgradeSystem';
 import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
 import { at, atIn } from '../math/typedArray';
@@ -57,10 +59,11 @@ import { STATE_ENTERING } from '../ai/fsm/customerFsm';
  * moment the tick ends.
  */
 
-/** Values of `VehicleStore.decision`. */
-export const DECISION_PENDING = 0;
-export const DECISION_NO = 1;
-export const DECISION_YES = 2;
+// The decision values live on the store (leaf — see its comment); re-exported
+// here so the one-roll rule's documentation and its constants stay findable
+// together.
+export { DECISION_NO, DECISION_PENDING, DECISION_YES } from '../stores/VehicleStore';
+import { DECISION_NO, DECISION_PENDING, DECISION_YES } from '../stores/VehicleStore';
 
 /** One factor of the product, kept alongside the reason it maps to. */
 interface FactorReport {
@@ -225,9 +228,15 @@ export class ConversionSystem implements SimSystem {
      * *next* conversion roll, so building a drive-thru would silently shift
      * every subsequent customer's odds.
      */
+    /*
+     * Phase 15: weather moves the split — "oturarak talebi ↑". The bias
+     * subtracts from the drive-thru share, floored at zero: rain sends people
+     * inside, it does not conjure a lane where none exists.
+     */
     const layoutNow = layoutForStage(world.progression.stage);
+    const driveThruShare = Math.max(0, DRIVE_THRU_SHARE - environmentSeatedBias(world));
     customer.channel =
-      layoutNow.driveThru !== null && world.rng.customer.next() < DRIVE_THRU_SHARE
+      layoutNow.driveThru !== null && world.rng.customer.next() < driveThruShare
         ? CHANNEL_DRIVE_THRU
         : CHANNEL_COUNTER;
     customer.visible = 0;
@@ -258,7 +267,23 @@ export class ConversionSystem implements SimSystem {
     const hour = world.clock.gameHour;
     const queueLength = this.visibleQueueLength(world);
 
-    this.set(0, spec.baseAffinity, REASON_JUST_PASSING, false);
+    /*
+     * Affinity, plus the two Phase 15 modifiers that are properties of the
+     * *driver*: the hour-of-day appetite (the long-haul truck eats at night)
+     * and the EV charger draw — GDD §9.4's Stage 4 hook, alive the moment an
+     * upgrade with that id exists and is owned, a no-op until then.
+     */
+    const hourBucket = Math.floor(((hour % 24) + 24) % 24);
+    const charger =
+      spec.chargerAffinityBoost !== 1 && upgradeLevel(world, 'ev-charger') > 0
+        ? spec.chargerAffinityBoost
+        : 1;
+    this.set(
+      0,
+      spec.baseAffinity * atIn(spec.hourAffinity, hourBucket, 1) * charger,
+      REASON_JUST_PASSING,
+      false,
+    );
     // A sign does not make the stand visible at 3 a.m.; it multiplies whatever
     // the hour already allows. Applied as a factor rather than added, so the
     // time-of-day curve keeps its shape and a dark hour stays dark.
@@ -279,7 +304,9 @@ export class ConversionSystem implements SimSystem {
     this.set(5, spilloverPenalty(queueLength, queueCapacityOf(world, layout)), REASON_QUEUE_TOO_LONG);
     this.set(6, reputationFactor(world.economy.reputation), REASON_REPUTATION_LOW);
     this.set(7, timeOfDayFit(hour), REASON_WRONG_TIME);
-    this.set(8, WEATHER_FACTOR_PLACEHOLDER, REASON_WEATHER);
+    // Phase 15: the placeholder becomes the real §9.6 environment — weather
+    // times whatever event is in force. Config-driven end to end.
+    this.set(8, WEATHER_FACTOR_PLACEHOLDER * environmentConversionFactor(world), REASON_WEATHER);
     this.set(9, noveltyDecay(world, archetype), REASON_JUST_PASSING);
 
     let product = 1;

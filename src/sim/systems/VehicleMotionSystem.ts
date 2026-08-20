@@ -1,12 +1,14 @@
 import { ARCHETYPE_SPECS } from '@config/archetypes';
 import { ENTRY_APPROACH_SPEED } from '@config/customer';
-import { IDM, MAX_SPEED_METRES_PER_SECOND, STOP_SPEED_EPSILON } from '@config/traffic';
+import { IDM, LEFT_TURN, MAX_SPEED_METRES_PER_SECOND, STOP_SPEED_EPSILON } from '@config/traffic';
 import { idmAcceleration } from '../math/idm';
 import { at } from '../math/typedArray';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { LaneGraph } from '../nav/LaneGraph';
 import { DECISION_YES } from './ConversionSystem';
+import { environmentSpeedCap } from './EventSystem';
+import { LANE_CHANGE, shouldChangeLane, wouldOscillate } from './laneChange';
 import { VEHICLE_ON_ROAD } from './VehicleManeuverSystem';
 
 /**
@@ -71,15 +73,136 @@ export class VehicleMotionSystem implements SimSystem {
     this.laneCounts = new Int32Array(lanes.laneCount);
     this.laneOffsets = new Int32Array(lanes.laneCount);
     this.laneCursor = new Int32Array(lanes.laneCount);
+
+    /*
+     * Discretionary lane changes — Phase 15's decision layer, wired to the
+     * road as it actually is. The partner table answers "is there another
+     * lane going my way": on the authored two-lane road every entry is -1,
+     * so the overtaking branch below is idle by *geometry*, not by flag, and
+     * the day a multi-lane road is authored it comes alive with no further
+     * wiring. That entanglement (road width ↔ traffic density) is the open
+     * user decision PROJECT_MEMORY carries.
+     */
+    this.sameHeadingPartner = new Int32Array(lanes.laneCount).fill(-1);
+    for (let a = 0; a < lanes.laneCount; a++) {
+      for (let b = 0; b < lanes.laneCount; b++) {
+        if (a === b) continue;
+        if (lanes.lane(a).heading === lanes.lane(b).heading) {
+          this.sameHeadingPartner[a] = b;
+          break;
+        }
+      }
+    }
   }
+
+  /** Same-direction alternative per lane, or -1. See the constructor note. */
+  private readonly sameHeadingPartner: Int32Array;
 
   run(world: World, deltaMs: number): void {
     const seconds = deltaMs / 1000;
     if (seconds <= 0) return;
 
     this.orderByLane(world);
-    this.accelerate(world);
+    this.accelerate(world, environmentSpeedCap(world), seconds);
+    this.considerLaneChanges(world);
     this.integrate(world, seconds);
+  }
+
+  /**
+   * One gap-acceptance decision per frustrated follower, per tick.
+   *
+   * The scan re-uses the ordering pass's buckets, so finding the target
+   * lane's neighbouring pair is a walk over already-sorted slots. A change
+   * moves the vehicle sideways at its own arc position — partner lanes are
+   * parallel by construction, so `laneS` carries over.
+   */
+  private considerLaneChanges(world: World): void {
+    const vehicles = world.vehicles;
+    for (let lane = 0; lane < this.lanes.laneCount; lane++) {
+      const target = at(this.sameHeadingPartner, lane);
+      if (target < 0) continue; // today's road, every time
+
+      const start = at(this.laneOffsets, lane);
+      const count = at(this.laneCounts, lane);
+      for (let i = 1; i < count; i++) {
+        const slot = at(this.ordered, start + i);
+        const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
+        if (spec === undefined) continue;
+        const leader = at(this.ordered, start + i - 1);
+        const leaderSpec = ARCHETYPE_SPECS[at(vehicles.archetype, leader)];
+
+        const s = at(vehicles.laneS, slot);
+        const currentLeadGap =
+          at(vehicles.laneS, leader) - s - (leaderSpec?.lengthMetres ?? spec.lengthMetres);
+
+        const context = {
+          speed: at(vehicles.speed, slot),
+          desiredSpeed: at(vehicles.desiredSpeed, slot),
+          currentLeadGap,
+          ...this.targetGaps(world, target, s, spec.lengthMetres),
+        };
+        if (!shouldChangeLane(context)) continue;
+
+        // The mirror question, so a symmetric pair cannot ping-pong.
+        const reverse = {
+          speed: at(vehicles.speed, slot),
+          desiredSpeed: at(vehicles.desiredSpeed, slot),
+          currentLeadGap: context.targetLeadGap,
+          targetLeadGap: currentLeadGap,
+          targetLagGap: LANE_CHANGE.minLagGapMetres + 1,
+          targetLeadSpeed: at(vehicles.speed, leader),
+          targetLagSpeed: 0,
+        };
+        if (wouldOscillate(context, reverse)) continue;
+
+        vehicles.lane[slot] = target;
+      }
+    }
+  }
+
+  /** Lead/lag gaps and speeds around arc position `s` on `lane`. */
+  private targetGaps(
+    world: World,
+    lane: number,
+    s: number,
+    ownLength: number,
+  ): {
+    targetLeadGap: number;
+    targetLagGap: number;
+    targetLeadSpeed: number;
+    targetLagSpeed: number;
+  } {
+    const vehicles = world.vehicles;
+    const start = at(this.laneOffsets, lane);
+    const count = at(this.laneCounts, lane);
+    let leadGap = Number.POSITIVE_INFINITY;
+    let lagGap = Number.POSITIVE_INFINITY;
+    let leadSpeed = MAX_SPEED_METRES_PER_SECOND;
+    let lagSpeed = 0;
+    for (let i = 0; i < count; i++) {
+      const slot = at(this.ordered, start + i);
+      const other = at(vehicles.laneS, slot);
+      const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
+      if (other >= s) {
+        const gap = other - s - (spec?.lengthMetres ?? 4.5);
+        if (gap < leadGap) {
+          leadGap = gap;
+          leadSpeed = at(vehicles.speed, slot);
+        }
+      } else {
+        const gap = s - other - ownLength;
+        if (gap < lagGap) {
+          lagGap = gap;
+          lagSpeed = at(vehicles.speed, slot);
+        }
+      }
+    }
+    return {
+      targetLeadGap: leadGap,
+      targetLagGap: lagGap,
+      targetLeadSpeed: leadSpeed,
+      targetLagSpeed: lagSpeed,
+    };
   }
 
   /**
@@ -129,7 +252,7 @@ export class VehicleMotionSystem implements SimSystem {
     }
   }
 
-  private accelerate(world: World): void {
+  private accelerate(world: World, speedCap: number, seconds: number): void {
     const vehicles = world.vehicles;
     const laneCount = this.lanes.laneCount;
 
@@ -158,9 +281,15 @@ export class VehicleMotionSystem implements SimSystem {
           leaderSpeed = at(vehicles.speed, leader);
         }
 
+        /*
+         * Phase 15: road work and accidents cap everyone's *desired* speed —
+         * §9.6's congestion is the follower model slowing down, not a script.
+         * Scaling desire keeps the IDM smooth; clamping actual speed would
+         * read as every car hitting a wall at the cordon.
+         */
         let accel = idmAcceleration(
           speed,
-          at(vehicles.desiredSpeed, slot),
+          at(vehicles.desiredSpeed, slot) * speedCap,
           gap,
           leaderSpeed,
           spec.accelFactor,
@@ -188,12 +317,26 @@ export class VehicleMotionSystem implements SimSystem {
          * car slowing to turn in sends an accordion wave back up the queue, and
          * that wave is the visible consequence of the player's stand existing.
          */
-        if (at(vehicles.decision, slot) === DECISION_YES && speed > ENTRY_APPROACH_SPEED) {
-          const toEntry = this.lanes.lane(lane).entryS - at(vehicles.laneS, slot);
-          if (toEntry > 0) {
-            const required = (ENTRY_APPROACH_SPEED ** 2 - speed ** 2) / (2 * toEntry);
+        if (at(vehicles.decision, slot) === DECISION_YES) {
+          const laneRecord = this.lanes.lane(lane);
+          /*
+           * Phase 15: a far-lane driver stops AT the mouth and waits for their
+           * gap (the manoeuvre system holds them until it opens); a near-lane
+           * driver only slows to the approach speed and turns straight in, as
+           * before. Same kinematics, different target speed.
+           */
+          const crossingHold = laneRecord.crossesOnEntry && world.progression.stage >= LEFT_TURN.minStage;
+          const targetSpeed = crossingHold ? 0 : ENTRY_APPROACH_SPEED;
+          const toEntry = laneRecord.entryS - at(vehicles.laneS, slot);
+          if (toEntry > 0 && speed > targetSpeed) {
+            const required = (targetSpeed ** 2 - speed ** 2) / (2 * toEntry);
             const clamped = Math.max(required, -MAX_BRAKE_METRES_PER_SECOND_SQUARED);
             if (clamped < accel) accel = clamped;
+          } else if (toEntry <= 0 && crossingHold) {
+            // At or past the mouth and still on the road: held for a gap.
+            // Pinned to a standstill so the queue forms behind, which is the
+            // congestion the design wants — and which clears when they turn.
+            accel = Math.max(-MAX_BRAKE_METRES_PER_SECOND_SQUARED, -speed / seconds);
           }
         }
 

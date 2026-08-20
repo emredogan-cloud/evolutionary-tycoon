@@ -32,7 +32,14 @@ const VIEWPORT = { width: 1280, height: 720 };
  * photograph tick 4264.
  */
 function frozenUrl(scene: string, freezeAt = 0, extra = ''): string {
-  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1${extra}`;
+  /*
+   * `forceHour=12` — Phase 15. The world's clock starts at midnight, and until
+   * the lighting pass existed that fact was invisible: every golden was
+   * unknowingly photographing 00:30. Now that hour paints, the daytime
+   * showcase intent these scenes always had is written down. The environment
+   * goldens below force their own hours and skies instead.
+   */
+  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&forceHour=12${extra}`;
 }
 
 async function openFrozen(page: Page, scene: string, freezeAt = 0, extra = ''): Promise<void> {
@@ -204,6 +211,48 @@ test.describe('visual goldens', () => {
       await expect(page).toHaveScreenshot(`stage${String(stage)}-layout.png`);
     });
   }
+});
+
+async function openEnvironment(page: Page, query: string): Promise<void> {
+  await page.setViewportSize(VIEWPORT);
+  await page.goto(`/?${query}&freezeAt=600&seed=424242&fixedViewport=1&dpr=1&hideHud=1`);
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
+  await expect(page.locator('html')).toHaveAttribute('data-visual-mode', '1');
+  await page.waitForTimeout(250);
+}
+
+test.describe('environment goldens — Phase 15', () => {
+  /*
+   * Each pins its sky and hour through the fixture instruments, so the golden
+   * is a function of the URL alone. `noParticles` stays OFF for rain and
+   * snow — this project's precipitation is deterministic (a pure function of
+   * sim time, frozen with the clock), which is the whole reason these goldens
+   * can exist.
+   */
+  test('night-stage3 — the terrace after dark, signs lit, headlights on', async ({ page }) => {
+    await openEnvironment(
+      page,
+      'stage=3&noParticles=1&forceHour=22&buy=hand-painted-sign,illuminated-sign,neon-facade',
+    );
+    await expect(page).toHaveScreenshot('env-night-stage3.png');
+  });
+
+  test('rain-stage1 — a wet noon at the stand', async ({ page }) => {
+    await openEnvironment(page, 'scene=stage1-serving&cook=1&forceWeather=rain&forceHour=12');
+    await expect(page).toHaveScreenshot('env-rain-stage1.png');
+  });
+
+  test('snow-stage3 — the diner under snow', async ({ page }) => {
+    await openEnvironment(page, 'stage=3&forceWeather=snow&forceHour=12');
+    await expect(page).toHaveScreenshot('env-snow-stage3.png');
+  });
+
+  test('festival-stage4 — the packed road at dusk', async ({ page }) => {
+    await openEnvironment(page, 'stage=4&noParticles=1&forceEvent=festival&forceHour=19');
+    await expect(page).toHaveScreenshot('env-festival-stage4.png');
+  });
 });
 
 test.describe('visual determinism', () => {

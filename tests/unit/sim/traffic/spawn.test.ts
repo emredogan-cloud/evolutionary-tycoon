@@ -3,6 +3,7 @@ import { ARCHETYPE_SPECS } from '@config/archetypes';
 import { MS_PER_GAME_DAY, TICK_MS } from '@config/simulation';
 import { BASE_SPAWN_PER_REAL_MINUTE, DAY_CURVE, HOURS_IN_CURVE } from '@config/traffic';
 import { Sim } from '@sim/core/Sim';
+import { expectedWeatherTrafficFactor } from '@config/weather';
 import { DAY_CURVE_PEAK, dayCurveAt } from '@sim/systems/TimeSystem';
 import { pickArchetype } from '@sim/systems/TrafficSpawnSystem';
 
@@ -134,7 +135,15 @@ describe('spawn rate', () => {
       const minutes = MS_PER_GAME_DAY / 60_000;
 
       const convertible = sim.world.stats.convertibleSpawned / minutes;
-      expect(convertible).toBeGreaterThan(BASE_SPAWN_PER_REAL_MINUTE * 0.75);
+      /*
+       * Phase 15: weather thins the road by design — GDD §9.3 puts
+       * `weather(state)` in the spawn product — so the envelope this asserts
+       * is the base rate times the mix's own expectation, derived from config
+       * the way the basket derives its ticket. A weather tweak that starves
+       * the economy turns this red with the number that did it.
+       */
+      const weatherMean = expectedWeatherTrafficFactor();
+      expect(convertible).toBeGreaterThan(BASE_SPAWN_PER_REAL_MINUTE * weatherMean * 0.75);
       expect(convertible).toBeLessThanOrEqual(BASE_SPAWN_PER_REAL_MINUTE * 1.05);
     },
     LONG_RUN_TIMEOUT_MS,
@@ -346,7 +355,10 @@ describe('archetype mix', () => {
     () => {
       const { archetypes } = spawnTimeline(2468, TICKS_PER_MINUTE * 60);
       const seen = new Set(archetypes);
-      expect(seen.size).toBe(ARCHETYPE_SPECS.length);
+      // Every archetype that is actually on the road. The artless six hold
+      // zero share (archetypes.test.ts pins that) and cannot appear.
+      const live = ARCHETYPE_SPECS.filter((spec) => spec.baseShare > 0).length;
+      expect(seen.size).toBe(live);
     },
     LONG_RUN_TIMEOUT_MS,
   );

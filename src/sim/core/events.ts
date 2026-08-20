@@ -243,6 +243,25 @@ export interface ObjectRemovedEvent {
   y: number;
 }
 
+/** The sky changed — Phase 15. `state` indexes `WEATHER_STATES`. */
+export interface WeatherChangedEvent {
+  readonly t: 'WEATHER_CHANGED';
+  state: number;
+}
+
+/** A calendar event began — Phase 15. `kind` indexes `EVENT_SPECS`. */
+export interface RoadEventStartedEvent {
+  readonly t: 'ROAD_EVENT_STARTED';
+  kind: number;
+  endsAtMs: number;
+}
+
+/** It ended. */
+export interface RoadEventEndedEvent {
+  readonly t: 'ROAD_EVENT_ENDED';
+  kind: number;
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
@@ -268,6 +287,9 @@ export type SimEvent =
   | ConstructionStartedEvent
   | StageChangedEvent
   | ObjectPlacedEvent
+  | WeatherChangedEvent
+  | RoadEventStartedEvent
+  | RoadEventEndedEvent
   | ObjectRemovedEvent;
 
 export type SimEventType = SimEvent['t'];
@@ -281,6 +303,9 @@ export type SimEventType = SimEvent['t'];
  */
 export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'DAY_STARTED',
+  'WEATHER_CHANGED',
+  'ROAD_EVENT_STARTED',
+  'ROAD_EVENT_ENDED',
   'SPEED_CHANGED',
   'PAUSE_CHANGED',
   'VEHICLE_SPAWNED',
