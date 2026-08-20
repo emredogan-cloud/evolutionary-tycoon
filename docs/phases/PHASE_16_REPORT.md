@@ -43,6 +43,36 @@ this batch (Phase 15's six archetypes wait on vehicle art).
 | Unit + integration             | 1474 passed (one long-run test flaked once under parallel host load and passed clean serially — same class the consolidation logged)                                                                                                                                                             |
 | E2E chromium (preview)         | **80 passed + 6 deployment-only skips**                                                                                                                                                                                                                                                          |
 
+## 3.1 The deployment gate found a real defect — and it was not the road
+
+The first push (bf3ec1a) went green in CI (run 32373098618, 11/11) but **failed
+the Preview E2E gate twice** — original run and a clean rerun of 32373400210 —
+on four tests, all timeout-shaped, including
+`productionArt › reaches the first playable frame with a clean console`
+(`data-render-state="ready"` never arrived within 30 s).
+
+Diagnosis, measured on the same deployment from the host (fresh context per
+navigation, exactly the suite's pattern):
+
+| Condition               | render-ready, 4 fresh contexts        |
+| ----------------------- | ------------------------------------- |
+| service worker active   | 13.7 s / **32.5 s** / 22.9 s / 18.8 s |
+| `sw.js` request blocked | 12.8 s / 8.6 s / 6.3 s / 5.8 s        |
+
+Every fresh browser context installs the worker anew, and each install
+re-downloads the full ~10.6 MB precache **in parallel with the page's own
+critical loads**. The suite opens a fresh context per test; the contention
+pushed marginal tests past their timeouts. The road slice did not break
+anything — its 1.6 MB merely tipped a contention pattern that had been near
+the edge since P14 over the runner's threshold.
+
+**Fix:** `?e2e=1` sessions do not register the worker — the same rule that
+already keeps instrumented sessions off persistence, extracted as the pure
+`shouldRegisterServiceWorker(search, visualDeterminism)` with unit tests. The
+service-worker spec runs on the plain URL and keeps full coverage of
+install/claim/offline/second-visit; players only ever have the plain URL. No
+test was weakened and no timeout was raised.
+
 ## 4. CI / DEPLOYMENT EVIDENCE
 
 > ⏳ Appended after push.

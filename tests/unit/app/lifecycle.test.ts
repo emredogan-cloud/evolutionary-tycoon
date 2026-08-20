@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AUTOSAVE_INTERVAL_MS } from '@config/simulation';
 import type { SaveService } from '@app/SaveService';
 import { startPersistenceLifecycle } from '@app/lifecycle';
-import { registerServiceWorker } from '@app/registerServiceWorker';
+import { registerServiceWorker, shouldRegisterServiceWorker } from '@app/registerServiceWorker';
 
 /**
  * The persistence lifecycle and the worker registration — Phase 14's app-layer
@@ -141,5 +141,26 @@ describe('registerServiceWorker', () => {
     expect(() => {
       registerServiceWorker(window);
     }).not.toThrow();
+  });
+});
+
+describe('shouldRegisterServiceWorker', () => {
+  it('registers on the plain player URL', () => {
+    expect(shouldRegisterServiceWorker('', false)).toBe(true);
+    expect(shouldRegisterServiceWorker('?seed=7', false)).toBe(true);
+  });
+
+  it('never registers in a visual-determinism session', () => {
+    expect(shouldRegisterServiceWorker('', true)).toBe(false);
+  });
+
+  it('never registers in an instrumented session — the install storm the deployment gate measured', () => {
+    expect(shouldRegisterServiceWorker('?e2e=1', false)).toBe(false);
+    expect(shouldRegisterServiceWorker('?e2e=1&stage=3&freezeAt=600', false)).toBe(false);
+  });
+
+  it('does not misread a value that merely contains e2e', () => {
+    expect(shouldRegisterServiceWorker('?e2e=0', false)).toBe(true);
+    expect(shouldRegisterServiceWorker('?mode=e2e', false)).toBe(true);
   });
 });

@@ -13,7 +13,7 @@ import GameHud from '@ui/components/GameHud.svelte';
 import OfflineReport from '@ui/screens/OfflineReport.svelte';
 import { OfflineService } from '@app/OfflineService';
 import { startPersistenceLifecycle } from '@app/lifecycle';
-import { registerServiceWorker } from '@app/registerServiceWorker';
+import { registerServiceWorker, shouldRegisterServiceWorker } from '@app/registerServiceWorker';
 import { syncServerTime } from '@platform/timeSync';
 
 /**
@@ -236,7 +236,8 @@ async function startSimulation(win: Window): Promise<void> {
       });
     }
 
-    if (!container.renderMode.visualDeterminism) registerServiceWorker(win);
+    if (shouldRegisterServiceWorker(win.location.search, container.renderMode.visualDeterminism))
+      registerServiceWorker(win);
 
     win.document.documentElement.dataset['simState'] = 'running';
     if (container.renderMode.visualDeterminism) {

@@ -13,6 +13,23 @@
  * new deployment replaces the cache on the next visit rather than being
  * pinned behind its own old cache forever.
  */
+/**
+ * Whether this session gets a worker at all. Two exclusions, one rule:
+ * instrumented sessions do not install machinery that outlives the page.
+ * Visual-determinism sessions never did; `?e2e=1` joined them when the
+ * deployment gate at bf3ec1a measured why — the preview suite opens a fresh
+ * context per test, every context's install re-downloads the full precache
+ * in parallel with the page's own loads, and that contention pushed
+ * render-ready past the runner's 30 s timeout (A/B on the same deployment:
+ * 13.7/32.5/22.9/18.8 s with the worker vs 12.8/8.6/6.3/5.8 s without).
+ * The service-worker spec exercises the real thing on the plain URL — which
+ * is also the only URL a player ever has.
+ */
+export function shouldRegisterServiceWorker(search: string, visualDeterminism: boolean): boolean {
+  if (visualDeterminism) return false;
+  return new URLSearchParams(search).get('e2e') !== '1';
+}
+
 export function registerServiceWorker(win: Window): void {
   if (import.meta.env.DEV) return;
   if (!('serviceWorker' in win.navigator)) return;
