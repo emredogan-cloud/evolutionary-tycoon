@@ -348,3 +348,20 @@ phase12 baseline (superseded 2026-08-20, retained per WORKING_DISCIPLINE §11):
   8 events/tick, 3 subs        2.8814             → ~3.9
   snapshot + JSON              2.5533             → ~2.97 (v10 environment block is real payload)
 ```
+
+---
+
+## Phase 16 — the road bake — 2026-08-20
+
+Same method as the Phase 15 entry (GL-call wrap, SwiftShader, load/draw-call
+figures only). With the baked road tiling every stage:
+
+| Metric                                   |                 Value |
+| ---------------------------------------- | --------------------: |
+| Draw calls, stage 3 noon                 | **4 / frame** (was 5) |
+| Draw calls, stage 3 night with lit signs | **4 / frame** (was 6) |
+
+The bake _reduced_ draw calls: the tiles batch with the texture pipeline and
+the procedural marking `Graphics` they replace is gone. Shipped-bytes and
+texture-memory budgets unchanged in class (`pnpm assets:report` — all within
+limits; the slice is one single file, SW precache 30 entries).

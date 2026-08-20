@@ -2,7 +2,7 @@
 
 **Phase:** 15 — the same day stops repeating
 **Date:** 2026-08-20
-**Result:** ✅ **PASS (technical)** — local gates green; CI/preview evidence appended below once the workflows ran
+**Result:** ✅ **PASS (technical)** — local gates green, CI 11/11 green at `7ea73ab`, preview-e2e green on the real CDN
 **Branch:** `phase/15-events-weather` (stacked on `phase/14-offline`)
 
 ---
@@ -82,9 +82,16 @@ weather goldens can exist.
 | Draw calls (measured, GL-call wrap)                                 | noon 5 → night **+1**, rain **+2** — budget was ≤ +8                                                                                                                                                                                                      |
 | Seed-tuned fixtures                                                 | wages (seed 3), stranded-walkers (seed 999), spawn-envelope (weather-mean-derived floor) — each retuned with the reason in-file; **no assertion weakened**                                                                                                |
 
-## 4. CI / DEPLOYMENT EVIDENCE
+## 4. CI / DEPLOYMENT EVIDENCE (appended once the workflows finished)
 
-> ⏳ Appended after push — this project does not claim green it has not seen.
+- **CI green** at the phase head `7ea73ab` — run **32368939802**, all 11 jobs.
+  The first dispatch at `ac26dac` went red on exactly one budget — the CI
+  runner's _absolute_ fresh-tick budget at 5.32 ms of 5 — which priced the
+  envelope mistake §1 describes; fixed by the stage-aware headroom in
+  `7ea73ab`, no budget touched.
+- **Preview E2E green** against the Vercel deployment of `7ea73ab` — run
+  **32369208677**, full chromium suite on the real CDN.
+- Production smoke: skipped by design (no production deployment exists).
 
 ## 5. NOT RUN
 

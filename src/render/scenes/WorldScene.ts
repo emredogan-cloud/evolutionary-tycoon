@@ -28,6 +28,7 @@ import type { AssetRegistry } from '../AssetRegistry';
 import {
   EMPLOYEE_TINT,
   GROUND_FRAMES,
+  ROAD_FRAME,
   RIG_DIRECTION_FOR,
   RIG_DRAW_ORDER,
   RIG_PIVOTS,
@@ -158,6 +159,8 @@ export class WorldScene extends Phaser.Scene {
   private surfaces: Phaser.GameObjects.Graphics | null = null;
   /** The stretched ground bake, replaced whenever the stage changes. */
   private groundTile: Phaser.GameObjects.Image | null = null;
+  /** The baked road tiles, replaced whenever the stage redraws the band. */
+  private readonly roadTiles: Phaser.GameObjects.Image[] = [];
   private construction!: ConstructionMask;
   private graph!: SceneGraph;
   private bridge!: RenderBridge;
@@ -721,14 +724,75 @@ export class WorldScene extends Phaser.Scene {
     road.fillStyle(SURFACE_COLORS.road, 1);
     road.fillPoints(this.worldQuad(startX, centreY - halfWidth, endX, centreY + halfWidth), true);
 
-    // Dashed centre line: a solid one would read as a barrier, and Stage 4 adds
-    // a left turn across it.
-    road.fillStyle(SURFACE_COLORS.roadMarking, 1);
-    for (let x = startX; x < endX; x += 4) {
-      road.fillPoints(this.worldQuad(x, centreY - 0.08, x + 2, centreY + 0.08), true);
+    /*
+     * The baked surface — Phase 16, the first regeneration item to get real
+     * art. The delivered slice is an isometric tile with the carriageway
+     * through its middle, laid along the band at the scale that puts the
+     * painted asphalt on `widthMetres`. The flat fill stays underneath for
+     * the same reason the ground keeps its quad: it is what draws at all if
+     * this one file fails to fetch — and the dashes below are the fallback's
+     * markings, skipped when the bake paints its own.
+     */
+    let baked = false;
+    if (this.textures.exists(ROAD_FRAME)) {
+      baked = true;
+      for (const tile of this.roadTiles) tile.destroy();
+      this.roadTiles.length = 0;
+
+      /*
+       * 12 m, not the slice's native 16: the art's carriageway spans ~60% of
+       * its diamond, and at native scale that is a 9.5 m road on a 7 m
+       * right-of-way — kerbs across the stand's own apron. Scaled so the
+       * painted asphalt lands on `widthMetres`, the kerb and verge finish on
+       * their own edges and the lanes sit centred in each half.
+       */
+      const TILE_METRES = 12;
+      /*
+       * No mask — measured, not assumed. `setMask` warns "not supported in
+       * WebGL" on this Phaser 4 build and silently does nothing (the ground
+       * bake's diamond mask has been inert for the same reason; its diamond
+       * comes from the art's own alpha). What bounds the road visually is the
+       * slice's transparent edges, which at this scale land the kerb and
+       * verge where they belong. The one blemish that a working mask would
+       * have trimmed — near-side verge under the drive-thru's on-road spill —
+       * is recorded as polish debt in PHASE_16_REPORT.
+       */
+      for (let x = startX; x < endX + TILE_METRES; x += TILE_METRES) {
+        const bounds = worldRectToScreenBounds(
+          x - TILE_METRES / 2,
+          centreY - TILE_METRES / 2,
+          x + TILE_METRES / 2,
+          centreY + TILE_METRES / 2,
+          { left: 0, top: 0, right: 0, bottom: 0 },
+        );
+        /*
+         * Mirrored: the slice was authored with its carriageway along the
+         * other isometric axis, and flipping X is the projection-level swap
+         * of the two diagonals. A laterally symmetric surface mirrors
+         * truthfully — the same rule DIRECTION_AUDIT applies to cars.
+         */
+        const tile = this.add
+          .image(bounds.left, bounds.top, ROAD_FRAME)
+          .setOrigin(0, 0)
+          .setFlipX(true)
+          .setDisplaySize(bounds.right - bounds.left, bounds.bottom - bounds.top);
+        this.graph.layer('road').add(tile);
+        this.roadTiles.push(tile);
+      }
+    }
+
+    if (!baked) {
+      // Dashed centre line: a solid one would read as a barrier, and Stage 4
+      // adds a left turn across it.
+      road.fillStyle(SURFACE_COLORS.roadMarking, 1);
+      for (let x = startX; x < endX; x += 4) {
+        road.fillPoints(this.worldQuad(x, centreY - 0.08, x + 2, centreY + 0.08), true);
+      }
     }
 
     this.graph.layer('road').add(road);
+    // The fill goes beneath the tiles it backstops.
+    this.graph.layer('road').sendToBack(road);
   }
 
   /**

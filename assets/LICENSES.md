@@ -182,3 +182,12 @@ was generated.
 | ---------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-08-15 | 4     | First verification. Four providers checked from primary sources; gate **not closed** — see §1 and §2.                                                                 |
 | 2026-08-15 | 4     | **Executive override.** Owner selected God Mode AI and accepted the unverified items 5 and 8 for the MVP; Sprixen and PixelLab dropped. Gate open, not passed — §1.5. |
+
+## Ek — Faz 16 yol dilimi (2026-08-20)
+
+`road_segment_tile-a@2x.png` — kullanıcı tarafından 2026-08-20'de teslim edildi
+(oturum içi bırakılan tek dosya; üretim aracı beyan edilmedi). Görsel aile ve
+teslim biçimi 172'lik setle aynı üretim kanalını işaret ediyor ve §1.5'teki
+yönetici kararının kapsamı içinde kabul edildi; **araç/lisans teyidi kullanıcıya
+açık soru olarak PHASE_16_REPORT'ta kayıtlıdır.** Doğrulama: 9/9 kontrol,
+palet-affinity aile içinde (`pnpm assets:validate`, 173 asset 0 failing).

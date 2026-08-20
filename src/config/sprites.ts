@@ -479,6 +479,14 @@ export const FX_FRAMES = {
   sparkle: `fx_sparkle_soft${SUFFIX}`,
 } as const;
 
+/**
+ * The baked road tile — Phase 16, the first regeneration-list item to receive
+ * real art (delivered 2026-08-20 as a 16 m isometric slice; ASSET_PIPELINE §5
+ * names the format). One tile for every stage: the road is the one surface
+ * that genuinely is the same place at all four.
+ */
+export const ROAD_FRAME = `road_segment_tile-a${SUFFIX}`;
+
 /** The baked lot surface, one slice per stage where a stage has its own. */
 export const GROUND_FRAMES: Readonly<Record<number, string>> = {
   1: `ground_stage1_tile-a${SUFFIX}`,
