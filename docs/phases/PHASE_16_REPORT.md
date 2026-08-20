@@ -89,6 +89,18 @@ suite's discipline is exactly what it was. Not one assertion changed. This is
 the same recorded discipline as the readiness budgets sized for a runner that
 decodes atlases the slow way (P13 consolidation).
 
+**Fix, part 3 — the underlying arithmetic.** With the preview gate green at
+f9f2aae, CI's own localhost chromium job — green at bf3ec1a and 315bf6d —
+failed on the very same tests with no product change in between. The green
+runs show why: 29.5 s and 31.9 s against 30 s, 1.8 m against 2.0 m. P15's
+calendar made a sim tick ~37% dearer and the bench baseline was re-recorded
+for it under §11 — but the e2e watchdogs, which time exactly those sim loops
+on runner hardware, were never resized, leaving six tests inside 80% of
+budget and pass/fail decided by runner draw. Local base budgets now give the
+worst observed green duration ~50% headroom (default 30 s → 45 s,
+serviceLoop 120 s → 180 s); external targets still double. Assertions
+untouched, evidence in `tests/helpers/budget.ts`.
+
 ## 4. CI / DEPLOYMENT EVIDENCE
 
 > ⏳ Appended after push.
