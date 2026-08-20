@@ -57,7 +57,7 @@ export const OFFLINE_MIN_REPORT_MS = 5 * 60 * 1000;
  * the ECONOMY_DESIGN §10 list — "park, mutfak, masa, personel, kuyruk".
  */
 export const OFFLINE_LIMITERS = ['parking', 'kitchen', 'tables', 'staff', 'queue'] as const;
-export type OfflineLimiter = (typeof OFFLINE_LIMITERS)[number];
+type OfflineLimiter = (typeof OFFLINE_LIMITERS)[number];
 
 /**
  * Below this, no capacity was the limiter — *demand* was.
