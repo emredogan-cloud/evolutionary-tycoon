@@ -2,7 +2,7 @@
 
 **Phase:** 14 — the return becomes informative
 **Date:** 2026-08-20
-**Result:** ✅ **PASS (technical)** — local gates all green; CI/preview evidence appended at the SHAs below
+**Result:** ✅ **PASS (technical)** — local gates green, CI 11/11 green, preview-e2e green on the real CDN
 **Branch:** `phase/14-offline` (stacked on `phase/consolidation-art`)
 
 ---
@@ -80,14 +80,25 @@ Security scenarios 1–14 from the batch directive map to: `offlineSystem.test.t
 manipulated meter, migrated save), `offlineScenarios.spec.ts` (browser-level 3,
 4, 5, 8, corrupt save), `lifecycle.test.ts` (12, 13 at the DOM seam).
 
-## 4. CI / DEPLOYMENT EVIDENCE
+## 4. CI / DEPLOYMENT EVIDENCE (appended once the workflows finished)
 
-> ⏳ **PENDING at the time this section was first written** — the branch had not
-> been pushed yet, and this project does not claim green it has not seen. Filled
-> in below, with run IDs and the live health probe, once the workflows finished.
-
-_(to be appended after push: CI run URL + job matrix, preview-e2e run URL,
-deployment URL + `/health.json` SHA + schemaVersion 9, CDN warm-visit bytes)_
+- **CI green** at the phase head `26d4587` — run **32350807804**, all 11 jobs
+  (quality · security · assets · balance · perf · unit+integration · build+size
+  · E2E chromium · E2E firefox under xvfb · WebKit smoke · visual). The first
+  dispatch at `09757f2` went red on exactly one finding — knip, a type export
+  the demand rework had orphaned — every other job green there too; fixed in
+  `26d4587`, no test touched.
+- **Preview E2E green** against the Vercel deployments of _both_ SHAs — runs
+  **32350134863** (`09757f2`) and **32351060875** (`26d4587`) — the full
+  chromium suite incl. the five offline scenarios and both service-worker specs
+  on the real CDN with the real `/api/time`.
+- **Deployment of record:**
+  `https://evolutionary-tycoon-*-emre30283-4955s-projects.vercel.app` (git
+  integration build of `26d4587`); `/health.json` → buildSha
+  `26d45870df121ee84f68b061b4c1abbefcc997c0` — **exact match**, schemaVersion
+  **9**; `/sw.js` served `cache-control: no-cache, must-revalidate` as
+  configured.
+- Production smoke: **skipped by design** — no production deployment exists.
 
 ## 5. NOT RUN
 
