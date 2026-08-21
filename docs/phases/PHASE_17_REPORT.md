@@ -75,10 +75,32 @@ audit filed (fire/coin — drawing truthful neighbours until then, recorded in t
    boot order in miniature (91a5f09). The hunt leaves permanent forensics —
    `World.hashSections()` plus hook getters that name the diverging
    neighbourhood instead of a sixteen-hex shrug.
+3. **And then a second, deeper one under it: `Math.hypot`.** Firefox's
+   trajectory survived the planDay fix unchanged, so a temporary section
+   locator rode one CI round (d97da41) and named it exactly: only the
+   `customers` section, from the first pedestrian stride (tick 400-500).
+   `Math.hypot` carries no rounding guarantee; V8's strays where
+   SpiderMonkey's does not - proven beyond argument when the sqrt-swept node
+   figure at tick 1000 came out byte-for-byte equal to the value Firefox had
+   been producing all along. All fifteen sim call sites now go through
+   `euclidean()` (correctly-rounded `sqrt` of squares), an eslint restriction
+   bans `Math.hypot` from the sim tree permanently, and the twelfth pin
+   renewal records the story (d5e068b). The midnight boot's empty first hour
+   had hidden this since Phase 7; the daylight decision ended the luck -
+   the best thing it did all batch.
 
 ## 4. CI / DEPLOYMENT EVIDENCE
 
-> ⏳ Appended after push.
+| SHA       | Change                      | CI                                                                               | Preview E2E              |
+| --------- | --------------------------- | -------------------------------------------------------------------------------- | ------------------------ |
+| `7a28d23` | P17 complete                | 32450020298 - chromium+firefox red (stale pins)                                  | 32450200382 - red (same) |
+| `978e126` | 11th pin renewal            | 32450756322 - **firefox-only red** (the real divergence)                         | 32450938549 - **GREEN**  |
+| `91a5f09` | planDay invalidation        | 32452361218 - firefox red (second divergence beneath)                            | 32452589997 - **GREEN**  |
+| `d97da41` | section locator (temporary) | 32453178131 - locator names `customers`                                          | -                        |
+| `d5e068b` | the sqrt sweep              | **32454056716 - GREEN, all 11** (firefox matches node checkpoint-for-checkpoint) | **32454300583 - GREEN**  |
+
+> Final-state evidence (this docs SHA's own runs) is appended at the batch
+> close, per the addendum precedent.
 
 ## 5. NOT RUN / NOT POSSIBLE
 
