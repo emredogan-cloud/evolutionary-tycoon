@@ -68,16 +68,16 @@ Detail: `docs/phases/PHASE_18_REPORT.md`.
 
 ## 3. VERIFIED (the batch's own numbers)
 
-| Gate               | Result                                                                                                                 |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `pnpm verify`      | exit 0 at every phase close — bundle 477.86 kB gz / 550 budget                                                         |
-| Unit + integration | **1 531 passed**                                                                                                       |
-| Determinism suite  | **61/61**, including outcome-invariance for every new command                                                          |
-| E2E                | chromium **92** + firefox under xvfb (CI matrix)                                                                       |
-| Visual             | world 18/18 container-regenerated, host-byte-identical; panel goldens 24/24 container-canonical across two verify runs |
-| Balance            | stage-1 + stage-2 windows asserted, dead-end 68.9 s ≤ 90, policy spread 1.0× ≤ 2.5                                     |
-| Coverage tool      | 131/131 prompts, 0 missing · 0 duplicate · 0 orphan                                                                    |
-| CI + Preview E2E   | ⏳ FINAL-SHA-EVIDENCE                                                                                                  |
+| Gate               | Result                                                                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`      | exit 0 at every phase close — bundle 477.86 kB gz / 550 budget                                                                                                                                    |
+| Unit + integration | **1 531 passed**                                                                                                                                                                                  |
+| Determinism suite  | **61/61**, including outcome-invariance for every new command                                                                                                                                     |
+| E2E                | chromium **92** + firefox under xvfb (CI matrix)                                                                                                                                                  |
+| Visual             | world 18/18 container-regenerated, host-byte-identical; panel goldens 24/24 container-canonical across two verify runs                                                                            |
+| Balance            | stage-1 + stage-2 windows asserted, dead-end 68.9 s ≤ 90, policy spread 1.0× ≤ 2.5                                                                                                                |
+| Coverage tool      | 131/131 prompts, 0 missing · 0 duplicate · 0 orphan                                                                                                                                               |
+| CI + Preview E2E   | **GREEN at `d0cbae4`** — CI 32467140143 (8m45s) + Preview E2E 32467368549 (5m59s); docs SHA `5652f4a` green on its own runs too — CI **32469364343** (9m7s) + Preview E2E **32469594005** (5m25s) |
 
 ### The determinism hunt this batch paid for (and what it bought)
 
