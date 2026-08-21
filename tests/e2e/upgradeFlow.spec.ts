@@ -118,7 +118,7 @@ test.describe('buying an upgrade', () => {
     await expect(card).toBeVisible();
     await expect(page.locator('[data-testid="upgrade-level"]')).toHaveText(/Seviye 0 \/ 4/);
     await expect(card).toContainText('1.00×');
-    await expect(card).toContainText('1.30×');
+    await expect(card).toContainText('1.50×');
     // ₡6 since Phase 12 rescaled the Stage 1 ladder so the next rung is always
     // inside ninety seconds of income — PHASE_12_REPORT §4.
     await expect(page.locator('[data-testid="upgrade-buy"]')).toContainText('₡6');

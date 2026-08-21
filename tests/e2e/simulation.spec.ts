@@ -78,7 +78,16 @@ const REFERENCE = {
    * factor, so the thousandth tick rides a resampled — equally distributed —
    * arrival stream. Both figures recomputed by the Node suite, as always.
    */
-  hashAtTick0: '0e732b19df6e2aab',
+  /*
+   * A tenth time, 2026-08-21 — and tick 0 moved for the first time since
+   * Phase 11, because the user's daylight decision changed the starting
+   * state itself: a fresh world now opens at 08:00 (DEFAULT_GAME_START_HOUR),
+   * so the clock — hashed since Phase 2 — differs at tick 0. Tick 1000 then
+   * rides a morning arrival stream instead of a midnight-empty one, plus the
+   * calibration pass's ladder (P17 batch, user-authorized): sign and menu
+   * effects, the SS3-budget stage-2 ladder, stage-4 prices.
+   */
+  hashAtTick0: 'a01ff54564e0b679',
   /*
    * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
    * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
@@ -102,7 +111,7 @@ const REFERENCE = {
    * the pre-P15 one again and the thousandth tick moved with it. Tick 0 is
    * unchanged — the calendar state at tick 0 is the same either way.
    */
-  hashAtTick1000: 'd0a614d057d0da66',
+  hashAtTick1000: '3db3c0dffba74db9',
 } as const;
 
 interface TestApi {
@@ -236,7 +245,7 @@ test.describe('simulation kernel in the browser', () => {
     });
 
     expect(state.tick).toBe(400);
-    expect(state.simTimeMs).toBe(400 * 50);
+    expect(state.simTimeMs).toBe(240_000 + 400 * 50); // the 08:00 opening plus 400 ticks
     expect(state.paused).toBe(true);
   });
 
