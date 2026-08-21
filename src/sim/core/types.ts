@@ -312,6 +312,8 @@ interface AudioSettings {
   music: number;
   sfx: number;
   muted: boolean;
+  /** Ambience bed level — Phase 17's fourth slider (GDD §14.9). */
+  ambience: number;
 }
 
 interface A11ySettings {
@@ -376,6 +378,12 @@ export interface ActorSnapshot {
    * on every customer is exactly the kind of thing nobody can point at.
    */
   readonly moving: boolean;
+  /**
+   * What this actor is doing, as `@config/animation`'s ACTIVITIES index —
+   * Phase 17. Derived per view from the state machines; the clip layer keys
+   * off it. Always 0 for vehicles and props.
+   */
+  readonly activity: number;
   /**
    * Which one of this kind — a vehicle's archetype, a person's appearance.
    *

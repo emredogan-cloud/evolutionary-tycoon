@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { emitPrompts } from '../../../tools/asset-pipeline/prompts.ts';
-import { numberPrompts, renderPromptHtml } from '../../../tools/asset-pipeline/promptExport.ts';
+import { allPrompts, renderPromptHtml } from '../../../tools/asset-pipeline/promptExport.ts';
 
 /**
  * The handover artefact, checked for the things that would waste somebody's
@@ -15,11 +15,13 @@ import { numberPrompts, renderPromptHtml } from '../../../tools/asset-pipeline/p
  * are discovered only after the art has been made wrong.
  */
 
-const EXPECTED_PROMPTS = 172;
+const DELIVERED_PROMPTS = 172;
+/** The delivered 172 plus the 2026-08-21 audit's 131 (P173–P303). */
+const EXPECTED_PROMPTS = 303;
 const HTML_PATH = resolve(import.meta.dirname, '../../../docs/ASSET_GENERATION_PROMPTS.html');
 
 describe('prompt numbering', () => {
-  const numbered = numberPrompts(emitPrompts());
+  const numbered = allPrompts();
 
   it('assigns exactly one id per prompt', () => {
     expect(numbered).toHaveLength(EXPECTED_PROMPTS);
@@ -29,13 +31,19 @@ describe('prompt numbering', () => {
   it('numbers in emission order, zero-padded and stable', () => {
     expect(numbered[0]?.id).toBe('P001');
     expect(numbered[171]?.id).toBe('P172');
+    // The audit's first card lands exactly where the matrix numbered it.
+    expect(numbered[172]?.id).toBe('P173');
+    expect(numbered[172]?.audit).toBeDefined();
+    expect(numbered[302]?.id).toBe('P303');
+    // The delivered core is still exactly 172 — the audit appends, never edits.
+    expect(emitPrompts()).toHaveLength(DELIVERED_PROMPTS);
     numbered.forEach((asset, index) => {
       expect(asset.index).toBe(index + 1);
     });
   });
 
   it('is deterministic across runs', () => {
-    const again = numberPrompts(emitPrompts());
+    const again = allPrompts();
     expect(again.map((asset) => `${asset.id}:${asset.file}`)).toEqual(
       numbered.map((asset) => `${asset.id}:${asset.file}`),
     );
@@ -60,7 +68,7 @@ describe('prompt numbering', () => {
 });
 
 describe('the exported page', () => {
-  const numbered = numberPrompts(emitPrompts());
+  const numbered = allPrompts();
   const html = renderPromptHtml(numbered);
 
   it('contains every prompt id exactly once', () => {
@@ -105,7 +113,7 @@ describe('the exported page', () => {
 
   it('lists every batch as its own section', () => {
     const batches = [...new Set(numbered.map((asset) => asset.batch))];
-    expect(batches).toHaveLength(12);
+    expect(batches).toHaveLength(22);
     for (const batch of batches) {
       expect(html).toContain(`id="batch-${batch}"`);
     }
@@ -119,7 +127,7 @@ describe('the exported page', () => {
 
   it('shows the counts a reader would check first', () => {
     expect(html).toContain(`<b>${EXPECTED_PROMPTS}</b><span>prompts</span>`);
-    expect(html).toContain('<b>12</b><span>batches</span>');
+    expect(html).toContain('<b>22</b><span>batches</span>');
   });
 
   it('is self-contained and offline', () => {
@@ -140,11 +148,11 @@ describe('the exported page', () => {
 
   it('offers per-prompt and per-batch copying', () => {
     expect(html.split('data-copy="one"').length - 1).toBe(EXPECTED_PROMPTS);
-    expect(html.split('data-copy="batch"').length - 1).toBe(12);
+    expect(html.split('data-copy="batch"').length - 1).toBe(22);
   });
 
   it('renders identically on a second run', () => {
-    expect(renderPromptHtml(numberPrompts(emitPrompts()))).toBe(html);
+    expect(renderPromptHtml(allPrompts())).toBe(html);
   });
 });
 
@@ -153,10 +161,10 @@ describe('the committed page on disk', () => {
     // Guards the case where someone edits a batch definition and forgets to
     // re-export, leaving the person doing the generating with a stale page.
     const onDisk = readFileSync(HTML_PATH, 'utf8');
-    expect(onDisk).toBe(renderPromptHtml(numberPrompts(emitPrompts())));
+    expect(onDisk).toBe(renderPromptHtml(allPrompts()));
   });
 
-  it('carries all 172 prompts', () => {
+  it('carries all 303 prompts', () => {
     const onDisk = readFileSync(HTML_PATH, 'utf8');
     expect(onDisk.split('data-copy="one"').length - 1).toBe(EXPECTED_PROMPTS);
   });

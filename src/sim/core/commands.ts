@@ -38,6 +38,34 @@ interface SetPausedCommand {
 }
 
 /**
+ * Move one audio slider — Phase 17.
+ *
+ * A command rather than a direct write for the same reason speed is: settings
+ * are world state (hashed, saved), so they change at tick boundaries through
+ * the log, and a replay reproduces the mix the session actually had.
+ */
+interface SetAudioCommand {
+  readonly t: 'SET_AUDIO';
+  readonly tick: number;
+  readonly channel: 'master' | 'music' | 'sfx' | 'ambience';
+  /** 0..1, clamped on apply. */
+  readonly value: number;
+}
+
+interface SetMutedCommand {
+  readonly t: 'SET_MUTED';
+  readonly tick: number;
+  readonly muted: boolean;
+}
+
+/** The a11y motion preference — Phase 17. Never touches simulation speed. */
+interface SetReducedMotionCommand {
+  readonly t: 'SET_REDUCED_MOTION';
+  readonly tick: number;
+  readonly on: boolean;
+}
+
+/**
  * Start preparing an order — the player being the cook, in Stage 1.
  *
  * `orderSlot` of -1 means "whichever is next", which is what a click on the
@@ -170,7 +198,10 @@ export type Command =
   | EvolveCommand
   | PlaceCommand
   | RemoveCommand
-  | CollectOfflineCommand;
+  | CollectOfflineCommand
+  | SetAudioCommand
+  | SetMutedCommand
+  | SetReducedMotionCommand;
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
@@ -184,7 +215,10 @@ export type CommandInput =
   | Omit<EvolveCommand, 'tick'>
   | Omit<PlaceCommand, 'tick'>
   | Omit<RemoveCommand, 'tick'>
-  | Omit<CollectOfflineCommand, 'tick'>;
+  | Omit<CollectOfflineCommand, 'tick'>
+  | Omit<SetAudioCommand, 'tick'>
+  | Omit<SetMutedCommand, 'tick'>
+  | Omit<SetReducedMotionCommand, 'tick'>;
 
 /**
  * Apply one command to the world.
@@ -212,6 +246,18 @@ export function apply(world: World, command: Command): void {
         world.control.paused = command.paused;
         world.eventQueue.emitPauseChanged(command.paused);
       }
+      break;
+    }
+    case 'SET_AUDIO': {
+      world.settings.audio[command.channel] = Math.min(1, Math.max(0, command.value));
+      break;
+    }
+    case 'SET_MUTED': {
+      world.settings.audio.muted = command.muted;
+      break;
+    }
+    case 'SET_REDUCED_MOTION': {
+      world.settings.a11y.reducedMotion = command.on;
       break;
     }
     case 'MANUAL_PREP': {
@@ -299,6 +345,12 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'SET_SPEED', tick, mult: input.mult };
     case 'SET_PAUSED':
       return { t: 'SET_PAUSED', tick, paused: input.paused };
+    case 'SET_AUDIO':
+      return { t: 'SET_AUDIO', tick, channel: input.channel, value: input.value };
+    case 'SET_MUTED':
+      return { t: 'SET_MUTED', tick, muted: input.muted };
+    case 'SET_REDUCED_MOTION':
+      return { t: 'SET_REDUCED_MOTION', tick, on: input.on };
     case 'MANUAL_PREP':
       return { t: 'MANUAL_PREP', tick, orderSlot: input.orderSlot };
     case 'BUY_UPGRADE':

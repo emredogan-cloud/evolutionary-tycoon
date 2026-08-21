@@ -4,6 +4,8 @@ import { PATHS } from './paths.ts';
 import { readPromptBlock } from './promptBlock.ts';
 import { emitPrompts } from './prompts.ts';
 import type { PromptedAsset } from './prompts.ts';
+import { auditPrompts } from './auditPrompts.ts';
+import type { AuditPrompt } from './auditPrompts.ts';
 
 /**
  * The prompt set as a single offline HTML page.
@@ -28,6 +30,10 @@ import type { PromptedAsset } from './prompts.ts';
  */
 
 export interface ExportedPrompt extends PromptedAsset {
+  /** Present on the 2026-08-21 audit's cards — status/priority metadata. */
+  readonly audit?: AuditPrompt['audit'];
+  /** Set on a delivered card whose target a corrected audit prompt now owns. */
+  readonly supersededBy?: string;
   /** Stable, zero-padded, assigned in emission order. */
   readonly id: string;
   readonly index: number;
@@ -83,6 +89,8 @@ main{padding:0 24px 60px}
 .file{font-family:var(--mono);font-size:12px;word-break:break-all}
 .tag{font-size:11px;color:var(--dim);border:1px solid var(--edge);border-radius:4px;padding:1px 6px}
 .tag.split{color:var(--warn);border-color:var(--warn)}
+.tag.new{background:#3f5d2e;color:#d7f0c0;border-radius:4px;padding:0 6px}
+.tag.superseded{background:#5d3a2e;color:#f0d0c0;border-radius:4px;padding:0 6px}
 .meta{padding:9px 13px;font-size:12.5px;color:var(--dim);border-bottom:1px solid var(--edge)}
 .meta b{color:var(--ink);font-weight:600}
 .meta div+div{margin-top:4px}
@@ -187,18 +195,32 @@ export function renderPromptHtml(assets: readonly ExportedPrompt[]): string {
           `${asset.id} ${asset.file} ${category} ${asset.subjectKey} ${asset.describe}`.toLowerCase();
         const size =
           asset.size === null ? 'derived per part' : `${asset.size.width} x ${asset.size.height} px`;
-        return `      <article class="card" data-cat="${escapeHtml(category)}" data-file="${escapeHtml(asset.file)}" data-search="${escapeHtml(search)}">
+        const superseded =
+          asset.supersededBy === undefined ? '' : ` data-superseded-by="${escapeHtml(asset.supersededBy)}"`;
+        const auditTag =
+          asset.audit === undefined ? '' : `\n          <span class="tag new">new in this audit</span>`;
+        const supersededTag =
+          asset.supersededBy === undefined
+            ? ''
+            : `\n          <span class="tag superseded">superseded by ${escapeHtml(asset.supersededBy)}</span>`;
+        const auditMeta =
+          asset.audit === undefined
+            ? ''
+            : `\n          <div><b>Status:</b> ${escapeHtml(asset.audit.status)}</div>` +
+              `\n          <div><b>Runtime role:</b> ${escapeHtml(asset.audit.role)}</div>` +
+              `\n          <div><b>Priority:</b> ${escapeHtml(asset.audit.priority)} · <b>Stage:</b> ${escapeHtml(asset.audit.stage)}${asset.audit.before === null ? '' : ` · <b>Needed before:</b> ${escapeHtml(asset.audit.before)}`}</div>`;
+        return `      <article class="card" data-cat="${escapeHtml(category)}" data-file="${escapeHtml(asset.file)}" data-search="${escapeHtml(search)}"${superseded}>
         <div class="head">
           <span class="pid">${asset.id}</span>
           <span class="file">${escapeHtml(asset.file)}</span>
           <span class="tag">${escapeHtml(category)}</span>
           <span class="tag">${escapeHtml(asset.subjectKey)}</span>
-          ${asset.split ? '<span class="tag split">split half</span>' : ''}
+          ${asset.split ? '<span class="tag split">split half</span>' : ''}${auditTag}${supersededTag}
         </div>
         <div class="meta">
           <div><b>Subject:</b> ${escapeHtml(asset.describe)}</div>
           <div><b>Size:</b> ${escapeHtml(size)}</div>
-          <div><b>Target file:</b> <span class="file">${escapeHtml(asset.file)}</span></div>
+          <div><b>Target file:</b> <span class="file">${escapeHtml(asset.file)}</span></div>${auditMeta}
         </div>
         <pre>${escapeHtml(asset.prompt)}</pre>
         <div class="acts"><button data-copy="one">Copy prompt</button></div>
@@ -209,8 +231,9 @@ export function renderPromptHtml(assets: readonly ExportedPrompt[]): string {
   const sections = batches
     .map((batch) => {
       const count = assets.filter((asset) => asset.batch === batch).length;
-      const note =
-        batch === 'golden-references'
+      const note = batch.startsWith('audit-')
+        ? 'Appended by the 2026-08-21 exhaustive audit (docs/FINAL_ASSET_REQUIREMENTS.md). Same rules as every batch: one session per batch, golden references attached, immutable block untouched.'
+        : batch === 'golden-references'
           ? 'Generate these FIRST and settle them before anything else — they become the style for every asset that follows, and each one is attached as a reference image afterwards. They cite no reference of their own.'
           : 'Generate this batch in ONE session with the approved golden references attached (ASSET_PIPELINE §4.3 step 3). Same-session coherence is most of what keeps a category looking related; never generate these one at a time.';
       return `    <section class="batch" id="batch-${escapeHtml(batch)}">
@@ -280,8 +303,28 @@ ${sections}
 `;
 }
 
+/**
+ * Everything the catalog renders: the 172 delivered prompts, then the audit's
+ * corrected/new prompts in matrix order, with superseded targets marked on
+ * the delivered card so exactly one canonical prompt owns every file.
+ */
+export function allPrompts(): ExportedPrompt[] {
+  const audit = auditPrompts();
+  const supersededTargets = new Map(audit.map((entry) => [entry.file, entry]));
+  const delivered = emitPrompts();
+  const numbered = numberPrompts([...delivered, ...audit]);
+  return numbered.map((asset, index) => {
+    const auditEntry = index >= delivered.length ? audit[index - delivered.length] : undefined;
+    if (auditEntry !== undefined) return { ...asset, audit: auditEntry.audit };
+    const successor = supersededTargets.get(asset.file);
+    if (successor === undefined) return asset;
+    const successorIndex = delivered.length + audit.indexOf(successor);
+    return { ...asset, supersededBy: `P${String(successorIndex + 1).padStart(3, '0')}` };
+  });
+}
+
 export function exportPromptHtml(path: string = PATHS.promptHtml): ExportResult {
-  const assets = numberPrompts(emitPrompts());
+  const assets = allPrompts();
   writeFileSync(path, renderPromptHtml(assets), 'utf8');
   return {
     path,

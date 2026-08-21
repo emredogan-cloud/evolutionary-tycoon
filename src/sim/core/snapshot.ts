@@ -142,6 +142,7 @@ export interface WorldSnapshot {
       readonly music: number;
       readonly sfx: number;
       readonly muted: boolean;
+      readonly ambience: number;
     };
     readonly a11y: { readonly reducedMotion: boolean; readonly highContrast: boolean };
   };
@@ -387,6 +388,7 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.stats.failureReasons.fill(0);
 
   world.settings.audio.master = snapshot.settings.audio.master;
+  world.settings.audio.ambience = snapshot.settings.audio.ambience;
   world.settings.audio.music = snapshot.settings.audio.music;
   world.settings.audio.sfx = snapshot.settings.audio.sfx;
   world.settings.audio.muted = snapshot.settings.audio.muted;

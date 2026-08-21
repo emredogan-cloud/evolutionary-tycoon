@@ -164,6 +164,8 @@ const saveFileV10Schema = z.object({
       music: z.number().min(0).max(1),
       sfx: z.number().min(0).max(1),
       muted: z.boolean(),
+      /** Phase 17, schema v11 — the ambience bed's own slider. */
+      ambience: z.number().min(0).max(1),
     }),
     a11y: z.object({ reducedMotion: z.boolean(), highContrast: z.boolean() }),
   }),

@@ -162,7 +162,7 @@ export class World {
     failureReasons: new Uint32Array(CONVERSION_REASONS.length),
   };
   readonly settings: SettingsState = {
-    audio: { master: 1, music: 1, sfx: 1, muted: false },
+    audio: { master: 1, music: 1, sfx: 1, muted: false, ambience: 1 },
     a11y: { reducedMotion: false, highContrast: false },
   };
 
@@ -318,6 +318,7 @@ export class World {
     h.writeF64(this.settings.audio.music);
     h.writeF64(this.settings.audio.sfx);
     h.writeBool(this.settings.audio.muted);
+    h.writeF64(this.settings.audio.ambience);
     h.writeBool(this.settings.a11y.reducedMotion);
     h.writeBool(this.settings.a11y.highContrast);
 
@@ -404,6 +405,7 @@ export class World {
     this.settings.audio.music = 1;
     this.settings.audio.sfx = 1;
     this.settings.audio.muted = false;
+    this.settings.audio.ambience = 1;
     this.settings.a11y.reducedMotion = false;
     this.settings.a11y.highContrast = false;
   }

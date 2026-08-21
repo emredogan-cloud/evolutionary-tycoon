@@ -325,6 +325,35 @@ const v9ToV10: Migration = {
   }),
 };
 
+/**
+ * v11 — Phase 17, the audio director's fourth slider.
+ *
+ * Ambience arrives at full volume, the same default a fresh world gets: a v10
+ * player has been hearing nothing (no audio system existed), so "as loud as
+ * the master allows" is the default they would have chosen by never touching
+ * a slider that did not exist.
+ */
+const v10ToV11: Migration = {
+  from: 10,
+  to: 11,
+  up: (save) => {
+    /*
+     * Defensive against the minimal hand-built chain fixtures, like every
+     * migration before it: a v1 object may not carry `settings` at all, and
+     * this step's only job is the one field it introduces.
+     */
+    const previous = (save as { settings?: { audio?: Record<string, unknown> } }).settings;
+    return {
+      ...save,
+      schemaVersion: 11,
+      settings: {
+        ...(previous ?? {}),
+        audio: { ...(previous?.audio ?? {}), ambience: 1 },
+      },
+    };
+  },
+};
+
 export const migrations: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -335,6 +364,7 @@ export const migrations: readonly Migration[] = [
   v7ToV8,
   v8ToV9,
   v9ToV10,
+  v10ToV11,
 ];
 
 assertContiguous(migrations);

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 11,
+  "buildSha": "fixture-v11",
+  "createdAt": 1764000000000,
+  "lastSeenAt": 1764000600000,
+  "lastSeenServerAt": 1764000600000,
+  "playtimeMs": 36050,
+  "offline": { "meter": null, "pending": null },
+  "tick": 721,
+  "nextEntityId": 38,
+  "clock": { "simTimeMs": 276050 },
+  "rng": {
+    "traffic": { "a": -1948346612, "b": -1013471694, "c": 1610779841, "d": 1559431394 },
+    "conversion": { "a": 1861348016, "b": -1285067118, "c": -803969244, "d": -189005762 },
+    "customer": { "a": 73524959, "b": -1781937003, "c": 690524324, "d": 1450601706 },
+    "tips": { "a": -1006839749, "b": 581093190, "c": -2124484763, "d": -449297221 },
+    "events": { "a": -440215798, "b": 1019827619, "c": 1290564491, "d": 1009619006 },
+    "cosmetic": { "a": -1166300199, "b": 1263116921, "c": -1145502117, "d": -829164119 }
+  },
+  "control": { "speedMultiplier": 1, "paused": false },
+  "progression": { "stage": 1, "unlocks": [], "milestones": [], "pendingStage": 0 },
+  "construction": { "targetStage": 0, "elapsedMs": 0, "totalMs": 0 },
+  "economy": {
+    "cash": 0,
+    "reputation": 50,
+    "lifetimeRevenue": 0,
+    "lifetimeSpend": 0,
+    "prices": [],
+    "revenueWindow": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "expenseWindow": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "bucketIndex": 7,
+    "bucketElapsedMs": 1050
+  },
+  "layout": { "placed": [], "revision": 0, "upgrades": [] },
+  "staff": { "hired": [], "settleElapsedMs": 0, "employees": [] },
+  "traffic": { "nextCandidateMs": 277146.4464031188, "nextDecorativeMs": 277068.11865102814 },
+  "environment": {
+    "plannedDay": 0,
+    "weatherSegments": [0, 1, 0, 0],
+    "eventTypes": [-1, -1, -1, 3, -1, -1],
+    "eventStartMs": [0, 0, 0, 55113.99506125599, 0, 0],
+    "eventEndMs": [0, 0, 0, 118615.60213495977, 0, 0],
+    "lastWeather": 1,
+    "lastActiveEvent": -1
+  },
+  "stats": {
+    "customersServed": 0,
+    "conversionsSucceeded": 2,
+    "conversionsFailed": 23,
+    "turnedAwayNoParking": 0,
+    "customersAbandoned": 0,
+    "vehiclesSpawned": 34,
+    "convertibleSpawned": 25,
+    "commandsApplied": 2
+  },
+  "settings": {
+    "audio": { "master": 1, "music": 0.55, "sfx": 1, "muted": false, "ambience": 0.7 },
+    "a11y": { "reducedMotion": false, "highContrast": false }
+  },
+  "checksum": "bbc522d4"
+}

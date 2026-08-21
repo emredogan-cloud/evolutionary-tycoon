@@ -9,6 +9,37 @@ import type { SimSystem } from './SystemPipeline';
 import { SystemPipeline } from './SystemPipeline';
 import { activeEventSlot, currentWeather } from '../systems/EventSystem';
 import { ACTOR_KIND_VEHICLE } from '@config/actors';
+import {
+  ACTIVITY_ANGRY,
+  ACTIVITY_CLEAN,
+  ACTIVITY_COOK,
+  ACTIVITY_EAT,
+  ACTIVITY_IDLE,
+  ACTIVITY_PAY,
+  ACTIVITY_SERVE,
+  ACTIVITY_TAKE_ORDER,
+  ACTIVITY_WAIT_IMPATIENT,
+  ACTIVITY_WALK,
+  ACTIVITY_WALK_CARRY,
+  IMPATIENT_PATIENCE_FRACTION,
+} from '@config/animation';
+import { TASK_KINDS } from '@config/employees';
+import type { EmployeeRecord } from '../stores/employees';
+import {
+  STATE_ABANDONING,
+  STATE_EATING,
+  STATE_LEAVING_ANGRY,
+  STATE_ORDERING,
+  STATE_PAYING,
+  STATE_QUEUEING_AT_COUNTER,
+  STATE_WAITING_FOR_FOOD,
+} from '../ai/fsm/customerFsm';
+
+/** Brain state 2 — `BRAIN_STATES` in the employee store. */
+const EMPLOYEE_STATE_PERFORMING = 2;
+const TASK_KIND_PREP = TASK_KINDS.indexOf('PREP_ORDER');
+const TASK_KIND_DELIVER = TASK_KINDS.indexOf('DELIVER_ORDER');
+const TASK_KIND_CLEAN = TASK_KINDS.indexOf('CLEAN_TABLE');
 import { ARRIVAL_EPSILON_METRES } from '@config/customer';
 import { BRAKE_LIGHT_DECEL } from '@config/traffic';
 import { stageManeuverSystem } from '../systems/noop';
@@ -128,6 +159,7 @@ export class Sim {
         z: 0,
         kind: 0,
         variant: 0,
+        activity: 0,
         headingX: 1,
         headingY: 0,
         braking: false,
@@ -323,6 +355,7 @@ export class Sim {
       out.braking = false;
       out.patience = 0;
       out.moving = record.state === 1;
+      out.activity = employeeActivity(this.world, record, out.moving);
       count++;
     }
     return count;
@@ -355,6 +388,7 @@ export class Sim {
       target.kind = ACTOR_KIND_VEHICLE;
       // Which car, so the renderer can draw a van as a van.
       target.variant = vehicles.archetype[slot] ?? 0;
+      target.activity = 0;
       target.headingX = this.laneSample.tangentX;
       target.headingY = this.laneSample.tangentY;
       target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
@@ -403,6 +437,7 @@ export class Sim {
        */
       target.moving =
         Math.hypot(record.targetX - record.x, record.targetY - record.y) > ARRIVAL_EPSILON_METRES;
+      target.activity = customerActivity(record.state, target.moving, target.patience);
       index++;
     }
     return index;
@@ -454,4 +489,44 @@ export function replay(sim: Sim, commands: readonly Command[], untilTick: number
     }
     sim.tick();
   }
+}
+
+/**
+ * A customer's activity, from their state machine — Phase 17.
+ *
+ * Presentation-only derivation: the FSM stays the authority on behaviour; this
+ * is just which clip reads as that behaviour at sixty pixels.
+ */
+function customerActivity(state: number, moving: boolean, patience: number): number {
+  if (state === STATE_EATING) return ACTIVITY_EAT;
+  if (state === STATE_PAYING) return ACTIVITY_PAY;
+  if (state === STATE_ORDERING) return ACTIVITY_TAKE_ORDER;
+  if (state === STATE_ABANDONING || state === STATE_LEAVING_ANGRY) return ACTIVITY_ANGRY;
+  if (moving) return ACTIVITY_WALK;
+  if (
+    (state === STATE_QUEUEING_AT_COUNTER || state === STATE_WAITING_FOR_FOOD) &&
+    patience > 0 &&
+    patience < IMPATIENT_PATIENCE_FRACTION
+  ) {
+    return ACTIVITY_WAIT_IMPATIENT;
+  }
+  return ACTIVITY_IDLE;
+}
+
+/**
+ * An employee's activity: their claimed task, while they perform it.
+ *
+ * `PERFORMING` is brain state 2; the task board still holds the claimed
+ * slot's kind. A moving employee with a delivery is a carry-walk — the plate
+ * is the whole point of the trip.
+ */
+function employeeActivity(world: World, record: EmployeeRecord, moving: boolean): number {
+  const kind = record.taskSlot >= 0 ? world.tasks.at(record.taskSlot).kind : -1;
+  if (moving) return kind === TASK_KIND_DELIVER ? ACTIVITY_WALK_CARRY : ACTIVITY_WALK;
+  if (record.state === EMPLOYEE_STATE_PERFORMING) {
+    if (kind === TASK_KIND_PREP) return ACTIVITY_COOK;
+    if (kind === TASK_KIND_DELIVER) return ACTIVITY_SERVE;
+    if (kind === TASK_KIND_CLEAN) return ACTIVITY_CLEAN;
+  }
+  return ACTIVITY_IDLE;
 }
