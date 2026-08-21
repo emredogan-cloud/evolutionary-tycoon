@@ -33,15 +33,17 @@
    */
 
   interface Props {
+    /** Driven by the İnşa Et tile — the panel's single door since the
+     *  consolidation pass; the strip no longer owns a toggle. */
+    active: boolean;
     placed: readonly PlacedView[];
     onplace: (objectId: string, worldX: number, worldY: number) => void;
     onremove: (index: number) => void;
     preview: (objectId: string, screenX: number, screenY: number) => PlacementPreview | null;
   }
 
-  const { placed, onplace, onremove, preview }: Props = $props();
+  const { active, placed, onplace, onremove, preview }: Props = $props();
 
-  let open = $state(false);
   let selected = $state(BUILDABLES[0]?.id ?? '');
   let ghost = $state<PlacementPreview | null>(null);
 
@@ -57,12 +59,12 @@
     BUILDABLES.find((entry) => entry.id === id)?.objectId ?? 'ph-prop-short';
 
   function track(event: PointerEvent): void {
-    if (!open) return;
+    if (!active) return;
     ghost = preview(objectIdOf(selected), event.clientX, event.clientY);
   }
 
   function commit(event: PointerEvent): void {
-    if (!open) return;
+    if (!active) return;
     const verdict = preview(objectIdOf(selected), event.clientX, event.clientY);
     ghost = verdict;
     // Refused here as well as disabled below. The pointer surface is the whole
@@ -71,10 +73,10 @@
     onplace(objectIdOf(selected), verdict.worldX, verdict.worldY);
   }
 
-  function toggle(): void {
-    open = !open;
-    if (!open) ghost = null;
-  }
+  // Leaving build mode clears the ghost so a stale preview cannot linger.
+  $effect(() => {
+    if (!active) ghost = null;
+  });
 </script>
 
 <!--
@@ -83,7 +85,7 @@
   merely stops listening is the kind of thing that swallows a click six months
   later for reasons nobody can find.
 -->
-{#if open}
+{#if active}
   <div
     class="surface"
     data-testid="build-surface"
@@ -108,12 +110,8 @@
   {/if}
 {/if}
 
-<section class="panel" class:open aria-label="İnşa" data-testid="build-panel">
-  <button type="button" class="toggle" data-testid="build-toggle" aria-pressed={open} onclick={toggle}>
-    {open ? 'İnşayı kapat' : 'İnşa et'}
-  </button>
-
-  {#if open}
+{#if active}
+  <section class="panel open" aria-label="Dekor yerleşimi" data-testid="decor-panel">
     <ul class="palette" data-testid="build-palette">
       {#each BUILDABLES as item (item.id)}
         <li>
@@ -150,8 +148,8 @@
         </li>
       {/each}
     </ol>
-  {/if}
-</section>
+  </section>
+{/if}
 
 <style>
   .surface {

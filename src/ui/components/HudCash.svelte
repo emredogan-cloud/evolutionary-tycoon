@@ -1,15 +1,11 @@
 <script lang="ts">
+  import type { PlayerLevelView } from '@app/bridge/hudModel';
+
   /**
-   * The cash panel — the first real connection between the simulation and the
-   * DOM.
-   *
-   * It receives numbers, never a store and never a simulation handle. That is
-   * what makes `src/ui` testable without booting a world, and it is why the
-   * throttle upstream cannot be bypassed from in here: there is nothing to poll.
-   *
-   * Money is formatted to two decimals because Stage 1 sells things for ₡2 and
-   * tips are fractions of that. Rounding to whole units would make a good tip
-   * and no tip look identical, which is the one number the player is watching.
+   * The economy pill, top left — cash with its derivative, the player level
+   * with its bar, and the compact day stats row
+   * (UI_REFERENCE_AUDIT §2). The testids are load-bearing: half the E2E
+   * suite reads the till through `data-cash`.
    */
   interface Props {
     cash: number;
@@ -20,49 +16,98 @@
     gameHour: number;
     /** Net, over the last sixty seconds. Phase 9. */
     incomePerMinute: number;
+    level: PlayerLevelView;
+    reducedMotion: boolean;
   }
 
-  const { cash, reputation, customersServed, customersWaiting, gameDay, gameHour, incomePerMinute }: Props =
-    $props();
+  const {
+    cash,
+    reputation,
+    customersServed,
+    customersWaiting,
+    gameDay,
+    gameHour,
+    incomePerMinute,
+    level,
+    reducedMotion,
+  }: Props = $props();
 
-  // `tr-TR` to match the interface language. Fixed digits either side so the
-  // panel does not resize every time the total crosses a power of ten — a HUD
-  // that reflows while you read it is worse than one that is slightly too wide.
   const money = new Intl.NumberFormat('tr-TR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
   /*
-   * Floored, because `gameHour` is a fraction of a game day and arrives as
-   * 13.799999999999999. Printed raw it read "1 · 13.799999999999999:00", which
-   * is both wrong and a good demonstration of why a clock is formatted rather
-   * than concatenated.
+   * The shown amount counts toward the real one over ~400 ms — money arriving
+   * should be *seen* arriving (§7 of the directive: "cash must update
+   * immediately", and a jump cut reads as a glitch, not an income). The real
+   * value is always in `data-cash`; only the paint animates. Reduced motion
+   * snaps.
    */
+  let shown = $state(0);
+  let raf = 0;
+  $effect(() => {
+    const target = cash;
+    if (reducedMotion) {
+      shown = target;
+      return;
+    }
+    cancelAnimationFrame(raf);
+    const from = shown;
+    const start = performance.now();
+    const step = (now: number): void => {
+      const t = Math.min(1, (now - start) / 400);
+      shown = from + (target - from) * (1 - (1 - t) * (1 - t));
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  });
+
   const clock = $derived(`${String(Math.floor(gameHour)).padStart(2, '0')}:00`);
+  const xpInLevel = $derived(level.xp - level.levelFloor);
+  const xpSpan = $derived(Math.max(1, level.nextLevelXp - level.levelFloor));
+  const xpPct = $derived(Math.min(100, (xpInLevel / xpSpan) * 100));
 </script>
 
 <section class="hud" aria-label="Durum" data-testid="hud">
-  <div class="cash" data-testid="hud-cash" data-cash={cash.toFixed(2)}>
-    <span class="symbol" aria-hidden="true">₡</span>
-    <span class="amount">{money.format(cash)}</span>
-    <!-- The rate, beside the total. A tycoon player reads the derivative, not
-         the value: "am I earning" is the question, and a total answers it only
-         by being watched. -->
-    <span
-      class="rate"
-      class:negative={incomePerMinute < 0}
-      data-testid="hud-income"
-      data-income={incomePerMinute.toFixed(2)}
+  <div class="line">
+    <span class="chip coin" aria-hidden="true">₡</span>
+    <div class="cash" data-testid="hud-cash" data-cash={cash.toFixed(2)}>
+      <span class="amount">{money.format(shown)}</span>
+      <span
+        class="rate"
+        class:negative={incomePerMinute < 0}
+        data-testid="hud-income"
+        data-income={incomePerMinute.toFixed(2)}
+      >
+        {incomePerMinute >= 0 ? '+' : ''}{money.format(incomePerMinute)}/dk
+      </span>
+    </div>
+  </div>
+
+  <div class="line level" data-testid="hud-level" data-level={String(level.level)}>
+    <span class="chip star" aria-hidden="true">★</span>
+    <span class="lvl">Seviye {level.level}</span>
+    <div
+      class="xp"
+      role="progressbar"
+      aria-label="Deneyim"
+      aria-valuenow={Math.round(xpPct)}
+      aria-valuemin="0"
+      aria-valuemax="100"
     >
-      {incomePerMinute >= 0 ? '+' : '−'}₡{money.format(Math.abs(incomePerMinute))}/dk
-    </span>
+      <span style="width: {xpPct}%"></span>
+    </div>
+    <span class="xpnum">{xpInLevel} / {xpSpan} XP</span>
   </div>
 
   <dl class="stats">
     <div>
       <dt>Gün</dt>
-      <dd data-testid="hud-day">{gameDay + 1} · {clock}</dd>
+      <dd><span data-testid="hud-day">{gameDay}</span> · {clock}</dd>
     </div>
     <div>
       <dt>Servis</dt>
@@ -74,7 +119,7 @@
     </div>
     <div>
       <dt>İtibar</dt>
-      <dd data-testid="hud-reputation">{reputation.toFixed(0)}</dd>
+      <dd data-testid="hud-reputation">{Math.round(reputation)}</dd>
     </div>
   </dl>
 </section>
@@ -82,74 +127,103 @@
 <style>
   .hud {
     position: absolute;
-    top: var(--sp-4);
-    left: var(--sp-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
-    padding: var(--sp-3) var(--sp-4);
-    background: color-mix(in srgb, var(--c-surface) 88%, transparent);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    /* The overlay is pointer-events: none so clicks reach the world; the panel
-       itself takes them back because Phase 9 puts controls in here. */
+    top: var(--space-3);
+    left: var(--space-3);
+    min-width: 15rem;
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-glass);
+    border: var(--border);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-card);
     pointer-events: auto;
-    backdrop-filter: blur(6px);
+    z-index: var(--z-hud);
   }
-
+  .line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .chip {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.8rem;
+  }
+  .coin {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .star {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.9rem;
+  }
   .cash {
     display: flex;
     align-items: baseline;
-    gap: var(--sp-2);
-    font-variant-numeric: tabular-nums;
+    gap: var(--space-2);
+    flex: 1;
   }
-
-  .symbol {
-    font-size: var(--fs-lg);
-    color: var(--c-accent-dim);
-  }
-
   .amount {
-    font-size: var(--fs-xl);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--c-accent);
+    font-size: var(--text-lg);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
-
   .rate {
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    color: var(--c-ok);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--ok);
   }
-
   .rate.negative {
-    color: var(--c-error);
+    color: var(--danger);
   }
-
+  .level {
+    margin-top: var(--space-1);
+  }
+  .lvl {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .xp {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+  }
+  .xp span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    transition: width 300ms ease-out;
+  }
+  .xpnum {
+    font-size: 0.65rem;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
   .stats {
     display: flex;
-    gap: var(--sp-4);
-    margin: 0;
-    padding-top: var(--sp-2);
-    border-top: 1px solid var(--c-border);
+    gap: var(--space-4);
+    margin: var(--space-2) 0 0;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--surface-sunken);
   }
-
   .stats dt {
-    font-size: var(--fs-xs);
-    color: var(--c-text-dim);
+    font-size: 0.65rem;
+    color: var(--ink-dim);
   }
-
   .stats dd {
     margin: 0;
-    font-size: var(--fs-sm);
-    font-weight: 600;
+    font-size: var(--text-sm);
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: var(--c-text);
-  }
-  @media (max-width: 700px), (max-height: 420px) {
-    /* Minimum HUD (GDD §14.8): one compact line, the stat grid folds away. */
-    .stats {
-      display: none;
-    }
   }
 </style>

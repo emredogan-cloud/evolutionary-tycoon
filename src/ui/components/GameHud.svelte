@@ -1,7 +1,9 @@
 <script lang="ts">
   import type {
     HudSource,
+    OrderCardView,
     PlacedView,
+    PlayerLevelView,
     PriceView,
     ProgressionView,
     RoleView,
@@ -13,42 +15,36 @@
   import EnvironmentStrip from './EnvironmentStrip.svelte';
   import HudCash from './HudCash.svelte';
   import EvolutionPanel from './EvolutionPanel.svelte';
-  import BuildMenu from '../screens/BuildMenu.svelte';
   import AudioSettings from '../screens/AudioSettings.svelte';
   import AnalyticsPanel from '../screens/AnalyticsPanel.svelte';
+  import ContextPanel from '../screens/ContextPanel.svelte';
   import DiagnosticsPanel from '../screens/DiagnosticsPanel.svelte';
+  import NavRail from './NavRail.svelte';
   import NotificationStrip from './NotificationStrip.svelte';
+  import OrderCards from './OrderCards.svelte';
   import PauseOverlay from './PauseOverlay.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
+  import ActionTiles from './ActionTiles.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
+  import SpeedRail from './SpeedRail.svelte';
   import StaffIcons from './StaffIcons.svelte';
   import StaffPanel from './StaffPanel.svelte';
   import UpgradeCard from './UpgradeCard.svelte';
-  import UpgradeHotspots from './UpgradeHotspots.svelte';
   import WorldMarkers from './WorldMarkers.svelte';
 
   /**
-   * The overlay root: everything the DOM draws above the world.
+   * The overlay root — the consolidation pass's reference layout
+   * (UI_REFERENCE_AUDIT §2): economy pill top left, time pill top centre,
+   * navigation tiles top right, speed rail on the left edge, action tiles
+   * bottom left, the contextual build panel bottom centre, the objective
+   * card top right, order cards on the left, evolution bottom right. The
+   * world owns the centre; every panel hugs an edge.
    *
-   * It takes a `HudSource` — a subscribe function and nothing else. The
-   * simulation is not reachable from here, structurally: `src/ui` cannot import
-   * `src/sim`, and what it does import is a plain data type with no methods to
-   * call back through. The only way in is a `Command`, dispatched by `src/app`.
-   *
-   * ## Why the values are copied out instead of held as one object
-   *
-   * The bridge publishes **the same object every time**, refreshed in place, so
-   * that sampling ten times a second allocates nothing. Svelte's reactivity is
-   * reference-based: `hud = model` with an unchanged reference invalidates
-   * nothing, and a `$derived` that returns the same object does not re-run its
-   * dependents. Held that way the HUD renders once at boot and then never
-   * updates again — which is indistinguishable from a simulation that has
-   * stopped, and is exactly what happened.
-   *
-   * Copying a dozen primitives per sample is the fix and it is the right trade:
-   * the expensive thing was reading the world per *frame*, which the throttle
-   * already prevents. Ten small copies a second is nothing.
+   * The "+" hotspot model is gone: upgrades are bought from the build
+   * panel's cards. The bridge publishes the same object every sample,
+   * refreshed in place, so every value is copied out (see the P18 note on
+   * reference-based reactivity).
    */
   interface Props {
     source: HudSource;
@@ -57,16 +53,9 @@
 
   const { source, commands }: Props = $props();
 
-  /**
-   * Which upgrade card is open, or null.
-   *
-   * Component state rather than simulation state, and that is the right place
-   * for it: which panel a player has open changes nothing about the world, must
-   * not be hashed, must not be saved, and must not survive a replay.
-   */
   let openUpgrade = $state<string | null>(null);
   /** One panel at a time — GDD §14.2's world-dominance rule made mechanical. */
-  let openPanel = $state<'settings' | 'staff' | 'analytics' | 'diagnostics' | 'menu' | null>(null);
+  let openPanel = $state<'settings' | 'staff' | 'analytics' | 'diagnostics' | 'menu' | 'build' | null>(null);
 
   let cash = $state(0);
   let reputation = $state(0);
@@ -79,9 +68,6 @@
   let eventId = $state('');
   let eventLabel = $state('');
   let eventRemainingMs = $state(0);
-  // A fresh array per sample, because `{#each}` needs a new reference to
-  // re-key. This is the one allocation the overlay makes, and it is bounded by
-  // the number of visible markers rather than by the pool size.
   let markers = $state<WorldMarker[]>([]);
   let placed = $state<PlacedView[]>([]);
   let incomePerMinute = $state(0);
@@ -98,8 +84,11 @@
   let analytics = $state({ sampleSize: 0, converted: 0, reasonCounts: [] as number[] });
   let notices = $state<{ id: number; kind: string; text: string }[]>([]);
   let paused = $state(false);
+  let speedMultiplier = $state(1);
   let showPauseVeil = $state(false);
   let highContrast = $state(false);
+  let orders = $state<OrderCardView[]>([]);
+  let level = $state<PlayerLevelView>({ level: 1, xp: 0, levelFloor: 0, nextLevelXp: 60 });
 
   /*
    * Presentation-only preferences live outside the world: they must survive
@@ -141,6 +130,7 @@
       };
       notices = [...model.notices];
       paused = model.paused;
+      speedMultiplier = model.speedMultiplier;
       showPauseVeil = model.showPauseVeil;
       highContrast = model.highContrast;
       reducedMotion = model.reducedMotion;
@@ -158,18 +148,13 @@
       const live: WorldMarker[] = [];
       for (let i = 0; i < model.markerCount; i++) {
         const marker = model.markers[i];
-        // Copied, not referenced: the bridge rewrites these records in place on
-        // the next sample, so a stored reference would silently change under a
-        // component that had already rendered it.
+        // Copied, not referenced: the bridge rewrites these records in place.
         if (marker?.visible === true) live.push({ ...marker });
       }
       markers = live;
-      // Copied for the same reason: `model.placed` is a reused buffer.
       /*
        * `model.placedCount` is read through a `$state` proxy, which erases to
-       * `any` inside a Svelte component — so it is narrowed to a number here
-       * rather than handed straight to `slice`, where the type-aware lint
-       * (correctly) refuses an unsafe argument.
+       * `any` inside a Svelte component — narrowed to a number before `slice`.
        */
       const placedCount: number = model.placedCount;
       placed = model.placed.slice(0, placedCount).map((object): PlacedView => ({ ...object }));
@@ -177,10 +162,9 @@
       incomePerMinute = model.incomePerMinute;
       objective = model.objective;
       objectiveProgress = model.objectiveProgress;
-      // Copied for the same reason the markers are: the bridge rewrites these
-      // records in place on the next sample.
       upgrades = model.upgrades.map((item): UpgradeView => ({
         ...item,
+        missingPrereqs: [...item.missingPrereqs],
         effects: item.effects.map((effect) => ({ ...effect })),
       }));
       prices = model.prices.map((item): PriceView => ({ ...item }));
@@ -192,15 +176,24 @@
         ...model.progression,
         requirements: model.progression.requirements.map((row) => ({ ...row })),
       };
+      const orderCount: number = model.orderCount;
+      orders = model.orders.slice(0, orderCount).map((order): OrderCardView => ({ ...order }));
+      level = { ...model.level };
     }),
   );
+
+  const togglePanel = (panel: NonNullable<typeof openPanel>): void => {
+    openPanel = openPanel === panel ? null : panel;
+    if (openPanel !== 'build') openUpgrade = null;
+  };
 </script>
 
 <svelte:window
   onkeydown={(event: KeyboardEvent) => {
     const target = event.target as HTMLElement | null;
-    if (event.key === 'Escape' && openPanel !== null) {
+    if (event.key === 'Escape' && (openPanel !== null || openUpgrade !== null)) {
       openPanel = null;
+      openUpgrade = null;
       event.preventDefault();
     } else if (event.key === ' ' && target?.tagName !== 'INPUT' && target?.tagName !== 'BUTTON') {
       commands.setPaused(!paused);
@@ -210,23 +203,66 @@
 />
 
 <div class="overlay" data-testid="game-hud">
-  <EnvironmentStrip {gameHour} {weatherId} {weatherLabel} {eventId} {eventLabel} {eventRemainingMs} />
   <WorldMarkers {markers} />
-
   <StaffIcons {staff} />
 
-  <UpgradeHotspots
-    {upgrades}
-    open={openUpgrade}
-    ontoggle={(id: string) => {
-      openUpgrade = openUpgrade === id ? null : id;
+  <HudCash
+    {cash}
+    {reputation}
+    {customersServed}
+    {customersWaiting}
+    {gameDay}
+    {gameHour}
+    {incomePerMinute}
+    {level}
+    {reducedMotion}
+  />
+  <EnvironmentStrip
+    {gameDay}
+    {gameHour}
+    {weatherId}
+    {weatherLabel}
+    {eventId}
+    {eventLabel}
+    {eventRemainingMs}
+  />
+  <NavRail open={openPanel} ontoggle={togglePanel} />
+  <SpeedRail
+    {paused}
+    speed={speedMultiplier}
+    onpause={() => {
+      commands.setPaused(!paused);
+    }}
+    onspeed={(mult: 1 | 2 | 4) => {
+      commands.setSpeed(mult);
+      if (paused) commands.setPaused(false);
     }}
   />
+  <ActionTiles open={openPanel} ontoggle={togglePanel} />
+  <OrderCards
+    {orders}
+    onprep={(slot: number) => {
+      commands.prep(slot);
+    }}
+  />
+  <ObjectivePanel {objective} progress={objectiveProgress} {progression} />
+
+  {#if openPanel === 'build'}
+    <ContextPanel
+      {upgrades}
+      stage={progression.stage}
+      playerLevel={level.level}
+      onselect={(id: string) => {
+        openUpgrade = openUpgrade === id ? null : id;
+      }}
+    />
+  {/if}
 
   {#each upgrades as upgrade (upgrade.id)}
-    {#if upgrade.id === openUpgrade && upgrade.visible}
+    {#if upgrade.id === openUpgrade}
       <UpgradeCard
         {upgrade}
+        centered
         onbuy={(id: string) => {
           commands.buyUpgrade(id);
         }}
@@ -236,53 +272,6 @@
       />
     {/if}
   {/each}
-
-  <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
-
-  <nav class="action-dock" aria-label="Birincil eylemler">
-    <button
-      type="button"
-      data-testid="dock-staff"
-      aria-pressed={openPanel === 'staff'}
-      onclick={() => {
-        openPanel = openPanel === 'staff' ? null : 'staff';
-      }}><span aria-hidden="true">👥</span> Personel</button
-    >
-    <button
-      type="button"
-      data-testid="dock-menu"
-      aria-pressed={openPanel === 'menu'}
-      onclick={() => {
-        openPanel = openPanel === 'menu' ? null : 'menu';
-      }}><span aria-hidden="true">🧾</span> Menü</button
-    >
-    <button
-      type="button"
-      data-testid="dock-analytics"
-      aria-pressed={openPanel === 'analytics'}
-      onclick={() => {
-        openPanel = openPanel === 'analytics' ? null : 'analytics';
-      }}><span aria-hidden="true">📊</span> Analiz</button
-    >
-    <button
-      type="button"
-      data-testid="settings-gear"
-      aria-pressed={openPanel === 'settings'}
-      aria-label="Ayarlar"
-      onclick={() => {
-        openPanel = openPanel === 'settings' ? null : 'settings';
-      }}><span aria-hidden="true">⚙</span> Ayarlar</button
-    >
-    <button
-      type="button"
-      data-testid="dock-diagnostics"
-      aria-pressed={openPanel === 'diagnostics'}
-      aria-label="Tanılama"
-      onclick={() => {
-        openPanel = openPanel === 'diagnostics' ? null : 'diagnostics';
-      }}><span aria-hidden="true">🛠</span></button
-    >
-  </nav>
 
   {#if openPanel === 'settings'}
     <AudioSettings
@@ -330,21 +319,9 @@
       commands.setPaused(!paused);
     }}
   />
-  <ObjectivePanel {objective} progress={objectiveProgress} />
-  <!--
-    The full list, for discovery — Phase 13. Selecting a row opens the card
-    beside the object rather than buying anything, so the list is a map and the
-    world is still where the decision is made (GAME_DESIGN_DOCUMENT §14.3).
-  -->
-  <BuildMenu
-    {upgrades}
-    stage={progression.stage}
-    onselect={(id: string) => {
-      openUpgrade = id;
-    }}
-  />
 
   <BuildMode
+    active={openPanel === 'build'}
     {placed}
     onplace={(objectId: string, x: number, y: number) => {
       commands.place(objectId, x, y);
@@ -392,47 +369,10 @@
   .overlay {
     position: fixed;
     inset: 0;
-    /* Above the canvas, and transparent to the pointer: a click that misses a
+    /* Above the canvas, transparent to the pointer: a click that misses a
        control has to reach the world (TECHNICAL_ARCHITECTURE §7). */
     z-index: 10;
     pointer-events: none;
     font-family: var(--font-ui);
-  }
-  .action-dock {
-    position: absolute;
-    right: var(--space-3);
-    bottom: var(--space-3);
-    display: flex;
-    gap: var(--space-2);
-    z-index: var(--z-hud);
-    pointer-events: auto;
-  }
-  .action-dock button {
-    min-height: var(--touch-target);
-    min-width: var(--touch-target);
-    padding: 0 var(--space-3);
-    background: var(--surface-raised);
-    border: var(--border);
-    border-radius: var(--radius-md);
-    color: var(--ink);
-    font-size: var(--text-sm);
-    cursor: pointer;
-    box-shadow: var(--shadow-card);
-  }
-  .action-dock button[aria-pressed='true'] {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .action-dock button:focus-visible {
-    outline: none;
-    box-shadow: var(--focus-ring);
-  }
-  @media (max-width: 700px) {
-    .action-dock {
-      left: 50%;
-      right: auto;
-      transform: translateX(-50%);
-      bottom: max(var(--space-2), env(safe-area-inset-bottom));
-    }
   }
 </style>

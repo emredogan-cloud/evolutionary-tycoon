@@ -13,7 +13,7 @@ import { buyUpgrade } from '@sim/systems/UpgradeSystem';
  */
 describe('the player level, derived', () => {
   it('starts at level 1 with zero everything', () => {
-    const sim = new Sim(1);
+    const sim = new Sim({ seed: 1 });
     expect(playerLevel(sim.world)).toEqual({
       level: 1,
       xp: 0,
@@ -23,8 +23,8 @@ describe('the player level, derived', () => {
   });
 
   it('is a pure function of the counters — two worlds, same counters, same level', () => {
-    const a = new Sim(1);
-    const b = new Sim(424242); // different seed on purpose
+    const a = new Sim({ seed: 1 });
+    const b = new Sim({ seed: 424242 }); // different seed on purpose
     for (const sim of [a, b]) {
       sim.world.stats.customersServed = 37;
       sim.world.economy.lifetimeRevenue = 210.7;
@@ -35,13 +35,13 @@ describe('the player level, derived', () => {
   });
 
   it('refuses a gated rung on a fresh world, as locked', () => {
-    const sim = new Sim(1);
+    const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 10_000;
     expect(buyUpgrade(sim.world, 'menu-board')).toBe('locked');
   });
 
   it('sells the same rung once the counters carry the level', () => {
-    const sim = new Sim(1);
+    const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 10_000;
     // Enough served customers for level 2 (LEVEL_XP[1] XP) and beyond.
     sim.world.stats.customersServed = Math.ceil((LEVEL_XP[1] ?? 60) / XP_WEIGHTS.served);

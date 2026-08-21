@@ -316,7 +316,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.scale.on('resize', () => {
       this.camera.handleResize();
+      this.layoutVignette();
     });
+    this.layoutVignette();
 
     /*
      * The construction reveal. Its bounds are the southern half of the lot,
@@ -677,6 +679,43 @@ export class WorldScene extends Phaser.Scene {
     return quad;
   }
 
+  /**
+   * The screen-space vignette — the premium falloff of the reference scenes,
+   * and the finish over the environment skirt. Camera-fixed (scroll factor
+   * zero), three stepped bands per edge instead of a gradient texture:
+   * CanvasTexture never drew on this Phaser 4 (P15's probe), and stepped
+   * translucency at these alphas is indistinguishable in place.
+   */
+  private vignette: Phaser.GameObjects.Rectangle[] = [];
+
+  private layoutVignette(): void {
+    for (const band of this.vignette) band.destroy();
+    this.vignette = [];
+    const { width, height } = this.scale.gameSize;
+    const steps: readonly { size: number; alpha: number }[] = [
+      { size: 0.1, alpha: 0.16 },
+      { size: 0.05, alpha: 0.1 },
+      { size: 0.025, alpha: 0.06 },
+    ];
+    let inset = 0;
+    for (const step of steps) {
+      const h = Math.round(height * step.size);
+      const w = Math.round(width * step.size);
+      const bands = [
+        this.add.rectangle(0, inset, width, h, 0x05070b, step.alpha).setOrigin(0, 0),
+        this.add.rectangle(0, height - inset - h, width, h, 0x05070b, step.alpha).setOrigin(0, 0),
+        this.add.rectangle(inset, 0, w, height, 0x05070b, step.alpha).setOrigin(0, 0),
+        this.add.rectangle(width - inset - w, 0, w, height, 0x05070b, step.alpha).setOrigin(0, 0),
+      ];
+      for (const band of bands) {
+        band.setScrollFactor(0);
+        band.setDepth(1_000_000);
+        this.vignette.push(band);
+      }
+      inset += Math.round(Math.min(w, h) * 0.4);
+    }
+  }
+
   private cameraBounds(): CameraBounds {
     const margin = this.layout.cameraMarginMetres;
     const lot = this.layout.lot;
@@ -707,6 +746,26 @@ export class WorldScene extends Phaser.Scene {
   private drawGround(): void {
     const lot = this.layout.lot;
     const layer = this.graph.layer('ground');
+
+    /*
+     * The environment skirt — consolidation pass (§4: no black app space).
+     * The camera clamps to the lot plus a margin, and everything the lot does
+     * not cover used to be the page background. The skirt paints the same
+     * base dirt far past any reachable camera rect, so every edge of every
+     * viewport is world. It is deliberately plain: the vignette above it
+     * (drawVignette) carries the falloff, and the reference scenes read the
+     * same way — detailed centre, quiet dark rim.
+     */
+    const skirt = this.add.graphics();
+    const reach = 220; // metres past the lot — beyond any zoom's reach
+    // The bake's own border dirt, sampled — NOT the lot-fallback green: the
+    // skirt must read as more of the same earth running out of frame.
+    skirt.fillStyle(0x8f6f49, 1);
+    skirt.fillPoints(
+      this.worldQuad(lot.minX - reach, lot.minY - reach, lot.maxX + reach, lot.maxY + reach),
+      true,
+    );
+    layer.add(skirt);
 
     const ground = this.add.graphics();
     ground.fillStyle(SURFACE_COLORS.ground, 1);

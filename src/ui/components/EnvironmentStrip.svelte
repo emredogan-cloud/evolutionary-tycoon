@@ -1,15 +1,15 @@
 <script lang="ts">
+  import { ensureSheet, frameStyle, onIconsReady } from '../lib/atlasIcons';
+
   /**
-   * The sky, the hour, and whatever the calendar is doing — Phase 15.
-   *
-   * The roadmap is specific about the shape: a **thin strip**, never a modal.
-   * An event is ambient context the player glances at, and a popup for "yol
-   * çalışması" would interrupt the exact play session the event exists to
-   * flavour. Weather and time-of-day ride in the same strip because they are
-   * the same glance. Primitive props, like every HUD cell — the bridge model
-   * is rewritten in place and only copied primitives re-render.
+   * The time pill, top centre — day, clock, weather with its painted icon,
+   * and the event chip with a countdown when the road is not ordinary
+   * (UI_REFERENCE_AUDIT §2). Weather/event icons come from the delivered
+   * `ui_icon_*` set; until the sheet arrives the label carries the meaning,
+   * exactly like the order bubble's fallback.
    */
   interface Props {
+    gameDay: number;
     gameHour: number;
     weatherId: string;
     weatherLabel: string;
@@ -18,50 +18,61 @@
     eventRemainingMs: number;
   }
 
-  const { gameHour, weatherId, weatherLabel, eventId, eventLabel, eventRemainingMs }: Props = $props();
+  const { gameDay, gameHour, weatherId, weatherLabel, eventId, eventLabel, eventRemainingMs }: Props =
+    $props();
 
-  const WEATHER_GLYPHS: Record<string, string> = {
-    CLEAR: '☀',
-    OVERCAST: '☁',
-    RAIN: '🌧',
-    SNOW: '❄',
+  const WEATHER_FRAMES: Record<string, string> = {
+    CLEAR: 'ui_icon_weather-clear@2x',
+    OVERCAST: 'ui_icon_weather-overcast@2x',
+    RAIN: 'ui_icon_weather-rain@2x',
+    SNOW: 'ui_icon_weather-snow@2x',
+  };
+  const EVENT_FRAMES: Record<string, string> = {
+    ROAD_WORK: 'ui_icon_event-road-work@2x',
+    ACCIDENT: 'ui_icon_event-accident@2x',
+    FESTIVAL: 'ui_icon_event-festival@2x',
+    NIGHT_RUSH: 'ui_icon_event-night-rush@2x',
+    WEATHER_FRONT: 'ui_icon_event-weather-front@2x',
+    FUEL_SPIKE: 'ui_icon_event-fuel-spike@2x',
   };
 
-  const EVENT_GLYPHS: Record<string, string> = {
-    ROAD_WORK: '🚧',
-    ACCIDENT: '⚠',
-    FESTIVAL: '🎪',
-    NIGHT_RUSH: '🚚',
-    WEATHER_FRONT: '🌧',
-    FUEL_SPIKE: '⛽',
+  ensureSheet('ui');
+  let revision = $state(0);
+  $effect(() => onIconsReady(() => (revision += 1)));
+  const icon = (frame: string | undefined, px: number): string | null => {
+    void revision;
+    return frame === undefined ? null : frameStyle('ui', frame, px);
   };
 
-  const hourLabel = $derived(
-    `${String(Math.floor(gameHour)).padStart(2, '0')}:${String(Math.floor((gameHour % 1) * 60)).padStart(
-      2,
-      '0',
-    )}`,
-  );
-  const night = $derived(gameHour < 6 || gameHour >= 20);
-  const remainingMin = $derived(Math.ceil(eventRemainingMs / 60_000));
+  const hourLabel = $derived(`${String(Math.floor(gameHour)).padStart(2, '0')}:00`);
+  const minutesLeft = $derived(Math.ceil(eventRemainingMs / 60_000));
 </script>
 
 <div class="strip" data-testid="environment-strip">
-  <span class="cell" data-testid="hud-clock" data-hour={String(Math.floor(gameHour))}>
-    <span aria-hidden="true">{night ? '🌙' : '🕐'}</span>
-    {hourLabel}
+  <span class="cell" data-testid="hud-clock">
+    <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"
+      ><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" /><path
+        d="M12 7v5l3.4 2"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      /></svg
+    >
+    Gün {gameDay} · {hourLabel}
   </span>
   <span class="cell" data-testid="hud-weather" data-weather={weatherId}>
-    <span aria-hidden="true">{WEATHER_GLYPHS[weatherId] ?? '☀'}</span>
+    {#if icon(WEATHER_FRAMES[weatherId], 20) !== null}
+      <span class="icon" style={icon(WEATHER_FRAMES[weatherId], 20)} aria-hidden="true"></span>
+    {/if}
     {weatherLabel}
   </span>
   {#if eventId !== ''}
     <span class="cell event" data-testid="hud-event" data-event={eventId}>
-      <span aria-hidden="true">{EVENT_GLYPHS[eventId] ?? '⚠'}</span>
-      {eventLabel}
-      {#if remainingMin > 0}
-        <span class="left">{remainingMin} dk</span>
+      {#if icon(EVENT_FRAMES[eventId], 20) !== null}
+        <span class="icon" style={icon(EVENT_FRAMES[eventId], 20)} aria-hidden="true"></span>
       {/if}
+      {eventLabel}
+      {#if eventRemainingMs > 0}<span class="left">{minutesLeft} dk</span>{/if}
     </span>
   {/if}
 </div>
@@ -69,36 +80,50 @@
 <style>
   .strip {
     position: absolute;
-    top: var(--sp-2);
+    top: var(--space-3);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: var(--sp-1);
-    pointer-events: none;
-    font-size: var(--fs-xs);
-    z-index: 5;
+    gap: var(--space-2);
+    pointer-events: auto;
+    z-index: var(--z-hud);
   }
-
   .cell {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 0.35em;
-    padding: 0.2rem var(--sp-2);
-    background: color-mix(in srgb, var(--c-surface) 82%, transparent);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-sm);
-    color: var(--c-text-muted);
-    backdrop-filter: blur(4px);
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    background: var(--surface-glass);
+    border: var(--border);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-card);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    white-space: nowrap;
   }
-
+  .glyph {
+    width: 16px;
+    height: 16px;
+    color: var(--ink-muted);
+  }
+  .icon {
+    flex: none;
+  }
   .event {
-    color: var(--c-text);
-    border-color: color-mix(in srgb, var(--c-warn) 55%, var(--c-border));
-    background: color-mix(in srgb, var(--c-warn) 14%, var(--c-surface));
+    border-color: var(--accent);
   }
-
   .left {
-    color: var(--c-text-dim);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 700px) {
+    .strip {
+      top: calc(var(--space-3) + 74px);
+    }
+    .cell {
+      padding: var(--space-1) var(--space-2);
+      font-size: var(--text-xs);
+    }
   }
 </style>

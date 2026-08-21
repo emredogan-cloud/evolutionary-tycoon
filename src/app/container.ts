@@ -296,6 +296,9 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       prep: (orderSlot: number) => {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot });
       },
+      setSpeed: (mult: 1 | 2 | 4) => {
+        sim.dispatch({ t: 'SET_SPEED', mult });
+      },
       buyUpgrade: (id: string) => {
         sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: id });
       },

@@ -343,6 +343,8 @@ export interface UiCommands {
   buyUpgrade(id: string): void;
   /** Start preparing an order — the manual loop. -1 means "the next startable". */
   prep(orderSlot: number): void;
+  /** Simulation speed, through the same command door as everything else. */
+  setSpeed(mult: 1 | 2 | 4): void;
   /** Confirm the stage transition the player has been offered. */
   evolve(): void;
   place(objectId: string, x: number, y: number): void;

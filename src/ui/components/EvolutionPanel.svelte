@@ -127,8 +127,8 @@
 <style>
   .panel {
     position: absolute;
-    top: var(--sp-4);
-    right: 13.5rem;
+    bottom: var(--space-3);
+    right: var(--space-3);
     width: 11rem;
     padding: var(--sp-3);
     background: color-mix(in srgb, var(--c-surface) 88%, transparent);
