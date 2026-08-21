@@ -131,7 +131,10 @@
   .panel {
     position: absolute;
     right: var(--sp-4);
-    bottom: var(--sp-4);
+    /* Clear of the action dock: the dock owns the bottom edge (Phase 18),
+       and a panel underlapping it eats the very clicks that opened it. */
+    bottom: calc(var(--touch-target) + var(--space-4) + var(--sp-4));
+    z-index: var(--z-panel);
     width: 14rem;
     background: color-mix(in srgb, var(--c-surface) 90%, transparent);
     border: 1px solid var(--c-border);
