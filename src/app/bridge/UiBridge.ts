@@ -487,10 +487,19 @@ export class UiBridge implements HudSource {
         text = state === undefined ? null : `Hava değişti: ${state.label}`;
         break;
       }
-      case 'STAGE_CHANGED':
+      case 'STAGE_CHANGED': {
+        // The reward said out loud — §20's unlock feedback. What each stage
+        // opens comes from the design (GDD §7/§13), not from a live scan: the
+        // strip is a headline, and the build panel is the inventory.
         kind = 'progress';
-        text = 'Mekân evrildi';
+        const unlocked: Record<number, string> = {
+          2: 'Yemek kamyonu açıldı — yeni menü, yeni yükseltmeler',
+          3: 'Küçük lokanta açıldı — masalar ve garsonlar',
+          4: 'Büyük restoran açıldı — drive-thru ve gece vardiyası',
+        };
+        text = unlocked[event.to] ?? 'Mekân evrildi';
         break;
+      }
       case 'DAY_STARTED':
       case 'SPEED_CHANGED':
       case 'PAUSE_CHANGED':
