@@ -196,10 +196,20 @@
     background: var(--accent);
     transition: width 150ms linear;
   }
-  @media (max-width: 700px) {
+  @media (max-width: 700px), (max-height: 480px) {
     .stack {
-      width: 10.5rem;
-      top: 16%;
+      width: 9rem;
+      top: 22%;
+    }
+    /* One card at a time on a phone: the oldest is the actionable one, and
+       the count of the rest is not worth a third of the screen. */
+    .card:nth-child(n + 2) {
+      display: none;
+    }
+  }
+  @media (max-width: 380px) {
+    .stack {
+      width: 8rem;
     }
   }
 </style>

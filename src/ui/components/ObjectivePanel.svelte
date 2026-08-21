@@ -63,6 +63,7 @@
       aria-valuemin="0"
       aria-valuemax="100"
       data-testid="objective-progress"
+      data-progress={String(Math.round(progress * 100))}
     >
       <span style="width: {Math.min(100, progress * 100)}%"></span>
     </div>
@@ -182,10 +183,23 @@
   }
   @media (max-width: 900px), (max-height: 500px) {
     .card {
-      width: 11.5rem;
+      width: 10rem;
       padding: var(--space-2);
     }
     .reqs {
+      display: none;
+    }
+  }
+  /* Phone landscape: the checklist card cedes the corner to the world. */
+  @media (max-height: 480px) {
+    .card {
+      display: none;
+    }
+  }
+  /* The smallest phones keep the world; the stage goal lives in the
+     evolution flow and the notices there. */
+  @media (max-width: 380px) {
+    .card {
       display: none;
     }
   }

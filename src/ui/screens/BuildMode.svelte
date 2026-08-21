@@ -192,12 +192,20 @@
   .panel {
     display: grid;
     gap: 0.4rem;
-    padding: 0.5rem;
+    padding: var(--space-2);
     pointer-events: auto;
-    /* Above its own pointer surface, which covers the whole viewport — otherwise
-       opening build mode makes the button that closes it unclickable. */
-    position: relative;
-    z-index: 10;
+    /* The decor strip rides above the build panel's cards, bottom centre —
+       and above its own pointer surface, which covers the whole viewport. */
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--space-3) + 10.5rem);
+    transform: translateX(-50%);
+    max-width: min(48rem, calc(100vw - 20rem));
+    background: var(--surface-glass);
+    border: var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    z-index: var(--z-panel);
   }
 
   .palette {

@@ -43,9 +43,13 @@ test.describe('production art', () => {
     await expect(root).not.toHaveAttribute('data-asset-missing', /.+/);
 
     const frames = Number(await root.getAttribute('data-asset-frames'));
-    // Every atlas frame in `docs/assets/productionBatches.json` except the ground
-    // bake, which ships as a single file rather than as an atlas frame.
-    expect(frames).toBe(171);
+    /*
+     * Every boot-fetched atlas frame. 171 was the original batch list; the
+     * 2026-08-21 delivery added the true rears, brake frames, real legs, food
+     * and interface icons that load before the world starts — the deferred
+     * atlases (vehicles2, ui2) are deliberately not part of this number.
+     */
+    expect(frames).toBe(199);
   });
 
   for (const stage of STAGES) {

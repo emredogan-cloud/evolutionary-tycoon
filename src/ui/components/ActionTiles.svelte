@@ -110,8 +110,12 @@
       bottom: max(var(--space-2), env(safe-area-inset-bottom));
     }
     .tile {
-      min-width: 60px;
-      padding: var(--space-1) var(--space-2);
+      min-width: var(--touch-target);
+      min-height: var(--touch-target);
+      padding: var(--space-1);
+    }
+    .tile span {
+      display: none;
     }
   }
 </style>

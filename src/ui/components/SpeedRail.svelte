@@ -94,4 +94,10 @@
       transform: none;
     }
   }
+  @media (max-width: 700px), (max-height: 480px) {
+    /* Pause stays; the multipliers wait for a bigger screen. */
+    .slot.label:not([aria-pressed='true']) {
+      display: none;
+    }
+  }
 </style>

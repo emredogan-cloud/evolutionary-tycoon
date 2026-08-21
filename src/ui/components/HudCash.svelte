@@ -226,4 +226,22 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
+  @media (max-width: 700px), (max-height: 480px) {
+    .stats,
+    .xpnum {
+      display: none;
+    }
+    .hud {
+      min-width: 11rem;
+    }
+  }
+  @media (max-width: 380px) {
+    .hud {
+      min-width: 9.5rem;
+      padding: var(--space-1) var(--space-2);
+    }
+    .amount {
+      font-size: var(--text-md);
+    }
+  }
 </style>

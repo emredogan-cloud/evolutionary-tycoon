@@ -93,7 +93,7 @@ test.describe('build mode', () => {
     // Closed by default: the pointer surface must not exist until asked for.
     await expect(page.locator('[data-testid="build-surface"]')).toHaveCount(0);
 
-    await page.locator('[data-testid="build-toggle"]').click();
+    await page.locator('[data-testid="dock-build"]').click();
     await expect(page.locator('[data-testid="build-surface"]')).toBeVisible();
     await expect(page.locator('[data-testid="build-palette"]')).toBeVisible();
 
@@ -160,7 +160,7 @@ test.describe('build mode', () => {
      * reliably outside the lot at the boot camera.
      */
     await boot(page);
-    await page.locator('[data-testid="build-toggle"]').click();
+    await page.locator('[data-testid="dock-build"]').click();
 
     const box = await page.locator('canvas').boundingBox();
     expect(box).not.toBeNull();
@@ -176,10 +176,10 @@ test.describe('build mode', () => {
     // The surface covers the canvas while it is open. If it survived the toggle,
     // every later click in the session would land on an invisible sheet.
     await boot(page);
-    await page.locator('[data-testid="build-toggle"]').click();
+    await page.locator('[data-testid="dock-build"]').click();
     await expect(page.locator('[data-testid="build-surface"]')).toBeVisible();
 
-    await page.locator('[data-testid="build-toggle"]').click();
+    await page.locator('[data-testid="dock-build"]').click();
     await expect(page.locator('[data-testid="build-surface"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="build-ghost"]')).toHaveCount(0);
   });

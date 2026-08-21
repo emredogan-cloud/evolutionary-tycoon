@@ -97,8 +97,25 @@
 
   const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 
-  /** Current stage first, next stage as anticipation, later stages folded. */
-  const visible = $derived(upgrades.filter((item) => item.stage <= stage + 1 && item.level < item.maxLevel));
+  const FAMILY_ORDER = ['VISIBILITY_APPEAL', 'KITCHEN', 'CAPACITY', 'STAFF', 'DRIVE_THRU'] as const;
+  const FAMILY_LABELS: Record<string, string> = {
+    VISIBILITY_APPEAL: 'Görünürlük & Çekicilik',
+    KITCHEN: 'Mutfak',
+    CAPACITY: 'Kapasite & Alan',
+    STAFF: 'Personel',
+    DRIVE_THRU: 'Drive-thru',
+  };
+  /**
+   * Every family, every rung — the whole tree, on purpose (§23: locked
+   * content is shown with its reason; hiding the future kills anticipation).
+   * Maxed rungs stay too, as owned trophies with their level chip.
+   */
+  const families = $derived(
+    FAMILY_ORDER.map((family) => ({
+      family,
+      items: upgrades.filter((item) => item.family === family),
+    })).filter((group) => group.items.length > 0),
+  );
 
   const lockText = (item: UpgradeView): string | null => {
     if (item.stage > stage) return `Aşama ${item.stage}`;
@@ -111,41 +128,53 @@
 
 <section class="panel" aria-label="İnşa" data-testid="build-panel">
   <div class="scroller">
-    {#each visible as item (item.id)}
-      {@const lock = lockText(item)}
-      <button
-        type="button"
-        class="card"
-        class:locked={lock !== null}
-        data-testid="build-card"
-        data-upgrade={item.id}
-        onclick={() => {
-          onselect(item.id);
-        }}
-      >
-        {#if iconFor(item) !== null}
-          <span class="art" style={iconFor(item)} aria-hidden="true"></span>
-        {:else}
-          <span class="art fallback" aria-hidden="true"></span>
-        {/if}
-        <span class="name">{LABELS[item.id] ?? item.id}</span>
-        {#if item.level > 0}
-          <span class="lvl">Sv. {item.level}</span>
-        {/if}
-        {#if lock !== null}
-          <span class="lock">
-            <svg viewBox="0 0 24 24" aria-hidden="true"
-              ><path
-                d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V8a3 3 0 0 0-6 0v2z"
-                fill="currentColor"
-              /></svg
+    {#each families as group (group.family)}
+      <div class="family" data-testid="build-family" data-family={group.family}>
+        <p class="famname">{FAMILY_LABELS[group.family] ?? group.family}</p>
+        <div class="famrow">
+          {#each group.items as item (item.id)}
+            {@const lock = lockText(item)}
+            <button
+              type="button"
+              class="card"
+              class:locked={lock !== null}
+              data-testid="build-card"
+              data-upgrade={item.id}
+              data-stage={String(item.stage)}
+              data-level={String(item.level)}
+              data-owned={item.level > 0 ? '1' : '0'}
+              onclick={() => {
+                onselect(item.id);
+              }}
             >
-            {lock}
-          </span>
-        {:else}
-          <span class="price" class:short={!item.affordable}>₡{money.format(item.cost)}</span>
-        {/if}
-      </button>
+              {#if iconFor(item) !== null}
+                <span class="art" style={iconFor(item)} aria-hidden="true"></span>
+              {:else}
+                <span class="art fallback" aria-hidden="true"></span>
+              {/if}
+              <span class="name">{LABELS[item.id] ?? item.id}</span>
+              {#if item.level > 0}
+                <span class="lvl">Sv. {item.level}</span>
+              {/if}
+              {#if lock !== null}
+                <span class="lock">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"
+                    ><path
+                      d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V8a3 3 0 0 0-6 0v2z"
+                      fill="currentColor"
+                    /></svg
+                  >
+                  {lock}
+                </span>
+              {:else if item.level >= item.maxLevel}
+                <span class="price">Tam</span>
+              {:else}
+                <span class="price" class:short={!item.affordable}>₡{money.format(item.cost)}</span>
+              {/if}
+            </button>
+          {/each}
+        </div>
+      </div>
     {/each}
   </div>
   <p class="hint">Seviye {playerLevel} · kart seç, ayrıntıda satın al</p>
@@ -168,10 +197,25 @@
   }
   .scroller {
     display: flex;
-    gap: var(--space-2);
+    gap: var(--space-4);
     overflow-x: auto;
     padding-bottom: 2px;
     scrollbar-width: thin;
+  }
+  .family {
+    flex: none;
+  }
+  .famname {
+    margin: 0 0 var(--space-1);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .famrow {
+    display: flex;
+    gap: var(--space-2);
   }
   .card {
     flex: none;

@@ -147,7 +147,7 @@
   <p class="family" data-testid="upgrade-family" data-family={upgrade.family}>{family}</p>
 
   <p class="level" data-testid="upgrade-level">
-    Seviye {upgrade.level} / {upgrade.maxLevel}
+    Kademe {upgrade.level} / {upgrade.maxLevel}
   </p>
 
   {#if maxed}
@@ -210,9 +210,11 @@
 <style>
   .card.centered {
     left: 50%;
-    bottom: calc(var(--space-3) + 9.5rem);
+    /* Above both the build panel and the decor strip that rides over it. */
+    bottom: calc(var(--space-3) + 14.5rem);
     top: auto;
     transform: translateX(-50%);
+    z-index: calc(var(--z-panel) + 1);
   }
   .card {
     position: absolute;

@@ -228,4 +228,22 @@
     box-shadow: var(--focus-ring);
     border-radius: var(--radius-sm);
   }
+  @media (max-width: 700px) {
+    .panel {
+      width: 9rem;
+      padding: var(--sp-2);
+    }
+  }
+  /* Phone landscape: evolution yields the corner; the offer still arrives as
+     a notice and the panel returns on any taller viewport. */
+  @media (max-height: 480px) {
+    .panel {
+      display: none;
+    }
+  }
+  @media (max-width: 380px) {
+    .panel {
+      width: 8rem;
+    }
+  }
 </style>
