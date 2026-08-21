@@ -87,7 +87,14 @@ const REFERENCE = {
    * calibration pass's ladder (P17 batch, user-authorized): sign and menu
    * effects, the SS3-budget stage-2 ladder, stage-4 prices.
    */
-  hashAtTick0: 'a01ff54564e0b679',
+  /*
+   * An eleventh time, within Phase 17: schema v11 put `audio.ambience` into
+   * the settings block, and settings are hashed — so tick 0 moved by exactly
+   * one written double. Tick 1000 follows. The local suite had been run
+   * before that write landed, which is why CI caught it and not the desk:
+   * the pin renewals exist for precisely this moment.
+   */
+  hashAtTick0: '7af1adc1d379aa8c',
   /*
    * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
    * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
@@ -111,7 +118,7 @@ const REFERENCE = {
    * the pre-P15 one again and the thousandth tick moved with it. Tick 0 is
    * unchanged — the calendar state at tick 0 is the same either way.
    */
-  hashAtTick1000: '3db3c0dffba74db9',
+  hashAtTick1000: '86c82ea944ad614c',
 } as const;
 
 interface TestApi {
