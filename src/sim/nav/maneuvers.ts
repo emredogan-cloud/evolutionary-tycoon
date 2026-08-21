@@ -139,7 +139,7 @@ export function buildManeuver(
  * polyline, so arc-length integration and `positionOf` see a single path —
  * nothing downstream knows the shape changed.
  */
-export function buildCorridorManeuver(
+function buildCorridorManeuver(
   startX: number,
   startY: number,
   startTangentX: number,

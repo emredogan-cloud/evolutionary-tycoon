@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { SpriteDirectionName } from '@config/sprites';
 import type { SimEvent } from '@sim/core/events';
 import {
   ACTOR_KIND_CUSTOMER,
@@ -489,9 +490,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Position a sprite by its footprint anchor, which is where it meets the ground. */
-  private place(sprite: Phaser.GameObjects.Image, frame: string, x: number, y: number): void {
+  private place(
+    sprite: Phaser.GameObjects.Image,
+    frame: string,
+    x: number,
+    y: number,
+    mirrored = false,
+  ): void {
     const info = this.assets?.info(frame);
-    sprite.setOrigin(info?.originX ?? 0.5, info?.originY ?? 1);
+    // A mirrored draw mirrors the anchor too: feet at 30% from the left are
+    // at 30% from the right once the pixels flip.
+    const originX = info?.originX ?? 0.5;
+    sprite.setOrigin(mirrored ? 1 - originX : originX, info?.originY ?? 1);
     sprite.setPosition(x, y);
   }
 
@@ -510,9 +520,28 @@ export class WorldScene extends Phaser.Scene {
      * `_brake` view wherever the lights are visible (rear-facing headings);
      * everywhere else the default frame is already the truth.
      */
+    /*
+     * West-side facings mirror at draw time, exactly as the doll rig does
+     * (P17): a vehicle is laterally symmetric, so `sw` is `se` flipped —
+     * zero shipped bytes instead of a second copy of every archetype. The
+     * audited four still carry real west files (their v1 import materialised
+     * them) and those win; the 2026-08-21 six resolve through the mirror.
+     */
+    const MIRROR: Readonly<Record<string, string>> = { w: 'e', nw: 'ne', sw: 'se' };
+    const partner = MIRROR[direction];
     const brake = view.braking ? vehicleBrakeFrame(view.variant, direction) : null;
-    const frame =
+    let flip = false;
+    let frame =
       (brake !== null ? this.frameOf(brake) : null) ?? this.frameOf(vehicleFrame(view.variant, direction));
+    if (frame === null && partner !== undefined) {
+      const brakePartner = view.braking
+        ? vehicleBrakeFrame(view.variant, partner as SpriteDirectionName)
+        : null;
+      frame =
+        (brakePartner !== null ? this.frameOf(brakePartner) : null) ??
+        this.frameOf(vehicleFrame(view.variant, partner as SpriteDirectionName));
+      flip = frame !== null;
+    }
     if (frame === null) {
       /*
        * The reserve fleet's atlas (`vehicles2`) is a deferred tier: a live
@@ -530,9 +559,10 @@ export class WorldScene extends Phaser.Scene {
     if (atlas === undefined) return this.drawPlaceholder(view, index);
 
     const sprite = this.quadFor(index, atlas, frame);
+    if (flip) sprite.setFlipX(true);
     vehicleBodyMotion(view.travelled, view.braking ? -4 : 0, this.bodyMotion);
     sprite.setRotation(this.bodyMotion.pitch);
-    this.place(sprite, frame, view.screenX, view.screenY + this.bodyMotion.bobY);
+    this.place(sprite, frame, view.screenX, view.screenY + this.bodyMotion.bobY, flip);
     return index + 1;
   }
 

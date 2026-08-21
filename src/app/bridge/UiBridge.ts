@@ -216,7 +216,7 @@ interface MutableOrderCard {
 }
 
 /** Order cards shown at once; deeper queues summarise as a count. */
-export const MAX_ORDER_CARDS = 5;
+const MAX_ORDER_CARDS = 5;
 
 export class UiBridge implements HudSource {
   private readonly sim: Sim;
