@@ -117,9 +117,10 @@ pnpm verify           # everything above, in order — run before claiming done
 - **A visual diff is never auto-accepted.** Look at it, decide whether the change was intended, and
   only then update the golden with the reason in the PR (TESTING_STRATEGY §8.4).
 - **Phaser 4.2.1 opens a WebGL _1_ context, not WebGL2** — `WebGLRenderer.js:709`, and the string
-  "webgl2" appears nowhere in its source. Four documents say otherwise. This is an open
-  contradiction recorded in `docs/PROJECT_MEMORY.md` §12; do not "fix" the documents or the
-  capability gate without the decision it asks for.
+  "webgl2" appears nowhere in its source. **Decided 2026-08-21 (ADR-017, Accepted):** the
+  capability floor is WebGL 1 — the gate probes the context the engine actually opens
+  (`no-webgl`), and browsers with no WebGL at all still get the Tier C fallback. Do not
+  re-raise the floor without a scheduled GL2-only consumer and a new decision.
 - **`vercel.json` is generated.** Edit `vercel.ts`, then run `pnpm config:build`. `pnpm config:check`
   fails the build if they drift.
 - **Placeholders must be registered** in `docs/PLACEHOLDER_REGISTER.md` and must look obviously

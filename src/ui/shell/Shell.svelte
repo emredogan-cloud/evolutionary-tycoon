@@ -44,8 +44,8 @@
         <dd data-testid="fact-sha"><code>{buildInfo.buildShaShort}</code></dd>
       </div>
       <div>
-        <dt>WebGL2</dt>
-        <dd data-testid="fact-webgl2">Destekleniyor</dd>
+        <dt>WebGL</dt>
+        <dd data-testid="fact-webgl">Destekleniyor</dd>
       </div>
       <div>
         <dt>Maks. texture</dt>

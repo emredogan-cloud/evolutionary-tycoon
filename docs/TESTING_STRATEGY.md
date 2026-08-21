@@ -315,7 +315,7 @@ Her viewport'ta: yatay taşma yok, tüm birincil eylemler erişilebilir, HUD dü
 
 ```
 ✓ Sayfa yükleniyor
-✓ Canvas oluşturuluyor ve WebGL2 context alınıyor
+✓ Canvas oluşturuluyor ve WebGL context alınıyor (motorun açtığı bağlam WebGL 1 — ADR-017)
 ✓ HUD DOM'da render ediliyor, değerler görünüyor
 ✓ Kritik konsol hatası yok
 ✓ Temel etkileşim (bir butona tıklama) çalışıyor

@@ -9,7 +9,7 @@ import { WorldScene } from './scenes/WorldScene';
  *
  * `Phaser.WEBGL`, never `Phaser.AUTO`. Phaser 4 deprecated the Canvas renderer,
  * so `AUTO` would silently fall back to a renderer that cannot draw this game
- * and the failure would arrive as a blank screen. A browser without WebGL2 is
+ * and the failure would arrive as a blank screen. A browser without WebGL is
  * caught earlier by the capability gate in `src/platform`, which shows an
  * explanatory page instead (TECHNICAL_ARCHITECTURE §12, tier C).
  */

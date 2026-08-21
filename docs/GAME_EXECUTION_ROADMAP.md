@@ -19,7 +19,7 @@
 
 **Nasıl inşa ediyoruz:** Motordan tamamen bağımsız, deterministik, saf TypeScript bir simülasyon çekirdeği (Phaser 4 sadece çiziyor). Bu tek karar; headless testi, CI'da ekonomi doğrulamasını, piksel-kesin görsel regresyonu, birebir tekrar üretilebilir bug raporlarını ve "gün tekrarı" oyun özelliğini aynı anda mümkün kılıyor.
 
-**Yığın:** TypeScript 6.0.3 · Vite 8.2.1 · Phaser 4.2.1 (WebGL2) · Svelte 5.56 (DOM UI) · Vitest 4.1 · Playwright 1.62 · Vercel (statik). Backend yok (tek 5 satırlık `/api/time` hariç).
+**Yığın:** TypeScript 6.0.3 · Vite 8.2.1 · Phaser 4.2.1 (WebGL — bağlam WebGL 1, ADR-017) · Svelte 5.56 (DOM UI) · Vitest 4.1 · Playwright 1.62 · Vercel (statik). Backend yok (tek 5 satırlık `/api/time` hariç).
 
 **Süre yapısı:** 25 faz (P0–P24), her biri kapı (gate) ile ayrılmış. Faz 9 sonunda zorunlu bir **Vertical Slice Kapısı** var: oyun o noktada eğlenceli, görsel olarak ikna edici ve teknik olarak stabil değilse **genişleme durur**.
 
@@ -240,9 +240,9 @@ Tam puanlama tablosu: [TECHNICAL_ARCHITECTURE §1.1](TECHNICAL_ARCHITECTURE.md#1
 | Three.js         |                 189 |
 | Custom WebGL2    |                 148 |
 
-**Neden Phaser:** (1) Pixi bir renderer, Phaser bir framework — Pixi seçseydik sahne/girdi/kamera/tween/partikül/ses/loader'ı yazmak 4–6 hafta alırdı ve hiçbiri bu oyunun farklılaştırıcısı değil. (2) Phaser 4 tam bizim ihtiyaç duyduğumuz yerde yenilendi (WebGL2 RenderNode, cone lights, stencil, Mesh2D). (3) AI ajan uyumluluğu ölçülebilir bir teslim riski kriteri ve Phaser'ın doküman/örnek hacmi en yüksek.
+**Neden Phaser:** (1) Pixi bir renderer, Phaser bir framework — Pixi seçseydik sahne/girdi/kamera/tween/partikül/ses/loader'ı yazmak 4–6 hafta alırdı ve hiçbiri bu oyunun farklılaştırıcısı değil. (2) Phaser 4 tam bizim ihtiyaç duyduğumuz yerde yenilendi (RenderNode mimarisi, cone lights, stencil, Mesh2D; açılan bağlam WebGL 1 — ADR-017). (3) AI ajan uyumluluğu ölçülebilir bir teslim riski kriteri ve Phaser'ın doküman/örnek hacmi en yüksek.
 
-**WebGPU kullanılmıyor:** Phaser 4 bir WebGL2 yeniden yazımı, WebGPU motoru değil; Firefox WebGPU'yu hâlâ default-off tutuyor; ve bizim darboğazımız GPU değil CPU. Bugün kazanç değil risk.
+**WebGPU kullanılmıyor:** Phaser 4 bir WebGL yeniden yazımı (bağlam WebGL 1 — ADR-017), WebGPU motoru değil; Firefox WebGPU'yu hâlâ default-off tutuyor; ve bizim darboğazımız GPU değil CPU. Bugün kazanç değil risk.
 
 ---
 
@@ -252,7 +252,7 @@ Tam puanlama tablosu: [TECHNICAL_ARCHITECTURE §1.1](TECHNICAL_ARCHITECTURE.md#1
 | ---------------- | ---------------------------- | ------------------------------------------------------- |
 | Dil              | TypeScript                   | **6.0.3** (TS7 değil — typescript-eslint desteklemiyor) |
 | Build            | Vite                         | 8.2.1                                                   |
-| Motor            | Phaser (WebGL2)              | 4.2.1                                                   |
+| Motor            | Phaser (WebGL 1 — ADR-017)   | 4.2.1                                                   |
 | UI               | Svelte 5 (runes)             | 5.56.9 + vite-plugin-svelte 7.3.0                       |
 | Simülasyon       | Saf TypeScript               | —                                                       |
 | Config doğrulama | Zod (dev-only)               | 4.4.3                                                   |
@@ -400,9 +400,9 @@ Orantılı strateji. Tek oyunculu bir oyunda hile yapan yalnızca kendi deneyimi
 | Chrome Android                     | 120      | A/B    | Manuel gerçek cihaz + emülasyon E2E  |
 | Safari iOS                         | 17       | A/B    | Manuel gerçek cihaz                  |
 | Samsung Internet / Firefox Android | 24 / 128 | B      | Manuel                               |
-| **WebGL2 yok**                     | —        | **C**  | Nazik "desteklenmiyor" ekranı        |
+| **WebGL yok**                      | —        | **C**  | Nazik "desteklenmiyor" ekranı        |
 
-**Kademe C zorunlu:** Phaser 4'te Canvas renderer deprecated — WebGL2 olmadan oyun çalışmaz. Siyah ekran yerine sebebini açıklayan bir sayfa gösterilir.
+**Kademe C zorunlu:** Phaser 4'te Canvas renderer deprecated — WebGL olmadan oyun çalışmaz (taban WebGL 1, ADR-017). Siyah ekran yerine sebebini açıklayan bir sayfa gösterilir.
 
 ---
 
@@ -658,7 +658,7 @@ Yok.
 
 ### UI/UX
 
-Minimal shell: siyah zemin, oyun adı, sürüm/buildSha, "WebGL2 desteklenmiyor" fallback ekranı, yükleme göstergesi iskeleti.
+Minimal shell: siyah zemin, oyun adı, sürüm/buildSha, "WebGL desteklenmiyor" fallback ekranı, yükleme göstergesi iskeleti.
 
 ### Assets
 
@@ -710,7 +710,7 @@ Yok.
 9. Husky + lint-staged + commitlint (Conventional Commits).
 10. `size-limit` + bütçeler.
 11. Dizin iskeleti + katman `index.ts` dosyaları + katman README'leri.
-12. Shell uygulaması: WebGL2 yetenek tespiti, fallback ekranı, sürüm gösterimi.
+12. Shell uygulaması: WebGL yetenek tespiti (taban WebGL 1 — ADR-017), fallback ekranı, sürüm gösterimi.
 13. `/health.json` üretimi (Vite plugin).
 14. `api/time.ts`.
 15. `.github/workflows/ci.yml`, `preview-e2e.yml`, `production-smoke.yml`, `codeql.yml`.
@@ -783,9 +783,9 @@ REQUIREMENTS
      no-unnecessary-condition.
 
 4. SHELL APP (src/app):
-   - Detect WebGL2. If unavailable, render a styled fallback page explaining why
+   - Detect WebGL (floor: WebGL 1 — ADR-017). If unavailable, render a styled fallback page explaining why
      and listing supported browsers. Phaser 4 deprecated the Canvas renderer, so
-     WebGL2 is mandatory — this page is a product requirement, not a nicety.
+     a working WebGL context is mandatory — this page is a product requirement, not a nicety.
    - Show app version and buildSha (injected by Vite define from git).
    - Do NOT initialise Phaser yet.
 
@@ -816,7 +816,7 @@ REQUIREMENTS
 10. TESTS to ship in this phase:
     unit:  a real test of the capability-detection module (mocked WebGL contexts)
     e2e:   page loads; /health.json matches build; zero console errors;
-           WebGL2-unavailable path renders the fallback (override the context getter)
+           WebGL-unavailable path renders the fallback (override the context getter)
 
 CONSTRAINTS
 - Do not add dependencies beyond those listed without recording an ADR.
@@ -1127,7 +1127,7 @@ Layout tanımı: `src/config/layouts/stage1.ts` — arsa boyutu, yol spline nokt
 - Unit: projeksiyon world↔screen round-trip; depth hesabı bilinen düzenlerde beklenen sıra üretiyor; kamera sınır clamp'i.
 - Integration: RenderBridge sim'e yazmıyor (readonly tip + runtime proxy testi).
 - **İlk visual golden'lar** (3 adet): `stage1-empty`, `iso-depth-testcard` (kasıtlı zor derinlik senaryosu), `camera-bounds`.
-- E2E: canvas oluşuyor, WebGL2 context alınıyor, 60 kare sorunsuz, konsol temiz.
+- E2E: canvas oluşuyor, WebGL context alınıyor (bağlam WebGL 1 — ADR-017), 60 kare sorunsuz, konsol temiz.
 
 ### Performance
 
@@ -1143,7 +1143,7 @@ Preview'da gezilebilir bir dünya. Bu, projenin ilk "gösterilebilir" çıktıs�
 
 ### Tasks
 
-1. Phaser 4 bootstrap, WebGL2 zorunlu, context loss/restore handler.
+1. Phaser 4 bootstrap, WebGL zorunlu (taban WebGL 1 — ADR-017), context loss/restore handler.
 2. `IsoProjection` + ters dönüşüm (ekran→dünya, tıklama için).
 3. `DepthSorter` + kararlı tie-break.
 4. 9 katmanlı `SceneGraph`.
@@ -1189,7 +1189,7 @@ CRITICAL CONSTRAINTS FROM RESEARCH — violating these will require a rewrite
   or anything that must sort.
 - TilemapGPULayer is orthographic-only. There is no isometric tilemap.
   The ground is 2-6 large hand-composed static sprites, not tiles.
-- Phaser 4 deprecated the Canvas renderer. WebGL2 is mandatory.
+- Phaser 4 deprecated the Canvas renderer. A working WebGL context is mandatory (floor: WebGL 1 — ADR-017).
 
 DELIVERABLES
 

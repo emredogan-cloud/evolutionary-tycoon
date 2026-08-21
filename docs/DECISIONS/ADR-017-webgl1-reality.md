@@ -1,7 +1,8 @@
 # ADR-017 — The game runs on WebGL 1, the gate demands WebGL 2, and the resolution needs a decision
 
-**Status:** Proposed — awaiting the user decision PROJECT_MEMORY §12 reserves ·
-**Date:** 2026-08-18 · **Phase:** consolidation batch (post P13, pre P14)
+**Status:** **Accepted — Option A** (user decision, 2026-08-21: "WebGL1 kullanımı
+onaylandı. Maksimum uyumluluk için belgeleri buna göre güncelle.") ·
+**Proposed:** 2026-08-18 · **Decided:** 2026-08-21 · **Phase:** pre-P17
 
 > CLAUDE.md is explicit: _"do not 'fix' the documents or the capability gate without the decision it
 > asks for."_ This ADR therefore changes **nothing**. It exists because the consolidation directive
@@ -55,8 +56,38 @@ the product could serve, for a benefit that has no scheduled consumer.
 measurement say what it needs is WebGL 1. The moment a real GL2 consumer is scheduled, the
 requirement can return as a fact instead of a guess.
 
-## What this batch did and did not do
+## The decision (2026-08-21)
+
+**Option A.** The supported-renderer requirement becomes: _a WebGL-capable
+browser compatible with the approved Phaser 4 renderer_ — which is WebGL 1.
+The gate probes `webgl` (with the `experimental-webgl` alias for old Safari)
+instead of `webgl2`; a browser with no usable WebGL context of any kind still
+gets the graceful fallback screen (Tier C), unchanged as a product requirement.
+
+### Compatibility consequence
+
+Strictly widens. Every browser that passed before still passes (WebGL2 implies
+WebGL1); WebGL1-only browsers — the ones the game has been rendering for all
+along — stop being turned away. No browser is newly _claimed_: the gate now
+tests exactly the context the engine opens, so "supported" and "runs" coincide.
+
+### Testing consequence
+
+- `tests/unit/platform/capability.test.ts`: the refusal fixture becomes
+  "no WebGL at all"; a WebGL1-only environment asserts **supported**.
+- The failure id `no-webgl2` becomes `no-webgl` (shell copy updated with it).
+- E2E boot assertions ("canvas gets a context") already run on WebGL1 —
+  thirteen phases of goldens and E2E are themselves the regression suite.
+
+### Rollback
+
+Re-raise the floor in `capability.ts` (one probe string + failure id) **only**
+with a scheduled GL2-only consumer and exclusion data, per the option-A cost
+recorded above. The documents changed by this decision are listed in
+PHASE_17_REPORT's change-control section.
+
+## What the consolidation batch did and did not do
 
 - Did: took the runtime measurement above, recorded it here and in PROJECT_MEMORY §12.
-- Did not: touch `capability.ts`, the four documents, or the failure copy. The decision is the
-  user's, and the final consolidation report carries this as **CHANGE CONTROL REQUIRED**.
+- Did not: touch `capability.ts`, the four documents, or the failure copy — that waited
+  for this decision.

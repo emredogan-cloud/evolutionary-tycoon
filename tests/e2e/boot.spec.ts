@@ -11,7 +11,7 @@ test.describe('application boot', () => {
 
     await expect(page.getByRole('heading', { name: /Evolutionary\s+Tycoon/ })).toBeVisible();
     await expect(page.getByTestId('build-facts')).toBeVisible();
-    await expect(page.getByTestId('fact-webgl2')).toHaveText('Destekleniyor');
+    await expect(page.getByTestId('fact-webgl')).toHaveText('Destekleniyor');
 
     // maxTextureSize comes from the real GL context. In CI this is SwiftShader,
     // which still reports a sane value — if it were "bilinmiyor" the probe would

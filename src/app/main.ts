@@ -29,7 +29,7 @@ import { syncServerTime } from '@platform/timeSync';
  * Test hook.
  *
  * E2E needs to exercise the unsupported-browser path without finding a machine
- * that genuinely lacks WebGL2. Rather than monkey-patching canvas internals from
+ * that genuinely lacks WebGL. Rather than monkey-patching canvas internals from
  * the test (brittle, and it would drift from the real detection code), the app
  * accepts an explicit override. It is read once, at boot, from the query string.
  */
@@ -40,7 +40,7 @@ function readForcedFailure(search: string): CapabilityReport | null {
 
   return {
     supported: false,
-    failure: forced === 'no-canvas-element' ? 'no-canvas-element' : 'no-webgl2',
+    failure: forced === 'no-canvas-element' ? 'no-canvas-element' : 'no-webgl',
     renderer: null,
     deviceMemoryGb: null,
     hardwareConcurrency: null,
@@ -107,7 +107,7 @@ function boot(): void {
     mount(UnsupportedBrowser, {
       target,
       props: {
-        failure: capabilities.failure ?? 'no-webgl2',
+        failure: capabilities.failure ?? 'no-webgl',
         renderer: capabilities.renderer,
       },
     });

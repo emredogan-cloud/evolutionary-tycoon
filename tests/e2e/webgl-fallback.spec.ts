@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
 
 /**
- * Tier C: no WebGL2, no game.
+ * Tier C: no WebGL, no game.
  *
  * Phaser 4 deprecated the Canvas renderer, so there is no degraded rendering
  * mode to fall back to. The only acceptable behaviour is an explanation
@@ -10,12 +10,12 @@ import { expect, test } from './fixtures';
  */
 test.describe('unsupported browser path', () => {
   test('shows an explanatory screen instead of a black page', async ({ page, consoleErrors }) => {
-    await page.goto('/?forceUnsupported=no-webgl2');
+    await page.goto('/?forceUnsupported=no-webgl');
 
     await expect(page.locator('html')).toHaveAttribute('data-app-state', 'unsupported');
 
     await expect(page.getByRole('heading', { name: /çalıştırılamıyor/i })).toBeVisible();
-    await expect(page.getByText(/WebGL2/i)).toBeVisible();
+    await expect(page.getByText(/WebGL/i)).toBeVisible();
 
     // The page must tell the player what would actually fix it, and which
     // browsers work. Saying only "unsupported" is a dead end for the player.
@@ -36,7 +36,7 @@ test.describe('unsupported browser path', () => {
 
   test('the fallback screen is readable on a small phone', async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 640 });
-    await page.goto('/?forceUnsupported=no-webgl2');
+    await page.goto('/?forceUnsupported=no-webgl');
 
     await expect(page.getByRole('heading', { name: /çalıştırılamıyor/i })).toBeVisible();
 
