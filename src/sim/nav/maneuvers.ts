@@ -1,3 +1,4 @@
+import { euclidean } from '../math/length';
 import type { StageLayout } from '@config/layouts/stage1';
 import type { LaneGraph } from './LaneGraph';
 import { Polyline } from './spline';
@@ -97,7 +98,7 @@ export function buildManeuver(
   endTangentX: number,
   endTangentY: number,
 ): Maneuver {
-  const span = Math.hypot(endX - startX, endY - startY);
+  const span = euclidean(endX - startX, endY - startY);
   const handle = Math.max(1, span * HANDLE_FRACTION);
 
   const c0x = startX + startTangentX * handle;
@@ -116,7 +117,7 @@ export function buildManeuver(
      * than defensive: two identical successive samples describe no motion.
      */
     const previous = points[points.length - 1];
-    if (previous !== undefined && Math.hypot(point.x - previous.x, point.y - previous.y) < 1e-6) {
+    if (previous !== undefined && euclidean(point.x - previous.x, point.y - previous.y) < 1e-6) {
       continue;
     }
     points.push(point);
@@ -132,9 +133,91 @@ export function buildManeuver(
  * Indexed `laneIndex * bayCount + bayIndex`, which is the flat layout the
  * simulation stores as a single number on the vehicle.
  */
+/**
+ * A destination a car can stop at: a parking bay, or a drive-thru lane slot.
+ *
+ * Lane slots are given the lane's own direction as their heading, derived from
+ * the slot ahead — so a car in the queue faces the window rather than facing
+ * whichever way the nearest parking bay happens to point.
+ */
+function bayAt(
+  layout: StageLayout,
+  index: number,
+): { x: number; y: number; heading: { x: number; y: number } } | undefined {
+  const parking = layout.parking[index];
+  if (parking !== undefined) return parking;
+
+  const driveThru = layout.driveThru;
+  if (driveThru === null) return undefined;
+
+  const slot = index - layout.parking.length;
+  const here = driveThru.lane[slot];
+  if (here === undefined) return undefined;
+
+  // Facing the slot in front, or the window if this is the front.
+  const ahead = driveThru.lane[slot - 1] ?? driveThru.window;
+  const dx = ahead.x - here.x;
+  const dy = ahead.y - here.y;
+  /*
+   * Guarded explicitly rather than with `|| 1`: two lane points authored at the
+   * same spot would be a layout error, and dividing by zero would produce a NaN
+   * heading that propagates silently into every curve built from it.
+   */
+  const raw = euclidean(dx, dy);
+  const length = raw === 0 ? 1 : raw;
+  return { x: here.x, y: here.y, heading: { x: dx / length, y: dy / length } };
+}
+
+/** One straight path per lane slot, from it to the slot in front. */
+function buildLaneAdvances(layout: StageLayout): readonly (Polyline | null)[] {
+  const driveThru = layout.driveThru;
+  if (driveThru === null) return [];
+
+  const out: (Polyline | null)[] = [];
+  for (let slot = 0; slot < driveThru.lane.length; slot++) {
+    const here = driveThru.lane[slot];
+    const ahead = driveThru.lane[slot - 1];
+    if (here === undefined || ahead === undefined) {
+      // Slot 0 has nowhere to advance to; it is already at the window.
+      out.push(null);
+      continue;
+    }
+    out.push(new Polyline([here, ahead]));
+  }
+  return out;
+}
+
 export class ManeuverTable {
   readonly laneCount: number;
   readonly bayCount: number;
+  /** How many of `bayCount` are real parking bays. The rest are lane slots. */
+  readonly parkingBayCount: number;
+  readonly driveThruSlotCount: number;
+  /**
+   * Straight paths from one lane slot to the next one forward.
+   *
+   * Indexed by the slot being left. A drive-thru queue compacts, and a car that
+   * jumped from slot three to slot two would be the teleport the whole design
+   * forbids — so the creep forward is a path like every other movement, just a
+   * very short and very straight one.
+   */
+  private readonly advances: readonly (Polyline | null)[];
+
+  /** The path from a lane slot to the one in front, or null at the window. */
+  advanceFrom(slot: number): Polyline | null {
+    return this.advances[slot] ?? null;
+  }
+
+  /** The bay index a drive-thru lane slot occupies in this table. */
+  driveThruBay(slot: number): number {
+    return this.parkingBayCount + slot;
+  }
+
+  /** The lane slot a bay index refers to, or -1 if it is a real parking bay. */
+  laneSlotOf(bay: number): number {
+    const slot = bay - this.parkingBayCount;
+    return slot >= 0 && slot < this.driveThruSlotCount ? slot : -1;
+  }
   private readonly sets: readonly ManeuverSet[];
   /**
    * One per lane: in off the road, across the apron, and back out — without
@@ -149,8 +232,23 @@ export class ManeuverTable {
   private readonly passThroughSets: readonly ManeuverSet[];
 
   constructor(layout: StageLayout, lanes: LaneGraph) {
+    this.advances = buildLaneAdvances(layout);
     this.laneCount = lanes.laneCount;
-    this.bayCount = layout.parking.length;
+    /*
+     * Drive-thru lane slots are extra "bays" — Phase 11.
+     *
+     * A car entering the lane runs exactly the same manoeuvre it would run into
+     * a parking bay: off the road, across the apron, stop facing the way it
+     * drove in. Modelling the lane as a separate kind of destination would have
+     * meant a second copy of the entry curve, the exit curve and the
+     * `positionOf` branch that samples them, and the two copies would disagree
+     * the first time anybody adjusted the bulge.
+     *
+     * Indices past `parking.length` are lane slots; `driveThruBay` converts.
+     */
+    this.parkingBayCount = layout.parking.length;
+    this.driveThruSlotCount = layout.driveThru?.lane.length ?? 0;
+    this.bayCount = this.parkingBayCount + this.driveThruSlotCount;
 
     const sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
     const sets: ManeuverSet[] = [];
@@ -199,7 +297,7 @@ export class ManeuverTable {
       });
 
       for (let bayIndex = 0; bayIndex < this.bayCount; bayIndex++) {
-        const bay = layout.parking[bayIndex];
+        const bay = bayAt(layout, bayIndex);
         if (bay === undefined) continue;
 
         /*

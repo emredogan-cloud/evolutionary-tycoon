@@ -150,8 +150,17 @@ export class AssetLoader {
     return { loaded, failed };
   }
 
+  /**
+   * The denominator for the progress bar.
+   *
+   * Every atlas is fetched before the world starts (see `LoadScene`'s note on
+   * why), so the honest denominator is the manifest's whole byte count. While
+   * this was `criticalBytes` the bar reached 100% two atlases early and then sat
+   * there — the precise failure ASSET_PIPELINE §14 exists to prevent, arrived at
+   * from the other direction.
+   */
   get totalBytes(): number {
-    return this.manifest?.totals.criticalBytes ?? 0;
+    return this.manifest?.totals.bytes ?? 0;
   }
 
   get progress(): LoadProgress {

@@ -153,14 +153,22 @@ describe('src/sim determinism guards', { concurrent: false }, () => {
       'export function f(): void {\n  requestAnimationFrame(() => undefined);\n}\n',
       'Timers are banned',
     ],
-  ])('ESLint rejects %s in src/sim', (_label, source, expectedMessage) => {
-    writeFixture(FIXTURE, source);
+  ])(
+    'ESLint rejects %s in src/sim',
+    (_label, source, expectedMessage) => {
+      writeFixture(FIXTURE, source);
 
-    const { exitCode, output } = lint(FIXTURE);
+      const { exitCode, output } = lint(FIXTURE);
 
-    expect(exitCode).not.toBe(0);
-    expect(output).toContain(expectedMessage);
-  });
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain(expectedMessage);
+    },
+    // The only block in this file that was missing the timeout every other one
+    // carries. Each case spawns a full type-aware ESLint run, which takes
+    // seconds on an idle machine and more than five of them under coverage —
+    // so it failed as a timeout while asserting exactly what it always did.
+    ENFORCEMENT_TIMEOUT_MS,
+  );
 
   it.each([
     ['phaser', "import Phaser from 'phaser';\nexport const v = Phaser;\n"],

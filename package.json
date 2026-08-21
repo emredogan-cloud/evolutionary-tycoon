@@ -2,7 +2,7 @@
   "name": "evolutionary-tycoon",
   "version": "0.1.0",
   "private": true,
-  "description": "2D isometric roadside restaurant tycoon — traffic is the demand curve.",
+  "description": "2D isometric roadside restaurant tycoon \u2014 traffic is the demand curve.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.33.4",
@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "rig:editor": "vite tools/rig-editor --open",
     "build": "vite build",
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.test.json --noEmit && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
@@ -22,7 +23,9 @@
     "depcruise": "depcruise src --config .dependency-cruiser.cjs",
     "depcruise:graph": "depcruise src --config .dependency-cruiser.cjs --output-type dot",
     "knip": "knip",
+    "assets:import": "node tools/asset-pipeline/cli.ts import",
     "assets:validate": "node tools/asset-pipeline/cli.ts validate",
+    "assets:prompt-coverage": "node tools/validateAssetPromptCoverage.ts",
     "assets:process": "node tools/asset-pipeline/cli.ts process",
     "assets:atlas": "node tools/asset-pipeline/cli.ts atlas",
     "assets:audio": "node tools/asset-pipeline/cli.ts audio",
@@ -38,6 +41,8 @@
     "test:coverage": "vitest run --coverage",
     "test:determinism": "vitest run tests/unit/determinism",
     "bench:sim": "vitest run --config vitest.bench.config.ts",
+    "balance": "BALANCE_MINUTES=720 BALANCE_WRITE_REPORT=1 vitest run --config vitest.balance.config.ts",
+    "balance:check": "vitest run --config vitest.balance.config.ts",
     "bench:record": "BENCH_RECORD=1 vitest run --config vitest.bench.config.ts",
     "e2e": "playwright test --project=chromium --project=firefox",
     "e2e:chromium": "playwright test --project=chromium",
@@ -47,7 +52,7 @@
     "test:visual": "playwright test --project=visual",
     "test:visual:update": "docker run --rm --user \"$(id -u):$(id -g)\" -e HOME=/tmp -e CI=1 -v \"$PWD\":/work -w /work mcr.microsoft.com/playwright:v1.62.1-noble bash -lc 'mkdir -p /tmp/bin && corepack enable --install-directory /tmp/bin && export PATH=/tmp/bin:$PATH && pnpm install --frozen-lockfile && pnpm build && pnpm exec playwright test --project=visual --update-snapshots'",
     "size": "size-limit",
-    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm assets:validate && pnpm assets:build && pnpm test:coverage && pnpm bench:sim && pnpm build && pnpm size",
+    "verify": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm depcruise && pnpm knip && pnpm assets:validate && pnpm assets:prompt-coverage && pnpm assets:build && pnpm test:coverage && pnpm balance:check && pnpm bench:sim && pnpm build && pnpm size",
     "prepare": "husky"
   },
   "dependencies": {
@@ -85,7 +90,9 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.67.0",
     "vite": "8.2.1",
-    "vitest": "4.1.10"
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "4.1.10",
+    "@axe-core/playwright": "4.10.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

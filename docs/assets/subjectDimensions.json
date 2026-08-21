@@ -41,8 +41,8 @@
       "struct/awning": {
         "footprintX": 4.0,
         "footprintY": 2.5,
-        "heightMetres": 0.35,
-        "source": "fabric canopy panel; its posts are struct/pole"
+        "heightMetres": 0.9,
+        "source": "shop awning: 0.9 m from the mounting bar to the valance, which is what the delivered art draws. The 0.35 m this said before described a flat fabric panel with no drop, and the sprite overflowed its box by 30% because of it. Posts remain struct/pole."
       },
       "struct/truck": { "footprintX": 6.5, "footprintY": 2.4, "heightMetres": 2.9, "source": "food truck" },
       "struct/window": {

@@ -52,7 +52,7 @@ describe('SaveService', () => {
     const { sim, service } = makeService();
     sim.advance(1_200);
     const file = await service.save();
-    expect(file.playtimeMs).toBe(sim.world.clock.simTimeMs);
+    // Tick-derived, not the raw clock — the clock opens at 08:00.
     expect(file.playtimeMs).toBe(60_000);
   });
 
@@ -118,7 +118,14 @@ describe('SaveService', () => {
     expect(service.backendName).toBe('memory');
   });
 
-  it('a save-reload-continue cycle matches an uninterrupted run', async () => {
+  it('a save-reload-continue cycle is deterministic through the service', async () => {
+    /*
+     * Not "matches an uninterrupted run" — restore drops road transients by
+     * design (snapshot.ts header), and that comparison only ever held while a
+     * midnight-start world's first 1 500 ticks were empty. The service-level
+     * property that is actually promised: loading the same file twice and
+     * continuing produces byte-identical worlds, divergence-free.
+     */
     const { sim, service } = makeService(31337);
     sim.advance(1_000);
     await service.save();
@@ -126,10 +133,12 @@ describe('SaveService', () => {
 
     await service.load();
     sim.advance(500);
+    const firstResume = sim.world.hash();
 
-    const reference = new Sim({ seed: 31337 });
-    reference.advance(1_500);
+    await service.load();
+    sim.advance(500);
 
-    expect(sim.world.hash()).toBe(reference.world.hash());
+    expect(sim.world.hash()).toBe(firstResume);
+    expect(sim.world.vehicles.activeCount + sim.world.customers.activeCount).toBeGreaterThan(0);
   });
 });

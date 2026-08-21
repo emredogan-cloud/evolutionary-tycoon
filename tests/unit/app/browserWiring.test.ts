@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HudModel } from '@app/bridge/hudModel';
 import { createContainer } from '@app/container';
 import { FrameMeter } from '@app/FrameMeter';
 import { GameLoop } from '@app/GameLoop';
@@ -42,14 +43,103 @@ function hooksOn(target: Window): EvoTycoonTestApi {
  * window so the scheduler is exercised for real.
  */
 function isolatedWindow(search: string): Window {
+  let frameClock = 0;
   return {
     requestAnimationFrame: (callback: FrameRequestCallback) => window.requestAnimationFrame(callback),
     cancelAnimationFrame: (handle: number) => {
       window.cancelAnimationFrame(handle);
     },
     location: { search },
+    /*
+     * A clock that advances a whole second per read, so the UI bridge's 10 Hz
+     * throttle never suppresses a sample a test is waiting for. Testing the
+     * throttle itself is `uiBridge.test.ts`'s job; here it would only be a way
+     * for these tests to fail for an unrelated reason.
+     */
+    performance: {
+      now: () => {
+        frameClock += 1000;
+        return frameClock;
+      },
+    },
   } as unknown as Window;
 }
+
+describe('the UI bridge, as the container wires it', () => {
+  it('publishes to the overlay on every rendered frame', () => {
+    /*
+     * Sampling hangs off `renderContext.onFrame` rather than off the simulation
+     * loop, and the difference is not cosmetic: a frozen scene stops the loop
+     * and keeps drawing. Wired to the loop, the overlay on every visual golden
+     * would be stuck on whatever it published before the camera existed.
+     */
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+
+    let published = 0;
+    container.ui.subscribe(() => {
+      published++;
+    });
+    const atSubscribe = published;
+
+    container.renderContext.onFrame?.();
+    container.renderContext.onFrame?.();
+    expect(published - atSubscribe).toBe(2);
+  });
+
+  it('starts with nothing projected and republishes when the camera arrives', () => {
+    /*
+     * The camera does not exist until Phaser has booted a scene, which is after
+     * the container is built. Until then every marker is off screen — and the
+     * republish is what stops the overlay waiting a frame to notice otherwise.
+     */
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+
+    let published = 0;
+    container.ui.subscribe(() => {
+      published++;
+    });
+    const before = published;
+
+    container.setProjector((_x, _y, _z, out) => {
+      out.x = 1;
+      out.y = 2;
+      return true;
+    });
+    expect(published - before).toBe(1);
+  });
+});
+
+describe('cooking through a frozen fast-forward', () => {
+  it('earns nothing without ?cook=1, because the player is the cook', () => {
+    /*
+     * The control. In Stage 1 an order sits in `PLACED` until a `MANUAL_PREP`
+     * command starts it, so a fast-forward that issues no commands arrives at
+     * the target tick with a queue and a cold kitchen. A golden of a busy stand
+     * taken this way would be photographing a stand that is not serving.
+     */
+    const container = createContainer(
+      isolatedWindow('?freezeAt=6000&noParticles=1'),
+      424242,
+      new MemoryStorageAdapter(),
+    );
+
+    expect(container.sim.world.tick).toBe(6000);
+    expect(container.sim.world.stats.customersServed).toBe(0);
+    expect(container.sim.world.economy.cash).toBe(0);
+  });
+
+  it('cooks the whole way there with ?cook=1', () => {
+    const container = createContainer(
+      isolatedWindow('?freezeAt=6000&noParticles=1&cook=1'),
+      424242,
+      new MemoryStorageAdapter(),
+    );
+
+    expect(container.sim.world.tick).toBe(6000);
+    expect(container.sim.world.stats.customersServed).toBeGreaterThan(0);
+    expect(container.sim.world.economy.cash).toBeGreaterThan(0);
+  });
+});
 
 describe('createContainer', () => {
   it('wires the simulation, the loop and the save service together', () => {
@@ -182,7 +272,7 @@ describe('DebugOverlay', () => {
 
     const text = document.querySelector('#debug-overlay')?.textContent ?? '';
     expect(text).toContain('tick     40');
-    expect(text).toContain('sim      2.0s');
+    expect(text).toContain('sim      242.0s'); // 08:00 opening (240 s) + the 2 s advanced here
     // Vehicle count comes from the live traffic system rather than the one the
     // test spawned, so it is matched by shape instead of by value.
     expect(text).toMatch(/entities v\d+ c1 e0 o0/);
@@ -309,7 +399,7 @@ describe('installTestHooks', () => {
   it('installs a frozen, non-enumerable API', () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
 
     const descriptor = Object.getOwnPropertyDescriptor(target, '__EVOTYCOON__');
     expect(descriptor?.enumerable).toBe(false);
@@ -320,7 +410,7 @@ describe('installTestHooks', () => {
   it('exposes state, hash, system order and loop statistics', () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.advanceTicks(20);
@@ -333,7 +423,7 @@ describe('installTestHooks', () => {
   it('dispatches commands through the same door the player uses', () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.dispatch({ t: 'SET_SPEED', mult: 2 });
@@ -347,7 +437,7 @@ describe('installTestHooks', () => {
     // whatever the next tick wrote into them.
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.dispatch({ t: 'SET_SPEED', mult: 4 });
@@ -356,7 +446,11 @@ describe('installTestHooks', () => {
     api.advanceTicks(1);
 
     expect(api.drainEvents()).toEqual([
+      // Commands land at the start of the tick, before the systems run — so
+      // the dispatched speed change precedes the calendar's first-tick
+      // weather announcement (Phase 15), which precedes the next dispatch.
       { t: 'SPEED_CHANGED', mult: 4 },
+      { t: 'WEATHER_CHANGED', state: expect.any(Number) as number },
       { t: 'PAUSE_CHANGED', paused: true },
     ]);
     expect(api.drainEvents()).toEqual([]);
@@ -365,10 +459,23 @@ describe('installTestHooks', () => {
   it('saves and loads through the real persistence stack', async () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
+    /*
+     * Advanced until there is traffic on the road, not for a fixed 300 ticks.
+     * The premise of the last assertion is that a live world carries transient
+     * state the save drops — and a fixed tick count only satisfies it when a car
+     * happens to be passing. Phase 12 changed the arrival rate and tick 300 with
+     * this seed became an empty road, so the test compared two identical worlds
+     * and asserted they differed.
+     */
     api.advanceTicks(300);
+    for (let attempt = 0; attempt < 40 && sim.world.vehicles.activeCount === 0; attempt++) {
+      api.advanceTicks(20);
+    }
+    expect(sim.world.vehicles.activeCount, 'no traffic to lose in the save').toBeGreaterThan(0);
+    const savedTick = sim.world.tick;
     const savedHash = api.getWorldHash();
 
     const saved = await api.save();
@@ -386,7 +493,7 @@ describe('installTestHooks', () => {
     expect(loaded.ok).toBe(true);
     expect(loaded.slot).toBe('save');
     expect(loaded.recovered).toBe(false);
-    expect(loaded.tick).toBe(300);
+    expect(loaded.tick).toBe(savedTick);
     expect(loaded.hash).toBe(reference.hash);
     expect(loaded.hash).not.toBe(savedHash);
   });
@@ -394,7 +501,7 @@ describe('installTestHooks', () => {
   it('reports a load failure instead of throwing', async () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     const loaded = await api.load();
@@ -414,7 +521,7 @@ describe('installTestHooks', () => {
     const saves = new SaveService(sim, new SaveManager(hostile), 'sha', () => 0);
 
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
 
     const result = await hooksOn(target).save();
     expect(result.ok).toBe(false);
@@ -424,7 +531,7 @@ describe('installTestHooks', () => {
   it('clearSaves empties the store', async () => {
     const { sim, loop, saves } = wire();
     const target = {} as unknown as Window;
-    installTestHooks(target, sim, loop, saves, new FrameMeter());
+    installTestHooks(target, sim, loop, saves, new FrameMeter(), new MemoryStorageAdapter());
     const api = hooksOn(target);
 
     api.advanceTicks(10);
@@ -432,5 +539,178 @@ describe('installTestHooks', () => {
     await api.clearSaves();
 
     expect((await api.load()).ok).toBe(false);
+  });
+});
+
+/**
+ * The intent surface, exercised through the container that builds it — Phase 11.
+ *
+ * Every entry of `UiCommands` is a closure created in `createContainer`, and
+ * none of them had ever been called by a test: the overlay calls them in a
+ * browser and the simulation is tested directly, so the *translation* between
+ * the two — the one thing this layer is for — sat in the gap between the two
+ * suites. Build mode added four more closures to that gap, which is what made
+ * it worth closing.
+ */
+describe('what the overlay is allowed to ask for', () => {
+  it('turns every intent into a command the simulation applies', () => {
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    const applied = container.sim.world.stats.commandsApplied;
+
+    container.commands.buyUpgrade('hand-painted-sign');
+    container.commands.setPrice('lemonade', 3);
+    container.commands.hire('cook', 0.5);
+    container.commands.evolve();
+    container.commands.place('ph-prop-short', 8, 16);
+    container.commands.removePlaced(0);
+
+    // Queued, not applied: commands land at the start of a tick, never on
+    // dispatch, so that wall-clock arrival time cannot change an outcome.
+    expect(container.sim.world.stats.commandsApplied).toBe(applied);
+    container.sim.advance(2);
+    expect(container.sim.world.stats.commandsApplied).toBe(applied + 6);
+  });
+
+  it('fires an employee the overlay names by entity id', () => {
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    container.sim.world.economy.cash = 500;
+    container.commands.hire('cook', 0.5);
+    container.sim.advance(2);
+    expect(container.sim.world.employees.activeCount).toBe(1);
+
+    const hired = container.sim.world.employees.at(0).entityId;
+    container.commands.fire(hired);
+    container.sim.advance(2);
+    expect(container.sim.world.employees.activeCount).toBe(0);
+  });
+
+  it('answers no placement preview until there is a camera', () => {
+    // The unprojector is installed by `main.ts` once Phaser has booted. Before
+    // that a screen point does not correspond to anywhere, and the honest answer
+    // is null rather than the origin.
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    expect(container.commands.previewPlacement('ph-prop-short', 640, 360)).toBeNull();
+  });
+
+  it('previews through the camera the moment one is installed', () => {
+    /*
+     * The whole point of the indirection: the container is built before the
+     * camera exists, so both the projector and its inverse are swapped in later
+     * and every preview from then on goes through them.
+     */
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    // A stand-in that reads screen pixels as tenths of a metre, which is enough
+    // to prove the wiring without restating the isometric transform.
+    container.setUnprojector((x, y) => ({ x: x / 10, y: y / 10 }));
+    container.setProjector((x, y, _z, out) => {
+      out.x = x * 10;
+      out.y = y * 10;
+      return true;
+    });
+
+    const preview = container.commands.previewPlacement('ph-prop-short', 83, 162);
+    expect(preview).not.toBeNull();
+    // Snapped to the half-metre navigation grid on the way through: 8.3 m
+    // becomes 8.5 and 16.2 becomes 16.0, which is the whole reason the ghost
+    // reports a cell rather than echoing the cursor back.
+    expect(preview?.worldX).toBe(8.5);
+    expect(preview?.worldY).toBe(16);
+    expect(preview?.outcome).toBe('ok');
+    // And projected back, so the ghost is drawn on the cell it would occupy.
+    expect(preview?.screenX).toBe(85);
+    expect(preview?.screenY).toBe(160);
+  });
+
+  it('reports the reason a placement would fail', () => {
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    container.setUnprojector((x, y) => ({ x: x / 10, y: y / 10 }));
+
+    expect(container.commands.previewPlacement('ph-prop-short', -500, 160)?.outcome).toBe('outside-lot');
+
+    container.commands.place('ph-prop-short', 8, 16);
+    container.sim.advance(2);
+    expect(container.commands.previewPlacement('ph-prop-short', 80, 160)?.outcome).toBe('occupied');
+  });
+
+  it('starts at the stage the query string asks for', () => {
+    // Visual regression only — `?stage=` is documented alongside `freezeAt` in
+    // renderMode. Clamped, so a golden URL asking for stage 9 photographs the
+    // last stage there is rather than crashing.
+    expect(
+      createContainer(isolatedWindow('?stage=3'), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
+    ).toBe(3);
+    expect(
+      createContainer(isolatedWindow('?stage=9'), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
+    ).toBe(4);
+    expect(
+      createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter()).sim.world.progression.stage,
+    ).toBe(1);
+  });
+});
+
+describe('the calendar pins — Phase 15 fixture instruments', () => {
+  it('forceHour starts the clock at the named hour', () => {
+    const container = createContainer(isolatedWindow('?forceHour=22'), 7, new MemoryStorageAdapter());
+    expect(container.sim.world.clock.gameHour).toBeCloseTo(22, 5);
+  });
+
+  it('forceWeather writes the whole of day 0 as that state, planned', () => {
+    const container = createContainer(isolatedWindow('?forceWeather=snow'), 7, new MemoryStorageAdapter());
+    expect(container.sim.world.environment.plannedDay).toBe(0);
+    expect([...container.sim.world.environment.weatherSegments]).toEqual([3, 3, 3, 3]);
+    // An unknown state changes nothing but still pins the plan.
+    const bogus = createContainer(isolatedWindow('?forceWeather=hailstorm'), 7, new MemoryStorageAdapter());
+    expect([...bogus.sim.world.environment.weatherSegments]).toEqual([0, 0, 0, 0]);
+  });
+
+  it('forceEvent schedules that event across the day', () => {
+    const container = createContainer(
+      isolatedWindow('?forceEvent=festival&stage=4'),
+      7,
+      new MemoryStorageAdapter(),
+    );
+    const env = container.sim.world.environment;
+    expect(env.eventTypes[2]).toBe(2);
+    expect(env.eventEndMs[2]).toBe(container.sim.world.clock.msPerGameDay);
+  });
+});
+
+describe('the HUD strip fields — Phase 15', () => {
+  it('samples weather and the active event into the model', () => {
+    const container = createContainer(
+      isolatedWindow('?forceWeather=rain&forceEvent=festival&stage=4'),
+      7,
+      new MemoryStorageAdapter(),
+    );
+    let model: HudModel | null = null;
+    const unsubscribe = container.ui.subscribe((m) => {
+      model = m;
+    });
+    container.sim.advance(2);
+    container.ui.refresh();
+    unsubscribe();
+
+    expect(model).not.toBeNull();
+    const hud = model as unknown as HudModel;
+    expect(hud.weatherId).toBe('RAIN');
+    expect(hud.weatherLabel).toBe('Yağmur');
+    expect(hud.eventId).toBe('FESTIVAL');
+    expect(hud.eventLabel).toBe('Festival');
+    expect(hud.eventRemainingMs).toBeGreaterThan(0);
+  });
+
+  it('reads an ordinary road as no event and clear skies', () => {
+    const container = createContainer(isolatedWindow('?forceWeather=clear'), 7, new MemoryStorageAdapter());
+    let model: HudModel | null = null;
+    const unsubscribe = container.ui.subscribe((m) => {
+      model = m;
+    });
+    container.sim.advance(2);
+    container.ui.refresh();
+    unsubscribe();
+    const hud = model as unknown as HudModel;
+    expect(hud.weatherId).toBe('CLEAR');
+    expect(hud.eventId).toBe('');
+    expect(hud.eventRemainingMs).toBe(0);
   });
 });

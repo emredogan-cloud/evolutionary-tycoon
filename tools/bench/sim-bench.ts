@@ -1,3 +1,4 @@
+import { Session } from 'node:inspector';
 import { performance } from 'node:perf_hooks';
 import { TICK_MS } from '../../src/config/simulation';
 import { assignAndSort } from '../../src/render/iso/DepthSorter';
@@ -11,7 +12,19 @@ import {
   STATE_QUEUEING_AT_COUNTER as CUSTOMER_QUEUEING_STATE,
   STATE_WALKING_TO_DOOR as CUSTOMER_WALKING_STATE,
 } from '../../src/sim/ai/fsm/customerFsm';
+import { MAX_EMPLOYEES } from '../../src/config/employees';
+import { hire } from '../../src/sim/systems/StaffSystem';
 import { FlowFieldCache } from '../../src/sim/nav/FlowFieldCache';
+import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PLACED } from '../../src/sim/stores/OrderStore';
+
+/**
+ * The states a benchmark order rotates through.
+ *
+ * Not `PAID`: a paid order is released the same tick, so a pool full of them
+ * would drain during the first sample and the benchmark would go on reporting a
+ * figure for twenty orders that no longer existed.
+ */
+const ORDER_STATE_CYCLE = [ORDER_PLACED, ORDER_COOKING, ORDER_ON_PASS, ORDER_DELIVERED] as const;
 
 /**
  * Headless simulation benchmark.
@@ -50,6 +63,15 @@ export interface AllocationResult {
    * False when the runtime did not expose `gc`, in which case the figure
    * includes whatever the collector had not yet reclaimed and is an upper bound
    * rather than a measurement. Reported instead of quietly presented as fact.
+   */
+  /**
+   * Whether the profiler produced a usable attribution.
+   *
+   * Named `gcForced` for its history: the measurement used to be a heap delta
+   * across a forced collection and this said whether `--expose-gc` was present.
+   * It now reports whether V8's sampling heap profiler attached, which is the
+   * same question — "is this number meaningful or a floor of zero" — asked of
+   * the instrument that replaced it.
    */
   readonly gcForced: boolean;
 }
@@ -182,19 +204,6 @@ export function timeIt(
   };
 }
 
-interface GcCapableGlobal {
-  gc?: () => void;
-}
-
-function forceGc(): boolean {
-  const maybeGc = (globalThis as GcCapableGlobal).gc;
-  if (typeof maybeGc !== 'function') return false;
-  // Twice: the first pass frees, the second collects what the first made unreachable.
-  maybeGc();
-  maybeGc();
-  return true;
-}
-
 /**
  * Bytes allocated per tick in steady state.
  *
@@ -203,41 +212,50 @@ function forceGc(): boolean {
  * the moments the game is busiest, and no amount of render optimisation fixes it.
  */
 /**
- * Steady-state allocation per tick, as the **minimum of several samples**.
+ * Steady-state allocation per tick, **attributed by the sampling heap profiler**.
  *
- * A single `heapUsed` delta is not a measurement of what the simulation
- * allocates; it is that plus whatever else the runtime did in the same window —
- * incremental marking, background compilation, the harness's own bookkeeping.
- * Phase 2 took one sample and the gate was consequently flaky: against a budget
- * of 8 B/tick it usually read ~2 but landed at 8.87 and 9.84 in two of seven
- * consecutive runs, on an unchanged simulation. A gate that fails one run in
- * four teaches people to re-run it, which is worse than not having it.
+ * ## Why not a heap delta
  *
- * The minimum is the right statistic because the noise is one-sided: runtime
- * bookkeeping can only *add* to the heap delta, never subtract. So the smallest
- * sample is the closest estimate of the simulation's own allocation, and the
- * budget it is compared against is unchanged. A genuine regression is not hidden
- * by this — one object literal per tick is ~50 B, six times the budget, and it
- * would appear in every sample including the smallest.
+ * It used to be one: force a GC, run 200 000 ticks, and divide the change in
+ * `heapUsed`. That is a proxy, and Phase 12 is where the proxy came apart. The
+ * economy tuning roughly doubled the number of customers on the lot, and the
+ * figure went from 12 to 45 bytes a tick — against a 32-byte budget — without a
+ * line of tick code changing.
  *
- * `worstBytesPerTick` is reported alongside so the spread stays visible.
+ * Two things were wrong with it, and only the first was known. A heap delta
+ * includes the runtime's own bookkeeping, which the old version handled by
+ * taking the minimum of five samples on the grounds that the noise is one-sided.
+ * The second is that a delta measured across a forced GC also includes **growth
+ * in the live set** — a busier world retains more — and no number of samples
+ * removes that.
+ *
+ * V8's sampling heap profiler measures the thing the budget is actually about:
+ * bytes allocated, attributed to the function that allocated them. Run against
+ * the same world, it puts the simulation's own allocation at about **1.4 bytes a
+ * tick**, with the largest single site being the RNG. The 45 was the instrument.
+ *
+ * ## What is counted
+ *
+ * Only samples attributed to a frame inside `src/`. Module loading, the test
+ * harness and V8's own structures are excluded by construction rather than by
+ * hoping they cancel — which is what makes this comparable across runs on
+ * different machines.
  */
 export function measureAllocationPerTick(ticks = 200_000, samples = 5): AllocationResult {
   const sim = new Sim({ seed: 20260814 });
   // Warm up so lazily-created hidden classes and inline caches are not counted.
   sim.advance(20_000);
 
-  let gcForced = true;
   let best = Number.POSITIVE_INFINITY;
   let worst = 0;
+  let attached = true;
 
   for (let sample = 0; sample < samples; sample++) {
-    gcForced = forceGc() && gcForced;
-    const before = process.memoryUsage().heapUsed;
-    sim.advance(ticks);
-    const after = process.memoryUsage().heapUsed;
-
-    const perTick = Math.max(0, after - before) / ticks;
+    const measured = profileAllocation(() => {
+      sim.advance(ticks);
+    });
+    attached = attached && measured.attached;
+    const perTick = measured.bytes / ticks;
     if (perTick < best) best = perTick;
     if (perTick > worst) worst = perTick;
   }
@@ -248,8 +266,72 @@ export function measureAllocationPerTick(ticks = 200_000, samples = 5): Allocati
     bytesPerTick: best,
     worstBytesPerTick: worst,
     samples,
-    gcForced,
+    gcForced: attached,
   };
+}
+
+/** Bytes allocated inside `src/` while `body` runs, by V8's sampling profiler. */
+function profileAllocation(body: () => void): { bytes: number; attached: boolean } {
+  const session = new Session();
+  session.connect();
+
+  try {
+    /*
+     * A 512-byte sampling interval. The default is 32 KB, which is larger than
+     * anything a tick allocates and reports almost nothing; 512 bytes samples
+     * often enough to attribute a per-tick object and is still cheap over a
+     * two-hundred-thousand-tick run.
+     */
+    session.post('HeapProfiler.startSampling', { samplingInterval: 512 });
+    body();
+
+    let total = 0;
+    let attached = false;
+    session.post('HeapProfiler.stopSampling', (error: Error | null, result?: { profile: ProfileNode }) => {
+      if (error !== null || result === undefined) return;
+      attached = true;
+      total = sumOwnAllocation(result.profile);
+    });
+    return { bytes: total, attached };
+  } finally {
+    session.disconnect();
+  }
+}
+
+/**
+ * The shape V8 returns. Declared here rather than imported: the `inspector`
+ * typings model the profile as a tree without the flat `samples` array the
+ * protocol actually sends, and the sizes live in that array.
+ */
+interface ProfileNode {
+  readonly id?: number;
+  readonly callFrame: { readonly url: string; readonly functionName: string };
+  readonly children?: readonly ProfileNode[];
+  readonly samples?: readonly { readonly nodeId: number; readonly size: number }[];
+}
+
+/**
+ * Sum the sampled bytes attributed to frames inside `src/`.
+ *
+ * `samples` and `head` sit side by side in the protocol's reply — the tree
+ * carries the call frames and the flat array carries the sizes — so both are
+ * read from the same object rather than from the tree alone.
+ */
+function sumOwnAllocation(profile: ProfileNode & { readonly head?: ProfileNode }): number {
+  const sizeByNode = new Map<number, number>();
+  for (const entry of profile.samples ?? []) {
+    sizeByNode.set(entry.nodeId, (sizeByNode.get(entry.nodeId) ?? 0) + entry.size);
+  }
+
+  let total = 0;
+  const visit = (node: ProfileNode): void => {
+    if (node.id !== undefined && node.callFrame.url.includes('/src/')) {
+      total += sizeByNode.get(node.id) ?? 0;
+    }
+    for (const child of node.children ?? []) visit(child);
+  };
+  visit(profile.head ?? profile);
+  return total;
 }
 
 /**
@@ -268,10 +350,26 @@ export function measureAllocationPerTick(ticks = 200_000, samples = 5): Allocati
  * and its cost is constant, so it does not skew the comparison between samples —
  * which is the only comparison this benchmark makes.
  */
+
+/**
+ * Pin a bench world to deep night so the empty-workload rows keep measuring
+ * what they have measured since Phase 2: the fixed per-tick overhead of an
+ * (almost) empty world. The 08:00 daylight start (user decision, 2026-08-21)
+ * made a *fresh* world open into the morning trade, which more than doubled
+ * these rows overnight with zero code change — a workload shift, not a
+ * regression. The busy-world cost has its own rows (populated / crowded /
+ * service / staffed / stage 4); letting it flood the empty rows too would
+ * bury exactly the fixed-overhead signal they exist to isolate.
+ */
+function pinToQuietHour(sim: Sim): void {
+  sim.world.clock.setState({ simTimeMs: (3 / 24) * 720_000 });
+}
+
 export function benchTicksFromFresh(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks from a fresh world', 1000, () => {
     sim.world.reset();
+    pinToQuietHour(sim);
     sim.advance(1000);
   });
 }
@@ -502,6 +600,191 @@ export function benchCrowdedTick(): TimingResult {
 }
 
 /**
+ * A tick with the whole loop running — GAME_EXECUTION_ROADMAP Phase 8.
+ *
+ * 120 vehicles, 40 pedestrians and 20 live orders, budget 2.8 ms p95. The
+ * orders are what this measures that `benchCrowdedTick` does not: three systems
+ * were added to the pipeline this phase, and two of them scan the order pool.
+ *
+ * The orders are spread across every state deliberately. A pool of twenty
+ * `PLACED` orders would leave `KitchenSystem.advanceCooking` with nothing to do
+ * and `ServiceSystem` with nothing to deliver — the benchmark would report the
+ * cost of *scanning* twenty orders rather than of running them, which is the
+ * cheap half. Rotating the states means every branch is exercised in every
+ * sample.
+ */
+export function benchServiceTick(): TimingResult {
+  const sim = new Sim({ seed: 20260817 });
+  const ticks = 200;
+
+  const load = (): void => {
+    populatePeakLoad(sim);
+
+    // Up to forty on foot, twenty of which the peak load already queued.
+    for (let i = sim.world.customers.activeCount; i < 40; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    for (let i = 0; i < 20; i++) {
+      const orderSlot = sim.world.orders.acquire();
+      if (orderSlot < 0) break;
+      const order = sim.world.orders.at(orderSlot);
+      order.entityId = sim.world.allocateEntityId();
+      order.customerSlot = i % Math.max(1, sim.world.customers.activeCount);
+      order.item = i % 3;
+      order.state = ORDER_STATE_CYCLE[i % ORDER_STATE_CYCLE.length] ?? ORDER_PLACED;
+      order.station = order.state === ORDER_COOKING ? i % 3 : -1;
+      order.orderedAtMs = sim.world.clock.simTimeMs;
+      order.startedAtMs = sim.world.clock.simTimeMs;
+      order.price = 3;
+      order.quality = 0.7;
+    }
+  };
+
+  load();
+  const label = `service tick (120 vehicles, ${String(sim.world.customers.activeCount)} pedestrians, ${String(sim.world.orders.activeCount)} orders)`;
+  return timeIt(label, ticks, () => {
+    load();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
+ * A tick with a full staff — GAME_EXECUTION_ROADMAP Phase 10.
+ *
+ * 8 employees, 60 pedestrians and 120 vehicles, budget 3.0 ms p95. Two systems
+ * joined the pipeline this phase and one of them — the task board — scans the
+ * order pool, the task pool and the payroll every tick.
+ *
+ * The employees are hired rather than poked into the store, so their wages,
+ * skills and starting positions are the ones the game produces. A hand-built
+ * employee with a zero wage would quietly remove the settlement path from the
+ * measurement, which is the part that touches the economy.
+ */
+export function benchStaffedTick(): TimingResult {
+  const sim = buildPeakLoad(20260819);
+  const ticks = 200;
+
+  const load = (): void => {
+    populatePeakLoad(sim);
+
+    for (let i = sim.world.customers.activeCount; i < 60; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    // Orders for them to work on. Without these the board is empty and the
+    // measurement is of eight employees standing still.
+    for (let i = 0; i < 20; i++) {
+      const orderSlot = sim.world.orders.acquire();
+      if (orderSlot < 0) break;
+      const order = sim.world.orders.at(orderSlot);
+      order.entityId = sim.world.allocateEntityId();
+      order.item = i % 3;
+      order.state = ORDER_PLACED;
+      order.station = -1;
+      order.orderedAtMs = sim.world.clock.simTimeMs;
+      order.customerSlot = i % Math.max(1, sim.world.customers.activeCount);
+    }
+
+    sim.world.economy.cash = 100_000;
+    for (let i = sim.world.employees.activeCount; i < MAX_EMPLOYEES; i++) {
+      hire(sim.world, i % 3 === 0 ? 'cook' : i % 3 === 1 ? 'waiter' : 'cleaner', (i % 5) / 4);
+    }
+  };
+
+  load();
+  const label = `staffed tick (${String(sim.world.employees.activeCount)} employees, ${String(sim.world.customers.activeCount)} pedestrians, 120 vehicles)`;
+  return timeIt(label, ticks, () => {
+    load();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
+ * A Stage 4 tick at full load — GAME_EXECUTION_ROADMAP Phase 11.
+ *
+ * 120 vehicles, 60 pedestrians and 12 employees, budget 3.2 ms p95. Stage 4 is
+ * the heaviest world the game has: the biggest layout, the most parking, tables,
+ * and a drive-thru lane whose compaction scans the customer pool every tick.
+ *
+ * The employee cap is 8, so "12 employees" is not reachable — the roadmap's
+ * figure predates that cap. This runs the maximum the world allows and says so
+ * in the label rather than quietly measuring a smaller load against a bigger
+ * number.
+ */
+export function benchStage4Tick(): TimingResult {
+  const sim = new Sim({ seed: 20260820 });
+  sim.world.progression.stage = 4;
+  const ticks = 200;
+
+  const load = (): void => {
+    populatePeakLoad(sim);
+    sim.world.progression.stage = 4;
+
+    for (let i = sim.world.customers.activeCount; i < 60; i++) {
+      const slot = sim.world.customers.acquire();
+      if (slot < 0) break;
+      const customer = sim.world.customers.at(slot);
+      customer.entityId = sim.world.allocateEntityId();
+      customer.state = CUSTOMER_WALKING_STATE;
+      customer.visible = 1;
+      customer.vehicleSlot = -1;
+      customer.parkingSlot = -1;
+      customer.x = 2 + (i % 10) * 2;
+      customer.y = 11 + Math.floor(i / 10) * 1.2;
+      customer.targetX = STAGE1_LAYOUT.counter.x;
+      customer.targetY = STAGE1_LAYOUT.counter.y - 1;
+    }
+
+    for (let i = 0; i < 20; i++) {
+      const orderSlot = sim.world.orders.acquire();
+      if (orderSlot < 0) break;
+      const order = sim.world.orders.at(orderSlot);
+      order.entityId = sim.world.allocateEntityId();
+      order.item = i % 3;
+      order.state = ORDER_PLACED;
+      order.station = -1;
+      order.orderedAtMs = sim.world.clock.simTimeMs;
+      order.customerSlot = i % Math.max(1, sim.world.customers.activeCount);
+    }
+
+    sim.world.economy.cash = 1_000_000;
+    for (let i = sim.world.employees.activeCount; i < MAX_EMPLOYEES; i++) {
+      hire(sim.world, i % 3 === 0 ? 'cook' : i % 3 === 1 ? 'waiter' : 'cleaner', (i % 5) / 4);
+    }
+  };
+
+  load();
+  const label = `stage 4 tick (${String(sim.world.employees.activeCount)} employees, ${String(sim.world.customers.activeCount)} pedestrians, 120 vehicles)`;
+  return timeIt(label, ticks, () => {
+    load();
+    for (let i = 0; i < ticks; i++) sim.tick();
+  });
+}
+
+/**
  * Reset per sample, for the same reason `benchTicksFromFresh` is: the world
  * fills as it runs, so twenty-five samples of a thousand ticks each were
  * measuring an increasingly busy simulation and the samples were describing
@@ -511,6 +794,7 @@ export function benchCommandProcessing(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks, one command each', 1000, () => {
     sim.world.reset();
+    pinToQuietHour(sim);
     for (let i = 0; i < 1000; i++) {
       sim.dispatch({ t: 'SET_SPEED', mult: i % 2 === 0 ? 2 : 4 });
       sim.tick();
@@ -528,6 +812,7 @@ export function benchEventFlush(): TimingResult {
   return timeIt('1000 ticks, 8 events per tick, 3 subscribers', 8000, () => {
     // Reset per sample — see `benchCommandProcessing`.
     sim.world.reset();
+    pinToQuietHour(sim);
     for (let i = 0; i < 1000; i++) {
       for (let e = 0; e < 8; e++) sim.world.eventQueue.emitDayStarted(e);
       sim.tick();
@@ -635,6 +920,9 @@ export function runSimBench(): BenchReport {
       benchWorldHash(),
       benchPopulatedTick(),
       benchCrowdedTick(),
+      benchServiceTick(),
+      benchStaffedTick(),
+      benchStage4Tick(),
       benchFlowFieldRebuild(),
       benchFlowFieldChunk(),
       benchCommandProcessing(),

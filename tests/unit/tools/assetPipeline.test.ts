@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, w
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ATLASES } from '@config/assets';
+import { ATLASES, TEXTURE_MEMORY_BUDGET_BYTES } from '@config/assets';
 import { buildAtlases, atlasFor, groupByAtlas, packAtlas } from '../../../tools/asset-pipeline/atlas.ts';
 import {
   AUDIO_TARGETS,
@@ -352,7 +352,13 @@ describe('report', () => {
     expect(formatReport(report)).toContain('BUDGET EXCEEDED');
   });
 
-  it('treats atlas fill as a floor rather than a ceiling', async () => {
+  /*
+   * Reported, not enforced — ADR-013 §7. Power-of-two pages make the 70% ratio
+   * unreachable for a small set no matter how well it is packed, so the line
+   * that fails a build is the texture-memory total, which is the budget
+   * ASSET_PIPELINE §17 states. The percentage still prints.
+   */
+  it('reports atlas fill without failing a build over it', async () => {
     const built = await buildAtlases(processed, join(root, 'report-atlas'));
     const report = buildReport({
       manifest: buildManifest({ atlasDir: join(root, 'report-atlas') }),
@@ -361,8 +367,21 @@ describe('report', () => {
     });
     const fill = report.atlases[0];
     expect(fill?.label).toBe('props fill');
-    expect(fill?.ok).toBe((built.atlases[0]?.fill ?? 0) >= 0.7);
-    expect(fill?.detail).toMatch(/need >= 70%/);
+    expect(fill?.ok).toBe(true);
+    expect(fill?.detail).toMatch(/decoded/);
+  });
+
+  it('enforces decoded texture memory, which is the budget the documents state', async () => {
+    const built = await buildAtlases(processed, join(root, 'report-atlas'));
+    const report = buildReport({
+      manifest: buildManifest({ atlasDir: join(root, 'report-atlas') }),
+      processedDir: processed,
+      atlases: built.atlases,
+    });
+    const memory = report.totals.find((entry) => entry.label === 'texture memory');
+    expect(memory).toBeDefined();
+    expect(memory?.budget).toBe(TEXTURE_MEMORY_BUDGET_BYTES);
+    expect(memory?.bytes).toBe(built.atlases.reduce((sum, atlas) => sum + atlas.textureBytes, 0));
   });
 
   it('counts the placeholders still in the tree', () => {

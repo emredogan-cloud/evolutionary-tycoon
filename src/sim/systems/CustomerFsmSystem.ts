@@ -1,6 +1,5 @@
 import { ARCHETYPE_PATIENCE, ARRIVAL_EPSILON_METRES, DOOR_OPEN_SECONDS } from '@config/customer';
 import { REASON_NO_PARKING, REASON_QUEUE_TOO_LONG } from '@config/conversion';
-import type { StageLayout } from '@config/layouts/stage1';
 import {
   abandonTargetFor,
   canTransition,
@@ -17,11 +16,16 @@ import {
   STATE_WALKING_TO_DOOR,
   customerStateSpec,
 } from '../ai/fsm/customerFsm';
+import { DRIVE_THRU_PATIENCE_SCALE } from '@config/driveThru';
+import { layoutForStage } from '@config/layouts';
+import { CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
+import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { atIn } from '../math/typedArray';
-import { VEHICLE_EXITING } from './VehicleManeuverSystem';
+import { discardOrdersFor } from './ServiceSystem';
+import { VEHICLE_DT_ADVANCING, VEHICLE_EXITING } from './VehicleManeuverSystem';
 import type { VehicleManeuverSystem } from './VehicleManeuverSystem';
 
 /**
@@ -45,10 +49,8 @@ import type { VehicleManeuverSystem } from './VehicleManeuverSystem';
 export class CustomerFsmSystem implements SimSystem {
   readonly name = 'CustomerFsmSystem' as const;
 
-  constructor(
-    private readonly layout: StageLayout,
-    private readonly maneuvers: VehicleManeuverSystem,
-  ) {}
+  /** No captured layout — see `ConversionSystem`'s constructor for why. */
+  constructor(private readonly maneuvers: VehicleManeuverSystem) {}
 
   run(world: World, deltaMs: number): void {
     if (deltaMs <= 0) return;
@@ -87,7 +89,7 @@ export class CustomerFsmSystem implements SimSystem {
      * this way a waiting state added in a later phase gets its clock without
      * anybody remembering to wire one up.
      */
-    if (customer.patienceMaxMs <= 0) this.beginPatience(customer, spec.patienceSeconds);
+    if (customer.patienceMaxMs <= 0) this.beginPatience(world, customer, spec.patienceSeconds);
 
     customer.patienceMs -= deltaMs;
     if (customer.patienceMs > 0) return;
@@ -104,7 +106,23 @@ export class CustomerFsmSystem implements SimSystem {
     this.transition(customer, STATE_ABANDONING);
     this.transition(customer, target);
     customer.queueIndex = -1;
-    if (target === STATE_WALKING_TO_CAR) this.aimAtOwnCar(customer);
+    /*
+     * **And the drive-thru slot**, which the first version forgot.
+     *
+     * A driver who gives up in the lane was leaving `laneSlot` set, so the slot
+     * stayed occupied by a car that was already driving away — and the car
+     * behind it could not creep past. Measured at Stage 4 once Phase 13's longer
+     * menu made drive-thru waits long enough for anyone to actually run out of
+     * patience: the window sat empty with a full lane behind it and nothing
+     * moving, which is exactly the deadlock `compactDriveThruLane` exists to
+     * prevent.
+     *
+     * Cleared here rather than in the compaction pass because this is where the
+     * customer stops being in the queue. A compaction that skipped slots whose
+     * occupant had left would be inferring the same fact one tick later.
+     */
+    customer.laneSlot = -1;
+    if (target === STATE_WALKING_TO_CAR) this.aimAtOwnCar(world, customer);
   }
 
   private advanceState(world: World, customer: CustomerRecord, slot: number, deltaMs: number): void {
@@ -115,7 +133,7 @@ export class CustomerFsmSystem implements SimSystem {
         break;
 
       case STATE_LEAVING_VEHICLE:
-        this.openDoor(customer, deltaMs);
+        this.openDoor(world, customer, deltaMs);
         break;
 
       case STATE_WALKING_TO_DOOR:
@@ -160,12 +178,12 @@ export class CustomerFsmSystem implements SimSystem {
    * door opening. "No teleporting" (GAME_DESIGN_DOCUMENT §8) covers appearing
    * as much as it covers moving.
    */
-  private openDoor(customer: CustomerRecord, deltaMs: number): void {
+  private openDoor(world: World, customer: CustomerRecord, deltaMs: number): void {
     customer.timerMs += deltaMs;
     if (customer.timerMs < DOOR_OPEN_SECONDS * 1000) return;
 
     customer.timerMs = 0;
-    const bay = this.layout.parking[customer.parkingSlot];
+    const bay = layoutForStage(world.progression.stage).parking[customer.parkingSlot];
     if (bay !== undefined) {
       customer.x = bay.door.x;
       customer.y = bay.door.y;
@@ -178,8 +196,9 @@ export class CustomerFsmSystem implements SimSystem {
      * slot later in the tick order, so for exactly one tick this is the only
      * target there is, and a customer with none would stand in the bay.
      */
-    customer.targetX = this.layout.counter.x;
-    customer.targetY = this.layout.counter.y - 1;
+    const layout = layoutForStage(world.progression.stage);
+    customer.targetX = layout.counter.x;
+    customer.targetY = layout.counter.y - 1;
   }
 
   /** Hand the vehicle back to the manoeuvre system and drive out. */
@@ -219,7 +238,19 @@ export class CustomerFsmSystem implements SimSystem {
      * the exit curve by the manoeuvre system the moment it finishes crossing the
      * apron, and beginning it a second time would snap it back to the start.
      */
-    if (world.vehicles.state[vehicleSlot] !== VEHICLE_EXITING) {
+    /*
+     * And not in the middle of a drive-thru creep.
+     *
+     * A car edging from one lane slot to the next is on the short path between
+     * them; the exit curve for a slot starts *at* the slot, so beginning the
+     * exit halfway through the creep moved the car by up to **1.3 m in one
+     * tick** — small enough to look like a stutter rather than a bug, which is
+     * worse. You cannot turn around halfway through a manoeuvre, and now neither
+     * can the simulation: the creep finishes first and the exit starts on the
+     * next tick, from a slot the exit curve actually begins at.
+     */
+    const vehicleState = world.vehicles.state[vehicleSlot];
+    if (vehicleState !== VEHICLE_EXITING && vehicleState !== VEHICLE_DT_ADVANCING) {
       this.maneuvers.beginExit(world, vehicleSlot, customer.parkingSlot);
     }
   }
@@ -229,11 +260,18 @@ export class CustomerFsmSystem implements SimSystem {
     if (vehicleSlot >= 0 && world.vehicles.isActive(vehicleSlot)) {
       world.vehicles.customerSlot[vehicleSlot] = -1;
     }
+    /*
+     * Their order goes with them. An order left behind holds its station and its
+     * pool slot forever, and the pool fills — measured at thirty live orders
+     * against four live customers, after which nobody could order at all and the
+     * stand quietly stopped taking money.
+     */
+    discardOrdersFor(world, slot);
     world.customers.release(slot);
   }
 
-  private aimAtOwnCar(customer: CustomerRecord): void {
-    const bay = this.layout.parking[customer.parkingSlot];
+  private aimAtOwnCar(world: World, customer: CustomerRecord): void {
+    const bay = layoutForStage(world.progression.stage).parking[customer.parkingSlot];
     if (bay === undefined) {
       customer.targetX = customer.x;
       customer.targetY = customer.y;
@@ -243,9 +281,28 @@ export class CustomerFsmSystem implements SimSystem {
     customer.targetY = bay.door.y;
   }
 
-  private beginPatience(customer: CustomerRecord, baseSeconds: number): void {
+  private beginPatience(world: World, customer: CustomerRecord, baseSeconds: number): void {
     const multiplier = atIn(ARCHETYPE_PATIENCE, customer.archetype, 1);
-    customer.patienceMaxMs = baseSeconds * 1000 * multiplier;
+    /*
+     * **The drive-thru asymmetry, applied here and only here** — Phase 11.
+     *
+     * GAME_EXECUTION_ROADMAP: "Patience here is far lower than seated: the
+     * customer is in a car with an engine running." Scaling in `beginPatience`
+     * rather than authoring a second set of `patienceSeconds` means every
+     * waiting state a drive-thru customer can ever enter inherits it, including
+     * ones added later — the same reasoning that put the patience clock on the
+     * state declaration in Phase 6 rather than at each call site.
+     */
+    const channelScale = customer.channel === CHANNEL_DRIVE_THRU ? DRIVE_THRU_PATIENCE_SCALE : 1;
+    /*
+     * And the comfort of the place, which is Phase 13's `patienceScale`: a
+     * canopy over the queue and benches in the waiting area buy time rather
+     * than throughput. Applied in the same place and for the same reason as the
+     * drive-thru scale — every waiting state inherits it, including ones added
+     * later.
+     */
+    const comfort = effectValue(world, 'patienceScale');
+    customer.patienceMaxMs = baseSeconds * 1000 * multiplier * channelScale * comfort;
     customer.patienceMs = customer.patienceMaxMs;
   }
 

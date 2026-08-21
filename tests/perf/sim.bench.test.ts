@@ -10,6 +10,9 @@ import {
   benchFlowFieldChunk,
   benchFlowFieldRebuild,
   benchPopulatedTick,
+  benchServiceTick,
+  benchStaffedTick,
+  benchStage4Tick,
   benchSnapshot,
   buildPeakLoad,
   benchStoreChurn,
@@ -196,6 +199,64 @@ describe('simulation performance budgets', () => {
     const result = benchCrowdedTick();
     const perTickMs = result.p95Ms / result.opsPerSample;
     expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(2.5);
+  });
+
+  it('runs the whole service loop inside the Phase 8 budget', () => {
+    /*
+     * 2.8 ms p95 at 120 vehicles, 40 pedestrians and 20 orders —
+     * GAME_EXECUTION_ROADMAP Phase 8. Three systems joined the pipeline this
+     * phase and two of them scan the order pool every tick, so this is the
+     * measurement that says whether closing the loop cost a frame.
+     */
+    const result = benchServiceTick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(2.8);
+  });
+
+  it('keeps twenty orders alive for the whole service measurement', () => {
+    /*
+     * The same failure mode the peak-load check above exists for, in the
+     * dimension this phase added. Orders are released the moment they are paid
+     * for, so a benchmark that let them run to completion would spend most of
+     * its samples measuring an empty pool — and would report a comfortable
+     * figure for a load it was no longer carrying.
+     */
+    const result = benchServiceTick();
+    expect(result.name, `the load is named in the label: ${result.name}`).toContain('20 orders');
+    expect(result.name).toContain('40 pedestrians');
+  });
+
+  it('runs a fully staffed tick inside the Phase 10 budget', () => {
+    /*
+     * 3.0 ms p95 at 8 employees, 60 pedestrians and 120 vehicles —
+     * GAME_EXECUTION_ROADMAP Phase 10. The task board is the new cost: it scans
+     * the order pool, the task pool and the payroll every tick, and an earlier
+     * version of it recomputed `nextStartable` *inside* the order loop, which
+     * turned one unit test from milliseconds into 153 seconds.
+     */
+    const result = benchStaffedTick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(3);
+  });
+
+  it('carries eight employees for the whole staffed measurement', () => {
+    // The same failure mode as the peak-load and order checks: a payroll that
+    // walked out unpaid mid-measurement would report a comfortable figure for a
+    // load it was no longer carrying.
+    const result = benchStaffedTick();
+    expect(result.name, `the label records the load: ${result.name}`).toContain('8 employees');
+  });
+
+  it('runs a Stage 4 tick inside the Phase 11 budget', () => {
+    /*
+     * 3.2 ms p95 at the heaviest world the game has — GAME_EXECUTION_ROADMAP
+     * Phase 11. Stage 4 adds ten tables, eight parking bays and a drive-thru
+     * lane whose compaction scans the customer pool every tick, on top of
+     * everything the earlier stages already do.
+     */
+    const result = benchStage4Tick();
+    const perTickMs = result.p95Ms / result.opsPerSample;
+    expect(perTickMs, `measured ${perTickMs.toFixed(4)} ms per tick`).toBeLessThan(3.2);
   });
 
   it('never spends more than a frame on one goal', () => {

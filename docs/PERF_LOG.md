@@ -181,6 +181,47 @@ colours moved onto the locked palette and the boot scene became a loading screen
 affects frame cost. The Phase 3 measurement (200 FPS p50, 5.1 ms p95, GTX 1660 Ti) stands and was
 not re-run, so it is not restated here as if it were.
 
+### Phase 8 — 2026-08-15 · the cost of closing the loop
+
+Simulation only. **No FPS was measured in Phase 8** and none is claimed: the renderer gained nothing
+this phase, and the DOM overlay it did gain is throttled to 10 Hz precisely so it cannot show up in
+a frame time. The Phase 3 measurement (200 FPS p50, 5.1 ms p95, GTX 1660 Ti) stands and was not
+re-run.
+
+Machine: this development host, headless Node 24.13.1, `pnpm bench:sim`. Calibration 0.9124 ms.
+
+| Load                                                             | Budget | Measured p95 | Of budget |
+| ---------------------------------------------------------------- | -----: | -----------: | --------: |
+| populated tick — 120 vehicles, 20 customers (Phase 6)            | 2.2 ms | **0.113 ms** |      5.1% |
+| crowded tick — 120 vehicles, 60 pedestrians (Phase 7)            | 2.5 ms | **0.339 ms** |     13.5% |
+| service tick — 120 vehicles, 40 pedestrians, 20 orders (Phase 8) | 2.8 ms | **0.185 ms** |      6.6% |
+
+The service load costs _less_ than the crowded one despite carrying twenty orders, because
+separation is O(n²) over pedestrians and this load has forty rather than sixty. Orders are cheap by
+comparison: the whole order pool is scanned linearly by two systems.
+
+#### The baseline moved, and why
+
+`tools/bench/baseline.json` was re-recorded at `964705e`. The populated tick went from 2.7582 to
+3.3314 calibration units — **18% slower** — and the crowded tick by a similar margin. That is a
+relative regression against a baseline recorded at `82655f2`, which is _before_ the three Phase 8
+systems existed.
+
+It was attributed by substitution rather than by reasoning, after two wrong guesses:
+
+1. `enforceGaps` was disabled and the benchmark re-run — still 18% slower. Not the cause.
+2. `KitchenSystem`, `ServiceSystem` and `SatisfactionSystem` were replaced with the no-op slots they
+   had occupied until this phase — the regression **disappeared entirely**.
+
+So the cost is the three new systems, which is what adding three systems to an eighteen-slot pipeline
+costs. `ServiceSystem` is the bulk of it: it visits every live customer every tick and switches on
+their state. The absolute budgets all pass with an order of magnitude of headroom, so nothing is
+being optimised on the strength of a number that is 5% of its own ceiling.
+
+A first attempt to attribute this from a wrapped-system profiler was discarded: wrapping eighteen
+`run` methods reported 189 µs/tick against a real cost of 15 µs/tick, so the harness was 92% of what
+it was measuring and its per-system shares could not be trusted.
+
 ### Template for future entries
 
 ```
@@ -202,3 +243,145 @@ Command:  <e.g. ?bench=1&seed=42>
 | JS heap after 30 min | |
 | Draw calls | |
 ```
+
+---
+
+## Consolidation batch — production art — 2026-08-18
+
+The first entry in this log measured on a **real GPU with real assets**. Every earlier number was
+taken against placeholder art (0.79 MB of texture), so this is the before/after the batch exists to
+record.
+
+```
+Device:   desktop, NVIDIA GeForce GTX 1660 Ti (ANGLE OpenGL 4.5)
+OS:       Linux 7.0.0-28-generic
+Browser:  Chromium 145 (Playwright build), HEADED, hardware GL — not SwiftShader
+Scene:    /?e2e=1&seed=424242, stage 1 after 6 000 ticks (5 sim-minutes of traffic and service)
+Method:   600 consecutive rAF deltas; load timed from navigation to the data attributes
+```
+
+| Metric                         |                                                       Value |
+| ------------------------------ | ----------------------------------------------------------: |
+| Frame time mean                |                                                     5.05 ms |
+| Frame time p50 / p95 / p99     |                                          5.0 / 5.1 / 5.1 ms |
+| Effective FPS (uncapped rAF)   |                                                        ~198 |
+| Navigation → assets loaded     |                                                    1 191 ms |
+| Navigation → world scene ready |                                                    1 204 ms |
+| JS heap after load + 5 sim-min |                                                       29 MB |
+| Stage-switch cost              | not measurable (no test hook; visually instant in captures) |
+
+**Asset pipeline, after integration (shipped bytes, from `pnpm assets:report`):**
+
+| Budget                 | Before (placeholders) |                           After (production) |
+| ---------------------- | --------------------: | -------------------------------------------: |
+| Total shipped          |                 ~0 MB |                           3.36 MB / 27.30 MB |
+| Critical path          |                  0 MB |                            2.22 MB / 4.00 MB |
+| Decoded texture memory |               0.79 MB |                         **21.13 MB** / 96 MB |
+| Bundle (js, gzip)      |               ~455 kB |                           456.35 kB / 550 kB |
+| Atlas pages            |                     0 | 7 (each shrunk to its smallest power-of-two) |
+
+**Reading.** The renderer's whole frame is ~5 ms on a mid-range 2019 GPU with every production atlas
+resident — the art is not the constraint, and no earlier budget regressed. Texture memory rose from
+under a megabyte to 21.13 MB, which is 22% of the mobile budget the documents bind (ASSET_PIPELINE
+§17 / TECHNICAL_ARCHITECTURE §11); the fill-ratio floor those pages fail is reported rather than
+enforced by ADR-013, because power-of-two pages make the ratio unreachable for small sets while the
+memory total — the number a device actually runs out of — stays the enforced gate. Load-to-playable
+is 1.2 s on localhost; the number to re-measure on the deployed CDN is in the deployment
+verification section of the final report. SwiftShader CI numbers are deliberately not quoted here —
+CLAUDE.md's rule stands, and this entry exists because a real GPU was available.
+
+---
+
+## Phase 14 — offline progression + service worker — 2026-08-20
+
+```
+Device:   dev desktop (Linux 7.0.0-28-generic), localhost preview (vite preview :4173)
+Browser:  Chromium 145 (Playwright build), headless, SwiftShader — load timing only, no FPS claims
+Method:   Playwright probe; SW-controlled reload measured with response.fromServiceWorker()
+```
+
+| Metric                                          |                                                                                                                                            Value |
+| ----------------------------------------------- | -----------------------------------------------------------------------------------------------------------------------------------------------: |
+| `computeOffline` (the boot-time settlement)     |                                                                                              **190 ns/call** (100 000 iterations; budget < 5 ms) |
+| Cold first visit → sim running                  |                                                                                                                 486 ms · **1.76 MB** transferred |
+| Warm second visit (SW-controlled) → sim running |                                                         **227 ms** · network **1 315 B** (yalnızca `/api/time` sınıfı istekler) · 5 istek SW'den |
+| Service worker precache                         |                                                                                                  29 entries, 8.98 MB (atlaslar + bundle + shell) |
+| Sim perf budgets after the offline meter        | **21/21** — per-tick meter sampling first measured **+57%** on the empty-world bench; moved to 5 s bucket-boundary sampling, budgets green again |
+
+**Reading.** "İkinci ziyaret ~0 bant genişliği" localhost'ta ölçüldü: 1.3 KB (yalnızca no-store
+uçları). CDN'deki karşılığı deployment doğrulamasında ölçülür ve faz raporuna girer. SwiftShader
+sayıları FPS iddiası değildir (CLAUDE.md kuralı); bu giriş yalnızca yükleme/bant genişliği kaydıdır.
+
+---
+
+## Phase 15 — events, weather, day/night — 2026-08-20
+
+```
+Device:   dev desktop (Linux 7.0.0-28-generic), localhost preview
+Browser:  Chromium 145 (Playwright build), headless, SwiftShader — draw-call counting only, no FPS claims
+Method:   WebGLRenderingContext.drawElements/drawArrays wrapped pre-boot; 40-frame mean, stage 3 frozen scene
+```
+
+| Metric                                     |                                       Value |
+| ------------------------------------------ | ------------------------------------------: |
+| Draw calls, clear noon                     |                               **5 / frame** |
+| Draw calls, night + lit signs + headlights |         **6 / frame** (**+1**, budget ≤ +8) |
+| Draw calls, noon rain (precipitation on)   |                          **7 / frame** (+2) |
+| Sim perf budgets                           | **21/21** on the re-recorded baseline below |
+
+**Baseline re-record (`bench:record`, full run) — the §11 discipline applied.** The relative gate
+compared against the **phase12** baseline, recorded before the calendar existed. Phase 15's honest
+per-tick additions — the calendar derivation in slot 2 and a spawn candidate stream widened ×3 so a
+festival can be _exact_ Lewis–Shedler thinning — measured **+37% on the empty-world tick** against
+that stale workload. Two real optimisations were taken first (bucket-boundary meter sampling in
+P14; a per-tick derivation cache after the first wiring re-derived per candidate, measured +47%);
+the remainder is the feature's price, every **absolute** budget still passes, and the baseline was
+re-recorded as `phase15` with the same mixed-calibration environment. The phase12 numbers are
+retained here:
+
+```
+phase12 baseline (superseded 2026-08-20, retained per WORKING_DISCIPLINE §11):
+  1000 ticks fresh world       2.7360 cal units   → phase15: 3.8491
+  populated tick               3.0414             → 3.7ish (run-to-run ±5%)
+  stage 4 tick                61.0572             → ~70.3
+  1000 ticks, 1 command each   2.7585             → ~3.8
+  8 events/tick, 3 subs        2.8814             → ~3.9
+  snapshot + JSON              2.5533             → ~2.97 (v10 environment block is real payload)
+```
+
+---
+
+## Phase 16 — the road bake — 2026-08-20
+
+Same method as the Phase 15 entry (GL-call wrap, SwiftShader, load/draw-call
+figures only). With the baked road tiling every stage:
+
+| Metric                                   |                 Value |
+| ---------------------------------------- | --------------------: |
+| Draw calls, stage 3 noon                 | **4 / frame** (was 5) |
+| Draw calls, stage 3 night with lit signs | **4 / frame** (was 6) |
+
+The bake _reduced_ draw calls: the tiles batch with the texture pipeline and
+the procedural marking `Graphics` they replace is gone. Shipped-bytes and
+texture-memory budgets unchanged in class (`pnpm assets:report` — all within
+limits; the slice is one single file, SW precache 30 entries).
+
+### 2026-08-20 — the absolute fresh-world backstop has no cross-runner margin
+
+Identical code across four CI dispatches: p50 3.092 (p95 5.274) → 5.660 (FAIL)
+→ 3.944 (p95 7.763) against the Phase-2-era `< 5 ms` absolute. Host baseline
+after the §11 phase15 re-record is 3.58 ms. The calibrated 1.15× relative gate
+never fired — the flap is the stale absolute, not the code. Resize (5 → 8 ms)
+filed as a change request in PHASE_16_REPORT §7.4; **not applied** pending the
+user's decision.
+
+## P17 — Animation / VFX / Audio (2026-08-21)
+
+| Ölçüm                          | Değer                                                                                                                                                                                                                   | Nasıl                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Rig runtime, 60 karakter/kare  | **p50 ≈ 0.03–0.05 ms** (bütçe 1.2 ms)                                                                                                                                                                                   | node bench `tests/perf/rig.bench.test.ts`, 200 kare medyanı |
+| Partikül bütçesi               | 400 tavan, **kod zoruyla** (spawn reddi) + birim test                                                                                                                                                                   | `ParticleLibrary` muhasebesi                                |
+| Ses eşzamanlılık               | 24 tavan, kod zoruyla + birim test                                                                                                                                                                                      | `AudioDirector`                                             |
+| Boş-işyükü sim bench satırları | 22/22 yeşil, rig satırı eklendi (baseline'da yok → mutlak-yalnız, sonraki kayıtta katılır)                                                                                                                              | `pnpm bench:sim`                                            |
+| Görsel goldenlar               | 18/18 bayt-özdeş — rig nefes ofseti alt-piksel, donmuş karelerde klip durumu yok                                                                                                                                        | `pnpm test:visual`                                          |
+| Gerçek GPU kare süresi         | **KOŞULMADI** — bu istasyonda otomasyon Chromium'u her bayrak kombinasyonunda SwiftShader'a düşüyor (`ANGLE … SwiftShader driver` doğrulandı); yazılım rasterin 40 ms/25 fps okuması D-08 gereği FPS olarak RAPORLANMAZ | headed Playwright, 3 deneme                                 |

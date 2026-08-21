@@ -4,11 +4,19 @@ import { SYSTEM_ORDER } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { LaneGraph } from '../nav/LaneGraph';
 import { FlowFieldCache } from '../nav/FlowFieldCache';
-import { ManeuverTable } from '../nav/maneuvers';
+import { maneuverTableFor } from '../nav/maneuverTables';
 import { ConversionSystem } from './ConversionSystem';
 import { CustomerFsmSystem } from './CustomerFsmSystem';
+import { EconomySystem } from './EconomySystem';
+import { EventSystem } from './EventSystem';
+import { ProgressionSystem } from './ProgressionSystem';
+import { EmployeeFsmSystem } from './EmployeeFsmSystem';
+import { TaskBoardSystem } from './TaskBoardSystem';
+import { KitchenSystem } from './KitchenSystem';
 import { NavigationSystem } from './NavigationSystem';
 import { QueueSystem } from './QueueSystem';
+import { SatisfactionSystem } from './SatisfactionSystem';
+import { ServiceSystem } from './ServiceSystem';
 import { TimeSystem } from './TimeSystem';
 import { VehicleManeuverSystem } from './VehicleManeuverSystem';
 import { TrafficSpawnSystem } from './TrafficSpawnSystem';
@@ -18,8 +26,9 @@ import { VehicleMotionSystem } from './VehicleMotionSystem';
  * The eighteen reserved slots, filled in as their phases land.
  *
  * Phase 2 built the machine and left every slot a no-op; Phase 5 filled the
- * traffic slots and Phase 6 the customer ones. The rest still do nothing, and
- * each is replaced in the phase noted beside it in `SYSTEM_ORDER`.
+ * traffic slots, Phase 6 the customer ones, Phase 7 navigation, and Phase 8 the
+ * kitchen and service. The rest still do nothing, and each is replaced in the
+ * phase noted beside it in `SYSTEM_ORDER`.
  *
  * Clock advancement deliberately does *not* live in `TimeSystem`. Advancing
  * simulation time is the definition of a tick rather than the behaviour of one
@@ -62,13 +71,18 @@ export function stage1Lanes(): LaneGraph {
 
 export function createDefaultSystems(world: World): readonly SimSystem[] {
   const lanes = stage1Lanes();
-  const maneuverSystem = stage1ManeuverSystem();
+  const maneuverSystem = stageManeuverSystem();
 
   const filled: Partial<Record<SystemName, SimSystem>> = {
     TimeSystem: new TimeSystem(),
+    /*
+     * The calendar plans on the first tick of each day and derives every tick
+     * after — Phase 15 fills the slot Phase 2 reserved for it.
+     */
+    EventSystem: new EventSystem(),
     TrafficSpawnSystem: new TrafficSpawnSystem(lanes),
     VehicleMotionSystem: new VehicleMotionSystem(lanes, world.vehicles.capacity),
-    ConversionSystem: new ConversionSystem(lanes, STAGE1_LAYOUT),
+    ConversionSystem: new ConversionSystem(lanes),
     VehicleManeuverSystem: maneuverSystem,
     /*
      * The state machine holds the manoeuvre system rather than the other way
@@ -84,8 +98,41 @@ export function createDefaultSystems(world: World): readonly SimSystem[] {
      * noticing they are on it.
      */
     NavigationSystem: new NavigationSystem(stage1Fields(), world.customers.capacity),
-    CustomerFsmSystem: new CustomerFsmSystem(STAGE1_LAYOUT, maneuverSystem),
-    QueueSystem: new QueueSystem(STAGE1_LAYOUT),
+    CustomerFsmSystem: new CustomerFsmSystem(maneuverSystem),
+    QueueSystem: new QueueSystem(),
+    /*
+     * The board posts and assigns *before* the brains run, so an employee
+     * assigned this tick starts walking this tick. The reverse order costs 50 ms
+     * of standing still at every transition — the same reasoning that puts
+     * navigation before the customer FSM and the kitchen before the service.
+     */
+    TaskBoardSystem: new TaskBoardSystem(),
+    EmployeeFsmSystem: new EmployeeFsmSystem(),
+    /*
+     * The kitchen runs before the service, so a plate that finishes this tick is
+     * handed over on the same tick rather than the next. The reverse order costs
+     * 50 ms of a customer standing beside their finished food, which is small
+     * and is exactly the kind of thing the fixed slot order exists to make a
+     * deliberate choice rather than an accident.
+     */
+    KitchenSystem: new KitchenSystem(),
+    ServiceSystem: new ServiceSystem(),
+    SatisfactionSystem: new SatisfactionSystem(),
+    /*
+     * The economy runs *after* satisfaction and payment, in its declared slot.
+     * It advances the sixty-second income window, and doing that before the
+     * tick's payments were booked would put each payment in the bucket after
+     * the one it happened in — invisible in a total, and a systematic one-bucket
+     * lag in the rate the player is watching.
+     */
+    EconomySystem: new EconomySystem(),
+    /*
+     * Progression runs late, after the tick's money and service have happened,
+     * so a requirement met *this* tick is seen on the tick it was met rather
+     * than the next. It also owns construction, which is why there is no
+     * nineteenth slot for one.
+     */
+    ProgressionSystem: new ProgressionSystem(),
   };
   return SYSTEM_ORDER.map((name) => filled[name] ?? NOOP_SYSTEMS[name]);
 }
@@ -113,19 +160,24 @@ function stage1Fields(): FlowFieldCache {
   return sharedFields;
 }
 
-export function stage1ManeuverSystem(): VehicleManeuverSystem {
-  /*
-   * The manoeuvre curves are built here, once, for the same reason the lane
-   * graph is: they are a pure function of authored layout, hold no mutable
-   * state, and the benchmark constructs thousands of simulations — flattening
-   * them per `Sim` would be tens of thousands of identical polylines.
-   */
-  sharedManeuverSystem ??= new VehicleManeuverSystem(
-    stage1Lanes(),
-    new ManeuverTable(STAGE1_LAYOUT, stage1Lanes()),
-    STAGE1_LAYOUT,
-  );
-  return sharedManeuverSystem;
+/**
+ * A manoeuvre system per simulation, over manoeuvre tables shared by stage.
+ *
+ * The split matters and it was not the original shape. Until Phase 11 a single
+ * `VehicleManeuverSystem` was shared by every `Sim` — correct, because it held
+ * no mutable state and the benchmark builds thousands of simulations, so
+ * re-flattening identical polylines each time was pure waste.
+ *
+ * Phase 11 made the *system* stateful: it remembers which stage its table was
+ * built for and rebuilds on evolution. A shared instance would then have two
+ * simulations at different stages fighting over one table, which breaks the
+ * property the whole architecture rests on — same seed and same commands must
+ * give the same world.
+ *
+ * So the **tables** stay shared (they are still a pure function of layout) and
+ * the **system** is per-simulation. The optimisation survives; the hazard does
+ * not.
+ */
+export function stageManeuverSystem(): VehicleManeuverSystem {
+  return new VehicleManeuverSystem(stage1Lanes(), maneuverTableFor(1), STAGE1_LAYOUT);
 }
-
-let sharedManeuverSystem: VehicleManeuverSystem | undefined;

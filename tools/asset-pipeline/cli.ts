@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { buildAtlases } from './atlas.ts';
 import { buildContactSheets } from './contactSheet.ts';
 import { convertAudioDirectory } from './audio.ts';
-import { buildManifest, writeManifest } from './manifest.ts';
+import { importStaging } from './import.ts';
+import { buildManifest, publishSingles, writeManifest } from './manifest.ts';
 import { emitPrompts } from './prompts.ts';
 import { exportPromptHtml } from './promptExport.ts';
 import { PATHS } from './paths.ts';
@@ -26,6 +27,7 @@ import { validateDirectory } from './validate.ts';
  */
 
 type Stage =
+  | 'import'
   | 'validate'
   | 'process'
   | 'atlas'
@@ -38,6 +40,7 @@ type Stage =
   | 'build';
 
 const STAGES: readonly Stage[] = [
+  'import',
   'validate',
   'process',
   'atlas',
@@ -61,6 +64,31 @@ function empty(stage: string): void {
   console.log(`assets:${stage} — 0 assets in ${PATHS.source}. Nothing was validated or built.`);
 }
 
+/**
+ * Condition the generator's drop into `assets/source`.
+ *
+ * Kept out of `build` deliberately. `build` runs in CI, where the staging
+ * directory does not exist; import is a one-off human-initiated step whose
+ * output — the sprites and their anchors — is what gets committed and checked.
+ */
+async function runImport(): Promise<boolean> {
+  const imported = await importStaging({ stagingDir: PATHS.staging, outputDir: PATHS.source });
+  if (imported.length === 0) {
+    console.log(`assets:import — nothing in ${PATHS.staging}.`);
+    return true;
+  }
+  let renamed = 0;
+  for (const asset of imported) {
+    if (asset.renamed) renamed++;
+    console.log(
+      `${basename(asset.output).padEnd(38)} ${String(asset.width).padStart(4)}x${String(asset.height).padEnd(4)} ` +
+        `anchor ${asset.anchor.x},${asset.anchor.y}  ${asset.reason}`,
+    );
+  }
+  console.log(`\n${imported.length} assets imported into ${PATHS.source}; ${renamed} renamed from the drop.`);
+  return true;
+}
+
 async function runValidate(): Promise<boolean> {
   const result = await validateDirectory();
   if (result.checked === 0) {
@@ -69,24 +97,44 @@ async function runValidate(): Promise<boolean> {
   }
 
   let failures = 0;
+  let waived = 0;
+  let offFamily = 0;
   for (const asset of result.assets) {
     const label = asset.file.split('/').pop() ?? asset.file;
+    const accepted = asset.findings.filter((entry) => entry.accepted === true);
+    const family = asset.findings.filter((entry) => entry.ok && entry.detail.includes('OFF-FAMILY'));
+    offFamily += family.length;
+    if (asset.ok && accepted.length === 0) {
+      if (family.length === 0) console.log(`ok   ${label}`);
+      else {
+        console.log(`warn ${label}`);
+        for (const finding of family) console.log(`       ${finding.check}: ${finding.detail}`);
+      }
+      continue;
+    }
     if (asset.ok) {
-      console.log(`ok   ${label}`);
+      // Waived, never silent: the measurement is printed exactly as it was taken.
+      waived += accepted.length;
+      console.log(`warn ${label}  (${accepted.length} accepted exception(s))`);
+      for (const finding of accepted) console.log(`       ${finding.check}: ${finding.detail}`);
+      for (const finding of family) console.log(`       ${finding.check}: ${finding.detail}`);
       continue;
     }
     failures++;
     console.log(`FAIL ${label}`);
-    for (const finding of asset.findings.filter((entry) => !entry.ok)) {
+    for (const finding of asset.findings.filter((entry) => !entry.ok && entry.accepted !== true)) {
       console.log(`       ${finding.check}: ${finding.detail}`);
     }
   }
-  for (const finding of result.setFindings.filter((entry) => !entry.ok)) {
+  for (const finding of result.setFindings.filter((entry) => !entry.ok && entry.accepted !== true)) {
     failures++;
     console.log(`FAIL (set) ${finding.check}: ${finding.detail}`);
   }
 
-  console.log(`\n${result.checked} assets, ${failures} failing.`);
+  console.log(
+    `\n${result.checked} assets, ${failures} failing, ${waived} accepted exception(s), ` +
+      `${offFamily} off-family warning(s).`,
+  );
   return result.ok;
 }
 
@@ -136,10 +184,15 @@ function runAudio(): boolean {
 }
 
 function runManifest(): boolean {
-  const manifest = buildManifest();
+  // Non-atlased categories are copied into the served root first: a file the
+  // browser cannot reach has no URL, and until this ran the ground bake was
+  // built, budgeted and invisible.
+  const singles = publishSingles();
+  const manifest = buildManifest({ singles });
   const hash = writeManifest(manifest);
   console.log(
     `${PATHS.manifest}\n  schema ${manifest.schemaVersion}, ${manifest.atlases.length} atlases, ` +
+      `${manifest.singles.length} single(s), ` +
       `prompt block ${manifest.promptBlockHash.slice(0, 12)}, palette v${manifest.paletteVersion}\n  manifest hash ${hash}`,
   );
   return true;
@@ -191,6 +244,8 @@ async function runContactSheets(): Promise<boolean> {
 
 async function run(stage: Stage): Promise<boolean> {
   switch (stage) {
+    case 'import':
+      return runImport();
     case 'validate':
       return runValidate();
     case 'process':

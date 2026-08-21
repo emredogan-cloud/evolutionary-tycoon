@@ -177,14 +177,23 @@ describe('navigation deadlock', () => {
       slots.push(slot);
     }
 
-    sim.advance(1200);
-
-    let queued = 0;
-    for (const slot of slots) {
-      if (!sim.world.customers.isActive(slot)) continue;
-      if (sim.world.customers.at(slot).queueIndex >= 0) queued++;
+    /*
+     * The peak over the run, not the count at the end. Phase 8 gave the queue a
+     * way out — the front customer orders and steps aside — so by tick 1200 a
+     * queue that formed perfectly may have drained entirely. Asserting the end
+     * state would be asserting that the service loop is *slow*.
+     */
+    let peakQueue = 0;
+    for (let tick = 0; tick < 1200; tick++) {
+      sim.tick();
+      let queued = 0;
+      for (const slot of slots) {
+        if (!sim.world.customers.isActive(slot)) continue;
+        if (sim.world.customers.at(slot).queueIndex >= 0) queued++;
+      }
+      peakQueue = Math.max(peakQueue, queued);
     }
-    expect(queued, 'a stacked crowd never formed a queue').toBeGreaterThan(0);
+    expect(peakQueue, 'a stacked crowd never formed a queue').toBeGreaterThan(0);
   }, 120_000);
 
   it('separates two agents standing on exactly the same point', () => {
@@ -291,9 +300,42 @@ describe('a crowded entrance', () => {
      * alternatives `QueueSystem` rejected measured 0.022 m and 0.009 m on this
      * same scenario.
      */
-    expect(closest, `closest approach ${closest.toFixed(3)} m`).toBeGreaterThan(0.25);
+    /*
+     * Re-baselined in Phase 8, and worth saying why rather than quietly moving.
+     * The scenario changed: in Phase 7 a crowd of thirty piled up at a counter
+     * that could not serve them, so most of them stood still. Phase 8 gave the
+     * queue a way out, so the same thirty now circulate — queue, order, cross to
+     * the waiting area, eat, leave — and there is far more passing traffic.
+     *
+     * The floor covers a transient: two people passing each other. 0.195 m is
+     * about 7 px at this scale, and three separate layout fixes brought it there
+     * from 0.054 m (a waiting area at all, on one side only, and rows spaced far
+     * enough apart to walk between). The **share** below is the bound that
+     * matters and it did not move — a settled crowd still keeps its distance.
+     */
+    expect(closest, `closest approach ${closest.toFixed(3)} m`).toBeGreaterThan(0.15);
+    /*
+     * Re-baselined a second time, when the world took its real dimensions
+     * (2026-08-18, the art-integration batch). The counter grew from a 1.2 m
+     * placeholder square to its declared 3.0 x 0.8 m, which removed about five
+     * square metres from the apron this scenario packs thirty people into.
+     * Two consequences, separated because they had different fixes:
+     *
+     *  - the closest approach collapsed to 0.080 m, and that was a **layout
+     *    defect**: the waiting rows started 1.1 m from the real counter's end,
+     *    reintroducing the walk-along-an-occupied-row failure this file already
+     *    records fixing once. The rows moved 0.9 m east and the floor above
+     *    passes again — authored, not re-baselined.
+     *  - the share rose from ~0.40% to a measured **0.84%**, and that is the
+     *    same thirty people churning in a genuinely smaller pocket. There is no
+     *    layout that gives a synthetic one-point stampede its old elbow room
+     *    back without shrinking the counter, which would be lying about the
+     *    world to keep a number. Re-baselined with the same margin philosophy
+     *    as the Phase 8 entry above: the bound sits above what is actually
+     *    reached (0.84%), close enough that a regression shows.
+     */
     const share = violating / Math.max(1, pairs);
-    expect(share, `${(share * 100).toFixed(2)}% of pair-ticks were too close`).toBeLessThan(0.005);
+    expect(share, `${(share * 100).toFixed(2)}% of pair-ticks were too close`).toBeLessThan(0.012);
   }, 120_000);
 
   it('still forms a queue while the rest hold back', () => {

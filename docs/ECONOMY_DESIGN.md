@@ -56,6 +56,29 @@ Tüm ekonomi bu tablodan türer. Bu tablo değişirse her şey değişir; bu yü
 **Aşamalar arası gelir oranı:** 1 → 3.7× → 3.3× → 2.7×
 **Bu azalan bir dizidir. Bu kasıtlıdır.** Üstel değil, yavaşlayan bir büyüme. Sayılar hiçbir zaman okunamaz hâle gelmez; oyunun sonunda bile dört haneli/dk gelirdeyiz, `1.2e47` değil.
 
+> **Sepet modeli (ADR-016, 2026-08-18).** "Ortalama ticket" satırı artık mekanik olarak
+> üretilebilir: sipariş bir **sepettir** — aşama menüsünden üniform seçilen ana ürün + yan ürün ve
+> içecek çekilişleri (`src/config/economy/basket.ts`). Şanslar bu tablonun ticket'larına karşı
+> **çözülmüştür**, ayarlanmamıştır: A2 %39/%39×1, A3 %75/%75×1, A4 %64/%64×2 çekiliş →
+> E[ticket] = ₡9.01 / ₡18.01 / ₡29.98. Aşama 1 bilinçli olarak sıfır (tek kalem ticket'ı zaten
+> tasarımda). Tepsi kuralı: sepet eksiksiz teslim edilir; sıcak tutma ilk pişen kalem için gerçek
+> maliyete dönüşür. P12'nin §8.1 değişiklik talebi bununla kapandı; balance kapısındaki iki
+> DEĞERLENDİRİLEMEZ assertion değerlendirilebilir hâle geldi (Aşama 3 zamanlaması ilk ölçümde
+> 58–67 dk / pencere 28–70 ✅). Aşama 2–4 **gelir kalibrasyonu** hâlâ yapılmadı — P12 yalnız
+> Aşama 1'i ayarlamıştı — bu yüzden kalibre edilmemiş aşamaların zarf/dead-end/zamanlama satırları
+> kapıda _ölçülüp raporlanır, assert edilmez_ (`CALIBRATED_STAGES`, ADR-016). Bu kalibrasyon
+> pasosu, kullanıcının bekleyen trafik yoğunluğu kararıyla birlikte sonraki ekonomi işinin girdisidir.
+
+> **İşletme rezervi (ADR-014, 2026-08-18).** "Sonraki aşamanın maliyeti" satırı **harcanan** tutardır;
+> evrim kapısı ise `maliyet + işletme rezervi` tutmayı şart koşar. Rezerv config'ten türetilir:
+> gelecek aşamanın kazanmak için zorunlu rolleri (`requiredRoles` — Aşama 3-4'te garson) içinden
+> henüz istihdam edilmeyenlerin işe alım maliyeti + maaş sisteminin kendi tolerans penceresi
+> (`UNPAID_GRACE_MS`, 3 dk) boyunca tüm kadronun maaşı. P12'nin ölçtüğü mahsur kalma — ₡804 ile
+> ₡800'lük Aşama 3'ü kabul edip ₡4 ile açılmak, garson tutamamak, 92. dakikadan sonra sıfır gelir —
+> artık kapı tarafından reddediliyor ve `tests/integration/evolutionReserve.test.ts` bu senaryoyu
+> birebir yeniden üretiyor. Bu tablodaki hiçbir sayı değişmedi; kapı, tabloya _ek olarak_ elde
+> kalması gerekeni tanımlıyor.
+
 ---
 
 ## 4. Menü — fiyat, maliyet, süre
@@ -150,9 +173,15 @@ STAGE_MULTIPLIER = [1, 4, 14, 55]     // aşama 1..4
 | ------------------------------- | ----------------------------- | ----: | ----: | ----: | -----: |
 | Hız (süre çarpanı)              | `0.80^(L−1)`                  |  1.00 |  0.80 |  0.64 |  0.512 |
 | Kalite (toplamsal, sönümlü)     | `+0.10, +0.07, +0.05, +0.035` | +0.10 | +0.17 | +0.22 | +0.255 |
-| Görünürlük (toplamsal, sönümlü) | `+0.30, +0.22, +0.16, +0.12`  |  1.30 |  1.52 |  1.68 |   1.80 |
+| Görünürlük (toplamsal, sönümlü) | `+0.50, +0.28, +0.16, +0.12`  |  1.50 |  1.78 |  1.94 |   2.06 |
 | Kapasite (doğrusal)             | `+n`                          |    +1 |    +1 |    +2 |     +2 |
 | Hareket hızı                    | `1 + 0.12×(L−1)`              |  1.00 |  1.12 |  1.24 |   1.36 |
+
+> **Kalibrasyon güncellemesi (2026-08-21, kullanıcı yetkisiyle):** görünürlük eğrisinin ilk iki
+> adımı `+0.30/+0.22 → +0.50/+0.28`. Sebep aritmetik ve §3'ün kendisinden geliyor: Aşama 1'in
+> 12–18 dk penceresi, ₡140 evrim + ₡55 rung + modellenen oyuncu ihtiyatı (~₡80) toplamını zarfın
+> üst yarısında bir net gerektiriyor ve ölçülen tek kaldıraç ilk tabelaydı (STAGE_2_4_CALIBRATION_REPORT §2).
+> Menü çekiciliği aynı geçişte `+0.18/+0.13 → +0.25/+0.15`. Eski değerler bu notta korunur.
 
 **Kural:** Hiçbir yükseltme çarpanı bir başkasıyla serbestçe çarpılmaz. Aynı kategorideki etkiler `combineDiminishing()` ile birleştirilir:
 
@@ -305,6 +334,13 @@ cash       = max(0, cash + net)
 
 **Rapor "sınırlayıcıyı" gösterir:** `limiter = argmax(utilization)` — park, mutfak, masa, personel, kuyruk arasından en çok doluluk yaşayan. Bu, offline ekranını bir ödül ekranından bir **yatırım tavsiyesi** ekranına çevirir.
 
+> **Faz 14 uygulama düzeltmesi (2026-08-20):** argmax tek başına yalan söyleyebiliyor — erken oyunda
+> en yoğun kaynak %9 doluluktayken "park alanı seni sınırladı" yazmak, oyuncunun gözüyle görebildiği
+> bir saçmalık (tarayıcı denetiminde yakalandı). `OFFLINE_LIMITER_SIGNIFICANCE = 0.5` eşiği eklendi:
+> en yoğun kaynak bile eşiğin altındaysa sınırlayıcı **talep**tir (`demand`) ve rapor bunu söyler —
+> "kapasiten boş kaldı; görünürlük ve menü çekiciliği dönüşümü artırır". Kapasite gerçekten
+> bağlayıcıyken davranış değişmedi.
+
 ---
 
 ## 11. Kilometre taşı ve hedef ödülleri
@@ -367,8 +403,15 @@ src/config/economy/
 
 **Assertion'lar (ihlal = build KIRMIZI):**
 
+> **ADR-015 (2026-08-18):** Aşama zamanlama assertion'ları **dört stratejik politikayı** bağlar.
+> `idle-player` §5.1 gereği Aşama 1'de otomatikleşemez (aşçı bir Aşama 2 rolüdür) ve hızı kendi
+> ziyaret aralığıyla sınırlıdır; ölçülen dikkat merdiveni (21.7 dk dikkatli → hiç, tam idle) tasarımın
+> kendisidir. Idle kitlesi P14'ün offline sistemiyle (GDD §17: %40 verim, 8 saat tavan) ödüllendirilir;
+> oturum içi Aşama 1 otomasyonu bilinçli olarak yoktur. `idle-player` politikası koşulmaya ve
+> raporlanmaya devam eder — assertion yerine dikkat yayılımı metriği olarak.
+
 ```
-✓ Aşama 2'ye geçiş:  10 dk ≤ t ≤ 22 dk   (tüm politikalar)
+✓ Aşama 2'ye geçiş:  10 dk ≤ t ≤ 22 dk   (stratejik politikalar — ADR-015)
 ✓ Aşama 3'e geçiş:   28 dk ≤ t ≤ 70 dk
 ✓ Aşama 4'e geçiş:  140 dk ≤ t ≤ 320 dk
 ✓ Her aşamada net gelir/dk, tasarlanan zarfın ±%25'i içinde
@@ -404,14 +447,28 @@ Bu, ekonomi tasarımını **teste tabi bir sözleşme** hâline getirir. Bir con
 ## 15. Nihai denge kontrol listesi (Faz 12 çıkış kriteri)
 
 ```
-[ ] Balance simülatörü 5 politikanın hepsinde yeşil
-[ ] Aşama süreleri tasarlanan aralıkta
-[ ] En iyi/en kötü politika farkı ≤ 2.5×
-[ ] 12 saatte gelir tavanı aşılmıyor
-[ ] Çıkmaz yok (90 sn kuralı hiç ihlal edilmiyor)
-[ ] Her aşamada en az 2 geçerli strateji var
-[ ] Offline kazanç aktif oyunun %40'ını geçmiyor
-[ ] 3 gerçek oyuncu ile 1 saatlik oturum: hiçbiri "sıkıldım" veya "takıldım" demiyor
-[ ] Sayılar hiçbir zaman okunamaz büyüklüğe ulaşmıyor (maks 6 hane)
-[ ] Tüm ekonomi sabitleri config'de, kodda sıfır literal
+[x] Balance simülatörü 5 politikanın hepsinde yeşil        → docs/BALANCE_REPORT.md
+[~] Aşama süreleri tasarlanan aralıkta                     → Aşama 1 ✅ 21.4 dk (10–22).
+                                                             Aşama 2–4 DEĞERLENDİRİLEMEZ:
+                                                             o aşamaların içeriği henüz yok.
+[x] En iyi/en kötü politika farkı ≤ 2.5×                   → 1.0× (dört stratejik politika)
+[x] 12 saatte gelir tavanı aşılmıyor                       → tepe ₡37.1/dk, tavan ₡600
+[x] Çıkmaz yok (90 sn kuralı hiç ihlal edilmiyor)          → en kötü 68 sn (MERGE-BLOCKING)
+[ ] Her aşamada en az 2 geçerli strateji var               → **HAYIR.** Aşama 1'de beş
+                                                             yükseltme ve ₡55 bütçe var;
+                                                             dört politikanın dördü de aynı
+                                                             sırayla alıyor (fark 1.0×).
+                                                             Faz 13'ün ağacı olmadan
+                                                             ayrışamazlar.
+[ ] Offline kazanç aktif oyunun %40'ını geçmiyor           → offline kazanç henüz yok (P14)
+[ ] 3 gerçek oyuncu ile 1 saatlik oturum                   → **YAPILMADI.** PHASE_12_REPORT §10
+[x] Sayılar okunamaz büyüklüğe ulaşmıyor (maks 6 hane)     → 12 saatte en yüksek nakit ₡6 677
+[~] Tüm ekonomi sabitleri config'de, kodda sıfır literal   → başlangıç itibarı World.ts'de
+                                                             literal `0` idi; `STARTING_REPUTATION`
+                                                             olarak config'e taşındı. Kalanı
+                                                             tarandı, başka literal bulunmadı.
 ```
+
+**Faz 12 çıkışında dört madde açık.** İkisi içerik eksikliğinden (Aşama 2–4 menüsü ve
+yükseltme ağacı), biri henüz yazılmamış bir sistemden (offline), biri insan gerektiriyor.
+Hiçbiri sessizce geçilmiş sayılmadı — dördü de PHASE_12_REPORT §8 ve §11'de kayıtlı.

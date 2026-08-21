@@ -28,7 +28,7 @@ test.describe('webkit smoke', () => {
   });
 
   test('the unsupported path still renders', async ({ page }) => {
-    await page.goto('/?forceUnsupported=no-webgl2');
+    await page.goto('/?forceUnsupported=no-webgl');
     await expect(page.locator('html')).toHaveAttribute('data-app-state', 'unsupported');
     await expect(page.getByRole('heading', { name: /çalıştırılamıyor/i })).toBeVisible();
   });

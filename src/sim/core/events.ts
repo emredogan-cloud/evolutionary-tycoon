@@ -119,6 +119,149 @@ export interface CustomerLeftAngryEvent {
   dwellMs: number;
 }
 
+/** A customer said what they want. */
+export interface OrderPlacedEvent {
+  readonly t: 'ORDER_PLACED';
+  entityId: number;
+  customerId: number;
+  /** Index into `MENU`. */
+  item: number;
+}
+
+/** Preparation began at a station. Carries the duration so the ring can fill. */
+export interface PrepStartedEvent {
+  readonly t: 'PREP_STARTED';
+  entityId: number;
+  station: number;
+  durationMs: number;
+}
+
+/** A plate reached the pass, and started going cold. */
+export interface OrderReadyEvent {
+  readonly t: 'ORDER_READY';
+  entityId: number;
+  item: number;
+}
+
+/** A plate reached the customer who ordered it. */
+export interface OrderDeliveredEvent {
+  readonly t: 'ORDER_DELIVERED';
+  entityId: number;
+  customerId: number;
+}
+
+/**
+ * Money changed hands — the event the whole loop exists to produce.
+ *
+ * Amount, tip and satisfaction together, because they are computed from the same
+ * numbers on the same tick and separating them would give three consumers three
+ * chances to disagree about what happened. Phase 9's economy reads it, Phase 17
+ * plays a sound on it, Phase 18 charts it.
+ */
+export interface PaymentEvent {
+  readonly t: 'PAYMENT';
+  customerId: number;
+  amount: number;
+  tip: number;
+  satisfaction: number;
+}
+
+/**
+ * A purchase that went through — Phase 9.
+ *
+ * Carries the level *bought* rather than the new total, and the price actually
+ * paid rather than the list price, because both are what the renderer's
+ * construction burst and the analysis panel need and neither can be recovered
+ * afterwards: the level advances and the next cost is different.
+ */
+export interface UpgradeAppliedEvent {
+  readonly t: 'UPGRADE_APPLIED';
+  upgradeId: string;
+  level: number;
+  cost: number;
+}
+
+/** The player moved a price. Emitted only when it actually changed. */
+export interface PriceChangedEvent {
+  readonly t: 'PRICE_CHANGED';
+  itemId: string;
+  price: number;
+}
+
+/** Somebody was hired. */
+export interface EmployeeHiredEvent {
+  readonly t: 'EMPLOYEE_HIRED';
+  entityId: number;
+  roleId: string;
+  cost: number;
+}
+
+/**
+ * Somebody left — fired, or unpaid for too long.
+ *
+ * `reason` separates the two, because they mean opposite things to a player:
+ * one is a decision they made and one is a consequence they need to notice.
+ */
+export interface EmployeeLeftEvent {
+  readonly t: 'EMPLOYEE_LEFT';
+  entityId: number;
+  roleId: string;
+  reason: 'fired' | 'unpaid';
+}
+
+/** Requirements met — the next stage is available and awaiting confirmation. */
+export interface StageUnlockedEvent {
+  readonly t: 'STAGE_UNLOCKED';
+  stage: number;
+}
+
+/** The player confirmed; the building starts growing. */
+export interface ConstructionStartedEvent {
+  readonly t: 'CONSTRUCTION_STARTED';
+  stage: number;
+  durationMs: number;
+}
+
+/** The building finished growing and the stage actually changed. */
+export interface StageChangedEvent {
+  readonly t: 'STAGE_CHANGED';
+  from: number;
+  to: number;
+}
+
+export interface ObjectPlacedEvent {
+  readonly t: 'OBJECT_PLACED';
+  objectId: string;
+  x: number;
+  y: number;
+}
+
+export interface ObjectRemovedEvent {
+  readonly t: 'OBJECT_REMOVED';
+  objectId: string;
+  x: number;
+  y: number;
+}
+
+/** The sky changed — Phase 15. `state` indexes `WEATHER_STATES`. */
+export interface WeatherChangedEvent {
+  readonly t: 'WEATHER_CHANGED';
+  state: number;
+}
+
+/** A calendar event began — Phase 15. `kind` indexes `EVENT_SPECS`. */
+export interface RoadEventStartedEvent {
+  readonly t: 'ROAD_EVENT_STARTED';
+  kind: number;
+  endsAtMs: number;
+}
+
+/** It ended. */
+export interface RoadEventEndedEvent {
+  readonly t: 'ROAD_EVENT_ENDED';
+  kind: number;
+}
+
 export type SimEvent =
   | DayStartedEvent
   | SpeedChangedEvent
@@ -130,7 +273,24 @@ export type SimEvent =
   | ConversionFailedEvent
   | VehicleParkedEvent
   | CustomerSpawnedEvent
-  | CustomerLeftAngryEvent;
+  | CustomerLeftAngryEvent
+  | OrderPlacedEvent
+  | PrepStartedEvent
+  | OrderReadyEvent
+  | OrderDeliveredEvent
+  | PaymentEvent
+  | UpgradeAppliedEvent
+  | PriceChangedEvent
+  | EmployeeHiredEvent
+  | EmployeeLeftEvent
+  | StageUnlockedEvent
+  | ConstructionStartedEvent
+  | StageChangedEvent
+  | ObjectPlacedEvent
+  | WeatherChangedEvent
+  | RoadEventStartedEvent
+  | RoadEventEndedEvent
+  | ObjectRemovedEvent;
 
 export type SimEventType = SimEvent['t'];
 
@@ -143,6 +303,9 @@ export type SimEventType = SimEvent['t'];
  */
 export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'DAY_STARTED',
+  'WEATHER_CHANGED',
+  'ROAD_EVENT_STARTED',
+  'ROAD_EVENT_ENDED',
   'SPEED_CHANGED',
   'PAUSE_CHANGED',
   'VEHICLE_SPAWNED',
@@ -153,6 +316,20 @@ export const SIM_EVENT_TYPES: readonly SimEventType[] = [
   'VEHICLE_PARKED',
   'CUSTOMER_SPAWNED',
   'CUSTOMER_LEFT_ANGRY',
+  'ORDER_PLACED',
+  'PREP_STARTED',
+  'ORDER_READY',
+  'ORDER_DELIVERED',
+  'PAYMENT',
+  'UPGRADE_APPLIED',
+  'PRICE_CHANGED',
+  'EMPLOYEE_HIRED',
+  'EMPLOYEE_LEFT',
+  'STAGE_UNLOCKED',
+  'CONSTRUCTION_STARTED',
+  'STAGE_CHANGED',
+  'OBJECT_PLACED',
+  'OBJECT_REMOVED',
 ];
 
 /**

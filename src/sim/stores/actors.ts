@@ -4,11 +4,10 @@ import { SlotPool } from './pool';
 /**
  * Pooled records for the non-vehicle entity kinds.
  *
- * Phase 2 delivers the skeleton and the pooling mechanics only. The behavioural
- * fields (patience, order contents, task assignment, FSM state) belong to the
- * phases that introduce those systems — Phase 6 for customers, Phase 8 for
- * orders, Phase 10 for employees. Adding them now would be implementing a later
- * phase's data model without its tests.
+ * Phase 2 delivered the skeleton and the pooling mechanics. The behavioural
+ * fields moved out as their systems arrived: customers to `customers.ts` in
+ * Phase 6 and orders to `OrderStore.ts` in Phase 8. What is left here is the
+ * employee pool, which is still a position and an identity until Phase 10.
  *
  * What is here is what the kernel genuinely needs: stable identity and a world
  * position, so the store can be spawned, despawned, hashed, saved and iterated
@@ -39,12 +38,6 @@ export interface ActorRecord {
   kind: number;
 }
 
-export interface OrderRecord {
-  entityId: number;
-  /** Slot of the owning customer, or -1 when unowned. */
-  customerSlot: number;
-}
-
 function createActor(defaultKind: number): ActorRecord {
   return { entityId: 0, x: 0, y: 0, z: 0, kind: defaultKind };
 }
@@ -57,26 +50,12 @@ function resetActor(record: ActorRecord, defaultKind: number): void {
   record.kind = defaultKind;
 }
 
-function createOrder(): OrderRecord {
-  return { entityId: 0, customerSlot: -1 };
-}
-
-function resetOrder(record: OrderRecord): void {
-  record.entityId = 0;
-  record.customerSlot = -1;
-}
-
 export function writeActor(hasher: Hasher, record: ActorRecord): void {
   hasher.writeI32(record.entityId);
   hasher.writeF64(record.x);
   hasher.writeF64(record.y);
   hasher.writeF64(record.z);
   hasher.writeU8(record.kind);
-}
-
-export function writeOrder(hasher: Hasher, record: OrderRecord): void {
-  hasher.writeI32(record.entityId);
-  hasher.writeI32(record.customerSlot);
 }
 
 export function createActorPool(capacity: number, defaultKind: number): SlotPool<ActorRecord> {
@@ -87,8 +66,4 @@ export function createActorPool(capacity: number, defaultKind: number): SlotPool
       resetActor(record, defaultKind);
     },
   );
-}
-
-export function createOrderPool(capacity: number): SlotPool<OrderRecord> {
-  return new SlotPool<OrderRecord>(capacity, createOrder, resetOrder);
 }

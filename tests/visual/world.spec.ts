@@ -31,16 +31,31 @@ const VIEWPORT = { width: 1280, height: 720 };
  * ignored, and the Phase 6 goldens would photograph tick 0 while claiming to
  * photograph tick 4264.
  */
-function frozenUrl(scene: string, freezeAt = 0): string {
-  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1`;
+function frozenUrl(scene: string, freezeAt = 0, extra = ''): string {
+  /*
+   * Pin the hour **at the frozen moment**, not at boot — Phase 15. The clock
+   * starts at midnight and 600 ticks are one game hour, so a long freeze
+   * travels: the first draft forced 12 at boot and `stage1-serving`
+   * (freezeAt 8280 → +13.8 h) faithfully photographed 18:54 dusk, headlight
+   * cones and all. Solving the start hour backwards lands every frozen frame
+   * within half an hour of noon — anywhere in the ambient curve's flat
+   * daylight band — which is the daytime-showcase intent these scenes always
+   * had, now written down. The environment goldens below force their own
+   * hours and skies instead.
+   */
+  const hoursTravelled = freezeAt / 600;
+  const startHour = Math.round((((12 - hoursTravelled) % 24) + 24) % 24) % 24;
+  return `/?scene=${scene}&freezeAt=${String(freezeAt)}&seed=424242&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&forceHour=${String(startHour)}${extra}`;
 }
 
-async function openFrozen(page: Page, scene: string, freezeAt = 0): Promise<void> {
+async function openFrozen(page: Page, scene: string, freezeAt = 0, extra = ''): Promise<void> {
   await page.setViewportSize(VIEWPORT);
-  await page.goto(frozenUrl(scene, freezeAt));
+  await page.goto(frozenUrl(scene, freezeAt, extra));
   // Wait on a state attribute, never a timeout — the difference between a suite
   // that is stable and one that lives in docs/FLAKY.md.
-  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
   await expect(page.locator('html')).toHaveAttribute('data-visual-mode', '1');
   await page.waitForTimeout(250);
 }
@@ -84,19 +99,172 @@ test.describe('visual goldens', () => {
 
   test('stage1-queue — four people waiting, and one of them losing patience', async ({ page }) => {
     /*
-     * Tick 10417 is the busiest the counter gets on this seed. It was 7940 in
-     * Phase 6 and moved when Phase 7 replaced the straight-line walk with
-     * flow-field steering: different routes mean different arrival times, which
-     * shifts every patience clock downstream and with it the whole sequence.
-     * It moved again within Phase 7, as the steering itself was corrected.
+     * **Tick 5309, re-derived in Phase 8.** It was 7940 in Phase 6, 10417 in
+     * Phase 7, and it has moved for the third time — because the thing it
+     * photographs genuinely moved, not because the pixels drifted.
      *
-     * The tick was re-derived rather than the golden re-recorded at the old one.
-     * A screenshot named `stage1-queue` that no longer photographs the busiest
-     * queue is a golden that lies about its subject, and it would go on lying
-     * quietly for as long as the pixels happened to be stable.
+     * Phase 8 gave the counter an exit. Until this phase a customer who reached
+     * the front stood there, so the queue only ever grew and the busiest moment
+     * was late and crowded. Now they order, step aside into the waiting area and
+     * eventually leave, so the counter drains continuously and the busiest it
+     * ever gets is four people — reached far earlier, at tick 5309, with one of
+     * them down to 9.8% of their patience.
+     *
+     * Re-derived rather than re-recorded at 10417, for the same reason as last
+     * time: a screenshot named `stage1-queue` that no longer photographs a queue
+     * is a golden that lies about its subject, and it would go on lying quietly
+     * for as long as the pixels happened to be stable. The old tick now shows
+     * two people and an empty counter.
      */
-    await openFrozen(page, 'empty', 10417);
+    await openFrozen(page, 'empty', 5309);
     await expect(page).toHaveScreenshot('stage1-queue.png');
+  });
+
+  /**
+   * The loop, mid-service — GAME_EXECUTION_ROADMAP Phase 8, `stage1-serving`.
+   *
+   * Tick 8280 was found by simulating seed 424242 with an attentive cook and
+   * looking for the first frame where the stand is genuinely busy: a customer
+   * waiting on an order, a station part-way through cooking, and a payment
+   * thirty ticks old. Five customers, eight vehicles, ₡24.03 taken.
+   *
+   * `cook=1` is what makes it reachable. In Stage 1 the player is the cook, so a
+   * fast-forward that issues no commands arrives at tick 8280 with a queue of
+   * people and a kitchen that has never started anything — a golden of a stand
+   * that is not serving, filed under the name `stage1-serving`.
+   *
+   * ## Why the overlay is not in this picture
+   *
+   * It was, briefly, and it made the golden host-specific. Phase 8's order
+   * bubbles, progress rings, pass plates and coin popups are DOM, and DOM means
+   * text: with the overlay mounted, this golden differed by 4283 pixels between
+   * the pinned container and the development host, and **every one of those
+   * pixels was a glyph**. The canvas matched exactly. `system-ui` resolves to
+   * different fonts in the two images and font rasterisation is not portable
+   * even when the family is, so no amount of pinning inside the page fixes it.
+   *
+   * That is not a loss. Visual regression exists for the thing Playwright cannot
+   * otherwise inspect — pixels in a WebGL canvas. The overlay is queryable DOM,
+   * and `tests/e2e/serviceLoop.spec.ts` asserts each marker by test id, which is
+   * a stricter check than a screenshot and does not go stale when a font does.
+   */
+  test('stage1-serving — the stand mid-service, cooking and paid', async ({ page }) => {
+    /*
+     * Re-derived (third time) at 13284 for the Phase 15 stream: the noon-pin
+     * rule gives this freeze a start hour of 14, and the busiest self-
+     * consistent moment in its window holds two customers with an order
+     * cooking — the subject the golden is named after. The old 8280, replayed
+     * under the new stream, photographed an empty counter.
+     */
+    await openFrozen(page, 'empty', 13284, '&cook=1');
+    await expect(page).toHaveScreenshot('stage1-serving.png');
+  });
+
+  /**
+   * Before and after — GAME_EXECUTION_ROADMAP Phase 9.
+   *
+   * The same seed, the same tick, the same camera; the only difference is that
+   * the second one owns three upgrades. The pair is the visual half of "visual
+   * feedback is not optional": if a purchase changed nothing on screen, these
+   * two images would be identical and the diff would say so.
+   *
+   * Three rather than one, chosen to land in different places — the sign on the
+   * stand, the marker out at the roadside, the second prep bench behind the
+   * counter — so a regression that dropped one of them still shows.
+   *
+   * What appears is a registered placeholder, not art. That is stated in
+   * PLACEHOLDER_REGISTER and in the phase report; the golden proves the object
+   * is drawn, sorted and in the right place, which is the part that can be true
+   * before the art exists.
+   */
+  test('upgrades-before — the stand with nothing bought', async ({ page }) => {
+    await openFrozen(page, 'empty', 8280, '&cook=1');
+    await expect(page).toHaveScreenshot('upgrades-before.png');
+  });
+
+  test('upgrades-after — the same moment, three upgrades in', async ({ page }) => {
+    await openFrozen(
+      page,
+      'empty',
+      8280,
+      /*
+       * `roadside-marker` was removed in Phase 12 — the paired experiment
+       * measured every level of it as costing revenue, because a converted
+       * driver reserves a bay the moment they decide and the marker made them
+       * decide sooner. `bigger-counter` takes its place here: three upgrades
+       * from three different families is what the golden is about, and the
+       * simulation refuses a purchase it does not recognise, which is what took
+       * the scene to `data-sim-state="failed"`.
+       */
+      '&cook=1&buy=hand-painted-sign,bigger-counter,second-prep-station',
+    );
+    await expect(page).toHaveScreenshot('upgrades-after.png');
+  });
+
+  /**
+   * The four stages — GAME_EXECUTION_ROADMAP Phase 11, "visual golden'lar: her
+   * aşama".
+   *
+   * The same lot, the same road and the same camera in all four; what changes is
+   * the building, the car park, the tables and — at Stage 4 — the drive-thru
+   * lane. That is the design constraint made photographable: put these side by
+   * side and the plot is recognisably the same place.
+   *
+   * `?stage=` sets the stage directly rather than playing to it. A golden that
+   * had to earn its way to Stage 4 would take minutes to regenerate and would
+   * photograph whatever the economy happened to do on the day.
+   *
+   * Stage 3 and 4 art is **placeholder** and registered as such — GAME_EXECUTION
+   * ROADMAP puts it in Phase 16. What these goldens protect is the *geometry*:
+   * where the bays are, where the tables are, where the lane runs.
+   */
+  for (const stage of [2, 3, 4]) {
+    test(`stage${String(stage)}-layout — the lot as it is built out`, async ({ page }) => {
+      await openFrozen(page, 'empty', 600, `&stage=${String(stage)}`);
+      await expect(page).toHaveScreenshot(`stage${String(stage)}-layout.png`);
+    });
+  }
+});
+
+async function openEnvironment(page: Page, query: string): Promise<void> {
+  await page.setViewportSize(VIEWPORT);
+  await page.goto(`/?${query}&freezeAt=600&seed=424242&fixedViewport=1&dpr=1&hideHud=1`);
+  await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+    timeout: 30_000,
+  });
+  await expect(page.locator('html')).toHaveAttribute('data-visual-mode', '1');
+  await page.waitForTimeout(250);
+}
+
+test.describe('environment goldens — Phase 15', () => {
+  /*
+   * Each pins its sky and hour through the fixture instruments, so the golden
+   * is a function of the URL alone. `noParticles` stays OFF for rain and
+   * snow — this project's precipitation is deterministic (a pure function of
+   * sim time, frozen with the clock), which is the whole reason these goldens
+   * can exist.
+   */
+  test('night-stage3 — the terrace after dark, signs lit, headlights on', async ({ page }) => {
+    await openEnvironment(
+      page,
+      'stage=3&noParticles=1&forceHour=22&buy=hand-painted-sign,illuminated-sign,neon-facade',
+    );
+    await expect(page).toHaveScreenshot('env-night-stage3.png');
+  });
+
+  test('rain-stage1 — a wet noon at the stand', async ({ page }) => {
+    await openEnvironment(page, 'scene=stage1-serving&cook=1&forceWeather=rain&forceHour=12');
+    await expect(page).toHaveScreenshot('env-rain-stage1.png');
+  });
+
+  test('snow-stage3 — the diner under snow', async ({ page }) => {
+    await openEnvironment(page, 'stage=3&forceWeather=snow&forceHour=12');
+    await expect(page).toHaveScreenshot('env-snow-stage3.png');
+  });
+
+  test('festival-stage4 — the packed road at dusk', async ({ page }) => {
+    await openEnvironment(page, 'stage=4&noParticles=1&forceEvent=festival&forceHour=19');
+    await expect(page).toHaveScreenshot('env-festival-stage4.png');
   });
 });
 
@@ -104,6 +272,11 @@ test.describe('visual determinism', () => {
   test('renders the same scene byte-identically ten times', async ({ browser }) => {
     // The precondition for every golden above. If this fails, a golden diff
     // means nothing, and the roadmap makes it a phase-completion condition.
+    //
+    // Ten full boots, each decoding every atlas — a 4-core CI runner spends
+    // 5-8 s per boot where this machine spends ~1.5 s, and the default thirty
+    // seconds covered the loop only before boot carried real art.
+    test.setTimeout(180_000);
     const hashes: string[] = [];
 
     for (let run = 0; run < 10; run++) {
@@ -131,7 +304,9 @@ test.describe('visual determinism', () => {
       .digest('hex');
 
     await page.reload();
-    await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+    await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready', {
+      timeout: 30_000,
+    });
     await page.waitForTimeout(250);
     const second = createHash('sha256')
       .update(await page.screenshot())

@@ -46,6 +46,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "vitest.bench.config.ts",
+    "vitest.balance.config.ts",
     "playwright.config.ts",
     "vercel.ts",
     "tools/**/*.ts",

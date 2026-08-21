@@ -1,0 +1,14 @@
+/*
+ * Applied only while a panel golden is captured. The panels are translucent
+ * and sit over the live WebGL canvas; the world is frozen, but on a slow
+ * software rasteriser (CI's SwiftShader) the compositor can catch the canvas
+ * between presents, so the pixels bleeding through the panel — and past its
+ * rounded corners — flip between frames and the screenshot never stabilises.
+ * That is exactly how e8a0b25's CI failed: every panel assertion timed out
+ * with zero completed comparisons. Hiding the canvas puts the app's flat
+ * token background behind the panel instead: the same translucency, blur and
+ * corner radii are exercised, against a backdrop that cannot flicker.
+ */
+canvas {
+  visibility: hidden !important;
+}

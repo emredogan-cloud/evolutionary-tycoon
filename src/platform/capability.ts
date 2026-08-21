@@ -1,14 +1,20 @@
 /**
  * Runtime capability detection.
  *
- * Phaser 4 deprecated the Canvas renderer, so WebGL2 is a hard requirement:
- * without it the game cannot render at all. That makes the unsupported-browser
- * path a product requirement rather than a nicety — a player on an unsupported
- * browser must see an explanation, never a black screen
- * (docs/TECHNICAL_ARCHITECTURE.md §12, tier C).
+ * Phaser 4 deprecated the Canvas renderer, so a working WebGL context is a hard
+ * requirement: without one the game cannot render at all. That makes the
+ * unsupported-browser path a product requirement rather than a nicety — a
+ * player on an unsupported browser must see an explanation, never a black
+ * screen (docs/TECHNICAL_ARCHITECTURE.md §12, tier C).
+ *
+ * The floor is WebGL **1**, not 2 — ADR-017, decided 2026-08-21. The engine
+ * opens a WebGL1 context (`WebGLRenderer.js:709`; "webgl2" appears nowhere in
+ * its source), so probing for WebGL2 refused browsers the product runs on
+ * while testing a capability nothing consumes. The gate now probes exactly
+ * the context the renderer will open.
  */
 
-export type CapabilityFailure = 'no-webgl2' | 'no-canvas-element';
+export type CapabilityFailure = 'no-webgl' | 'no-canvas-element';
 
 export interface CapabilityReport {
   readonly supported: boolean;
@@ -32,7 +38,7 @@ interface NavigatorWithDeviceMemory extends Navigator {
  * Firefox and privacy-hardened browsers withhold WEBGL_debug_renderer_info, so a
  * null here is normal and must not be treated as a failure.
  */
-function readRenderer(gl: WebGL2RenderingContext): string | null {
+function readRenderer(gl: WebGLRenderingContext): string | null {
   const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
   if (debugInfo === null) return null;
   const value: unknown = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
@@ -70,15 +76,23 @@ export function detectCapabilities(doc: Document = document, nav: Navigator = na
   // desktops fall back to SwiftShader, which is slow but entirely playable at
   // the Low quality tier. Refusing to run there would break our own E2E suite
   // and lock out real users on machines without a GPU driver.
-  let gl: WebGL2RenderingContext | null;
+  const attributes: WebGLContextAttributes = {
+    alpha: false,
+    antialias: false,
+    powerPreference: 'high-performance',
+  };
+  let gl: WebGLRenderingContext | null;
   try {
-    gl = canvas.getContext('webgl2', { alpha: false, antialias: false, powerPreference: 'high-performance' });
+    gl = canvas.getContext('webgl', attributes);
+    // Old Safari exposes WebGL1 only under its prefixed name. Same context,
+    // different string; the fallback costs nothing where 'webgl' works.
+    gl ??= canvas.getContext('experimental-webgl', attributes) as WebGLRenderingContext | null;
   } catch {
     gl = null;
   }
 
   if (gl === null) {
-    return { supported: false, failure: 'no-webgl2', ...base };
+    return { supported: false, failure: 'no-webgl', ...base };
   }
 
   const maxTextureSizeRaw: unknown = gl.getParameter(gl.MAX_TEXTURE_SIZE);

@@ -39,6 +39,13 @@ export interface Lane {
   readonly entryS: number;
   /** Distance at which a departing vehicle rejoins this lane. */
   readonly rejoinS: number;
+  /**
+   * True when this lane's pull-in crosses another lane — the far side of the
+   * road, Phase 15. GDD §9.1 names the left turn as a genuine congestion
+   * source; whether a lane *is* the far side is geometry, so it is computed
+   * here once rather than guessed by a system.
+   */
+  readonly crossesOnEntry: boolean;
 }
 
 export class LaneGraph {
@@ -86,13 +93,41 @@ export class LaneGraph {
         decisionS,
         entryS,
         rejoinS,
+        crossesOnEntry: false,
       };
     });
 
     if (this.lanes.length === 0) {
       throw new RangeError('LaneGraph requires at least one lane');
     }
+
+    /*
+     * The near lane is the one whose entry point sits closest to the pull-in;
+     * every other lane's turn passes through road it does not own. With the
+     * authored two-lane road that is exactly one crossing lane, but nothing
+     * here assumes two.
+     */
+    const sample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+    let nearest = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const lane of this.lanes) {
+      lane.path.sample(lane.entryS, sample);
+      const distance = (sample.x - layout.pullIn.x) ** 2 + (sample.y - layout.pullIn.y) ** 2;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = lane.index;
+      }
+    }
+    for (const lane of this.lanes) {
+      // The array was built just above from plain literals; the readonly view
+      // is for everyone after construction.
+      (lane as { crossesOnEntry: boolean }).crossesOnEntry = lane.index !== nearest;
+    }
+    this.nearEntryLane = nearest;
   }
+
+  /** Index of the lane whose entry does not cross traffic. */
+  readonly nearEntryLane: number = 0;
 
   get laneCount(): number {
     return this.lanes.length;

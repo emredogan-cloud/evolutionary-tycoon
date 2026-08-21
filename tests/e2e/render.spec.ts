@@ -61,19 +61,28 @@ test.describe('renderer', () => {
     );
   });
 
-  test('the loading screen says out loud that it is running on placeholders', async ({ page }) => {
+  test('the loaded state is announced, and the fallback still says so out loud', async ({ page }) => {
     /*
-     * Phase 4 built the loader and the manifest format; it did not produce art,
-     * because the AI-tool licence gate is open (assets/LICENSES.md). So there is
-     * no asset manifest to fetch, and LoadScene falls back to the generated
-     * placeholder textures.
-     *
-     * The fallback is asserted rather than tolerated. A loader that quietly
-     * substitutes placeholders is how a build ships with magenta checkers in it
-     * (WORKING_DISCIPLINE §7) — this attribute is the thing that makes
-     * "we are not running on real art" a fact a test can see. When production
-     * art lands, this expectation flips to 'loaded' and the flip is the proof.
+     * This assertion spent thirteen phases as `'placeholder'`, with its own
+     * comment promising: "When production art lands, this expectation flips to
+     * 'loaded' and the flip is the proof." The art landed in the consolidation
+     * batch; this is the flip.
      */
+    await page.goto(FROZEN);
+    await expect(page.locator('html')).toHaveAttribute('data-asset-state', 'loaded');
+    await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');
+  });
+
+  test('a missing manifest still falls back to placeholders, and says so', async ({ page }) => {
+    /*
+     * The fallback did not stop mattering when the art arrived — it is what
+     * keeps a CDN hiccup from being a black screen. Asserted rather than
+     * tolerated, by taking the manifest away: a loader that quietly substitutes
+     * placeholders is how a build ships with magenta checkers in it
+     * (WORKING_DISCIPLINE §7), and this attribute is what makes the substitution
+     * a fact a test can see.
+     */
+    await page.route('**/asset-manifest.json', (route) => route.fulfill({ status: 404, body: '' }));
     await page.goto(FROZEN);
     await expect(page.locator('html')).toHaveAttribute('data-asset-state', 'placeholder');
     await expect(page.locator('html')).toHaveAttribute('data-render-state', 'ready');

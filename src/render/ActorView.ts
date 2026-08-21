@@ -17,6 +17,13 @@ export interface ActorView extends DepthSortable {
   worldZ: number;
   /** Index into the render catalogue (`src/config/actors.ts`). */
   kind: number;
+  /**
+   * Which one of this kind — vehicle archetype, or a packed person appearance.
+   *
+   * Carried straight through from `ActorSnapshot.variant`; the renderer turns it
+   * into a frame name in `src/config/sprites.ts`.
+   */
+  variant: number;
   /** Written by the depth sorter. */
   depth: number;
   /** Projected position, refreshed each frame. */
@@ -46,6 +53,8 @@ export interface ActorView extends DepthSortable {
   patience: number;
   /** Moving under its own power this tick. Drives the walk cycle in Phase 7. */
   moving: boolean;
+  /** ACTIVITIES index — Phase 17's clip selector. */
+  activity: number;
 }
 
 function createActorView(): ActorView {
@@ -55,6 +64,7 @@ function createActorView(): ActorView {
     worldY: 0,
     worldZ: 0,
     kind: 0,
+    variant: 0,
     depth: 0,
     screenX: 0,
     screenY: 0,
@@ -65,6 +75,7 @@ function createActorView(): ActorView {
     travelled: 0,
     patience: 0,
     moving: false,
+    activity: 0,
   };
 }
 

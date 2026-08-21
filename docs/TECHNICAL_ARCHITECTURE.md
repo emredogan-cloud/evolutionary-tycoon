@@ -34,7 +34,7 @@
 
 1. **Kapsam farkı, oyunun farklılaştırıcısı olmayan alanlarda.** PixiJS bir renderer'dır; Phaser bir framework. Pixi seçseydik sahne yönetimi, girdi, kamera, tween, partikül, ses ve loader'ı kendimiz yazacaktık — 4–6 haftalık iş, ve bu işlerin hiçbiri bu oyunu diğerlerinden ayırmıyor. O süre trafik simülasyonuna ve görsel yönüne harcanmalı.
 
-2. **Phaser 4 tam olarak bizim ihtiyacımız olan yerde yenilendi.** WebGL2 RenderNode mimarisi, sprite başına 4 vertex (v3'te 6), daha az batch kırılması, otomatik context restore. v4.2 ile gelen **cone lights** far ışıkları ve tabela aydınlatması için doğrudan kullanılabilir; **stencil rendering** inşaat maskeleri ve drive-thru penceresi kesiti için; **Mesh2D** yol yüzeyi deformasyonu için.
+2. **Phaser 4 tam olarak bizim ihtiyacımız olan yerde yenilendi.** RenderNode mimarisi (açılan bağlam WebGL 1 — ADR-017), sprite başına 4 vertex (v3'te 6), daha az batch kırılması, otomatik context restore. v4.2 ile gelen **cone lights** far ışıkları ve tabela aydınlatması için doğrudan kullanılabilir; **stencil rendering** inşaat maskeleri ve drive-thru penceresi kesiti için; **Mesh2D** yol yüzeyi deformasyonu için.
 
 3. **AI ajan uyumluluğu ölçülebilir bir kriter.** Bu proje büyük ölçüde bir AI ajan tarafından yazılacak. Phaser'ın doküman ve örnek hacmi, custom WebGL veya Pixi-üzerine-kendi-framework'ümüz seçeneğine göre hata oranını belirgin biçimde düşürür. Bu bir konfor tercihi değil, teslim riski yönetimi.
 
@@ -48,7 +48,7 @@
 
 ### 1.3 WebGPU: kullanılmıyor
 
-[RESEARCH_NOTES §5](RESEARCH_NOTES.md#5-motor-karşılaştırması--kanıt-tabanı): Phaser 4 bir WebGL2 yeniden yazımıdır, WebGPU motoru değil. Firefox WebGPU'yu hâlâ varsayılanda kapalı tutuyor. Ve bizim darboğazımız GPU fill-rate değil, CPU-taraflı simülasyon. WebGPU bugün kazanç değil risk.
+[RESEARCH_NOTES §5](RESEARCH_NOTES.md#5-motor-karşılaştırması--kanıt-tabanı): Phaser 4 bir WebGL yeniden yazımıdır (bağlam WebGL 1 — ADR-017), WebGPU motoru değil. Firefox WebGPU'yu hâlâ varsayılanda kapalı tutuyor. Ve bizim darboğazımız GPU fill-rate değil, CPU-taraflı simülasyon. WebGPU bugün kazanç değil risk.
 
 ---
 
@@ -479,6 +479,23 @@ interface SaveFileV1 {
 - **`objectives`/`archetypesSeen` v1'de yok.** İlgili sistemler henüz yok; alanı boş taşımak yerine
   migration zinciriyle eklenecekler (Faz 11 ve Faz 6).
 
+**v9 (Faz 14) — offline zarfı.** Envelope'a `offline: { meter, pending }` eklendi. `meter`,
+kayıt anında canlı dünyadan okunan **beş dakikalık ölçüm özeti**dir (müşteri/dk, ortalama sepet,
+ortalama malzeme maliyeti, geri dönen/dk, beş kaynağın doluluk örneklemesi) — ECONOMY_DESIGN §10'un
+"son 5 dakikanın ölçülen değeri" dediği şeyin somut hâli. `pending`, fiyatlanmış ama toplanmamış
+"Uzaktayken" raporudur; pencere fiyatlandığı anda tüketilir (lastSeen ileri yazılır) ve rapor
+toplanana kadar her kayıtta taşınır — aynı pencere iki kez ödenemez. Sayaç penceresinin kendisi
+(`world.offline`) **hash'lenmez ve snapshot'a girmez**: hiçbir sistem onu okuyarak karar vermez;
+simülasyona tek girişi, açık tutarları taşıyan ve loglanan `COLLECT_OFFLINE` komutudur. Dışlama,
+cosmetic stream'inkiyle aynı biçimde test altındadır.
+
+**v10 (Faz 15) — takvim.** `environment` bloğu eklendi: günün hava segmentleri ve olay programı,
+`rng.events`'ten günde sabit sayıda çekilişle planlanır ve **plan** olduğu için kaydedilir — yükleme
+sonrası yeniden planlamak, ilerlemiş bir stream'den taze sayılar çekmek olurdu ve kaydedilen öğleden
+sonra başka bir hava alırdı. Aktif durum (şu an hangi hava, hangi olay) saklanmaz; plandan ve
+saatten türetilir, bu yüzden bayatlayamaz. Çevre durumu hash'e girer: trafiği çarpan bir olay tanım
+gereği simülasyon sonucudur.
+
 **Transient state kaydedilmez.** Yoldaki araçlar, yarım siparişler, yürüyen müşteriler — hepsi yeniden başlangıçta temiz olarak oluşturulur. Save yalnızca **kalıcı** durumu tutar. Bu, save boyutunu ~15 KB'ta tutar ve migration'ları basitleştirir.
 
 ### 8.2 Kalıcılık stratejisi
@@ -618,9 +635,9 @@ Boot'ta cihaz yeteneği ölçülür (GPU string, `deviceMemory`, `hardwareConcur
 | Safari iOS              | 17        | A/B    | Manuel gerçek cihaz                 | Ses unlock, safe-area, bellek dikkat                     |
 | Samsung Internet        | 24        | B      | Manuel                              |                                                          |
 | Firefox Android         | 128       | B      | Manuel                              |                                                          |
-| **WebGL2 yok**          | —         | **C**  | —                                   | Nazik "desteklenmiyor" ekranı + sebep + tarayıcı önerisi |
+| **WebGL yok**           | —         | **C**  | —                                   | Nazik "desteklenmiyor" ekranı + sebep + tarayıcı önerisi |
 
-**Kademe C zorunlu, çünkü Phaser 4'te Canvas renderer deprecated.** WebGL2 olmadan oyun çalışmaz; siyah ekran yerine açıklayıcı bir sayfa gösterilir.
+**Kademe C zorunlu, çünkü Phaser 4'te Canvas renderer deprecated.** WebGL olmadan oyun çalışmaz (taban WebGL 1 — ADR-017 kabul, 2026-08-21); siyah ekran yerine açıklayıcı bir sayfa gösterilir.
 
 **Bilinen tarayıcı riskleri ve karşılıkları:**
 

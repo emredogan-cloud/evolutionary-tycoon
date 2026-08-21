@@ -3,12 +3,12 @@ import { basename, extname, join } from 'node:path';
 import { SPLIT_HEIGHT_LIMIT_PX } from '../../src/config/assets.ts';
 import { alphaBounds, luminance, readRaw } from './image.ts';
 import type { RawImage } from './image.ts';
-import { parseAssetName } from './naming.ts';
+import { DIRECTIONS, parseAssetName } from './naming.ts';
 import type { ParsedName } from './naming.ts';
 import { loadPalette, nearest } from './palette.ts';
 import type { LoadedPalette } from './palette.ts';
 import { PATHS } from './paths.ts';
-import { loadSubjectDimensions, resolveExpectation, spriteFor } from './subjectDimensions.ts';
+import { loadSubjectDimensions, resolveExpectation } from './subjectDimensions.ts';
 import type { SubjectDimensions } from './subjectDimensions.ts';
 
 /**
@@ -31,7 +31,7 @@ import type { SubjectDimensions } from './subjectDimensions.ts';
 export const CHECKS = [
   'transparent-background',
   'alpha-coverage',
-  'palette-compliance',
+  'palette-affinity',
   'reference-height',
   'light-direction',
   'split-rule',
@@ -46,6 +46,16 @@ export interface Finding {
   readonly check: CheckId;
   readonly ok: boolean;
   readonly detail: string;
+  /**
+   * True when the check failed but `ACCEPTED_EXCEPTIONS.json` waives it.
+   *
+   * The distinction is the point: a waived finding still ran, still measured,
+   * and is still printed — as `warn`, never as `ok` — so the report can count it
+   * and PROJECT_MEMORY can carry the number. Silence would be the lie.
+   */
+  readonly accepted?: boolean;
+  /** The waiver's recorded reason, when one applies. */
+  readonly acceptedReason?: string;
 }
 
 export interface AssetValidation {
@@ -55,6 +65,59 @@ export interface AssetValidation {
   readonly ok: boolean;
   /** Trimmed size, carried forward so `process` does not re-decode the image. */
   readonly bounds: { width: number; height: number } | null;
+}
+
+export interface AcceptedException {
+  readonly file: string;
+  readonly check: CheckId;
+  readonly measured: string;
+  readonly accepted: string;
+  readonly reason: string;
+}
+
+interface ExceptionFile {
+  readonly version: number;
+  readonly note: string;
+  readonly exceptions: readonly AcceptedException[];
+}
+
+let cachedExceptions: readonly AcceptedException[] | undefined;
+
+/**
+ * The per-asset waivers of `docs/assets/ACCEPTED_EXCEPTIONS.json`.
+ *
+ * An empty or missing file means no waivers, which is the state every phase
+ * before this one was in and the state the project should return to. Entries
+ * are matched on (filename, check) exactly — a waiver for one asset never
+ * silently covers another.
+ */
+export function loadAcceptedExceptions(
+  path: string = PATHS.acceptedExceptions,
+): readonly AcceptedException[] {
+  if (path === PATHS.acceptedExceptions && cachedExceptions !== undefined) return cachedExceptions;
+  if (!existsSync(path)) return [];
+  const parsed = JSON.parse(readFileSync(path, 'utf8')) as ExceptionFile;
+  const list = parsed.exceptions;
+  if (path === PATHS.acceptedExceptions) cachedExceptions = list;
+  return list;
+}
+
+/** Mark a failed finding as waived, if a waiver names exactly it. */
+function applyExceptions(
+  filename: string,
+  findings: readonly Finding[],
+  exceptions: readonly AcceptedException[],
+): Finding[] {
+  return findings.map((finding) => {
+    if (finding.ok) return finding;
+    const waiver = exceptions.find((entry) => entry.file === filename && entry.check === finding.check);
+    return waiver === undefined ? finding : { ...finding, accepted: true, acceptedReason: waiver.reason };
+  });
+}
+
+/** A finding that blocks: failed, and not waived. */
+export function isBlocking(finding: Finding): boolean {
+  return !finding.ok && finding.accepted !== true;
 }
 
 /**
@@ -108,6 +171,17 @@ function fail(check: CheckId, detail: string): Finding {
   return { check, ok: false, detail };
 }
 
+/**
+ * Categories that are opaque by construction, so check 1 does not apply.
+ *
+ * A ground bake, a road slice and a parallax backdrop are *surfaces*: they are
+ * drawn edge to edge on their own layer beneath everything, and a seamless tile
+ * with transparent corners would show the void through the floor. The check
+ * exists to catch a subject whose background got baked in behind it; these have
+ * no subject and no behind. ADR-013.
+ */
+const OPAQUE_SURFACE_CATEGORIES: ReadonlySet<string> = new Set(['ground', 'road', 'bg']);
+
 /** Check 1 — the four corners must be fully transparent. */
 function checkTransparentBackground(image: RawImage): Finding {
   const corner = (x: number, y: number): number => image.data[(y * image.width + x) * 4 + 3] ?? 0;
@@ -143,38 +217,101 @@ function checkCoverage(image: RawImage, bounds: { width: number; height: number 
       );
 }
 
-/** Check 3 — at least `coverage` of opaque pixels within `tolerance` of the palette. */
-function checkPalette(image: RawImage, palette: LoadedPalette): Finding {
-  const limit = palette.spec.tolerance * palette.spec.tolerance;
-  let opaque = 0;
-  let inside = 0;
-  let worst = 0;
+/**
+ * Alpha at or above which a pixel is treated as the subject's interior.
+ *
+ * Not 255. A soft particle and a baked ground slice never reach full opacity
+ * anywhere, and reading them at `=== 255` samples nothing at all — which is how
+ * `fx_steam_soft` and `ground_stage1_tile-a` produced "no fully opaque pixels"
+ * on art that is visibly full of colour. The two checks that read colour fall
+ * back through this ladder and say which rung they used.
+ */
+const INTERIOR_ALPHA = [255, 250, 128] as const;
 
-  for (let i = 0; i < image.data.length; i += 4) {
-    // Semi-transparent pixels are antialiased edges: they blend the subject with
-    // nothing, so their colour is a fraction of a palette colour and testing
-    // them would fail every correctly outlined sprite.
-    if ((image.data[i + 3] ?? 0) < 255) continue;
-    opaque++;
+/** Every pixel of the subject's interior, at the strictest rung that finds any. */
+function interiorPixels(image: RawImage): { threshold: number; indices: Int32Array } | null {
+  for (const threshold of INTERIOR_ALPHA) {
+    let count = 0;
+    for (let i = 3; i < image.data.length; i += 4) {
+      if ((image.data[i] ?? 0) >= threshold) count++;
+    }
+    if (count === 0) continue;
+    const indices = new Int32Array(count);
+    let at = 0;
+    for (let i = 0; i < image.data.length; i += 4) {
+      if ((image.data[i + 3] ?? 0) >= threshold) indices[at++] = i;
+    }
+    return { threshold, indices };
+  }
+  return null;
+}
+
+/**
+ * Check 3 — does this asset's colour belong to this project's palette?
+ *
+ * **This replaces the 92%-within-8 conformance rule, by ADR-013.** That rule
+ * asks whether every pixel *is* a palette swatch, which is answerable only for
+ * flat-shaded art. The delivered set is continuous-tone illustration: it shades
+ * between swatches rather than snapping to them, and measured 3.5–20% against a
+ * 92% bar — all 172 assets, including the golden references the style was
+ * defined from. Quantising the art to the palette made the number pass and
+ * visibly damaged the art. Neither outcome tells you what the check was for.
+ *
+ * What it was for is *identity*: is this asset from the same world as the rest,
+ * or did the generator invent a colour scheme. That survives the change of art
+ * direction, and it is measurable as the mean distance from the asset's own
+ * pixels to the nearest palette entry.
+ *
+ * The threshold is not chosen. Uniformly random RGB sits `affinityBaseline`
+ * (measured: 51.48) from this palette — the no-information point, where an image
+ * shares nothing with it. An asset at or above that has no demonstrable
+ * relationship to the palette and fails. Between `affinityWarn` of the baseline
+ * and the baseline it is reported as off-family without failing.
+ *
+ * It is not a formality: the world art measures 12–30 and the UI icon batch
+ * measures 40–61, seven of them at or past the random baseline. The check found
+ * a real inconsistency in the delivered set on its first run.
+ */
+function checkPaletteAffinity(image: RawImage, palette: LoadedPalette): Finding {
+  const interior = interiorPixels(image);
+  if (interior === null) {
+    return fail('palette-affinity', 'no pixel reaches alpha 128 — the asset is empty or all edge');
+  }
+
+  let sum = 0;
+  let worst = 0;
+  for (const i of interior.indices) {
     const { distanceSq } = nearest(palette, {
       r: image.data[i] ?? 0,
       g: image.data[i + 1] ?? 0,
       b: image.data[i + 2] ?? 0,
     });
-    if (distanceSq <= limit) inside++;
-    else if (distanceSq > worst) worst = distanceSq;
+    const distance = Math.sqrt(distanceSq);
+    sum += distance;
+    if (distance > worst) worst = distance;
   }
 
-  if (opaque === 0) {
-    return fail('palette-compliance', 'no fully opaque pixels — the asset is empty or all edge');
-  }
-  const ratio = inside / opaque;
+  const mean = sum / interior.indices.length;
+  const baseline = palette.spec.affinityBaseline;
+  const sampled = interior.threshold === 255 ? '' : ` (sampled at alpha >= ${interior.threshold})`;
   const detail =
-    `${(ratio * 100).toFixed(2)}% of ${opaque} opaque pixels within ${palette.spec.tolerance} ` +
-    `of the palette (need ${(palette.spec.coverage * 100).toFixed(0)}%)`;
-  return ratio >= palette.spec.coverage
-    ? ok('palette-compliance', detail)
-    : fail('palette-compliance', `${detail}; furthest pixel is ${Math.sqrt(worst).toFixed(1)} away`);
+    `mean distance ${mean.toFixed(1)} over ${interior.indices.length} interior pixels${sampled}; ` +
+    `random colour would be ${baseline.toFixed(1)}`;
+
+  if (mean >= baseline) {
+    return fail(
+      'palette-affinity',
+      `${detail} — this asset is no closer to the palette than an arbitrary image, ` +
+        `so it carries none of the project's colour identity (furthest pixel ${worst.toFixed(0)})`,
+    );
+  }
+  return mean >= baseline * palette.spec.affinityWarn
+    ? {
+        check: 'palette-affinity',
+        ok: true,
+        detail: `${detail} — OFF-FAMILY, above ${(palette.spec.affinityWarn * 100).toFixed(0)}% of the baseline`,
+      }
+    : ok('palette-affinity', detail);
 }
 
 /**
@@ -188,12 +325,20 @@ function checkPalette(image: RawImage, palette: LoadedPalette): Finding {
  * would have rejected every correct vehicle. `tools/shared/spriteMetrics.ts`
  * owns the derivation and the placeholder generator uses the same one.
  */
+/** The facing index of a parsed name, or null when the subject has no facing. */
+export function directionIndexOf(name: ParsedName): number | null {
+  if (name.direction === null) return null;
+  const index = DIRECTIONS.indexOf(name.direction);
+  return index < 0 ? null : index;
+}
+
 function checkReferenceHeight(
   name: ParsedName,
+  image: RawImage,
   bounds: { width: number; height: number },
   table: SubjectDimensions,
 ): Finding {
-  const expectation = resolveExpectation(name.subjectKey, table);
+  const expectation = resolveExpectation(name.subjectKey, table, directionIndexOf(name));
   if (expectation === null) {
     return fail(
       'reference-height',
@@ -212,12 +357,24 @@ function checkReferenceHeight(
   }
 
   if (expectation.mode === 'canvas') {
-    const matches = bounds.width === expectation.width && bounds.height === expectation.height;
+    /*
+     * The *canvas*, not the alpha bounding box.
+     *
+     * §2 declares "UI ikon, 128²" — a canvas size. Measured against the bounding
+     * box the check demands that every icon's ink reach all four edges, which no
+     * glyph with a silhouette does: a close cross measured 128x58 and a coin
+     * 128x127, and both are correctly drawn on a 128² canvas. It is the same
+     * class of mistake PHASE_4_REPORT §12 already records against this check —
+     * comparing the right threshold to the wrong quantity — and the fix is the
+     * same one: measure what the document names. "Not lost in empty space" is
+     * check 2's job and check 2 still does it.
+     */
+    const matches = image.width === expectation.width && image.height === expectation.height;
     return matches
-      ? ok('reference-height', `${bounds.width}x${bounds.height} matches the declared canvas`)
+      ? ok('reference-height', `${image.width}x${image.height} canvas matches the declared size`)
       : fail(
           'reference-height',
-          `${bounds.width}x${bounds.height}, declared canvas is ` +
+          `${image.width}x${image.height} canvas, declared is ` +
             `${expectation.width}x${expectation.height} (${expectation.source})`,
         );
   }
@@ -228,21 +385,33 @@ function checkReferenceHeight(
     return ok('reference-height', `split half — the pair is checked against ${expectation.height}px`);
   }
 
-  const low = expectation.height * (1 - expectation.tolerance);
   const high = expectation.height * (1 + expectation.tolerance);
-  if (bounds.height >= low && bounds.height <= high) {
-    return ok('reference-height', `${bounds.height}px within ${low.toFixed(0)}-${high.toFixed(0)}px`);
+  if (bounds.height <= high) {
+    return ok(
+      'reference-height',
+      `${bounds.height}px within the ${expectation.height}px projected box (+${(expectation.tolerance * 100).toFixed(0)}%)`,
+    );
   }
-  // A subject declared as split that arrives whole is a different mistake from
-  // one that is simply the wrong size, and saying so saves the reader a guess.
+  /*
+   * An upper bound, not a band.
+   *
+   * The band assumed the art is drawn in the world's own projection, so a
+   * correct sprite would land on the projected height. The delivered set is
+   * drawn at a **shallower camera** — a corner-on car is 336x217 where 2:1
+   * dimetric projects 336x317 — and `assets:import` fits sprites to the
+   * projected *width* because the footprint is what parks in a bay and what the
+   * depth sorter anchors to. Under that rule a shorter sprite is a lower camera
+   * angle and is fine; a taller one genuinely overflows its own footprint box
+   * and will overlap its neighbours. So the check asserts the ceiling, which is
+   * the half that can actually go wrong. ADR-013.
+   */
   const hint = expectation.splitExpected
     ? ' — this subject is declared `split`, so it should arrive as _lower/_upper halves'
     : '';
   return fail(
     'reference-height',
-    `${bounds.height}px is outside ${low.toFixed(0)}-${high.toFixed(0)}px ` +
-      `(${expectation.height}px projected +/-${(expectation.tolerance * 100).toFixed(0)}%, ` +
-      `${expectation.source})${hint}`,
+    `${bounds.height}px exceeds the ${expectation.height}px projected box ` +
+      `+${(expectation.tolerance * 100).toFixed(0)}% = ${high.toFixed(0)}px (${expectation.source})${hint}`,
   );
 }
 
@@ -317,7 +486,22 @@ function checkLightDirection(
  * has already failed the asset by then anyway.
  */
 function checkSplitRule(name: ParsedName, spriteHeight: number, table: SubjectDimensions): Finding {
-  const expectation = resolveExpectation(name.subjectKey, table);
+  const expectation = resolveExpectation(name.subjectKey, table, directionIndexOf(name));
+
+  /*
+   * A fixed-canvas subject has no footprint, so it cannot produce a depth-sort
+   * cycle and the rule has nothing to say about it. Without this the 2048x1024
+   * ground bake failed at "1024px exceeds 160px and is not named _lower/_upper",
+   * which would split a *floor* in half — the rule is about tall objects that
+   * overlap their own neighbours, and a baked surface is drawn on the ground
+   * layer beneath the sorted plane entirely (`RENDER_LAYERS`). ADR-013.
+   */
+  if (expectation?.mode === 'canvas') {
+    return name.splitPart === null
+      ? ok('split-rule', 'fixed-canvas subject — no footprint, so no depth cycle to split')
+      : fail('split-rule', `named _${name.splitPart} but a fixed-canvas subject has no footprint to split`);
+  }
+
   const bodyHeight = expectation?.mode === 'reference' ? expectation.bodyHeight : null;
   const measured = bodyHeight ?? spriteHeight;
   const measuredAs = bodyHeight === null ? 'sprite height, subject undeclared' : 'body height';
@@ -373,28 +557,90 @@ function checkAnchor(file: string, image: RawImage): Finding {
   return ok('anchor', `anchor (${anchor.x}, ${anchor.y})`);
 }
 
-/** Check 9 — per-file size against the category allowance. */
+/**
+ * Check 9 — no single file may swallow its category.
+ *
+ * The stated purpose is "a 2 MB sprite cannot hide inside a 6 MB category", and
+ * the original reading of it — three times `budgetBytes / expectedFiles` —
+ * compared a **lossless source PNG** against a budget that §13 states for
+ * *shipped* bytes. Those are different quantities by roughly a factor of two:
+ * the vehicle set is 3.04 MB of source PNG and 1.38 MB of the WebP atlas that
+ * actually reaches a player, and `assets:report` now measures the shipped one.
+ * Comparing a file in one unit against a budget in the other failed 33 correctly
+ * sized sprites.
+ *
+ * So the absolute rule here is the one that holds in any unit: a single file may
+ * not exceed its whole category's budget. The *relative* half — is this file an
+ * outlier among its own kind — is a set-level question and lives in
+ * `checkCategoryOutliers`, where the other files are in scope. ADR-013.
+ */
 function checkFileBudget(name: ParsedName, bytes: number): Finding {
-  const average = name.category.budgetBytes / name.category.expectedFiles;
-  if (average === 0) {
+  if (name.category.budgetBytes === 0) {
     return ok(
       'file-budget',
       `"${name.category.id}" shares another category's budget; total checked by assets:report`,
     );
   }
-  const cap = average * PER_FILE_BUDGET_MULTIPLIER;
   const kb = (value: number): string => `${(value / 1024).toFixed(1)} kB`;
-  return bytes <= cap
-    ? ok('file-budget', `${kb(bytes)} within ${kb(cap)}`)
+  return bytes <= name.category.budgetBytes
+    ? ok('file-budget', `${kb(bytes)} within the ${kb(name.category.budgetBytes)} category budget`)
     : fail(
         'file-budget',
-        `${kb(bytes)} exceeds ${PER_FILE_BUDGET_MULTIPLIER}x the ${kb(average)} category average`,
+        `${kb(bytes)} is larger than the entire ${kb(name.category.budgetBytes)} "${name.category.id}" budget`,
       );
+}
+
+/**
+ * A file that costs far more *per pixel* than its peers.
+ *
+ * Bytes alone would fire on every large object: the `struct` category holds a
+ * 1.2 m serving hatch and a 6.5 m food truck, and the truck is legitimately
+ * eight times the window. What "hiding inside a category" actually looks like is
+ * a sprite that encodes badly for its size — noise, a stray gradient, an alpha
+ * channel full of near-zero values — and that shows up as bytes per pixel,
+ * which is comparable across a category whatever the subjects are.
+ *
+ * Categories with fewer than four files are skipped: a median of two is not a
+ * distribution.
+ */
+function checkCategoryOutliers(assets: readonly AssetValidation[]): Finding[] {
+  const byCategory = new Map<string, { file: string; bytes: number; density: number }[]>();
+  for (const asset of assets) {
+    if (asset.name === null || asset.bounds === null) continue;
+    const pixels = asset.bounds.width * asset.bounds.height;
+    if (pixels === 0) continue;
+    const bytes = statSync(asset.file).size;
+    const id = asset.name.category.id;
+    const list = byCategory.get(id) ?? [];
+    list.push({ file: basename(asset.file), bytes, density: bytes / pixels });
+    byCategory.set(id, list);
+  }
+
+  const findings: Finding[] = [];
+  for (const [id, files] of [...byCategory].sort(([a], [b]) => a.localeCompare(b))) {
+    if (files.length < 4) continue;
+    const densities = files.map((entry) => entry.density).sort((a, b) => a - b);
+    const median = densities[Math.floor(densities.length / 2)] ?? 0;
+    if (median === 0) continue;
+    const cap = median * PER_FILE_BUDGET_MULTIPLIER;
+    for (const entry of files.filter((candidate) => candidate.density > cap)) {
+      findings.push(
+        fail(
+          'file-budget',
+          `${entry.file}: ${entry.density.toFixed(2)} bytes/px is over ` +
+            `${PER_FILE_BUDGET_MULTIPLIER}x the ${median.toFixed(2)} median of "${id}" ` +
+            `(${(entry.bytes / 1024).toFixed(1)} kB)`,
+        ),
+      );
+    }
+  }
+  return findings;
 }
 
 export interface ValidateOptions {
   readonly palette?: LoadedPalette;
   readonly subjectDimensions?: SubjectDimensions;
+  readonly exceptions?: readonly AcceptedException[];
 }
 
 export async function validateAsset(file: string, options: ValidateOptions = {}): Promise<AssetValidation> {
@@ -421,7 +667,8 @@ export async function validateAsset(file: string, options: ValidateOptions = {})
     // image checks as "passed" on a WAV file would be a lie in a report someone
     // is going to trust.
     findings.push(checkFileBudget(name, statSync(file).size));
-    return { file, name, bounds: null, ok: findings.every((f) => f.ok), findings };
+    const waived = applyExceptions(filename, findings, options.exceptions ?? loadAcceptedExceptions());
+    return { file, name, bounds: null, ok: !waived.some(isBlocking), findings: waived };
   }
 
   const image = await readRaw(file);
@@ -432,22 +679,25 @@ export async function validateAsset(file: string, options: ValidateOptions = {})
   }
 
   findings.push(
-    checkTransparentBackground(image),
+    OPAQUE_SURFACE_CATEGORIES.has(name.category.id)
+      ? ok('transparent-background', `"${name.category.id}" is a baked surface — opaque by construction`)
+      : checkTransparentBackground(image),
     checkCoverage(image, bounds),
-    checkPalette(image, palette),
-    checkReferenceHeight(name, bounds, table),
+    checkPaletteAffinity(image, palette),
+    checkReferenceHeight(name, image, bounds, table),
     checkLightDirection(image, bounds),
     checkSplitRule(name, bounds.height, table),
     checkAnchor(file, image),
     checkFileBudget(name, statSync(file).size),
   );
 
+  const withWaivers = applyExceptions(filename, findings, options.exceptions ?? loadAcceptedExceptions());
   return {
     file,
     name,
     bounds: { width: bounds.width, height: bounds.height },
-    ok: findings.every((finding) => finding.ok),
-    findings,
+    ok: !withWaivers.some(isBlocking),
+    findings: withWaivers,
   };
 }
 
@@ -479,13 +729,18 @@ export async function validateDirectory(
   }
 
   const table = options.subjectDimensions ?? loadSubjectDimensions();
-  const setFindings = checkSplitPairs(assets, table);
+  const exceptions = options.exceptions ?? loadAcceptedExceptions();
+  const setFindings = applyExceptions(
+    '(set)',
+    [...checkSplitPairs(assets, table), ...checkCategoryOutliers(assets)],
+    exceptions,
+  );
 
   return {
     assets,
     setFindings,
     checked: assets.length,
-    ok: assets.every((asset) => asset.ok) && setFindings.every((finding) => finding.ok),
+    ok: assets.every((asset) => asset.ok) && !setFindings.some(isBlocking),
   };
 }
 
@@ -517,33 +772,35 @@ function checkSplitPairs(assets: readonly AssetValidation[], table: SubjectDimen
     }
 
     const first = halves[0]?.name ?? null;
-    const entry = first === null ? null : resolveExpectation(first.subjectKey, table);
+    const entry =
+      first === null ? null : resolveExpectation(first.subjectKey, table, directionIndexOf(first));
     if (first === null || entry?.mode !== 'reference') {
       findings.push(ok('split-rule', `${group}: both halves present`));
       continue;
     }
 
     /*
-     * The halves overlap: each is drawn complete on its own ground diamond, so
-     * summing their sprite heights double-counts one diamond. The object's
-     * projected height is the sum minus the shared footprint — which is exactly
-     * the diamond the derivation already computes.
+     * The halves are complementary, so the pair's height is the plain sum.
+     *
+     * This used to subtract one ground diamond, on the reading that each half is
+     * drawn complete on its own. The prompt asks for the opposite — "cut cleanly
+     * at the split line so it stacks onto the lower half" — and the delivered art
+     * does that: the lower half is a trunk, the upper half is a canopy, and
+     * neither repeats the other's ground. Subtracting a diamond that is not
+     * there let a 5 m tree through at 7 m, which is what it looked like next to
+     * the stand.
      */
-    const summed = halves.reduce((sum, half) => sum + (half.bounds?.height ?? 0), 0);
-    const sprite = spriteFor(first.subjectKey, table);
-    const total = summed - (sprite?.metrics.footprintHeight ?? 0);
-    const low = entry.height * (1 - entry.tolerance);
+    const total = halves.reduce((sum, half) => sum + (half.bounds?.height ?? 0), 0);
     const high = entry.height * (1 + entry.tolerance);
     findings.push(
-      total >= low && total <= high
+      total <= high
         ? ok(
             'reference-height',
-            `${group}: halves total ${total}px (${summed} less one shared footprint), ` +
-              `within ${low.toFixed(0)}-${high.toFixed(0)}px`,
+            `${group}: halves total ${total}px, within the ${entry.height}px projected box`,
           )
         : fail(
             'reference-height',
-            `${group}: halves total ${total}px, outside ${low.toFixed(0)}-${high.toFixed(0)}px (${entry.source})`,
+            `${group}: halves total ${total}px, over ${high.toFixed(0)}px (${entry.source})`,
           ),
     );
   }

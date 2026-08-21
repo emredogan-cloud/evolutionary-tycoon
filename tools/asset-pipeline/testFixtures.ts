@@ -37,6 +37,20 @@ export interface FixtureOptions {
   readonly opaqueBackground?: boolean;
   /** Use a colour that is nowhere near the palette. */
   readonly offPalette?: boolean;
+  /**
+   * Shade *between* two ramp steps instead of snapping to one.
+   *
+   * What continuous-tone art does, and what `palette-affinity` exists to accept
+   * — see ADR-013. `0` is the flat ramp colour, `1` is halfway to the next step.
+   */
+  readonly blend?: number;
+  /**
+   * Cap the subject's alpha below full opacity.
+   *
+   * Soft particles and baked surfaces never reach 255 anywhere, which used to
+   * make the colour checks sample nothing at all.
+   */
+  readonly maxAlpha?: number;
 }
 
 function rampColors(palette: LoadedPalette, id: string): readonly Rgb[] {
@@ -86,10 +100,21 @@ export function fixturePixels(options: FixtureOptions, palette: LoadedPalette = 
       else if (diagonal < 1.34) color = mid;
       else color = base;
 
+      if (options.blend !== undefined && options.offPalette !== true) {
+        // A smooth gradient across the subject, which lands most pixels between
+        // two ramp steps rather than on either.
+        const t = options.blend * (diagonal / 2);
+        color = {
+          r: Math.round(color.r + (lit.r - color.r) * t),
+          g: Math.round(color.g + (lit.g - color.g) * t),
+          b: Math.round(color.b + (lit.b - color.b) * t),
+        };
+      }
+
       data[i] = color.r;
       data[i + 1] = color.g;
       data[i + 2] = color.b;
-      data[i + 3] = 255;
+      data[i + 3] = options.maxAlpha ?? 255;
     }
   }
   return data;

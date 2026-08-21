@@ -6,6 +6,20 @@ import type {
   CustomerLeftAngryEvent,
   CustomerSpawnedEvent,
   DayStartedEvent,
+  OrderDeliveredEvent,
+  OrderPlacedEvent,
+  OrderReadyEvent,
+  ConstructionStartedEvent,
+  EmployeeHiredEvent,
+  EmployeeLeftEvent,
+  ObjectPlacedEvent,
+  ObjectRemovedEvent,
+  StageChangedEvent,
+  StageUnlockedEvent,
+  PaymentEvent,
+  PriceChangedEvent,
+  UpgradeAppliedEvent,
+  PrepStartedEvent,
   PauseChangedEvent,
   ReadonlySimEvent,
   SimEvent,
@@ -15,6 +29,9 @@ import type {
   VehicleDespawnedEvent,
   VehicleParkedEvent,
   VehicleSpawnedEvent,
+  WeatherChangedEvent,
+  RoadEventStartedEvent,
+  RoadEventEndedEvent,
 } from './events';
 import { SIM_EVENT_TYPES } from './events';
 
@@ -42,6 +59,12 @@ function createRecord(type: SimEventType): SimEvent {
   switch (type) {
     case 'DAY_STARTED':
       return { t: 'DAY_STARTED', day: 0 };
+    case 'WEATHER_CHANGED':
+      return { t: 'WEATHER_CHANGED', state: 0 };
+    case 'ROAD_EVENT_STARTED':
+      return { t: 'ROAD_EVENT_STARTED', kind: 0, endsAtMs: 0 };
+    case 'ROAD_EVENT_ENDED':
+      return { t: 'ROAD_EVENT_ENDED', kind: 0 };
     case 'SPEED_CHANGED':
       return { t: 'SPEED_CHANGED', mult: 1 };
     case 'PAUSE_CHANGED':
@@ -62,6 +85,34 @@ function createRecord(type: SimEventType): SimEvent {
       return { t: 'CUSTOMER_SPAWNED', entityId: 0, archetype: 0 };
     case 'CUSTOMER_LEFT_ANGRY':
       return { t: 'CUSTOMER_LEFT_ANGRY', entityId: 0, reason: 0, dwellMs: 0 };
+    case 'ORDER_PLACED':
+      return { t: 'ORDER_PLACED', entityId: 0, customerId: 0, item: 0 };
+    case 'PREP_STARTED':
+      return { t: 'PREP_STARTED', entityId: 0, station: -1, durationMs: 0 };
+    case 'ORDER_READY':
+      return { t: 'ORDER_READY', entityId: 0, item: 0 };
+    case 'ORDER_DELIVERED':
+      return { t: 'ORDER_DELIVERED', entityId: 0, customerId: 0 };
+    case 'PAYMENT':
+      return { t: 'PAYMENT', customerId: 0, amount: 0, tip: 0, satisfaction: 0 };
+    case 'UPGRADE_APPLIED':
+      return { t: 'UPGRADE_APPLIED', upgradeId: '', level: 0, cost: 0 };
+    case 'PRICE_CHANGED':
+      return { t: 'PRICE_CHANGED', itemId: '', price: 0 };
+    case 'EMPLOYEE_HIRED':
+      return { t: 'EMPLOYEE_HIRED', entityId: 0, roleId: '', cost: 0 };
+    case 'EMPLOYEE_LEFT':
+      return { t: 'EMPLOYEE_LEFT', entityId: 0, roleId: '', reason: 'fired' };
+    case 'STAGE_UNLOCKED':
+      return { t: 'STAGE_UNLOCKED', stage: 0 };
+    case 'CONSTRUCTION_STARTED':
+      return { t: 'CONSTRUCTION_STARTED', stage: 0, durationMs: 0 };
+    case 'STAGE_CHANGED':
+      return { t: 'STAGE_CHANGED', from: 0, to: 0 };
+    case 'OBJECT_PLACED':
+      return { t: 'OBJECT_PLACED', objectId: '', x: 0, y: 0 };
+    case 'OBJECT_REMOVED':
+      return { t: 'OBJECT_REMOVED', objectId: '', x: 0, y: 0 };
   }
 }
 
@@ -108,6 +159,29 @@ export class EventQueue {
     const record = this.lease('DAY_STARTED');
     if (record === null) return;
     (record as DayStartedEvent).day = day;
+    this.push(record);
+  }
+
+  emitWeatherChanged(state: number): void {
+    const record = this.lease('WEATHER_CHANGED');
+    if (record === null) return;
+    (record as WeatherChangedEvent).state = state;
+    this.push(record);
+  }
+
+  emitRoadEventStarted(kind: number, endsAtMs: number): void {
+    const record = this.lease('ROAD_EVENT_STARTED');
+    if (record === null) return;
+    const typed = record as RoadEventStartedEvent;
+    typed.kind = kind;
+    typed.endsAtMs = endsAtMs;
+    this.push(record);
+  }
+
+  emitRoadEventEnded(kind: number): void {
+    const record = this.lease('ROAD_EVENT_ENDED');
+    if (record === null) return;
+    (record as RoadEventEndedEvent).kind = kind;
     this.push(record);
   }
 
@@ -199,6 +273,139 @@ export class EventQueue {
     event.entityId = entityId;
     event.reason = reason;
     event.dwellMs = dwellMs;
+    this.push(record);
+  }
+
+  emitOrderPlaced(entityId: number, customerId: number, item: number): void {
+    const record = this.lease('ORDER_PLACED');
+    if (record === null) return;
+    const event = record as OrderPlacedEvent;
+    event.entityId = entityId;
+    event.customerId = customerId;
+    event.item = item;
+    this.push(record);
+  }
+
+  emitPrepStarted(entityId: number, station: number, durationMs: number): void {
+    const record = this.lease('PREP_STARTED');
+    if (record === null) return;
+    const event = record as PrepStartedEvent;
+    event.entityId = entityId;
+    event.station = station;
+    event.durationMs = durationMs;
+    this.push(record);
+  }
+
+  emitOrderReady(entityId: number, item: number): void {
+    const record = this.lease('ORDER_READY');
+    if (record === null) return;
+    const event = record as OrderReadyEvent;
+    event.entityId = entityId;
+    event.item = item;
+    this.push(record);
+  }
+
+  emitOrderDelivered(entityId: number, customerId: number): void {
+    const record = this.lease('ORDER_DELIVERED');
+    if (record === null) return;
+    const event = record as OrderDeliveredEvent;
+    event.entityId = entityId;
+    event.customerId = customerId;
+    this.push(record);
+  }
+
+  emitPayment(customerId: number, amount: number, tip: number, satisfaction: number): void {
+    const record = this.lease('PAYMENT');
+    if (record === null) return;
+    const event = record as PaymentEvent;
+    event.customerId = customerId;
+    event.amount = amount;
+    event.tip = tip;
+    event.satisfaction = satisfaction;
+    this.push(record);
+  }
+
+  emitUpgradeApplied(upgradeId: string, level: number, cost: number): void {
+    const record = this.lease('UPGRADE_APPLIED');
+    if (record === null) return;
+    const event = record as UpgradeAppliedEvent;
+    event.upgradeId = upgradeId;
+    event.level = level;
+    event.cost = cost;
+    this.push(record);
+  }
+
+  emitPriceChanged(itemId: string, price: number): void {
+    const record = this.lease('PRICE_CHANGED');
+    if (record === null) return;
+    const event = record as PriceChangedEvent;
+    event.itemId = itemId;
+    event.price = price;
+    this.push(record);
+  }
+
+  emitEmployeeHired(entityId: number, roleId: string, cost: number): void {
+    const record = this.lease('EMPLOYEE_HIRED');
+    if (record === null) return;
+    const event = record as EmployeeHiredEvent;
+    event.entityId = entityId;
+    event.roleId = roleId;
+    event.cost = cost;
+    this.push(record);
+  }
+
+  emitEmployeeLeft(entityId: number, roleId: string, reason: 'fired' | 'unpaid'): void {
+    const record = this.lease('EMPLOYEE_LEFT');
+    if (record === null) return;
+    const event = record as EmployeeLeftEvent;
+    event.entityId = entityId;
+    event.roleId = roleId;
+    event.reason = reason;
+    this.push(record);
+  }
+
+  emitStageUnlocked(stage: number): void {
+    const record = this.lease('STAGE_UNLOCKED');
+    if (record === null) return;
+    (record as StageUnlockedEvent).stage = stage;
+    this.push(record);
+  }
+
+  emitConstructionStarted(stage: number, durationMs: number): void {
+    const record = this.lease('CONSTRUCTION_STARTED');
+    if (record === null) return;
+    const event = record as ConstructionStartedEvent;
+    event.stage = stage;
+    event.durationMs = durationMs;
+    this.push(record);
+  }
+
+  emitStageChanged(from: number, to: number): void {
+    const record = this.lease('STAGE_CHANGED');
+    if (record === null) return;
+    const event = record as StageChangedEvent;
+    event.from = from;
+    event.to = to;
+    this.push(record);
+  }
+
+  emitObjectPlaced(objectId: string, x: number, y: number): void {
+    const record = this.lease('OBJECT_PLACED');
+    if (record === null) return;
+    const event = record as ObjectPlacedEvent;
+    event.objectId = objectId;
+    event.x = x;
+    event.y = y;
+    this.push(record);
+  }
+
+  emitObjectRemoved(objectId: string, x: number, y: number): void {
+    const record = this.lease('OBJECT_REMOVED');
+    if (record === null) return;
+    const event = record as ObjectRemovedEvent;
+    event.objectId = objectId;
+    event.x = x;
+    event.y = y;
     this.push(record);
   }
 

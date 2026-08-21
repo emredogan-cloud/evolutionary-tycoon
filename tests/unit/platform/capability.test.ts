@@ -61,10 +61,10 @@ function makeNav(overrides: Partial<Navigator> & { deviceMemory?: number } = {})
 }
 
 describe('detectCapabilities', () => {
-  it('reports supported when a webgl2 context is available', () => {
+  it('reports supported when a webgl1 context is available', () => {
     const { gl } = makeFakeGl({ maxTextureSize: 16384, rendererString: 'Fake GPU 9000' });
     const report = detectCapabilities(
-      makeDoc((id) => (id === 'webgl2' ? gl : null)),
+      makeDoc((id) => (id === 'webgl' ? gl : null)),
       makeNav({ deviceMemory: 8 }),
     );
 
@@ -76,18 +76,30 @@ describe('detectCapabilities', () => {
     expect(report.hardwareConcurrency).toBe(8);
   });
 
-  it('reports no-webgl2 when the context cannot be created', () => {
+  it('accepts a browser that only answers to the prefixed experimental-webgl name', () => {
+    /* Old Safari — ADR-017's compatibility widening, exercised rather than claimed. */
+    const { gl } = makeFakeGl({ maxTextureSize: 4096, rendererString: null });
+    const report = detectCapabilities(
+      makeDoc((id) => (id === 'experimental-webgl' ? gl : null)),
+      makeNav(),
+    );
+
+    expect(report.supported).toBe(true);
+    expect(report.maxTextureSize).toBe(4096);
+  });
+
+  it('reports no-webgl when no context of any kind can be created', () => {
     const report = detectCapabilities(
       makeDoc(() => null),
       makeNav(),
     );
 
     expect(report.supported).toBe(false);
-    expect(report.failure).toBe('no-webgl2');
+    expect(report.failure).toBe('no-webgl');
     expect(report.maxTextureSize).toBeNull();
   });
 
-  it('reports no-webgl2 when getContext throws', () => {
+  it('reports no-webgl when getContext throws', () => {
     const report = detectCapabilities(
       makeDoc(() => {
         throw new Error('context creation blocked');
@@ -96,7 +108,7 @@ describe('detectCapabilities', () => {
     );
 
     expect(report.supported).toBe(false);
-    expect(report.failure).toBe('no-webgl2');
+    expect(report.failure).toBe('no-webgl');
   });
 
   it('reports no-canvas-element when the document cannot create a canvas', () => {

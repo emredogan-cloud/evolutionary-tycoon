@@ -18,6 +18,10 @@ describe('EventQueue', () => {
         'DAY_STARTED',
         'PAUSE_CHANGED',
         'SPEED_CHANGED',
+        // Phase 15 — the calendar.
+        'WEATHER_CHANGED',
+        'ROAD_EVENT_STARTED',
+        'ROAD_EVENT_ENDED',
         // Phase 5 — traffic.
         'VEHICLE_SPAWNED',
         'VEHICLE_BRAKED',
@@ -28,6 +32,24 @@ describe('EventQueue', () => {
         'VEHICLE_PARKED',
         'CUSTOMER_SPAWNED',
         'CUSTOMER_LEFT_ANGRY',
+        // Phase 8 — the service loop.
+        'ORDER_PLACED',
+        'PREP_STARTED',
+        'ORDER_READY',
+        'ORDER_DELIVERED',
+        'PAYMENT',
+        // Phase 9 — the economy.
+        'UPGRADE_APPLIED',
+        'PRICE_CHANGED',
+        // Phase 10 — employees.
+        'EMPLOYEE_HIRED',
+        'EMPLOYEE_LEFT',
+        // Phase 11 — evolution and the build system.
+        'STAGE_UNLOCKED',
+        'CONSTRUCTION_STARTED',
+        'STAGE_CHANGED',
+        'OBJECT_PLACED',
+        'OBJECT_REMOVED',
       ].sort(),
     );
   });

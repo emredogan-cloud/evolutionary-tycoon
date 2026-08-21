@@ -1,3 +1,5 @@
+import { euclidean } from '../math/length';
+import { layoutForStage } from '@config/layouts';
 import { ARRIVAL_EPSILON_METRES, WALK_SPEED_METRES_PER_SECOND } from '@config/customer';
 import { STATE_WALKING_TO_CAR, STATE_WALKING_TO_DOOR } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
@@ -122,7 +124,7 @@ export class NavigationSystem implements SimSystem {
 
         const dx = neighbour.x - customer.x;
         const dy = neighbour.y - customer.y;
-        const distance = Math.hypot(dx, dy);
+        const distance = euclidean(dx, dy);
         if (distance >= MIN_PERSONAL_SPACE_METRES) continue;
 
         /*
@@ -163,7 +165,7 @@ export class NavigationSystem implements SimSystem {
       if (!customers.isActive(slot)) continue;
       const dx = this.correctionX[slot] ?? 0;
       const dy = this.correctionY[slot] ?? 0;
-      const magnitude = Math.hypot(dx, dy);
+      const magnitude = euclidean(dx, dy);
       if (magnitude < 1e-9) continue;
 
       this.nudge(customers.at(slot), dx, dy);
@@ -181,9 +183,18 @@ export class NavigationSystem implements SimSystem {
    * it. Recorded here rather than assumed away.
    */
   private syncLayout(world: World): void {
-    const signature = world.layout.placed.length;
+    /*
+     * `layout.revision`, not `placed.length` — Phase 11.
+     *
+     * The old signature could not see a **move**: place then remove leaves the
+     * count identical and the navigation grid describing a world that no longer
+     * exists. PHASE_7_REPORT recorded it as a known weakness owed to this phase.
+     * The revision is bumped by every placement, every removal, every move, and
+     * by evolution.
+     */
+    const signature = world.layout.revision;
     if (signature !== this.builtFor) {
-      this.fields.rebuild(world.layout.placed);
+      this.fields.rebuild(world.layout.placed, layoutForStage(world.progression.stage));
       this.builtFor = signature;
     }
 
@@ -217,7 +228,7 @@ export class NavigationSystem implements SimSystem {
   private move(world: World, customer: CustomerRecord, slot: number, seconds: number): void {
     const dx = customer.targetX - customer.x;
     const dy = customer.targetY - customer.y;
-    const distance = Math.hypot(dx, dy);
+    const distance = euclidean(dx, dy);
     if (distance <= ARRIVAL_EPSILON_METRES) return;
 
     if (!this.flowDirection(customer, distance, dx, dy)) return;

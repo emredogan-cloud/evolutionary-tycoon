@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 7,
+  "buildSha": "phase10fixture",
+  "createdAt": 1700000000000,
+  "lastSeenAt": 1700000000000,
+  "lastSeenServerAt": null,
+  "playtimeMs": 600650,
+  "tick": 12602,
+  "nextEntityId": 464,
+  "clock": {
+    "simTimeMs": 630100
+  },
+  "rng": {
+    "traffic": {
+      "a": -810526050,
+      "b": -1063886474,
+      "c": 1426064665,
+      "d": -1078026141
+    },
+    "conversion": {
+      "a": -1814662298,
+      "b": -701815764,
+      "c": -832177750,
+      "d": -1774840206
+    },
+    "customer": {
+      "a": 660028977,
+      "b": -1096328864,
+      "c": -1221840312,
+      "d": 396367557
+    },
+    "tips": {
+      "a": -2048330897,
+      "b": -1620255985,
+      "c": 2021161755,
+      "d": -1345280936
+    },
+    "events": {
+      "a": 361707646,
+      "b": -1252921798,
+      "c": 191661503,
+      "d": -130262879
+    },
+    "cosmetic": {
+      "a": 1289948761,
+      "b": 2041160955,
+      "c": -1728245038,
+      "d": 1800911822
+    }
+  },
+  "control": {
+    "speedMultiplier": 1,
+    "paused": false
+  },
+  "progression": {
+    "stage": 1,
+    "unlocks": [],
+    "milestones": []
+  },
+  "economy": {
+    "cash": 61.788879999999985,
+    "reputation": 2.4307200000000004,
+    "lifetimeRevenue": 72.56288000000002,
+    "lifetimeSpend": 32,
+    "prices": [],
+    "revenueWindow": [0, 2.3248, 0, 0, 0, 0, 0, 6.0304, 0, 0, 3.5577600000000005, 0],
+    "expenseWindow": [
+      0, 0.5623333333333335, 0.062333333333333504, 0.062333333333333504, 0.062333333333333504,
+      0.062333333333333504, 0.062333333333333504, 1.8, 0, 0, 0.8, 0
+    ],
+    "bucketIndex": 6,
+    "bucketElapsedMs": 100
+  },
+  "layout": {
+    "placed": [],
+    "upgrades": [["hand-painted-sign", 1]]
+  },
+  "staff": {
+    "hired": [],
+    "settleElapsedMs": 50,
+    "employees": [
+      {
+        "entityId": 439,
+        "role": 0,
+        "skill": 0.6,
+        "wagePerMinute": 0.748,
+        "accruedWages": 0.0006233333333333334,
+        "unpaidMs": 0,
+        "x": 12,
+        "y": 10.799999999999999
+      }
+    ]
+  },
+  "traffic": {
+    "nextCandidateMs": 632210.9308460368,
+    "nextDecorativeMs": 630267.1629248015
+  },
+  "stats": {
+    "customersServed": 19,
+    "conversionsSucceeded": 21,
+    "conversionsFailed": 197,
+    "turnedAwayNoParking": 2,
+    "customersAbandoned": 0,
+    "vehiclesSpawned": 422,
+    "convertibleSpawned": 219,
+    "commandsApplied": 12002
+  },
+  "settings": {
+    "audio": {
+      "master": 1,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": false,
+      "highContrast": false
+    }
+  },
+  "checksum": "908381f7"
+}

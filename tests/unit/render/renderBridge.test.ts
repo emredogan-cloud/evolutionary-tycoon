@@ -86,8 +86,8 @@ describe('RenderBridge', () => {
     const sim = simWithCustomers([[10, 10, 0]]);
     const bridge = new RenderBridge(16);
     bridge.setStatics([
-      { entityId: -1, x: 4, y: 4, z: 0, kind: ACTOR_KIND_PROP_TALL },
-      { entityId: -2, x: 16, y: 16, z: 0, kind: ACTOR_KIND_PROP_TALL },
+      { entityId: -1, x: 4, y: 4, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
+      { entityId: -2, x: 16, y: 16, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
     ]);
 
     bridge.sync(sim.readView(), 0);
@@ -158,14 +158,18 @@ describe('RenderBridge', () => {
     bridge.sync(sim.readView(), 0);
     expect(bridge.trackedCount).toBe(2);
 
+    const releasedId = sim.world.customers.at(1).entityId;
     sim.world.customers.release(1);
     sim.tick();
-    bridge.sync(sim.readView(), 0);
+    const view = sim.readView();
+    bridge.sync(view, 0);
 
     // Entity ids are never reused, so a stale entry could not be mistaken for a
-    // live one — but it would still grow the map for the whole session.
-    expect(bridge.trackedCount).toBe(1);
-    expect(bridge.visible).toHaveLength(1);
+    // live one — but it would still grow the map for the whole session. The
+    // 08:00 world may add morning traffic on that tick, so the counts are
+    // anchored to the live view rather than to a literal.
+    expect(bridge.trackedCount).toBe(view.actorCount);
+    expect(bridge.visible.some((v) => v.entityId === releasedId)).toBe(false);
   });
 
   it('drops actors beyond the pool rather than growing', () => {
@@ -183,9 +187,9 @@ describe('RenderBridge', () => {
     const sim = new Sim({ seed: 1 });
     const bridge = new RenderBridge(2);
     bridge.setStatics([
-      { entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL },
-      { entityId: -2, x: 2, y: 2, z: 0, kind: ACTOR_KIND_PROP_TALL },
-      { entityId: -3, x: 3, y: 3, z: 0, kind: ACTOR_KIND_PROP_TALL },
+      { entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
+      { entityId: -2, x: 2, y: 2, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
+      { entityId: -3, x: 3, y: 3, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 },
     ]);
     bridge.sync(sim.readView(), 0);
     expect(bridge.visible).toHaveLength(2);
@@ -197,7 +201,7 @@ describe('RenderBridge', () => {
     // a scene that silently renders without its people.
     const sim = simWithCustomers([[5, 5, 0]]);
     const bridge = new RenderBridge(1);
-    bridge.setStatics([{ entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL }]);
+    bridge.setStatics([{ entityId: -1, x: 1, y: 1, z: 0, kind: ACTOR_KIND_PROP_TALL, variant: 0 }]);
     bridge.sync(sim.readView(), 0);
     expect(bridge.visible).toHaveLength(1);
     expect(bridge.visible[0]?.entityId).toBe(-1);

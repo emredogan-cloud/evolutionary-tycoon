@@ -20,6 +20,8 @@
  * without a world, which is the same reason `idm.ts` is shaped this way.
  */
 
+import { euclidean } from '../math/length';
+
 export interface SteerOutput {
   x: number;
   y: number;
@@ -101,7 +103,7 @@ export function blendSteering(
 
   const x = flowX + acrossX * SEPARATION_WEIGHT;
   const y = flowY + acrossY * SEPARATION_WEIGHT;
-  const length = Math.hypot(x, y);
+  const length = euclidean(x, y);
 
   if (length < 1e-6) {
     out.x = 0;
@@ -134,7 +136,7 @@ export function separationFrom(
 ): boolean {
   const dx = agentX - otherX;
   const dy = agentY - otherY;
-  const distance = Math.hypot(dx, dy);
+  const distance = euclidean(dx, dy);
 
   if (distance >= SEPARATION_RADIUS_METRES || distance < 1e-6) {
     out.x = 0;

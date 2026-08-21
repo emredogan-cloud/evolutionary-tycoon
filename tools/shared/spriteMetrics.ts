@@ -76,3 +76,85 @@ export function isoSpriteMetrics(box: WorldBox, scale: number = ART_SCALE): Spri
 export function worldHeightPx(heightMetres: number, scale: number = ART_SCALE): number {
   return Math.round(heightMetres * TILE_Z * scale);
 }
+
+/**
+ * Compass order for the eight directional sprites — `src/render/views/VehicleView.ts`.
+ *
+ * Duplicated rather than imported for the reason the file header gives: this
+ * module runs under plain Node from the pipeline CLI, which cannot resolve
+ * `src/**`'s path aliases. `tests/unit/tools/spriteMetrics.test.ts` asserts the
+ * two lists are identical, so the duplication cannot drift.
+ */
+export const SPRITE_DIRECTION_COUNT = 8;
+
+/**
+ * The sprite box for a **directional** subject, which is not the axis-aligned one.
+ *
+ * `isoSpriteMetrics` projects a box whose long side runs along world X. That is
+ * one of eight cases, and using it for all eight is wrong by a factor of 1.7 at
+ * the extremes: a 4.5 m car seen side-on is 407 x 182 px, and seen corner-on it
+ * is 336 x 317. Sizing every direction to the axis-aligned 410 x 301 made the
+ * side views 2.8x too many pixels — which showed up first as the vehicle atlas
+ * landing at **216% of its ASSET_PIPELINE §13 budget**, and would have shown up
+ * second as a car that changes size as it turns a corner.
+ *
+ * The derivation is the projection itself. A sprite direction is a *screen*
+ * heading; `worldToScreen` maps world (x, y) to screen `(x - y, (x + y) / 2)`,
+ * so inverting that map on the screen heading gives the world heading, and
+ * rotating the footprint rectangle by it and projecting its corners gives the
+ * box the art has to fit.
+ *
+ *     screen heading i  ->  world heading θ  ->  rotated footprint  ->  projected box
+ *
+ * The eight results are the eight sizes the validator expects and the importer
+ * fits to, so a correctly drawn sprite passes at every facing rather than at the
+ * two facings that happen to match the axis-aligned case.
+ */
+export function isoSpriteMetricsFacing(
+  box: WorldBox,
+  directionIndex: number,
+  scale: number = ART_SCALE,
+): SpriteMetrics {
+  const phi = ((directionIndex % SPRITE_DIRECTION_COUNT) * Math.PI * 2) / SPRITE_DIRECTION_COUNT;
+  // Screen heading, measured clockwise from north with y growing downward.
+  const u = Math.sin(phi);
+  const v = -Math.cos(phi);
+  // Invert `(dx - dy, (dx + dy) / 2)`.
+  const theta = Math.atan2(v - u / 2, u / 2 + v);
+
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  const halfLength = box.footprintX / 2;
+  const halfWidth = box.footprintY / 2;
+
+  let minDiff = Infinity;
+  let maxDiff = -Infinity;
+  let minSum = Infinity;
+  let maxSum = -Infinity;
+  for (const alongSign of [-1, 1]) {
+    for (const acrossSign of [-1, 1]) {
+      const x = alongSign * halfLength * cos - acrossSign * halfWidth * sin;
+      const y = alongSign * halfLength * sin + acrossSign * halfWidth * cos;
+      const diff = x - y;
+      const sum = x + y;
+      if (diff < minDiff) minDiff = diff;
+      if (diff > maxDiff) maxDiff = diff;
+      if (sum < minSum) minSum = sum;
+      if (sum > maxSum) maxSum = sum;
+    }
+  }
+
+  const footprintHeight = (maxSum - minSum) * (TILE_H / 2) * scale;
+  const bodyHeight = box.heightMetres * TILE_Z * scale;
+  const width = Math.max(4, Math.round((maxDiff - minDiff) * (TILE_W / 2) * scale));
+  const height = Math.max(4, Math.round(footprintHeight + bodyHeight));
+
+  return {
+    width,
+    height,
+    footprintHeight: Math.round(footprintHeight),
+    bodyHeight: Math.round(bodyHeight),
+    anchorX: Math.round(width / 2),
+    anchorY: Math.round(height - footprintHeight / 2),
+  };
+}

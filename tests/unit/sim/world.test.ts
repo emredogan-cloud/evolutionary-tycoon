@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_GAME_START_HOUR, HOURS_PER_GAME_DAY, MS_PER_GAME_DAY } from '@config/simulation';
+
+const START_MS = (DEFAULT_GAME_START_HOUR / HOURS_PER_GAME_DAY) * MS_PER_GAME_DAY;
 import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
 import { World } from '@sim/core/World';
 
@@ -10,7 +13,7 @@ describe('World', () => {
   it('starts from documented defaults', () => {
     const world = freshWorld();
     expect(world.tick).toBe(0);
-    expect(world.clock.simTimeMs).toBe(0);
+    expect(world.clock.simTimeMs).toBe(START_MS);
     expect(world.nextEntityId).toBe(1);
     expect(world.control.speedMultiplier).toBe(DEFAULT_SPEED_MULTIPLIER);
     expect(world.control.paused).toBe(false);

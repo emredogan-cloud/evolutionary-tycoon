@@ -1,3 +1,4 @@
+import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { CURRENT_SCHEMA_VERSION } from './schema';
 
 /**
@@ -166,7 +167,205 @@ const v4ToV5: Migration = {
   },
 };
 
-export const migrations: readonly Migration[] = [v1ToV2, v2ToV3, v3ToV4, v4ToV5];
+/**
+ * v5 to v6 — the Phase 9 economy.
+ *
+ * A v5 save has cash and a lifetime revenue total but no record of what was
+ * spent and no income window, because neither existed. Both are filled with
+ * zeroes, and zero is the honest value for the same reason it was in v4→v5: a
+ * save written before the window existed genuinely has no last-sixty-seconds,
+ * and reconstructing a plausible rate from `lifetimeRevenue` would put a
+ * fabricated number on the HUD the moment the player resumed.
+ *
+ * The window is written at the length **this build** uses. A save is data; the
+ * shape of the world is config, and a migration that guessed a length from the
+ * save would hand `applySnapshot` an array of the wrong size.
+ */
+const v5ToV6: Migration = {
+  from: 5,
+  to: 6,
+  up: (save) => {
+    const economy = save['economy'];
+    const buckets = new Array<number>(ECONOMY_BUCKET_COUNT).fill(0);
+    return {
+      ...save,
+      schemaVersion: 6,
+      economy: {
+        ...(typeof economy === 'object' && economy !== null ? economy : {}),
+        lifetimeSpend: 0,
+        revenueWindow: buckets,
+        expenseWindow: [...buckets],
+        bucketIndex: 0,
+        bucketElapsedMs: 0,
+      },
+    };
+  },
+};
+
+/**
+ * v6 to v7 — the Phase 10 payroll.
+ *
+ * An empty staff list, a zeroed settlement cursor, and a zeroed walkout
+ * counter. Empty is the honest value and not merely the easy one: a v6 save was
+ * written by a build where employees could not be hired, so the player genuinely
+ * had none, and inventing one would spend their money for them.
+ *
+ * `hired` is left alone. It has been in the schema since Phase 2 as an empty
+ * array and Phase 10 did not start using it — the payroll lives in
+ * `staff.employees`, next to it, because `hired` carries a `roleId` string where
+ * the simulation indexes roles by position. Reconciling the two is a change
+ * request, not a migration.
+ */
+const v6ToV7: Migration = {
+  from: 6,
+  to: 7,
+  up: (save) => {
+    const staff = save['staff'];
+    const stats = save['stats'];
+    return {
+      ...save,
+      schemaVersion: 7,
+      staff: {
+        ...(typeof staff === 'object' && staff !== null ? staff : { hired: [] }),
+        settleElapsedMs: 0,
+        employees: [],
+      },
+      stats: {
+        ...(typeof stats === 'object' && stats !== null ? stats : {}),
+        employeesLeftUnpaid: 0,
+      },
+    };
+  },
+};
+
+/**
+ * v7 to v8 — the Phase 11 evolution.
+ *
+ * A v7 save was written by a build with one stage, so: nothing pending, nothing
+ * under construction, and a layout revision of zero. Zero is the honest value
+ * for the revision in particular — it is an invalidation counter, and starting a
+ * resumed session at zero simply means the navigation cache rebuilds once on the
+ * first tick, which it would have done anyway.
+ *
+ * `stage` itself is untouched. It has been in the schema since Phase 2 and a v7
+ * save legitimately holds whichever stage it was on; inventing a transition here
+ * would evolve somebody's restaurant while they were not looking.
+ */
+const v7ToV8: Migration = {
+  from: 7,
+  to: 8,
+  up: (save) => {
+    const progression = save['progression'];
+    const layout = save['layout'];
+    const stats = save['stats'];
+    return {
+      ...save,
+      schemaVersion: 8,
+      progression: {
+        ...(typeof progression === 'object' && progression !== null
+          ? progression
+          : { stage: 1, unlocks: [], milestones: [] }),
+        pendingStage: 0,
+      },
+      construction: { targetStage: 0, elapsedMs: 0, totalMs: 0 },
+      layout: {
+        ...(typeof layout === 'object' && layout !== null ? layout : { placed: [], upgrades: [] }),
+        revision: 0,
+      },
+      stats: {
+        ...(typeof stats === 'object' && stats !== null ? stats : {}),
+        driveThruServed: 0,
+      },
+    };
+  },
+};
+
+/**
+ * v9 — Phase 14, offline progression.
+ *
+ * `meter: null` rather than a zeroed summary, and the distinction is the
+ * honest one: a v8 save measured nothing, and a zeroed summary would read as
+ * "measured zero throughput", which prices the away window as pure wage loss.
+ * A migrated player's first return simply has no offline report; measurement
+ * starts with their next session.
+ */
+const v8ToV9: Migration = {
+  from: 8,
+  to: 9,
+  up: (save) => ({
+    ...save,
+    schemaVersion: 9,
+    offline: { meter: null, pending: null },
+  }),
+};
+
+/**
+ * v10 — Phase 15, the environment calendar.
+ *
+ * `plannedDay: -1` means "never planned": the first tick after load plans the
+ * *current* day from the events stream exactly as a fresh world would. That
+ * consumes stream draws a v9 session never made — acceptable and honest,
+ * because a v9 session never had a calendar to preserve in the first place.
+ */
+const v9ToV10: Migration = {
+  from: 9,
+  to: 10,
+  up: (save) => ({
+    ...save,
+    schemaVersion: 10,
+    environment: {
+      plannedDay: -1,
+      weatherSegments: [0, 0, 0, 0],
+      eventTypes: [-1, -1, -1, -1, -1, -1],
+      eventStartMs: [0, 0, 0, 0, 0, 0],
+      eventEndMs: [0, 0, 0, 0, 0, 0],
+      lastWeather: -1,
+      lastActiveEvent: -1,
+    },
+  }),
+};
+
+/**
+ * v11 — Phase 17, the audio director's fourth slider.
+ *
+ * Ambience arrives at full volume, the same default a fresh world gets: a v10
+ * player has been hearing nothing (no audio system existed), so "as loud as
+ * the master allows" is the default they would have chosen by never touching
+ * a slider that did not exist.
+ */
+const v10ToV11: Migration = {
+  from: 10,
+  to: 11,
+  up: (save) => {
+    /*
+     * Defensive against the minimal hand-built chain fixtures, like every
+     * migration before it: a v1 object may not carry `settings` at all, and
+     * this step's only job is the one field it introduces.
+     */
+    const previous = (save as { settings?: { audio?: Record<string, unknown> } }).settings;
+    return {
+      ...save,
+      schemaVersion: 11,
+      settings: {
+        ...(previous ?? {}),
+        audio: { ...(previous?.audio ?? {}), ambience: 1 },
+      },
+    };
+  },
+};
+
+export const migrations: readonly Migration[] = [
+  v1ToV2,
+  v2ToV3,
+  v3ToV4,
+  v4ToV5,
+  v5ToV6,
+  v6ToV7,
+  v7ToV8,
+  v8ToV9,
+  v9ToV10,
+  v10ToV11,
+];
 
 assertContiguous(migrations);
 

@@ -33,8 +33,100 @@ const REFERENCE = {
    * shape genuinely changed — the deliberate reason the comment above allows
    * for, for the second time.
    */
-  hashAtTick0: 'f2b8d1f5b4b22b04',
-  hashAtTick1000: '8373e8f91dce3dab',
+  /*
+   * Regenerated a third time, in Phase 8. Orders entered the digest — the pool,
+   * each record's state, station, timestamps, price and quality — so the world's
+   * shape genuinely changed again. Computed by the Node suite for seed 424242
+   * and asserted here to prove the browser agrees.
+   */
+  /*
+   * And a fourth time, in Phase 9. The economy grew a lifetime spend total and
+   * a twenty-four-slot income window, all of which are hashed — the window
+   * because objectives will read it in Phase 11 and the dead-end gate reads it
+   * already, so a divergence in it can change an outcome.
+   */
+  /*
+   * A fifth time, in Phase 10. Employees stopped being generic actors and grew
+   * a role, a brain state, a task claim, a skill and a wage; the task board
+   * joined the digest beside them. All of it can change an outcome, so all of
+   * it is hashed.
+   */
+  /*
+   * A sixth time, in Phase 11. Evolution put a pending stage, a construction
+   * timer and the layout revision into the digest, customers grew a table and a
+   * service channel, and the statistics grew a drive-thru counter. Every one of
+   * them can change an outcome — which stage you are in decides the layout, and
+   * the layout decides where everybody walks — so every one of them is hashed.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here, which is the
+   * whole point: the browser is expected to agree, and it does.
+   */
+  /*
+   * A seventh time, in Phase 12 — and this one is not a new field, it is a new
+   * *starting value*. Reputation began at zero, which `reputationFactor` maps to
+   * the worst conversion multiplier in the game (0.60); it now begins at 50, the
+   * neutral point of the published 0.60..1.40 band. Reputation is hashed, so the
+   * world at tick 0 is genuinely a different world.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here.
+   */
+  /*
+   * A ninth time, in Phase 15 — the calendar. `EnvironmentState` (the day's
+   * weather segments and event schedule, plus the transition markers) entered
+   * the digest, because an event that multiplies traffic is a simulation
+   * outcome by definition; and the spawn envelope widened by the festival
+   * factor, so the thousandth tick rides a resampled — equally distributed —
+   * arrival stream. Both figures recomputed by the Node suite, as always.
+   */
+  /*
+   * A tenth time, 2026-08-21 — and tick 0 moved for the first time since
+   * Phase 11, because the user's daylight decision changed the starting
+   * state itself: a fresh world now opens at 08:00 (DEFAULT_GAME_START_HOUR),
+   * so the clock — hashed since Phase 2 — differs at tick 0. Tick 1000 then
+   * rides a morning arrival stream instead of a midnight-empty one, plus the
+   * calibration pass's ladder (P17 batch, user-authorized): sign and menu
+   * effects, the SS3-budget stage-2 ladder, stage-4 prices.
+   */
+  /*
+   * An eleventh time, within Phase 17: schema v11 put `audio.ambience` into
+   * the settings block, and settings are hashed — so tick 0 moved by exactly
+   * one written double. Tick 1000 follows. The local suite had been run
+   * before that write landed, which is why CI caught it and not the desk:
+   * the pin renewals exist for precisely this moment.
+   */
+  hashAtTick0: '7af1adc1d379aa8c',
+  /*
+   * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
+   * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
+   * the only Phase 12 change visible at tick 0 is the starting reputation, and
+   * that was already in the Phase 11 figure above.
+   */
+  /*
+   * An eighth time, in the consolidation batch — ADR-016's baskets. A customer
+   * consumes a variable number of `customer`-stream rolls at the counter now
+   * (base, then side and drink draws), so every roll after the first order of
+   * the run lands differently and the thousandth tick is a different world.
+   * Tick 0 did not move: nothing about the world's starting state changed.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here; the browser
+   * produced this value independently before the pin was updated, which is the
+   * agreement this test exists to prove.
+   */
+  /*
+   * Renewed within Phase 15 when the spawn envelope became stage-aware: only
+   * Stage 4 pays the festival's ×3 candidate headroom, so Stage 1's stream is
+   * the pre-P15 one again and the thousandth tick moved with it. Tick 0 is
+   * unchanged — the calendar state at tick 0 is the same either way.
+   */
+  /*
+   * A twelfth time, closing the P17 divergence hunt: every sim distance now
+   * goes through `euclidean()` (correctly-rounded sqrt) instead of
+   * `Math.hypot`, whose rounding engines do not agree on. The new figure is
+   * the one Firefox had been producing all along — SpiderMonkey's hypot
+   * already equalled the sqrt form; it was V8's that strayed. Tick 0 is
+   * motionless and did not move.
+   */
+  hashAtTick1000: 'ae855a2b076f9f8f',
 } as const;
 
 interface TestApi {
@@ -168,7 +260,7 @@ test.describe('simulation kernel in the browser', () => {
     });
 
     expect(state.tick).toBe(400);
-    expect(state.simTimeMs).toBe(400 * 50);
+    expect(state.simTimeMs).toBe(240_000 + 400 * 50); // the 08:00 opening plus 400 ticks
     expect(state.paused).toBe(true);
   });
 

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 6,
+  "buildSha": "phase9fixture",
+  "createdAt": 1700000000000,
+  "lastSeenAt": 1700000000000,
+  "lastSeenServerAt": null,
+  "playtimeMs": 600050,
+  "tick": 12001,
+  "nextEntityId": 439,
+  "clock": {
+    "simTimeMs": 600050
+  },
+  "rng": {
+    "traffic": {
+      "a": 423254594,
+      "b": -278976821,
+      "c": -810879678,
+      "d": -1078026821
+    },
+    "conversion": {
+      "a": -2012201879,
+      "b": 959455466,
+      "c": -1695116530,
+      "d": -1774840217
+    },
+    "customer": {
+      "a": 660028977,
+      "b": -1096328864,
+      "c": -1221840312,
+      "d": 396367557
+    },
+    "tips": {
+      "a": -2048330897,
+      "b": -1620255985,
+      "c": 2021161755,
+      "d": -1345280936
+    },
+    "events": {
+      "a": 361707646,
+      "b": -1252921798,
+      "c": 191661503,
+      "d": -130262879
+    },
+    "cosmetic": {
+      "a": 1289948761,
+      "b": 2041160955,
+      "c": -1728245038,
+      "d": 1800911822
+    }
+  },
+  "control": {
+    "speedMultiplier": 1,
+    "paused": false
+  },
+  "progression": {
+    "stage": 1,
+    "unlocks": [],
+    "milestones": []
+  },
+  "economy": {
+    "cash": 40.33808,
+    "reputation": 2.3099200000000004,
+    "lifetimeRevenue": 70.23808000000002,
+    "lifetimeSpend": 12,
+    "prices": [],
+    "revenueWindow": [0, 0, 0, 0, 6.0304, 0, 0, 6.0304, 0, 0, 3.5577600000000005, 0],
+    "expenseWindow": [0, 0, 0, 0, 1.8, 0, 0, 1.8, 0, 0, 0.8, 0],
+    "bucketIndex": 0,
+    "bucketElapsedMs": 50
+  },
+  "layout": {
+    "placed": [],
+    "upgrades": [["hand-painted-sign", 1]]
+  },
+  "staff": {
+    "hired": []
+  },
+  "traffic": {
+    "nextCandidateMs": 601431.2397784941,
+    "nextDecorativeMs": 600514.3852864475
+  },
+  "stats": {
+    "customersServed": 18,
+    "conversionsSucceeded": 21,
+    "conversionsFailed": 186,
+    "turnedAwayNoParking": 2,
+    "customersAbandoned": 0,
+    "vehiclesSpawned": 398,
+    "convertibleSpawned": 208,
+    "commandsApplied": 12001
+  },
+  "settings": {
+    "audio": {
+      "master": 1,
+      "music": 1,
+      "sfx": 1,
+      "muted": false
+    },
+    "a11y": {
+      "reducedMotion": false,
+      "highContrast": false
+    }
+  },
+  "checksum": "39e3555c"
+}

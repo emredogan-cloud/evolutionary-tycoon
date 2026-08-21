@@ -6,7 +6,7 @@ import { worldToScreen } from '@render/iso/IsoProjection';
  * Visual determinism mode — a first-class engine feature, not a test hack.
  *
  * ```
- * ?seed=42&freezeAt=600&scene=depth-testcard&noParticles=1&fixedViewport=1&dpr=1&hideHud=1
+ * ?seed=42&freezeAt=600&scene=depth-testcard&noParticles=1&fixedViewport=1&dpr=1&hideHud=1&cook=1&buy=
  * ```
  *
  * Screenshot-diffing a WebGL canvas is impossible without it. Two runs of the
@@ -26,7 +26,58 @@ export interface RenderMode {
   readonly noParticles: boolean;
   readonly fixedViewport: boolean;
   readonly hideHud: boolean;
+  /**
+   * Cook while fast-forwarding to `freezeAt`.
+   *
+   * In Stage 1 the player is the cook: an order sits in `PLACED` until a
+   * `MANUAL_PREP` command starts it. A frozen advance issues no commands, so a
+   * golden of a "busy" stand would photograph a kitchen where nothing had ever
+   * been started — no progress ring, no plate on the pass, and a queue that only
+   * grows. This dispatches `MANUAL_PREP` on every tick of the fast-forward,
+   * which is precisely what an attentive player does and what the integration
+   * suite already models.
+   *
+   * It changes the world, deliberately and visibly: a run with it produces a
+   * different world hash from a run without, because the player did something.
+   */
+  readonly cook: boolean;
+  /**
+   * Upgrades to grant before the fast-forward — visual regression only.
+   *
+   * `?buy=hand-painted-sign,cooler`. Each is bought at tick 0, with exactly its
+   * cost credited first, so the world can be photographed in a state a long
+   * session would reach without photographing the session.
+   *
+   * That credit is a cheat and it is named as one. The golden it exists for is
+   * about *how the world looks with a sign on it* — the purchase path is proved
+   * by `tests/e2e/upgradeFlow.spec.ts`, which earns the money — and a golden
+   * that had to play for twenty minutes first would be a golden nobody reruns.
+   * Nothing happens without the parameter.
+   */
+  readonly buy: readonly string[];
+  /**
+   * Start at this stage — visual regression only, `?stage=3`.
+   *
+   * Evolution takes minutes of play and a construction sequence; a golden of
+   * the Stage 4 restaurant that had to earn its way there would be a golden
+   * nobody could regenerate. Setting the stage directly is the same kind of
+   * affordance as `freezeAt` and is named as one.
+   *
+   * It does **not** replay the transition — the world simply starts at that
+   * stage, which is exactly what a golden of a *stage* should photograph.
+   */
+  readonly stage: number;
   readonly sceneId: string;
+  /**
+   * Pin the calendar for a golden — Phase 15. `?forceWeather=rain` plans the
+   * whole of day 0 as that state; `?forceHour=22` starts the clock there;
+   * `?forceEvent=FESTIVAL` schedules that event across the day. Fixture
+   * instruments in the exact sense `?stage` is: they construct a world a
+   * screenshot needs without photographing the hours that reach it.
+   */
+  readonly forceWeather: string | null;
+  readonly forceHour: number | null;
+  readonly forceEvent: string | null;
   /** True when any pinning parameter is present. */
   readonly visualDeterminism: boolean;
   /** Fixed camera transform; input is ignored while set. */
@@ -47,7 +98,18 @@ export function parseRenderMode(search: string): RenderMode {
   const noParticles = params.get('noParticles') === '1';
   const fixedViewport = params.get('fixedViewport') === '1';
   const hideHud = params.get('hideHud') === '1';
+  const cook = params.get('cook') === '1';
+  const stageRaw = readInt(params, 'stage');
+  const stage = stageRaw === null ? 1 : Math.min(4, Math.max(1, stageRaw));
+  const buy = (params.get('buy') ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
   const sceneId = params.get('scene') ?? 'empty';
+  const forceWeather = params.get('forceWeather');
+  const forceHourRaw = readInt(params, 'forceHour');
+  const forceHour = forceHourRaw === null ? null : Math.min(23, Math.max(0, forceHourRaw));
+  const forceEvent = params.get('forceEvent');
 
   // The camera is locked whenever the clock is frozen. A golden taken through a
   // camera the player can nudge is a golden that fails the first time someone
@@ -69,7 +131,13 @@ export function parseRenderMode(search: string): RenderMode {
     noParticles,
     fixedViewport,
     hideHud,
+    cook,
+    buy,
+    stage,
     sceneId,
+    forceWeather,
+    forceHour,
+    forceEvent,
     visualDeterminism: freezeAt !== null || noParticles || fixedViewport || hideHud,
     lockedCamera,
   };

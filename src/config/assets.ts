@@ -79,6 +79,24 @@ export interface CategorySpec {
 const MB = 1024 * 1024;
 
 /**
+ * Total decoded texture memory, in bytes — the budget the fill floor stands in for.
+ *
+ * ASSET_PIPELINE §17 and TECHNICAL_ARCHITECTURE §11 both state it: **192 MB
+ * desktop, 96 MB mobile**. The mobile figure is the binding one, because a build
+ * that fits only the desktop budget is a build that fails on half its audience.
+ *
+ * This is enforced; `ATLAS_MIN_FILL` is reported. That is a deliberate swap of
+ * which quantity fails a build, made by ADR-013 on measurement: pages are
+ * power-of-two, so a set whose content needs 862 kpx cannot have a 1.05 Mpx page
+ * (MaxRects will not reach 82% occupancy) and lands on 2.1 Mpx — 41% fill, with
+ * no packing that does better. An exhaustive search over every power-of-two page
+ * confirmed those sizes are already minimal. A floor no correct build can reach
+ * is not a floor, while the memory total is the number the documents actually
+ * budget and the number a device actually runs out of.
+ */
+export const TEXTURE_MEMORY_BUDGET_BYTES = 96 * MB;
+
+/**
  * The budget rows of ASSET_PIPELINE §13, expanded to one row per filename prefix.
  *
  * Two §13 rows cover more than one prefix, so their budget is shared and the

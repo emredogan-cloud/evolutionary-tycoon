@@ -37,6 +37,17 @@ export const MS_PER_GAME_DAY = 720_000;
 export const HOURS_PER_GAME_DAY = 24;
 
 /**
+ * Hour of the game day a fresh world opens on. **8** — user decision,
+ * 2026-08-21. The world used to boot at midnight, which was invisible until
+ * P15 painted the night: the first session opened dark and thin, against the
+ * design's first-car-in-8-seconds teaching beat (GDD §7). Daylight start
+ * fixes the first impression; night still arrives on the same cycle, just
+ * not first. Only a fresh world reads this — a loaded save keeps its own
+ * clock, and instrumented sessions may pin any hour over it.
+ */
+export const DEFAULT_GAME_START_HOUR = 8;
+
+/**
  * Entity store capacities.
  *
  * Preallocated at construction and never grown: growth in a hot loop is an
@@ -66,4 +77,13 @@ export const EVENT_QUEUE_CAPACITY = 512;
  * v2 (Phase 3): placed objects gained `z`, because the renderer sorts on height
  * and an object on a counter has to draw in front of the counter.
  */
-export const SAVE_SCHEMA_VERSION = 5;
+export const SAVE_SCHEMA_VERSION = 11;
+
+/**
+ * Wall-clock autosave cadence — TECHNICAL_ARCHITECTURE §8.2, wired in Phase 14.
+ *
+ * Thirty real seconds, plus a write on `visibilitychange`(hidden) and
+ * `pagehide`. Wall-clock rather than simulation time on purpose: the save's
+ * job is bounding what a crash can lose, and a paused game can still crash.
+ */
+export const AUTOSAVE_INTERVAL_MS = 30_000;

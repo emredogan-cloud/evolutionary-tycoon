@@ -12,8 +12,8 @@
   // The honest thing is to say exactly what is missing and what would fix it,
   // rather than showing a black screen or a vague error.
   const reason = $derived(
-    failure === 'no-webgl2'
-      ? 'Tarayıcınız WebGL2 desteklemiyor veya donanım hızlandırma kapalı.'
+    failure === 'no-webgl'
+      ? 'Tarayıcınız WebGL desteklemiyor veya donanım hızlandırma kapalı.'
       : 'Tarayıcınız canvas elemanı oluşturamıyor.',
   );
 </script>

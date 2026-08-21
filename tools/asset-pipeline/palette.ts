@@ -5,10 +5,17 @@ import { PATHS } from './paths.ts';
  * The locked palette, and the distance test the validator runs against it.
  *
  * ASSET_PIPELINE §1.1 makes the palette part of the style contract rather than a
- * suggestion: an asset outside it is rejected. §4.3 step 4 gives the exact
+ * suggestion: an asset outside it is rejected. §4.3 step 4 gave the original
  * threshold — at least 92% of pixels within a distance of 8 of some palette
- * entry. Both numbers live in `palette.json` so the contract is one file, not a
- * file plus two constants buried in code.
+ * entry. Every number lives in `palette.json` so the contract is one file, not a
+ * file plus constants buried in code.
+ *
+ * **That conformance rule was written for flat-shaded art and the delivered set
+ * is not flat-shaded** (ADR-013). `tolerance` and `coverage` are kept because
+ * they still describe the palette's own geometry — no two entries are closer to
+ * each other than `tolerance`, which is what makes each one a distinct target —
+ * but the check the validator runs is now `palette-affinity`, against
+ * `affinityBaseline`. Both live here for the same reason the first pair did.
  */
 
 export interface PaletteColor {
@@ -31,6 +38,13 @@ export interface Palette {
   readonly tolerance: number;
   /** Fraction of opaque pixels that must be within `tolerance`. */
   readonly coverage: number;
+  /**
+   * Mean nearest-palette distance of uniformly random RGB — the no-information
+   * point. Measured, not chosen: see `palette.json`'s note and ADR-013.
+   */
+  readonly affinityBaseline: number;
+  /** Fraction of the baseline above which an asset is reported off-family. */
+  readonly affinityWarn: number;
   readonly ramps: readonly PaletteRamp[];
 }
 

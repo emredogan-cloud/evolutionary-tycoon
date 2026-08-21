@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Doll Rig Clip Editor</title>
+    <style>
+      body {
+        margin: 0;
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        height: 100vh;
+        font: 13px/1.5 system-ui;
+        background: #12141a;
+        color: #e8e9ee;
+      }
+      #panel {
+        padding: 14px;
+        border-right: 1px solid #2b303d;
+        overflow: auto;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      select,
+      button,
+      textarea {
+        width: 100%;
+        margin: 6px 0;
+        background: #1b1e27;
+        color: #e8e9ee;
+        border: 1px solid #2b303d;
+        border-radius: 6px;
+        padding: 6px;
+      }
+      textarea {
+        height: 220px;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+      }
+      label {
+        display: block;
+        margin-top: 8px;
+        color: #9aa0b8;
+      }
+      input[type='range'] {
+        width: 100%;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 8px;
+      }
+      .hint {
+        color: #9aa0b8;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <h1>Doll Rig Clip Editor</h1>
+      <p class="hint">
+        ASSET_PIPELINE §6.3'ün aracı: kliği seç, zamanı sür, JSON'u kopyala. Üretim build'ine girmez;
+        <code>pnpm rig:editor</code> ile açılır.
+      </p>
+      <label
+        >Clip
+        <select id="clip"></select
+      ></label>
+      <label
+        >Time <input id="time" type="range" min="0" max="1" step="0.001" value="0" />
+        <span id="timeLabel">0 ms</span></label
+      >
+      <label><input id="mirror" type="checkbox" /> mirror (sw/nw)</label>
+      <label><input id="playing" type="checkbox" checked /> play</label>
+      <label>Clip JSON (düzenle → Apply)</label>
+      <textarea id="json" spellcheck="false"></textarea>
+      <button id="apply">Apply JSON to preview</button>
+      <button id="copy">Copy clip JSON</button>
+    </div>
+    <canvas id="view"></canvas>
+    <script type="module" src="./editor.ts"></script>
+  </body>
+</html>

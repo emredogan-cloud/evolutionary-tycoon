@@ -124,25 +124,54 @@ describe('check 2 — alpha coverage', () => {
   });
 });
 
-describe('check 3 — palette compliance', () => {
-  it('fails on a colour that is nowhere near the palette', async () => {
+describe('check 3 — palette affinity', () => {
+  it('fails art that is no closer to the palette than random colour would be', async () => {
     const result = await check('prop_table_offpalette@2x.png', { offPalette: true });
-    expect(finding(result, 'palette-compliance').ok).toBe(false);
-    expect(finding(result, 'palette-compliance').detail).toMatch(/furthest pixel is/);
+    expect(finding(result, 'palette-affinity').ok).toBe(false);
+    expect(finding(result, 'palette-affinity').detail).toMatch(/no closer to the palette/);
   });
 
-  it('reports the measured percentage either way', async () => {
+  it('passes art drawn from the palette, and says how far it sits', async () => {
     const result = await check(TABLE);
-    expect(finding(result, 'palette-compliance').detail).toMatch(/100\.00% of \d+ opaque pixels/);
+    const detail = finding(result, 'palette-affinity');
+    expect(detail.ok).toBe(true);
+    expect(detail.detail).toMatch(/mean distance 0\.0 over \d+ interior pixels/);
+  });
+
+  /*
+   * The reason the check exists at all — see ADR-013. Continuous-tone art shades
+   * *between* swatches, so it is nowhere near a 92%-within-8 conformance bar and
+   * is still unmistakably from this palette. A check that cannot tell those two
+   * cases apart is the one this replaced.
+   */
+  it('passes art that shades between swatches rather than snapping to them', async () => {
+    const result = await check('prop_table_shaded@2x.png', { blend: 0.5 });
+    expect(finding(result, 'palette-affinity').ok).toBe(true);
+  });
+
+  it('samples below full opacity when nothing in the asset reaches it', async () => {
+    const result = await check('fx_steam_soft@2x.png', { maxAlpha: 200, canvasWidth: 64, canvasHeight: 64 });
+    expect(finding(result, 'palette-affinity').detail).toMatch(/sampled at alpha >= /);
   });
 });
 
 describe('check 4 — reference height', () => {
-  it('fails a table that is the wrong height', async () => {
-    // 1.2 x 1.2 x 0.75 m projects to 125px +/-15%, so 60px is nowhere near it.
-    const result = await check('prop_table_tall@2x.png', { canvasHeight: 64 });
+  /*
+   * A ceiling, not a band — ADR-013 §4. `assets:import` fits a sprite to its
+   * projected WIDTH because the footprint is what parks and sorts, so a sprite
+   * shorter than its box is a shallower camera and a sprite taller than its box
+   * overflows the ground it stands on. Only the second one can go wrong.
+   */
+  it('fails a table drawn taller than its own footprint box', async () => {
+    // 1.2 x 1.2 x 0.75 m projects to 125px, so the ceiling is 144px.
+    const result = await check('prop_table_tall@2x.png', { canvasHeight: 300 });
     expect(finding(result, 'reference-height').ok).toBe(false);
-    expect(finding(result, 'reference-height').detail).toMatch(/outside 106-144px/);
+    expect(finding(result, 'reference-height').detail).toMatch(/exceeds the 125px projected box/);
+  });
+
+  it('accepts a table drawn shorter than its box, which is a lower camera', async () => {
+    const result = await check('prop_table_short@2x.png', { canvasHeight: 64 });
+    expect(finding(result, 'reference-height').ok).toBe(true);
   });
 
   it('refuses a subject nobody has declared dimensions for', async () => {
@@ -164,7 +193,26 @@ describe('check 4 — reference height', () => {
 
   it('checks an icon against its declared canvas rather than a projection', async () => {
     const result = await check('ui_icon_cash@2x.png', { canvasWidth: 128, canvasHeight: 128, margin: 0 });
-    expect(finding(result, 'reference-height').detail).toMatch(/matches the declared canvas/);
+    expect(finding(result, 'reference-height').ok).toBe(true);
+    expect(finding(result, 'reference-height').detail).toMatch(/canvas matches the declared size/);
+  });
+
+  /*
+   * The canvas, not the ink — ADR-013 §2. §2 declares "UI ikon, 128²", which is
+   * a canvas size; measured against the alpha bounding box it demanded that
+   * every glyph reach all four edges, and failed a close cross at 128x58 and a
+   * coin at 128x127. Keeping the subject off the edges is `alpha-coverage`'s
+   * job, and it still has it.
+   */
+  it('accepts an icon whose glyph does not reach all four edges', async () => {
+    const result = await check('ui_icon_close@2x.png', { canvasWidth: 128, canvasHeight: 128, margin: 12 });
+    expect(finding(result, 'reference-height').ok).toBe(true);
+  });
+
+  it('still fails an icon drawn on the wrong canvas', async () => {
+    const result = await check('ui_icon_coin@2x.png', { canvasWidth: 96, canvasHeight: 96, margin: 0 });
+    expect(finding(result, 'reference-height').ok).toBe(false);
+    expect(finding(result, 'reference-height').detail).toMatch(/96x96 canvas, declared is 128x128/);
   });
 });
 
@@ -311,13 +359,21 @@ describe('set-level checks', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('checks the pair against the projected height, less the shared footprint', async () => {
+  /*
+   * The halves are **complementary**, so the pair's height is the plain sum —
+   * ADR-013 §.. The prompt asks for an object "cut cleanly at the split line so
+   * it stacks onto the lower half", and the delivered art does exactly that: a
+   * trunk and a canopy, neither carrying the other's ground. Subtracting a
+   * shared diamond that is not there made every tree 37.5% too tall, which is
+   * what the first browser capture showed.
+   */
+  it('checks the pair against the projected height, as the plain sum', async () => {
     await writeFixture(setDir, 'struct_sign_large_upper@2x.png', { ...base, ...SIGN });
     const result = await validateDirectory(setDir);
     const heights = result.setFindings.map((entry) => entry.detail).join(' ');
-    // Two trimmed halves of 139px sum to 278; the sign's own diamond is 38px, so
-    // the object measures 240 against a 243px expectation.
-    expect(heights).toMatch(/halves total 240px \(278 less one shared footprint\)/);
+    // Two trimmed halves of 139px sum to 278, against a 243px expectation with a
+    // 15% ceiling of 279 — inside it, and inside it for the right reason.
+    expect(heights).toMatch(/halves total 278px/);
     expect(result.setFindings.every((entry) => entry.ok)).toBe(true);
   });
 

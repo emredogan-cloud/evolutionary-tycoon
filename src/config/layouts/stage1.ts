@@ -95,6 +95,16 @@ export interface StageLayout {
   /** Index 0 is at the counter; a customer joins at the highest free index. */
   readonly queue: readonly QueueSlot[];
   /**
+   * Where somebody stands after ordering, while their food is made.
+   *
+   * A separate list from the queue, because they are a separate thing: the queue
+   * is people waiting for *attention* and this is people waiting for *food*, and
+   * they must not be in each other's way. Without it, a customer who ordered
+   * simply stopped where they stood — on the queue — and the next person walked
+   * into them. Measured before it existed: closest approach 7.9 cm.
+   */
+  readonly waitingArea: readonly QueueSlot[];
+  /**
    * Queue slots beyond this count as spilled onto the road.
    *
    * Below `queue.length` on purpose: the last authored slots exist so that an
@@ -106,6 +116,61 @@ export interface StageLayout {
   readonly statics: readonly StaticObject[];
   /** Extra world metres of margin the camera may show beyond the lot. */
   readonly cameraMarginMetres: number;
+
+  /**
+   * Seating — Stage 3 onward. Empty until a building exists to put it in.
+   *
+   * A table is where a customer *eats*, which is what turns delivery from an
+   * instantaneous handover into a walk somebody has to make. Three features
+   * built in Phases 8, 9 and 10 have been dormant waiting for exactly this:
+   * the pass plate indicator, the cooler upgrade and the waiter role.
+   */
+  readonly tables: readonly TableSlot[];
+
+  /**
+   * The drive-thru channel — Stage 4 only, `null` before it exists.
+   *
+   * Order post, lane and window, in the order a car meets them. Patience here is
+   * far lower than seated (GAME_EXECUTION_ROADMAP Phase 11: "the customer is in a
+   * car with an engine running"), and that asymmetry is the source of the game's
+   * central strategic tension.
+   */
+  readonly driveThru: DriveThruLayout | null;
+
+  /**
+   * How many customers can be served at the counter simultaneously.
+   *
+   * One until Stage 4's second register. It is the counter's parallelism, not
+   * the kitchen's: two registers means two people ordering at once, which is a
+   * different bottleneck from two stations cooking at once.
+   */
+  readonly registers: number;
+}
+
+/** A place to sit and eat. */
+interface TableSlot {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  /** How many customers it seats. Groups arrive from vans; see ARCHETYPE_SPECS. */
+  readonly seats: number;
+}
+
+interface DriveThruLayout {
+  /** Where a car stops to order. */
+  readonly orderPost: Point;
+  /** Where it collects, after the post. */
+  readonly window: Point;
+  /**
+   * Stopping places along the lane, from the entrance to the post.
+   *
+   * Index 0 is at the post. A car joins at the highest free index, exactly like
+   * the counter queue — so the lane backing up onto the road is visible, and
+   * ECONOMY_DESIGN §7's spillover penalty applies to it too.
+   */
+  readonly lane: readonly Point[];
+  /** Cars beyond this are spilling onto the road. */
+  readonly laneCapacity: number;
 }
 
 const LANE_EAST_Y = 3.5;
@@ -121,28 +186,50 @@ export const STAGE1_LAYOUT: StageLayout = {
     // Straight in Stage 1. It reads as a diagonal on screen because the
     // projection turns the world X axis into a down-right diagonal — the road
     // does not need to be diagonal in world space to look like one.
+    /*
+     * The lanes overshoot the lot by ten metres each side, not six. The extra
+     * four exist for the decision point below: it sits 20 m up-lane of the
+     * counter, and a lane that starts 18 m out would clamp it to the spawn edge
+     * — a car "deciding" the instant it exists. Off-lot road costs nothing
+     * visible (the camera is bounded to the lot plus margin) and moves the
+     * spawn pop-in further off screen at minimum zoom.
+     */
     lanes: [
       {
         id: 'east',
         heading: 'east',
         points: [
-          { x: -6, y: LANE_EAST_Y },
-          { x: 30, y: LANE_EAST_Y },
+          { x: -10, y: LANE_EAST_Y },
+          { x: 34, y: LANE_EAST_Y },
         ],
       },
       {
         id: 'west',
         heading: 'west',
         points: [
-          { x: 30, y: LANE_WEST_Y },
-          { x: -6, y: LANE_WEST_Y },
+          { x: 34, y: LANE_WEST_Y },
+          { x: -10, y: LANE_WEST_Y },
         ],
       },
     ],
     widthMetres: 7,
-    // Far enough out that a driver has time to decide and brake, which is what
-    // makes the conversion feel like a choice rather than a teleport.
-    decisionPointMetres: 14,
+    /*
+     * Far enough out that a driver has time to decide and brake, which is what
+     * makes the conversion feel like a choice rather than a teleport.
+     *
+     * Twenty metres, not the 14 first authored, and the number is arithmetic
+     * rather than taste. The entry is at 4 m, so the braking window is
+     * `decision - entry`; the fastest car on this road is a sedan at
+     * 13.9 x 1.12 = 15.6 m/s, and `v² = u² + 2as` at the model's 8 m/s² maximum
+     * braking over a 10 m window leaves it doing **9.1 m/s at the turn** — the
+     * approach speed is unreachable, not merely missed. A 16 m window brings the
+     * required deceleration to 7.4 m/s², inside the model's own limit. The cost
+     * this trades against is the one the roadside-marker removal documented —
+     * deciding earlier reserves a parking bay earlier — and six metres at road
+     * speed holds a bay for ~0.5 s more per conversion, which the balance gate
+     * confirms is noise.
+     */
+    decisionPointMetres: 20,
   },
 
   pullIn: { x: 12, y: 8.5 },
@@ -204,14 +291,78 @@ export const STAGE1_LAYOUT: StageLayout = {
   ],
   queueCapacity: 4,
 
+  /*
+   * All on **one** side of the counter, and that is the point rather than a
+   * shortcut. Spots on both sides were tried first: two people assigned to
+   * opposite sides walk straight across the front of the counter, meet in the
+   * middle, and the non-overlap correction cannot separate them because the only
+   * way apart is into the counter itself. Measured at 5.4 cm closest approach.
+   *
+   * Two rows, 1.8 m apart, with the gap between them used as the approach. The
+   * rows started 0.9 m apart and that was too close: somebody assigned a spot at
+   * the far end had to walk *along* an occupied row to reach it, passing every
+   * standing person at half the spacing — 15 cm closest approach. The aisle
+   * keeps a passer-by 0.9 m from both rows, which is the same distance the rows
+   * themselves are spaced at.
+   *
+   * Eight spots so a busy stand has somewhere to put everyone. Clear of the
+   * queue, which runs down the x = 12 corridor towards the road.
+   *
+   * The rows start at x = 15.5, and that number was moved once, by measurement.
+   * They were authored at 14.6 against the placeholder counter, whose blocked
+   * edge sat at x = 12.6 — two metres of approach corridor. The real counter is
+   * 3 m wide and its end is at x = 13.5, which quietly cut the corridor to
+   * 1.1 m: anyone heading for a far spot passed the first standing person at
+   * 8 cm, the exact "walk along an occupied row" failure the paragraph above
+   * records fixing the first time. Shifting the rows 0.9 m east restores the
+   * corridor the rows were designed around.
+   */
+  waitingArea: [
+    { x: 15.5, y: 10.0 },
+    { x: 16.4, y: 10.0 },
+    { x: 17.3, y: 10.0 },
+    { x: 18.2, y: 10.0 },
+    { x: 15.5, y: 11.8 },
+    { x: 16.4, y: 11.8 },
+    { x: 17.3, y: 11.8 },
+    { x: 18.2, y: 11.8 },
+  ],
+
+  /*
+   * The stand, and just enough roadside to say where it is.
+   *
+   * Stage 1 is a lemonade stand on a verge and it has to read as one — sparse on
+   * purpose, because everything added here is something Stage 2 cannot add to
+   * make the place feel like it grew. The scale-reference figure is gone: it was
+   * a ruler for judging placeholder sizes and it has no business on a production
+   * screen (PLACEHOLDER_REGISTER).
+   */
   statics: [
-    { objectId: 'ph-prop-short', x: 12, y: 11, z: 0 }, // the counter itself
-    { objectId: 'ph-prop-tall', x: 9.5, y: 11.5, z: 0 }, // sign post
-    { objectId: 'ph-prop-tall', x: 20, y: 14, z: 0 }, // tree
-    { objectId: 'ph-prop-tall', x: 4, y: 15, z: 0 }, // tree
-    { objectId: 'ph-prop-short', x: 16, y: 13, z: 0 }, // bin
-    { objectId: 'ph-scale-reference', x: 14, y: 11, z: 0 }, // 2 m scale figure
+    { objectId: 'counter-lv1', x: 12, y: 11, z: 0 }, // the stand itself
+    { objectId: 'awning', x: 12, y: 10.2, z: 0 }, // over the counter, behind it in depth
+    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the hand-painted sign by the road
+    { objectId: 'bin', x: 16, y: 13, z: 0 },
+    { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
+    { objectId: 'tree-broadleaf-02', x: 4, y: 15, z: 0 },
+    { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
+    { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
+    { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 }, // roadside, north-west corner
   ],
 
   cameraMarginMetres: 4,
+
+  // Nobody sits down at a roadside stand; they eat standing in the waiting area.
+  tables: [],
+  driveThru: null,
+  registers: 1,
 };
+
+/**
+ * The road, shared by every stage.
+ *
+ * Evolution happens **on the same plot** (GAME_DESIGN_DOCUMENT §7) — the camera
+ * does not move and the road does not change. Exporting it rather than copying
+ * it into three more files is what keeps that true: a lane edited in Stage 4
+ * that was not edited in Stage 1 would silently teleport every car mid-evolution.
+ */
+export const SHARED_ROAD = STAGE1_LAYOUT.road;

@@ -1,3 +1,9 @@
+import {
+  STATE_DT_APPROACHING,
+  STATE_DT_COLLECTING,
+  STATE_DT_ORDERING,
+  STATE_DT_QUEUEING,
+} from './driveThruFsm';
 import { PATIENCE_SECONDS } from '@config/customer';
 
 /**
@@ -15,16 +21,17 @@ import { PATIENCE_SECONDS } from '@config/customer';
  *
  * ## Scope
  *
- * Phase 6 covers arrival through to waiting at the counter. `ORDERING` onward
- * belongs to Phase 8 and the drive-thru branch to Phase 11, so both are absent
- * rather than stubbed — a state with no implementation behind it would satisfy
- * the reachability test while doing nothing, which is worse than not having it.
+ * Phase 6 delivered arrival through to waiting at the counter, where every
+ * customer eventually abandoned because nothing served food. Phase 8 added
+ * `ORDERING` through `PAYING`, so the queue now has a way out that ends in
+ * money. The drive-thru branch belongs to Phase 11 and is absent rather than
+ * stubbed — a state with no implementation behind it would satisfy the
+ * reachability test while doing nothing, which is worse than not having it.
  *
- * The consequence is that in Phase 6 **every customer eventually abandons**:
- * nothing serves food, so the counter queue drains only through patience. That
- * is the specified Phase 6 end state (GAME_EXECUTION_ROADMAP: "vehicles stop,
- * park, wait, get bored and leave"), not an accident, and the abandonment path
- * is a real path that Phase 8 will simply stop being the only one.
+ * Abandonment did not become a fallback; it stayed a real path. Every waiting
+ * state can still end in `ABANDONING`, and `WAITING_FOR_FOOD` is the expensive
+ * one: the kitchen has already spent time and ingredients on food nobody will
+ * pay for.
  */
 
 export const CUSTOMER_STATES = [
@@ -40,6 +47,14 @@ export const CUSTOMER_STATES = [
   'WALKING_TO_DOOR',
   /** On foot, standing in the queue. Patience runs here. */
   'QUEUEING_AT_COUNTER',
+  /** At the front of the queue, saying what they want. A beat, not a wait. */
+  'ORDERING',
+  /** Order placed, standing aside. Patience runs here too, and harder. */
+  'WAITING_FOR_FOOD',
+  /** Food in hand. Nothing can go wrong from here except the food itself. */
+  'EATING',
+  /** Paying. Where the money and the satisfaction actually happen. */
+  'PAYING',
   /** No bay was free. Still in the car, and about to leave unhappy. */
   'NO_SPACE',
   /** Patience ran out. Distinguished from NO_SPACE so the reasons stay separate. */
@@ -54,6 +69,19 @@ export const CUSTOMER_STATES = [
   'REJOINING_ROAD',
   /** Terminal. The record is released on the tick it reaches this. */
   'GONE',
+  /*
+   * The drive-thru branch — Phase 11, Stage 4. Appended rather than inserted:
+   * the index is hashed into the world digest and written into every save, so
+   * this array is append-only exactly like the menu and the archetypes.
+   */
+  /** In the car, driving from the road to the back of the lane. */
+  'DT_APPROACHING',
+  /** Stopped at the post, placing an order through a window. */
+  'DT_ORDERING',
+  /** In the lane, creeping toward the window. Patience runs here, and fast. */
+  'DT_QUEUEING',
+  /** At the window, collecting and paying. */
+  'DT_COLLECTING',
 ] as const;
 
 export type CustomerStateName = (typeof CUSTOMER_STATES)[number];
@@ -64,13 +92,17 @@ export const STATE_PARKING = 2;
 export const STATE_LEAVING_VEHICLE = 3;
 export const STATE_WALKING_TO_DOOR = 4;
 export const STATE_QUEUEING_AT_COUNTER = 5;
-export const STATE_NO_SPACE = 6;
-export const STATE_ABANDONING = 7;
-export const STATE_WALKING_TO_CAR = 8;
-export const STATE_LEAVING_ANGRY = 9;
-export const STATE_EXITING = 10;
-export const STATE_REJOINING_ROAD = 11;
-export const STATE_GONE = 12;
+export const STATE_ORDERING = 6;
+export const STATE_WAITING_FOR_FOOD = 7;
+export const STATE_EATING = 8;
+export const STATE_PAYING = 9;
+export const STATE_NO_SPACE = 10;
+export const STATE_ABANDONING = 11;
+export const STATE_WALKING_TO_CAR = 12;
+export const STATE_LEAVING_ANGRY = 13;
+export const STATE_EXITING = 14;
+export const STATE_REJOINING_ROAD = 15;
+export const STATE_GONE = 16;
 
 export interface CustomerStateSpec {
   readonly name: CustomerStateName;
@@ -108,7 +140,17 @@ export interface CustomerStateSpec {
  * index is what `CustomerRecord.state` holds and what the world hash digests.
  */
 export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
-  { name: 'ENTERING', to: [STATE_SEEKING_PARKING], patienceSeconds: null, alwaysInVehicle: true },
+  {
+    /*
+     * Two ways in from Phase 11: the car park, or the drive-thru lane. The
+     * channel was chosen at conversion, so this is a branch the customer already
+     * decided rather than one they take on arrival.
+     */
+    name: 'ENTERING',
+    to: [STATE_SEEKING_PARKING, STATE_DT_APPROACHING],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
   {
     name: 'SEEKING_PARKING',
     to: [STATE_PARKING, STATE_NO_SPACE, STATE_ABANDONING],
@@ -120,10 +162,35 @@ export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
   { name: 'WALKING_TO_DOOR', to: [STATE_QUEUEING_AT_COUNTER], patienceSeconds: null, alwaysInVehicle: false },
   {
     name: 'QUEUEING_AT_COUNTER',
-    to: [STATE_ABANDONING],
+    to: [STATE_ORDERING, STATE_ABANDONING],
     patienceSeconds: PATIENCE_SECONDS.queueingAtCounter,
     alwaysInVehicle: false,
   },
+  /*
+   * Ordering is not a wait. It takes a moment and it cannot fail — the customer
+   * is at the counter and has decided. Giving it patience would mean somebody
+   * could give up *while telling you what they want*, which reads as a bug
+   * however carefully it is modelled.
+   */
+  { name: 'ORDERING', to: [STATE_WAITING_FOR_FOOD], patienceSeconds: null, alwaysInVehicle: false },
+  {
+    /*
+     * The wait that decides the phase. Longer patience than queueing, because
+     * having ordered is a sunk cost — and abandoning here is the expensive kind:
+     * the kitchen has already spent time and ingredients on food nobody will
+     * pay for.
+     */
+    name: 'WAITING_FOR_FOOD',
+    to: [STATE_EATING, STATE_ABANDONING],
+    patienceSeconds: PATIENCE_SECONDS.waitingForFood,
+    alwaysInVehicle: false,
+  },
+  /*
+   * Eating cannot be abandoned. They have the food; the only thing left to
+   * judge is the food itself, and that judgement happens at payment.
+   */
+  { name: 'EATING', to: [STATE_PAYING], patienceSeconds: null, alwaysInVehicle: false },
+  { name: 'PAYING', to: [STATE_WALKING_TO_CAR], patienceSeconds: null, alwaysInVehicle: false },
   { name: 'NO_SPACE', to: [STATE_LEAVING_ANGRY], patienceSeconds: null, alwaysInVehicle: true },
   {
     /*
@@ -137,7 +204,19 @@ export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
     patienceSeconds: null,
     alwaysInVehicle: false,
   },
-  { name: 'WALKING_TO_CAR', to: [STATE_LEAVING_ANGRY], patienceSeconds: null, alwaysInVehicle: false },
+  {
+    /*
+     * Two ways out, and the difference is the whole point of the phase. Somebody
+     * who ate walks to their car and drives off; somebody who gave up passes
+     * through `LEAVING_ANGRY` first, which is the state the player is meant to
+     * notice. Collapsing them would make a served customer and a lost one leave
+     * identically, and the player's only feedback would be the cash figure.
+     */
+    name: 'WALKING_TO_CAR',
+    to: [STATE_LEAVING_ANGRY, STATE_EXITING],
+    patienceSeconds: null,
+    alwaysInVehicle: false,
+  },
   { name: 'LEAVING_ANGRY', to: [STATE_EXITING], patienceSeconds: null, alwaysInVehicle: true },
   { name: 'EXITING', to: [STATE_REJOINING_ROAD], patienceSeconds: null, alwaysInVehicle: true },
   /*
@@ -151,6 +230,47 @@ export const CUSTOMER_STATE_SPECS: readonly CustomerStateSpec[] = [
    */
   { name: 'REJOINING_ROAD', to: [STATE_GONE], patienceSeconds: null, alwaysInVehicle: true },
   { name: 'GONE', to: [], patienceSeconds: null, alwaysInVehicle: true },
+  /*
+   * The drive-thru. Every one of these is `alwaysInVehicle` — the whole point
+   * of the channel is that nobody gets out, which is why it converts traffic a
+   * car park never would and why the patience is so much shorter.
+   */
+  {
+    name: 'DT_APPROACHING',
+    to: [STATE_DT_ORDERING, STATE_LEAVING_ANGRY],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
+  /*
+   * Ordering at the post cannot fail, exactly as it cannot at the counter: they
+   * have stopped and decided. Giving it patience would let somebody drive off
+   * mid-sentence.
+   */
+  {
+    name: 'DT_ORDERING',
+    to: [STATE_DT_QUEUEING],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
+  {
+    /*
+     * The wait that makes the drive-thru a decision rather than a strict
+     * upgrade. Patience here is `DRIVE_THRU_PATIENCE_SCALE` of the counter's —
+     * an engine is running and the driver can see how far they are from the
+     * window. A slow kitchen loses these customers first, and loses the ones
+     * behind them at the same time.
+     */
+    name: 'DT_QUEUEING',
+    to: [STATE_DT_COLLECTING, STATE_ABANDONING],
+    patienceSeconds: PATIENCE_SECONDS.waitingForFood,
+    alwaysInVehicle: true,
+  },
+  {
+    name: 'DT_COLLECTING',
+    to: [STATE_PAYING, STATE_EXITING],
+    patienceSeconds: null,
+    alwaysInVehicle: true,
+  },
 ];
 
 export function customerStateSpec(state: number): CustomerStateSpec {

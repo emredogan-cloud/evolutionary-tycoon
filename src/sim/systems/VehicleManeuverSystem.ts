@@ -1,3 +1,11 @@
+import { DRIVE_THRU_ADVANCE_MPS } from '@config/driveThru';
+import { layoutForStage } from '@config/layouts';
+import {
+  CHANNEL_COUNTER,
+  CHANNEL_DRIVE_THRU,
+  STATE_DT_APPROACHING,
+  STATE_DT_ORDERING,
+} from '../ai/fsm/driveThruFsm';
 import { ARCHETYPE_SPECS } from '@config/archetypes';
 import {
   MANEUVER_SPEED_METRES_PER_SECOND,
@@ -18,9 +26,13 @@ import {
 } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
+import { recordOfflineTurnaway } from './offlineMeter';
 import { at } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
+import { LEFT_TURN } from '@config/traffic';
+import { DECISION_YES } from '../stores/VehicleStore';
 import type { ManeuverTable } from '../nav/maneuvers';
+import { maneuverTableFor } from '../nav/maneuverTables';
 import type { LaneSample } from '../nav/spline';
 
 /**
@@ -60,20 +72,49 @@ export const VEHICLE_ON_ROAD = 0;
 export const VEHICLE_ENTERING = 1;
 export const VEHICLE_PARKED = 2;
 export const VEHICLE_EXITING = 3;
+/**
+ * Creeping forward one drive-thru slot — Phase 11.
+ *
+ * Its own state because it is the one movement in the game that is neither on a
+ * lane nor on an entry/exit curve: a short straight path between two lane slots,
+ * run at a crawl. Reusing `VEHICLE_ENTERING` would have meant `positionOf`
+ * sampling the entry curve, which starts at the road — so a car advancing one
+ * metre would have snapped back to the kerb first.
+ */
+export const VEHICLE_DT_ADVANCING = 4;
+
+/** How far upstream of the mouth a holder still reads as "at the mouth". */
+const HELD_TURNER_SLACK_METRES = 1.5;
+/** Below this, a holder counts as standing. Matches the motion pin's floor. */
+const HELD_TURNER_SPEED_EPSILON = 0.5;
 
 export class VehicleManeuverSystem implements SimSystem {
   readonly name = 'VehicleManeuverSystem' as const;
 
   /** Reused by every sample; the manoeuvre path never allocates. */
   private readonly sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  /** A second scratch, so `nearestOnExit` cannot clobber the one it is comparing against. */
+  private readonly exitScratch: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
 
   constructor(
     private readonly lanes: LaneGraph,
-    private readonly maneuvers: ManeuverTable,
+    private maneuvers: ManeuverTable,
     private readonly layout: StageLayout,
   ) {}
 
+  /**
+   * The stage the current manoeuvre table was built for.
+   *
+   * Rebuilt on evolution, exactly like the flow-field cache — and for the same
+   * reason, discovered the same way. A table built for Stage 1 answers "bay 9"
+   * with a `RangeError` the moment Stage 4's drive-thru assigns a lane slot,
+   * and `tests/unit/sim/traffic/limits.test.ts` — which sets the stage directly
+   * — caught it within minutes of the drive-thru landing.
+   */
+  private tableStage = 1;
+
   run(world: World, deltaMs: number): void {
+    this.syncStage(world);
     const seconds = deltaMs / 1000;
     if (seconds <= 0) return;
 
@@ -86,13 +127,16 @@ export class VehicleManeuverSystem implements SimSystem {
 
       switch (at(vehicles.state, slot)) {
         case VEHICLE_ON_ROAD:
-          this.considerHandover(world, slot);
+          this.considerHandover(world, slot, deltaMs);
           break;
         case VEHICLE_ENTERING:
           this.advanceEntry(world, slot, seconds);
           break;
         case VEHICLE_EXITING:
           this.advanceExit(world, slot, seconds);
+          break;
+        case VEHICLE_DT_ADVANCING:
+          this.advanceLane(world, slot, seconds);
           break;
         default:
           // Parked: nothing moves until the customer's machine says so.
@@ -110,7 +154,15 @@ export class VehicleManeuverSystem implements SimSystem {
    * Deciding at the entrance means the answer reflects the car park as it
    * actually is when the driver looks at it.
    */
-  private considerHandover(world: World, slot: number): void {
+  /** Rebuild the manoeuvre table when the stage changes. */
+  private syncStage(world: World): void {
+    const stage = world.progression.stage;
+    if (stage === this.tableStage) return;
+    this.tableStage = stage;
+    this.maneuvers = maneuverTableFor(stage);
+  }
+
+  private considerHandover(world: World, slot: number, deltaMs: number): void {
     const vehicles = world.vehicles;
     const customerSlot = at(vehicles.customerSlot, slot);
     if (customerSlot < 0) return;
@@ -121,7 +173,51 @@ export class VehicleManeuverSystem implements SimSystem {
     const lane = this.lanes.lane(laneIndex);
     if (at(vehicles.laneS, slot) < lane.entryS) return;
 
+    /*
+     * The left turn — Phase 15. A far-lane pull-in crosses the near lane, and
+     * a driver does not cross through traffic: they hold at the mouth until a
+     * gap is acceptable. The comfort gap shrinks with the wait toward a floor
+     * (same shape as the exit-merge), so the turn always eventually happens —
+     * the jam GDD §9.1 wants both forms and clears. `waitMs` is reused from
+     * the exit-merge: a car is never waiting for both at once.
+     */
+    if (lane.crossesOnEntry && world.progression.stage >= LEFT_TURN.minStage) {
+      if (!this.oncomingClear(world, at(vehicles.waitMs, slot))) {
+        vehicles.waitMs[slot] = at(vehicles.waitMs, slot) + deltaMs;
+        return;
+      }
+      vehicles.waitMs[slot] = 0;
+    }
+
     const customer = world.customers.at(customerSlot);
+
+    /*
+     * The drive-thru is chosen at conversion, so by the time a car turns in it
+     * already knows which channel it wants. A lane slot is assigned exactly as a
+     * parking bay is — same manoeuvre, same reservation, same "there was nowhere
+     * to stop" fallback — because a lane slot *is* a bay as far as the
+     * manoeuvre table is concerned (see `ManeuverTable.driveThruBay`).
+     */
+    if (customer.channel === CHANNEL_DRIVE_THRU) {
+      const laneSlot = this.freeLaneSlot(world);
+      if (laneSlot >= 0) {
+        vehicles.state[slot] = VEHICLE_ENTERING;
+        vehicles.maneuverS[slot] = 0;
+        vehicles.parkingSlot[slot] = this.maneuvers.driveThruBay(laneSlot);
+        customer.state = STATE_DT_APPROACHING;
+        customer.laneSlot = laneSlot;
+        customer.parkingSlot = -1;
+        return;
+      }
+      /*
+       * The lane is full. They fall through to the counter rather than being
+       * turned away: a driver who finds the drive-thru backed up parks instead,
+       * and modelling that as a lost customer would overstate the cost of a
+       * busy lane. It is still a cost — they now have to find a bay.
+       */
+      customer.channel = CHANNEL_COUNTER;
+    }
+
     const bay = this.nearestFreeBay(world, at(vehicles.laneS, slot), laneIndex);
 
     vehicles.state[slot] = VEHICLE_ENTERING;
@@ -149,6 +245,7 @@ export class VehicleManeuverSystem implements SimSystem {
        */
       customer.reason = REASON_NO_PARKING;
       world.stats.turnedAwayNoParking++;
+      recordOfflineTurnaway(world);
       world.stats.failureReasons[REASON_NO_PARKING] =
         (world.stats.failureReasons[REASON_NO_PARKING] ?? 0) + 1;
       return;
@@ -186,7 +283,14 @@ export class VehicleManeuverSystem implements SimSystem {
       vehicles.state[slot] = VEHICLE_PARKED;
       world.eventQueue.emitVehicleParked(at(vehicles.entityId, slot), bay);
       if (customerSlot >= 0 && world.customers.isActive(customerSlot)) {
-        world.customers.at(customerSlot).state = STATE_LEAVING_VEHICLE;
+        const arrived = world.customers.at(customerSlot);
+        /*
+         * A drive-thru customer never gets out. They stop at the post and start
+         * ordering through the window; `LEAVING_VEHICLE` would put them on foot
+         * in a lane meant for cars.
+         */
+        arrived.state = arrived.channel === CHANNEL_DRIVE_THRU ? STATE_DT_ORDERING : STATE_LEAVING_VEHICLE;
+        arrived.timerMs = 0;
       }
     } else {
       vehicles.maneuverS[slot] = advanced;
@@ -203,6 +307,58 @@ export class VehicleManeuverSystem implements SimSystem {
      * appear to jump from the road to the bay.
      */
     this.carryCustomer(world, slot, maneuver.path);
+  }
+
+  /**
+   * Creep one lane slot forward.
+   *
+   * `maneuverS` runs along a straight two-point path, so the movement is
+   * integrated exactly like every other movement in the game — no branch here
+   * assigns a position. When it arrives the car is parked again, in its new
+   * slot, and the manoeuvre index is updated so `positionOf` samples the right
+   * curve from then on.
+   */
+  private advanceLane(world: World, slot: number, seconds: number): void {
+    const vehicles = world.vehicles;
+    const customerSlot = at(vehicles.customerSlot, slot);
+    if (customerSlot < 0 || !world.customers.isActive(customerSlot)) {
+      vehicles.state[slot] = VEHICLE_PARKED;
+      return;
+    }
+
+    const customer = world.customers.at(customerSlot);
+    const from = customer.laneSlot + 1;
+    const path = this.maneuvers.advanceFrom(from);
+    if (path === null) {
+      vehicles.state[slot] = VEHICLE_PARKED;
+      return;
+    }
+
+    const advanced = at(vehicles.maneuverS, slot) + DRIVE_THRU_ADVANCE_MPS * seconds;
+    if (advanced >= path.length) {
+      vehicles.speed[slot] = 0;
+      vehicles.state[slot] = VEHICLE_PARKED;
+      const bay = this.maneuvers.driveThruBay(customer.laneSlot);
+      vehicles.parkingSlot[slot] = bay;
+      /*
+       * **Parked at the *end* of the new slot's entry curve, not at zero.**
+       *
+       * `positionOf` samples a parked car along its entry path, and a parked car
+       * sits at the end of it. Leaving `maneuverS` at zero projected the car
+       * back to the start of that curve — out on the road — an **8.5 m
+       * teleport** every time a car crept forward one slot. Invisible in the
+       * simulation, glaring on screen, and caught by the no-teleport test
+       * measuring the *vehicle* rather than the customer record.
+       */
+      vehicles.maneuverS[slot] = this.maneuvers.setFor(at(vehicles.lane, slot), bay).entry.length;
+      return;
+    }
+
+    vehicles.maneuverS[slot] = advanced;
+    vehicles.speed[slot] = DRIVE_THRU_ADVANCE_MPS;
+    path.sample(advanced, this.sample);
+    customer.x = this.sample.x;
+    customer.y = this.sample.y;
   }
 
   private advanceExit(world: World, slot: number, seconds: number): void {
@@ -298,13 +454,95 @@ export class VehicleManeuverSystem implements SimSystem {
   /**
    * Start the exit manoeuvre from wherever the vehicle currently is.
    *
-   * Used both by a customer who has given up and by one who was never let in.
+   * Used both by a customer who has given up and by one who was never let in —
+   * and, since Phase 11, by a car leaving the **drive-thru lane**, which is what
+   * made the naive version wrong.
+   *
+   * ## Why it does not simply set `maneuverS` to zero
+   *
+   * The exit path starts at the *bay*. A car that is in a bay is therefore at
+   * arc length zero and the old one-liner was right for it. A car in the
+   * drive-thru window is nowhere near that bay, so starting it at zero moved it
+   * across the lot between two frames: measured, an **eleven-metre jump in a
+   * fifty-millisecond tick**, caught by `driveThru.test.ts`'s no-teleport check
+   * once Phase 12's balancing put enough cars through the lane to hit it.
+   *
+   * So the car's current position is sampled first and the exit is joined at the
+   * nearest point on it. That is continuous for every caller by construction,
+   * rather than for the callers somebody remembered.
    */
   beginExit(world: World, slot: number, bay: number): void {
     const vehicles = world.vehicles;
-    vehicles.parkingSlot[slot] = bay;
+    this.positionOf(world, slot, this.sample);
+    const fromX = this.sample.x;
+    const fromY = this.sample.y;
+
+    /*
+     * A car in the drive-thru keeps its own curve.
+     *
+     * The caller passes the *customer's* parking slot, which for a drive-thru
+     * customer is -1 — they never parked. The **vehicle** knows better: it was
+     * given the lane slot's bay index when it entered (`driveThruBay`), and that
+     * index has a real exit path leading back to the road. Overwriting it with
+     * the customer's -1 routed a car at the window onto the pass-through curve
+     * that starts beside the road, eleven metres away.
+     *
+     * `DriveThruSystem.collect` clears `customer.laneSlot` before this runs, on
+     * purpose — the slot is freed early so the car behind creeps forward on the
+     * same tick — so the customer cannot be asked either. The vehicle can.
+     */
+    const current = at(vehicles.parkingSlot, slot);
+    const resolved = this.maneuvers.laneSlotOf(current) >= 0 ? current : bay;
+
+    vehicles.parkingSlot[slot] = resolved;
     vehicles.state[slot] = VEHICLE_EXITING;
-    vehicles.maneuverS[slot] = 0;
+    vehicles.maneuverS[slot] = this.nearestOnExit(at(vehicles.lane, slot), resolved, fromX, fromY);
+  }
+
+  /**
+   * Arc length along a bay's exit path closest to a world point.
+   *
+   * Coarse scan, then bisection. The coarse pass alone left a **1.3 m step** on
+   * the drive-thru's long exit curve — a scan of thirty-two samples over an
+   * eighty-metre path can only ever land within a metre or so, and a metre in a
+   * fifty-millisecond tick is exactly the teleport this is here to remove.
+   *
+   * Twelve refinement rounds take that under a centimetre, which is well inside
+   * the 5 cm the depth sorter treats as indistinguishable. It runs when a car
+   * departs, not per tick, so the cost is irrelevant next to being right.
+   */
+  private nearestOnExit(laneIndex: number, bay: number, x: number, y: number): number {
+    if (laneIndex >= this.lanes.laneCount) return 0;
+    const path = this.maneuvers.setFor(laneIndex, bay).exit.path;
+
+    const distanceAt = (s: number): number => {
+      path.sample(s, this.exitScratch);
+      return (this.exitScratch.x - x) ** 2 + (this.exitScratch.y - y) ** 2;
+    };
+
+    const steps = 32;
+    let bestS = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i <= steps; i++) {
+      const s = (path.length * i) / steps;
+      const distance = distanceAt(s);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestS = s;
+      }
+    }
+
+    // Bisect the bracket the coarse pass left, which is one step either side.
+    let low = Math.max(0, bestS - path.length / steps);
+    let high = Math.min(path.length, bestS + path.length / steps);
+    for (let round = 0; round < 12; round++) {
+      const third = (high - low) / 3;
+      const left = low + third;
+      const right = high - third;
+      if (distanceAt(left) < distanceAt(right)) high = right;
+      else low = left;
+    }
+    return (low + high) / 2;
   }
 
   /**
@@ -317,6 +555,35 @@ export class VehicleManeuverSystem implements SimSystem {
    * *fixed*, and that is the whole requirement: a tie broken by iteration order
    * would be stable on one engine and not on another.
    */
+  /**
+   * The furthest-back free lane slot, or -1.
+   *
+   * Furthest back rather than nearest the window, because a car joins the *end*
+   * of a queue. Taking the first free slot would let a late arrival appear in
+   * front of cars already waiting, which is the drive-thru equivalent of
+   * teleporting.
+   */
+  private freeLaneSlot(world: World): number {
+    const layout = layoutForStage(world.progression.stage);
+    const driveThru = layout.driveThru;
+    if (driveThru === null) return -1;
+
+    for (let slot = driveThru.lane.length - 1; slot >= 0; slot--) {
+      if (!this.laneSlotTaken(world, slot)) return slot;
+    }
+    return -1;
+  }
+
+  /** Is anybody sitting in this lane slot? */
+  private laneSlotTaken(world: World, laneSlot: number): boolean {
+    const customers = world.customers;
+    for (let slot = 0; slot < customers.scanLimit; slot++) {
+      if (!customers.isActive(slot)) continue;
+      if (customers.at(slot).laneSlot === laneSlot) return true;
+    }
+    return false;
+  }
+
   private nearestFreeBay(world: World, _laneS: number, laneIndex: number): number {
     const lane = this.lanes.lane(laneIndex);
     lane.path.sample(lane.entryS, this.sample);
@@ -379,6 +646,33 @@ export class VehicleManeuverSystem implements SimSystem {
   }
 
   /**
+   * Room to cross the near lane, judged at its own entry mouth.
+   *
+   * The conflict point is the near lane's `entryS`: both pull-ins converge on
+   * the same apron, so the box a crossing car sweeps sits at the near lane's
+   * turn. Oncoming means "upstream of the box within the current gap" —
+   * distance-based like `rejoinClear`, because at these speeds a distance is a
+   * time and one fewer moving part is one fewer way to disagree with the IDM.
+   */
+  private oncomingClear(world: World, waitedMs: number): boolean {
+    const nearIndex = this.lanes.nearEntryLane;
+    const near = this.lanes.lane(nearIndex);
+    const t = Math.min(1, Math.max(0, waitedMs / LEFT_TURN.patienceMs));
+    const required = LEFT_TURN.comfortGapMetres + (LEFT_TURN.minGapMetres - LEFT_TURN.comfortGapMetres) * t;
+
+    const vehicles = world.vehicles;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!vehicles.isActive(slot)) continue;
+      if (at(vehicles.state, slot) !== VEHICLE_ON_ROAD) continue;
+      if (at(vehicles.lane, slot) !== nearIndex) continue;
+      const delta = near.entryS - at(vehicles.laneS, slot);
+      // Approaching within the gap, or still inside the conflict box.
+      if (delta > -LEFT_TURN.conflictBoxMetres && delta < required) return false;
+    }
+    return true;
+  }
+
+  /**
    * Room to merge at `rejoinS`, with `comfort` metres of margin behind.
    *
    * The margin ahead is never negotiable — it is the leader's own length, and
@@ -395,6 +689,26 @@ export class VehicleManeuverSystem implements SimSystem {
       const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
       const length = spec?.lengthMetres ?? 4.5;
       const delta = at(vehicles.laneS, slot) - rejoinS;
+
+      /*
+       * A held left-turner is not oncoming — Phase 15. On a crossing lane the
+       * entry mouth sits a few metres upstream of the merge point, and a car
+       * standing there waiting for its gap is *leaving* the lane: it will
+       * never reach the merger, and the road ahead of it is exactly the space
+       * the merger is entering. Counting it produced a measured 18-minute
+       * merge starvation the first time Stage 4's continuous converts kept a
+       * rolling holder at the mouth. Narrow on purpose: on the road, committed
+       * to the turn, at the mouth, and essentially stopped.
+       */
+      const lane = this.lanes.lane(laneIndex);
+      if (
+        lane.crossesOnEntry &&
+        at(vehicles.decision, slot) === DECISION_YES &&
+        at(vehicles.laneS, slot) >= lane.entryS - HELD_TURNER_SLACK_METRES &&
+        at(vehicles.speed, slot) < HELD_TURNER_SPEED_EPSILON
+      ) {
+        continue;
+      }
 
       // Ahead of the merge point: the merging car must clear its back bumper.
       if (delta > 0 && delta < length + MERGE_CLEARANCE_METRES) return false;
@@ -414,6 +728,19 @@ export class VehicleManeuverSystem implements SimSystem {
 
     if (state === VEHICLE_ON_ROAD || laneIndex >= this.lanes.laneCount) {
       return this.lanes.sample(laneIndex, at(vehicles.laneS, slot), out);
+    }
+
+    if (state === VEHICLE_DT_ADVANCING) {
+      /*
+       * Mid-creep between two lane slots. The path is the short straight one
+       * from the slot behind, so it has to be looked up from the customer's
+       * *current* slot plus one — the slot they are leaving.
+       */
+      const customerSlot = at(vehicles.customerSlot, slot);
+      if (customerSlot >= 0 && world.customers.isActive(customerSlot)) {
+        const path = this.maneuvers.advanceFrom(world.customers.at(customerSlot).laneSlot + 1);
+        if (path !== null) return path.sample(at(vehicles.maneuverS, slot), out);
+      }
     }
 
     const set = this.maneuvers.setFor(laneIndex, bay);

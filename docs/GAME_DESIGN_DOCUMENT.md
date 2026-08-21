@@ -850,11 +850,107 @@ Bunlar iyi fikir olabilir ama **bu roadmap'te yok**. Eklenmeleri onay ve roadmap
 
 Bunlar GATE 0'da cevaplanmadı ve ilgili fazda karara bağlanacak. Şimdi karar vermek erken olurdu.
 
-| #   | Soru                                                         | Ne zaman karara bağlanır   | Neden şimdi değil                                    |
-| --- | ------------------------------------------------------------ | -------------------------- | ---------------------------------------------------- |
-| 1   | Zaman ölçeği: 1 oyun günü = kaç gerçek dakika? (aday: 12 dk) | Faz 5 (trafik) — deneyerek | Trafik yoğunluğu hissi olmadan seçilemez             |
-| 2   | Oyuncu manuel müdahalesi Aşama 3+'ta kalmalı mı?             | Faz 10 (çalışan AI)        | Çalışanlar çalışmadan bilinemez                      |
-| 3   | Fiyat ayarı ürün başına mı, kategori başına mı?              | Faz 9 (ekonomi)            | UI karmaşıklığı vs. derinlik dengesi test gerektirir |
-| 4   | Masa yerleşimi serbest mi, ızgaraya mı oturuyor?             | Faz 11 (evrim)             | Layout sistemi yazılmadan bilinemez                  |
-| 5   | Aşama geçişi otomatik mi, oyuncu onaylı mı?                  | Faz 11                     | Pacing verisi gerekir                                |
-| 6   | Gece oynanışı ayrı bir mekanik mi, yoksa sadece görsel mi?   | Faz 15                     | Kapsam riski; ayrı mekanik olursa büyük              |
+| #   | Soru                                                           | Ne zaman karara bağlanır         | Neden şimdi değil                                    |
+| --- | -------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------- |
+| 1   | Zaman ölçeği: 1 oyun günü = kaç gerçek dakika? (aday: 12 dk)   | Faz 5 (trafik) — deneyerek       | Trafik yoğunluğu hissi olmadan seçilemez             |
+| 2   | Oyuncu manuel müdahalesi Aşama 3+'ta kalmalı mı?               | Faz 10 (çalışan AI)              | Çalışanlar çalışmadan bilinemez                      |
+| 3   | Fiyat ayarı ürün başına mı, kategori başına mı?                | Faz 9 (ekonomi)                  | UI karmaşıklığı vs. derinlik dengesi test gerektirir |
+| 4   | ~~Masa yerleşimi serbest mi, ızgaraya mı oturuyor?~~           | ✅ **Faz 11'de karara bağlandı** | → §25.1                                              |
+| 5   | ~~Aşama geçişi otomatik mi, oyuncu onaylı mı?~~                | ✅ **Faz 11'de karara bağlandı** | → §25.2                                              |
+| 6   | ~~Gece oynanışı ayrı bir mekanik mi, yoksa sadece görsel mi?~~ | ✅ **Faz 15'te karara bağlandı** | → §25.3                                              |
+
+---
+
+### 25.1 S4 — Yerleştirme **ızgaraya oturur** (Faz 11, 2026-08-16)
+
+**Karar: grid-snapped.** Izgara adımı navigasyon hücresiyle _aynı sabittir_
+(`CELL_SIZE_METRES = 0.5 m`), tercihen değil kasten.
+
+**Ölçüm** (`tests/unit/sim/layout/placementMode.test.ts`, testte kalıyor):
+
+Soru "yarım hücre arayla iki tıklama farklı mı davranır" değil — her iki modda da
+davranmalı. Soru, oyuncunun bir hücreyi hedeflerken fiilen isabet ettiği ve gözle
+bölemediği **snap havzası** (bir ızgara noktasının ±0.25 m'si) içinde ne olduğu:
+
+| Mod             | Havza içindeki tıklamaların ürettiği farklı "bloke hücre kümesi" sayısı |
+| --------------- | ----------------------------------------------------------------------: |
+| Serbest         |                                                                 **> 1** |
+| Izgaraya oturan |                                                                   **1** |
+
+Yani serbest yerleştirmede, oyuncunun birbirinden ayırt edemediği iki tıklama
+komşu bir hücreyi yer ya da yemez. "Bu neyi bloke edecek?" sorusu tıklamadan
+**önce** cevaplanamaz hâle gelir.
+
+**Desteklenmeyen bir iddia, düşürülmek yerine kayda geçti:** serbest
+yerleştirmenin kabul/ret kararını da hücre-altı nişan hassasiyetine bağlayacağı
+beklenmişti. **Bağlamıyor** — bu layout'ta bir hücre boyunca süpürüldüğünde her
+ofset aynı kararı verdi. Dolayısıyla ızgara lehine argüman tamamen _hangi
+hücrelerin bloke olduğuna_ dayanıyor, kararın kararsızlığına değil. Test bu
+kararlılığı de iddia ediyor ki ileride bir layout bunu değiştirirse **kırılsın**.
+
+### 25.2 S5 — Aşama geçişi **oyuncu onaylı** (Faz 11, 2026-08-16)
+
+**Karar: player-confirmed.** `STAGE_TRANSITION_MODE = 'confirmed'`.
+Otomatik geçiş kodu duruyor ve tek bir config sabitiyle açılıyor — karar zevkle
+değil pacing verisiyle verildiği için, veri değişirse yeniden yazım gerekmesin.
+
+**Ölçüm** (`tests/integration/stageTransitionPacing.test.ts`):
+
+| Seed     | Aşama 1 koşulları karşılandığında | İşlem ortasındaki müşteri | Arsadaki araç |
+| -------- | --------------------------------: | ------------------------: | ------------: |
+| 424242   |                           55.1 dk |                         3 |             5 |
+| 909      |                           54.6 dk |                         6 |            10 |
+| 4242     |                           46.7 dk |                         3 |             6 |
+| 777      |                           48.1 dk |                         1 |             3 |
+| 20260816 |                           55.2 dk |                         4 |             7 |
+
+**Beş seed'in beşinde de koşullar servis ortasında karşılandı.** Bu tesadüf
+değil, yapısal: koşullar _insan servis ederek_ karşılanıyor, dolayısıyla
+karşılandıkları an tanım gereği insanların servis edildiği bir an.
+
+İnşaat ardından tezgâhı 12–30 saniye aksatıyor. Bunu otomatik tetiklemek, oyuncu
+**en meşgulken** tetiklemek demek — tezgâhının yıkılmasını en az istediği an.
+Onay, aynı olayı oyuncunun zamanlamasını seçtiği bir karara çeviriyor; koşullar
+karşılanmış olarak kaldığı için beklemenin bir maliyeti yok.
+
+**Ek — işletme rezervi (ADR-014, 2026-08-18).** Onay kapısı artık eşiğin üstüne
+bir _işletme rezervi_ şart koşuyor: gelecek aşamanın kazanmak için zorunlu
+rolleri (Aşama 3-4'te garson) içinden eksik olanların işe alım maliyeti + maaş
+sisteminin 3 dakikalık tolerans penceresi boyunca tüm kadronun maaşı. Eşik yine
+harcanıyor; rezerv, geçişten sonra elde kalması _garanti edilen_ tutar. Sebep
+P12'nin ölçtüğü mahsur kalma: ₡804 ile ₡800'lük Aşama 3'ü kabul eden stant ₡4
+ile açılıyor, garson tutamıyor ve gelir kalıcı olarak sıfırlanıyordu. Oyuncu,
+normal ve geçerli bir eylemle telafisi olmayan bir duruma girmemeli — kapı artık
+bunu mekanik olarak imkânsız kılıyor.
+
+**Aynı ölçümden çıkan ikinci ve daha rahatsız edici sayı:** Aşama 1, tasarlanan
+**12–18 dakika** yerine **46.7–55.2 dakika** sürüyor. Bu S5 kararını
+değiştirmiyor ama Faz 12'nin düzeltmesi gereken talep kıtlığının progression
+tarafındaki görüntüsü. Test bu yanlış sınırı iddia ediyor ve ekonomi ayarlandığında
+**kırılacak** — kırılması sinyalin kendisi.
+
+### 25.3 S6 — Gece **zaten onaylı mekaniklerin saatidir**; yeni bir mekanik eklenmedi (Faz 15, 2026-08-20)
+
+**Karar:** Gece, ayrı bir oynanış sistemi değil — §9.5 ve §13.2'nin **zaten onayladığı** mekaniklerin
+görünür saatidir, artı Faz 15'in ışıklandırma pasosu. Yeni hiçbir kural eklenmedi; kapsam artışı yok,
+değişiklik talebi gerekmiyor.
+
+**Kanıtla:** karar anında kodda ölçülebilir hâlde duran gece mekanikleri sayıldı:
+
+1. **Görünürlük çarpanı** gece farklıdır (`VISIBILITY.night`, §9.5 faktör 2) — dönüşüm gece
+   kendiliğinden düşer.
+2. **`nightVisibility` yükseltme etkisi** (§13.2 tabela ailesi, Faz 13'ten beri canlı) yalnızca gece
+   çarpar — ışıklı tabela ailesinin değeri geceleri artar, tam §9.6'nın istediği gibi.
+3. **Arketip saat-iştahı** (Faz 15, `hourAffinity`): uzun yol kamyoncusunun gece dönüşümü yüksek
+   (§9.4 satırının kendisi) — ve gece kamyoncu akını olayı bu payı çarpar.
+4. Gün eğrisi geceyi zaten inceltir (§9.3).
+
+Bu dördü birlikte "gece farklı oynanır"ı üretir; ayrıca bir "gece modu" icat etmek, §24'ün kapsam
+disiplinine aykırı bir büyütme olurdu. Faz 15 geceye **görünürlüğünü** verdi (ambiyans tintı, farlar,
+tabela ışıması, neon titremesi) — mekaniği değil, mekaniğin sahnesini.
+
+**Açık uç (kayıt):** Oyun saati 00:00'da başlıyor. Işıklandırma gelmeden önce bunun görünür bir
+sonucu yoktu; artık ilk oturum karanlıkta ve ince trafikle açılıyor (gün eğrisi 00:00'da 0.1×), bu da
+§19'un "ilk araç 8 saniye içinde" hedefiyle gerilim içinde. Başlangıç saatini (ör. 08:00) seçmek
+hash'leri ve tohuma bağlı tüm fixture'ları yenileyen tek satırlık bir config kararı — **kullanıcıya
+bırakıldı** (PHASE_15_REPORT açık maddeler).

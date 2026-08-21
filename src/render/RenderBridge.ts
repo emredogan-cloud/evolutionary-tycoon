@@ -57,6 +57,8 @@ export interface StaticItem {
   readonly y: number;
   readonly z: number;
   readonly kind: number;
+  /** Which one of this kind — for a static, an index into `WORLD_OBJECTS`. */
+  readonly variant: number;
 }
 
 export class RenderBridge {
@@ -121,12 +123,14 @@ export class RenderBridge {
       if (target === null) break;
       target.entityId = item.entityId;
       target.kind = item.kind;
+      target.variant = item.variant;
       target.headingX = 1;
       target.headingY = 0;
       target.braking = false;
       target.travelled = 0;
       target.patience = 0;
       target.moving = false;
+      target.activity = 0;
       target.worldX = item.x;
       target.worldY = item.y;
       target.worldZ = item.z;
@@ -158,11 +162,13 @@ export class RenderBridge {
 
       target.entityId = actor.entityId;
       target.kind = actor.kind;
+      target.variant = actor.variant;
       target.headingX = actor.headingX;
       target.headingY = actor.headingY;
       target.braking = actor.braking;
       target.patience = actor.patience;
       target.moving = actor.moving;
+      target.activity = actor.activity;
       // Accumulated from the interpolated position, so the bob advances smoothly
       // between ticks instead of stepping 20 times a second.
       target.travelled = tracked?.travelled ?? 0;

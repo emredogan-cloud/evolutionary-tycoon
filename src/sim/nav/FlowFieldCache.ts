@@ -50,15 +50,40 @@ import { NavGrid } from './NavGrid';
 export const GOAL_COUNTER = 'counter';
 export const GOAL_EXIT = 'exit';
 
+/**
+ * The per-bay goal names, built once.
+ *
+ * `parking_0`, `parking_1`, … — and they are **cached rather than formatted**,
+ * because `NavigationSystem.goalFor` asks for one on every tick for every
+ * customer walking back to their car. Formatting it there allocated a string per
+ * customer per tick: measured at Phase 12, the simulation allocated **48.8 bytes
+ * a tick against a 32-byte budget** in a busy world, and roughly half of that
+ * was this line. A lazily-grown array of interned strings costs nothing after
+ * the first lap of the car park.
+ */
+const PARKING_GOAL_NAMES: string[] = [];
+
 /** Prefix for the per-bay goals: `parking_0`, `parking_1`, … */
 export function parkingGoal(bay: number): string {
-  return `parking_${String(bay)}`;
+  const cached = PARKING_GOAL_NAMES[bay];
+  if (cached !== undefined) return cached;
+
+  const name = `parking_${String(bay)}`;
+  PARKING_GOAL_NAMES[bay] = name;
+  return name;
 }
 
 export class FlowFieldCache {
-  readonly grid: NavGrid;
+  grid: NavGrid;
   private readonly fields = new Map<string, FlowField>();
-  private readonly layout: StageLayout;
+  /**
+   * Mutable from Phase 11: evolution replaces it.
+   *
+   * A cache that kept Stage 1's layout after the building grew would route every
+   * agent around a world that no longer exists — to bays that were removed and
+   * past a counter that moved. `rebuild` takes the new one.
+   */
+  private layout: StageLayout;
   /** Bumped on every rebuild, so a caller can tell whether its lookup is stale. */
   private generation = 0;
   /** Goals queued for rebuild, oldest first. Drained one per `step`. */
@@ -88,7 +113,16 @@ export class FlowFieldCache {
    * its buffers from the grid, and a grid that changed shape would leave them
    * inconsistent in a way that shows up as an agent walking off the map.
    */
-  rebuild(placed: readonly PlacedObject[]): void {
+  rebuild(placed: readonly PlacedObject[], layout?: StageLayout): void {
+    if (layout !== undefined && layout !== this.layout) {
+      /*
+       * A new stage means a new grid, not a rebuilt one: the lot can change
+       * size, and `NavGrid` sizes its buffers at construction. Reusing the old
+       * one would leave every index pointing at the wrong cell.
+       */
+      this.layout = layout;
+      this.grid = new NavGrid(layout);
+    }
     this.grid.rebuild(placed);
     /*
      * The fields are *not* cleared. They are stale, not wrong — each routes

@@ -32,21 +32,99 @@ export interface WorldSnapshot {
     readonly stage: Stage;
     readonly unlocks: readonly string[];
     readonly milestones: readonly string[];
+    /** A stage whose requirements are met, awaiting the player — Phase 11. */
+    readonly pendingStage: number;
+  };
+  /**
+   * The building mid-growth — Phase 11.
+   *
+   * Saved because it takes twelve to thirty seconds of *world* time and the
+   * stand is disrupted throughout. A player who saved during construction and
+   * found the building finished — or reset — on load would have had the one
+   * moment the progression system exists for taken away from them.
+   */
+  readonly construction: {
+    readonly targetStage: number;
+    readonly elapsedMs: number;
+    readonly totalMs: number;
   };
   readonly economy: {
     readonly cash: number;
     readonly reputation: number;
     readonly lifetimeRevenue: number;
+    readonly lifetimeSpend: number;
     readonly prices: readonly (readonly [string, number])[];
+    /**
+     * The sixty-second income window — Phase 9.
+     *
+     * Saved rather than recomputed, because it cannot be recomputed: it is a
+     * window over the last minute of *play*, and a resumed session has no
+     * record of the payments inside it. Dropping it would make the rate on the
+     * HUD read zero for a minute after every load, which looks exactly like a
+     * stand that has stopped earning.
+     */
+    readonly revenueWindow: readonly number[];
+    readonly expenseWindow: readonly number[];
+    readonly bucketIndex: number;
+    readonly bucketElapsedMs: number;
   };
   readonly layout: {
     readonly placed: readonly PlacedObject[];
+    /** Navigation invalidation counter — Phase 11. */
+    readonly revision: number;
     readonly upgrades: readonly (readonly [string, number])[];
   };
-  readonly staff: { readonly hired: readonly HiredEmployee[] };
+  readonly staff: {
+    readonly hired: readonly HiredEmployee[];
+    /**
+     * The wage-settlement cursor — Phase 10.
+     *
+     * Persisted because it decides *when* money moves. A resumed session that
+     * restarted it would hand the player a few free seconds of labour on every
+     * load, which is small, silent and exploitable by saving in a loop.
+     */
+    readonly settleElapsedMs: number;
+    /**
+     * The payroll itself.
+     *
+     * Employees are **not** transient state, unlike the customers and vehicles
+     * TECHNICAL_ARCHITECTURE §8.1 deliberately drops: a player who hired three
+     * cooks and reloaded to find them gone would have lost money. What is *not*
+     * saved is what they were doing — the task board is rebuilt from the world
+     * on the first tick, and an employee resumes idle beside the pass.
+     */
+    readonly employees: readonly {
+      readonly entityId: number;
+      readonly role: number;
+      readonly skill: number;
+      readonly wagePerMinute: number;
+      readonly accruedWages: number;
+      readonly unpaidMs: number;
+      readonly x: number;
+      readonly y: number;
+    }[];
+  };
   readonly traffic: {
     readonly nextCandidateMs: number;
     readonly nextDecorativeMs: number;
+  };
+  /**
+   * The day's calendar — Phase 15.
+   *
+   * Saved because it is *plan*, not derivation: replanning on load would draw
+   * fresh numbers from a stream that has moved, and a reloaded afternoon would
+   * get different weather from the afternoon that was saved. The two `last*`
+   * fields ride along so a resumed session does not re-announce the state it
+   * was already in.
+   */
+  readonly environment: {
+    readonly plannedDay: number;
+    readonly weatherSegments: readonly number[];
+    readonly eventTypes: readonly number[];
+    readonly eventStartMs: readonly number[];
+    readonly eventEndMs: readonly number[];
+    readonly lastWeather: number;
+    readonly lastActiveEvent: number;
   };
   readonly stats: {
     readonly customersServed: number;
@@ -64,6 +142,7 @@ export interface WorldSnapshot {
       readonly music: number;
       readonly sfx: number;
       readonly muted: boolean;
+      readonly ambience: number;
     };
     readonly a11y: { readonly reducedMotion: boolean; readonly highContrast: boolean };
   };
@@ -72,6 +151,79 @@ export interface WorldSnapshot {
 function sortedEntries(map: ReadonlyMap<string, number>): (readonly [string, number])[] {
   // Map keys are unique, so a two-way comparison is a total order here.
   return [...map.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+}
+
+/** Int32 variant of `copyOut`, for the calendar's index arrays. */
+function copyOutInts(source: Int32Array): number[] {
+  const out = new Array<number>(source.length);
+  for (let i = 0; i < source.length; i++) out[i] = source[i] ?? 0;
+  return out;
+}
+
+/** A plain array from a typed one, without the iterator protocol. */
+function copyOut(source: Float64Array): number[] {
+  const out = new Array<number>(source.length);
+  for (let i = 0; i < source.length; i++) out[i] = source[i] ?? 0;
+  return out;
+}
+
+/** The payroll, in slot order so a save is stable across runs. */
+function snapshotEmployees(world: World): WorldSnapshot['staff']['employees'] {
+  const out: {
+    entityId: number;
+    role: number;
+    skill: number;
+    wagePerMinute: number;
+    accruedWages: number;
+    unpaidMs: number;
+    x: number;
+    y: number;
+  }[] = [];
+
+  for (let slot = 0; slot < world.employees.scanLimit; slot++) {
+    if (!world.employees.isActive(slot)) continue;
+    const employee = world.employees.at(slot);
+    out.push({
+      entityId: employee.entityId,
+      role: employee.role,
+      skill: employee.skill,
+      wagePerMinute: employee.wagePerMinute,
+      accruedWages: employee.accruedWages,
+      unpaidMs: employee.unpaidMs,
+      x: employee.x,
+      y: employee.y,
+    });
+  }
+  return out;
+}
+
+/**
+ * Put the payroll back, idle.
+ *
+ * Deliberately *not* mid-task. The task board is derived from world state and is
+ * rebuilt on the first tick after a load, so a restored task slot would point at
+ * a board that does not exist yet — the exact class of dangling reference the
+ * two-sided claim protocol exists to make impossible.
+ */
+function restoreEmployees(world: World, saved: WorldSnapshot['staff']['employees']): void {
+  for (const record of saved) {
+    const slot = world.employees.acquire();
+    if (slot < 0) break;
+    const employee = world.employees.at(slot);
+    employee.entityId = record.entityId;
+    employee.role = record.role;
+    employee.skill = record.skill;
+    employee.wagePerMinute = record.wagePerMinute;
+    employee.accruedWages = record.accruedWages;
+    employee.unpaidMs = record.unpaidMs;
+    employee.x = record.x;
+    employee.y = record.y;
+    employee.z = 0;
+    employee.state = 0;
+    employee.taskSlot = -1;
+    employee.progressMs = 0;
+    employee.blockedMs = 0;
+  }
 }
 
 export function snapshotWorld(world: World): WorldSnapshot {
@@ -88,21 +240,52 @@ export function snapshotWorld(world: World): WorldSnapshot {
       stage: world.progression.stage,
       unlocks: [...world.progression.unlocks],
       milestones: [...world.progression.milestones],
+      pendingStage: world.progression.pendingStage,
+    },
+    construction: {
+      targetStage: world.construction.targetStage,
+      elapsedMs: world.construction.elapsedMs,
+      totalMs: world.construction.totalMs,
     },
     economy: {
       cash: world.economy.cash,
       reputation: world.economy.reputation,
       lifetimeRevenue: world.economy.lifetimeRevenue,
+      lifetimeSpend: world.economy.lifetimeSpend,
       prices: sortedEntries(world.economy.prices),
+      /*
+       * Copied with a loop rather than spread. `[...typedArray]` goes through
+       * the iterator protocol and it is not free: spreading the two twelve-entry
+       * windows made the save benchmark 36% slower than the whole rest of the
+       * snapshot cost put together, which for twenty-four numbers is absurd.
+       */
+      revenueWindow: copyOut(world.economy.revenueWindow),
+      expenseWindow: copyOut(world.economy.expenseWindow),
+      bucketIndex: world.economy.bucketIndex,
+      bucketElapsedMs: world.economy.bucketElapsedMs,
     },
     layout: {
       placed: world.layout.placed.map((object) => ({ ...object })),
+      revision: world.layout.revision,
       upgrades: sortedEntries(world.layout.upgrades),
     },
-    staff: { hired: world.staff.hired.map((employee) => ({ ...employee })) },
+    staff: {
+      hired: world.staff.hired.map((employee) => ({ ...employee })),
+      settleElapsedMs: world.staff.settleElapsedMs,
+      employees: snapshotEmployees(world),
+    },
     traffic: {
       nextCandidateMs: world.traffic.nextCandidateMs,
       nextDecorativeMs: world.traffic.nextDecorativeMs,
+    },
+    environment: {
+      plannedDay: world.environment.plannedDay,
+      weatherSegments: copyOutInts(world.environment.weatherSegments),
+      eventTypes: copyOutInts(world.environment.eventTypes),
+      eventStartMs: copyOut(world.environment.eventStartMs),
+      eventEndMs: copyOut(world.environment.eventEndMs),
+      lastWeather: world.environment.lastWeather,
+      lastActiveEvent: world.environment.lastActiveEvent,
     },
     stats: {
       customersServed: world.stats.customersServed,
@@ -142,16 +325,45 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.progression.stage = snapshot.progression.stage;
   world.progression.unlocks.push(...snapshot.progression.unlocks);
   world.progression.milestones.push(...snapshot.progression.milestones);
+  world.progression.pendingStage = snapshot.progression.pendingStage;
+  world.construction.targetStage = snapshot.construction.targetStage;
+  world.construction.elapsedMs = snapshot.construction.elapsedMs;
+  world.construction.totalMs = snapshot.construction.totalMs;
 
   world.economy.cash = snapshot.economy.cash;
   world.economy.reputation = snapshot.economy.reputation;
   world.economy.lifetimeRevenue = snapshot.economy.lifetimeRevenue;
+  world.economy.lifetimeSpend = snapshot.economy.lifetimeSpend;
   for (const [key, value] of snapshot.economy.prices) world.economy.prices.set(key, value);
 
+  /*
+   * Copied by index rather than by `set`, and only as far as the current window
+   * length. A save written by a build with a different bucket count must not
+   * resize the array — the world's shape comes from this build's config, and a
+   * short save leaves the remaining buckets at the zero `reset` put there.
+   */
+  for (let i = 0; i < world.economy.revenueWindow.length; i++) {
+    world.economy.revenueWindow[i] = snapshot.economy.revenueWindow[i] ?? 0;
+    world.economy.expenseWindow[i] = snapshot.economy.expenseWindow[i] ?? 0;
+  }
+  world.economy.bucketIndex = snapshot.economy.bucketIndex % world.economy.revenueWindow.length;
+  world.economy.bucketElapsedMs = snapshot.economy.bucketElapsedMs;
+
   for (const object of snapshot.layout.placed) world.layout.placed.push({ ...object });
+  world.layout.revision = snapshot.layout.revision;
   for (const [key, value] of snapshot.layout.upgrades) world.layout.upgrades.set(key, value);
 
   for (const employee of snapshot.staff.hired) world.staff.hired.push({ ...employee });
+  world.staff.settleElapsedMs = snapshot.staff.settleElapsedMs;
+  restoreEmployees(world, snapshot.staff.employees);
+
+  world.environment.plannedDay = snapshot.environment.plannedDay;
+  copyIntoInts(world.environment.weatherSegments, snapshot.environment.weatherSegments);
+  copyIntoInts(world.environment.eventTypes, snapshot.environment.eventTypes);
+  copyInto(world.environment.eventStartMs, snapshot.environment.eventStartMs);
+  copyInto(world.environment.eventEndMs, snapshot.environment.eventEndMs);
+  world.environment.lastWeather = snapshot.environment.lastWeather;
+  world.environment.lastActiveEvent = snapshot.environment.lastActiveEvent;
 
   world.traffic.nextCandidateMs = snapshot.traffic.nextCandidateMs;
   world.traffic.nextDecorativeMs = snapshot.traffic.nextDecorativeMs;
@@ -176,6 +388,7 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.stats.failureReasons.fill(0);
 
   world.settings.audio.master = snapshot.settings.audio.master;
+  world.settings.audio.ambience = snapshot.settings.audio.ambience;
   world.settings.audio.music = snapshot.settings.audio.music;
   world.settings.audio.sfx = snapshot.settings.audio.sfx;
   world.settings.audio.muted = snapshot.settings.audio.muted;
@@ -192,4 +405,14 @@ function normaliseSpeed(value: number): SpeedMultiplier {
     if (value === allowed) return allowed;
   }
   return SPEED_MULTIPLIERS[0];
+}
+
+/** Fill a typed array from a saved plain one; missing entries become zero. */
+function copyInto(target: Float64Array, source: readonly number[]): void {
+  for (let i = 0; i < target.length; i++) target[i] = source[i] ?? 0;
+}
+
+/** Int32 variant; missing entries become -1, the calendar's own "empty". */
+function copyIntoInts(target: Int32Array, source: readonly number[]): void {
+  for (let i = 0; i < target.length; i++) target[i] = source[i] ?? -1;
 }

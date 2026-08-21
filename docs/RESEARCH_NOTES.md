@@ -127,7 +127,7 @@ Arsa (lot), evrim aşaması başına **elle kompoze edilmiş, birkaç büyük st
 
 ### Kullanılabilir Phaser 4 özellikleri
 
-- **WebGL2 + RenderNode mimarisi** (v3'ün pipeline sistemi yerine): her node tek iş yapar, `run` + opsiyonel `batch`.
+- **RenderNode mimarisi** (v3'ün pipeline sistemi yerine): her node tek iş yapar, `run` + opsiyonel `batch`. Phaser'ın "WebGL rewrite" ifadesi **mimari** yeniden yazımdır; açılan bağlam ölçümle **WebGL 1**'dir (ADR-017).
 - Sprite başına **6 yerine 4 vertex** (index buffer ile) → %33 daha az vertex.
 - Shader seviyesinde vertex yuvarlama kaldırıldı → daha az batch kırılması.
 - Sekme değişiminde otomatik **WebGL context restore**.
@@ -137,7 +137,7 @@ Arsa (lot), evrim aşaması başına **elle kompoze edilmiş, birkaç büyük st
 
 ### Breaking change'ler (v3 → v4), bilinmesi gerekenler
 
-- Canvas renderer **deprecated** (2026 itibarıyla resmî). → WebGL2 yoksa oyun çalışmaz; Tier C fallback ekranı zorunlu.
+- Canvas renderer **deprecated** (2026 itibarıyla resmî). → WebGL yoksa oyun çalışmaz; Tier C fallback ekranı zorunlu. Taban **WebGL 1** — motorun gerçekten açtığı bağlam (ADR-017).
 - `roundPixels` varsayılanı artık `false`.
 - Texture yönelimi WebGL standardına geçti (v3'ün ters framebuffer davranışı düzeltildi).
 
@@ -164,10 +164,10 @@ PixiJS bir **renderer**'dır; Phaser bir **oyun framework**'üdür. Pixi seçili
 - Global destek ~%82–85 (caniuse).
 - Safari 26.0 ile geldi (macOS Tahoe 26, iOS 26, iPadOS 26).
 - **Firefox hâlâ varsayılanda kapalı** — Windows'ta Fx 141'den, macOS ARM64'te Fx 145'ten itibaren mevcut ama default-off. Gerekçe: fingerprinting ve sürücü kararlılığı.
-- **Phaser 4 bir WebGL2 yeniden yazımıdır, WebGPU motoru değildir.** WebGPU altyapı hazırlığı olarak duruyor, sevk edilen bir özellik değil.
+- **Phaser 4 bir WebGL yeniden yazımıdır (açılan bağlam WebGL 1 — ADR-017), WebGPU motoru değildir.** WebGPU altyapı hazırlığı olarak duruyor, sevk edilen bir özellik değil.
 - PixiJS v8 WebGPU destekliyor, ancak resmî not: "WebGPU her senaryoda WebGL'den otomatik olarak hızlı değildir; Pixi genelde GPU tarafında değil CPU tarafında sınırlanır."
 
-→ **WebGPU bu proje için bugün bir kazanç değil, bir risk.** Bizim darboğazımız 2D sprite sayısı ve CPU-taraflı simülasyon; GPU'da fill-rate sınırlı değiliz. WebGL2'de kalıyoruz.
+→ **WebGPU bu proje için bugün bir kazanç değil, bir risk.** Bizim darboğazımız 2D sprite sayısı ve CPU-taraflı simülasyon; GPU'da fill-rate sınırlı değiliz. WebGL'de kalıyoruz (bağlam: WebGL 1, ADR-017).
 
 ---
 

@@ -50,7 +50,7 @@ export interface SimSystem {
  * about when a replay diverges.
  */
 export class SystemPipeline {
-  private readonly systems: readonly SimSystem[];
+  readonly systems: readonly SimSystem[];
 
   constructor(systems: readonly SimSystem[]) {
     if (systems.length !== SYSTEM_ORDER.length) {

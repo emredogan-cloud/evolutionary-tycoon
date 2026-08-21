@@ -66,9 +66,18 @@ describe('patience', () => {
   });
 
   it('counts down in real time and ends in abandonment', () => {
+    /*
+     * Two customers, and the *second* is the one watched. Phase 8 gave the front
+     * of the queue somewhere to go — index 0 orders and steps aside — so a lone
+     * seeded customer leaves `QUEUEING_AT_COUNTER` on its first tick and its
+     * patience clock stops with it. The one behind is the one still queueing,
+     * which is what this test is about.
+     */
     const sim = new Sim({ seed: 2 });
+    seatInQueue(sim, 1);
     const slot = seatInQueue(sim, 1); // the least patient archetype
     sim.tick();
+    expect(sim.world.customers.at(slot).queueIndex, 'not the one queueing').toBeGreaterThan(0);
     const started = sim.world.customers.at(slot).patienceMs;
 
     sim.advance(20);

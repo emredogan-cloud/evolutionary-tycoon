@@ -20,6 +20,8 @@
     "tests/unit/**/*.ts",
     "tests/integration/**/*.ts",
     "tests/perf/**/*.ts",
+    "tests/balance/**/*.ts",
+    "tools/balance-sim/**/*.ts",
     "src/**/*.ts",
     "src/**/*.svelte"
   ]

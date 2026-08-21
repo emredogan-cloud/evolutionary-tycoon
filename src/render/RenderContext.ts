@@ -1,4 +1,5 @@
 import type { SimView } from '@sim/core/types';
+import type { SimEvent } from '@sim/core/events';
 import type { CameraState } from './camera/cameraMath';
 
 /**
@@ -8,6 +9,16 @@ import type { CameraState } from './camera/cameraMath';
  * the scene import the bootstrap that imports the scene.
  */
 export const RENDER_CONTEXT_KEY = 'renderContext';
+
+/**
+ * Registry key the world scene reads the loaded frame catalogue from.
+ *
+ * The load scene builds it and the world scene consumes it, and neither may
+ * import the other's module for the same reason as above. It is not part of
+ * `RenderContext` because `src/app` does not build it — the renderer does, out
+ * of what it managed to fetch.
+ */
+export const ASSET_REGISTRY_KEY = 'assetRegistry';
 
 /**
  * What the renderer needs from the outside world.
@@ -26,8 +37,39 @@ export interface RenderContext {
   readView(): SimView;
   /** Fraction of a tick elapsed, from the fixed-timestep loop. */
   interpolationAlpha(): number;
+  /**
+   * Called once per *rendered* frame, after the scene has synchronised.
+   *
+   * `src/app` uses it to sample the UI bridge. Driving that from the simulation
+   * loop instead looks equivalent and is not: a frozen scene stops the loop but
+   * keeps rendering, so the overlay would be stuck on whatever it published
+   * before the camera existed — which is how the first `stage1-serving` golden
+   * came out with a HUD and no world markers at all.
+   *
+   * The renderer learns nothing from this. It is a function it was handed.
+   */
+  onFrame?(): void;
+  /**
+   * How far the building has grown, 0..1 — Phase 11.
+   *
+   * Supplied by `src/app` from the simulation rather than timed in the renderer.
+   * A locally-timed reveal drifts from the world the first time the game is
+   * paused, and construction genuinely takes simulated seconds — at 4x the
+   * building goes up four times faster and the mask has to agree.
+   */
+  constructionProgress?(): number;
+  /**
+   * Subscribe to simulation events — Phase 17.
+   *
+   * Handed in rather than imported, like everything else here: the renderer
+   * may listen, never emit. Particles and audio key off these. Returns an
+   * unsubscribe, called on scene shutdown.
+   */
+  subscribeEvents?(listener: (event: SimEvent) => void): () => void;
   /** `prefers-reduced-motion` — disables smoothing and shake outright. */
   readonly reducedMotion: boolean;
+  /** `?noParticles=1` — the weather layers are not even created. */
+  readonly noParticles: boolean;
   /** Which authored scene to stage, from `?scene=`. */
   readonly sceneId: string;
   /** Development overlays: grid, coordinates, depth colouring. */

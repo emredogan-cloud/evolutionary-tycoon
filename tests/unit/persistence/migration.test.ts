@@ -28,15 +28,15 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 5, with four registered migrations', () => {
+  it('the current version is 11, with ten registered migrations', () => {
     /*
      * Both halves matter. The first says the schema constant and the save layer
      * agree; the second is a deliberate speed bump — bumping the version means
      * coming here, which means noticing that a migration and a fixture are owed.
      */
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(5);
-    expect(migrations).toHaveLength(4);
+    expect(CURRENT_SCHEMA_VERSION).toBe(11);
+    expect(migrations).toHaveLength(10);
   });
 
   it('a save already at the current version needs no steps', () => {
@@ -104,15 +104,15 @@ describe('migration chain', () => {
     });
   });
 
-  it('v1 → v5 runs every step in order', () => {
+  it('v1 → v11 runs every step in order', () => {
     const outcome = migrateToCurrent(
       { schemaVersion: 1, layout: { placed: [{ objectId: 'a', x: 0, y: 0 }] } },
       1,
     );
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(4);
-    expect(outcome.save['schemaVersion']).toBe(5);
+    expect(outcome.steps).toBe(10);
+    expect(outcome.save['schemaVersion']).toBe(11);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'a', x: 0, y: 0, z: 0 },
     ]);
@@ -123,6 +123,10 @@ describe('migration chain', () => {
       conversionsFailed: 0,
       turnedAwayNoParking: 0,
       customersAbandoned: 0,
+      // Phase 10.
+      employeesLeftUnpaid: 0,
+      // Phase 11.
+      driveThruServed: 0,
     });
   });
 
@@ -174,7 +178,12 @@ describe('migration chain', () => {
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'shelf', x: 0, y: 0, z: 1.1 },
     ]);
-    expect(outcome.save['economy']).toEqual({ cash: 42 });
+    /*
+     * `cash` is untouched all the way up the chain — that is what this asserts.
+     * The v5→v6 step adds the spend total and the income window, so the object
+     * is no longer identical; the fields it *did* carry are.
+     */
+    expect(outcome.save['economy']).toMatchObject({ cash: 42 });
   });
 
   it('v1 → v2 survives a layout that is missing or malformed', () => {
@@ -294,7 +303,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(4);
+    expect(result.migrationSteps).toBe(10);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
@@ -309,7 +318,7 @@ describe('committed save fixtures', () => {
     // Was zero until Phase 5 added the traffic cursor. The fixture is a
     // historical record and is never regenerated, so this number grows by one
     // with every schema change — which is the point of keeping it.
-    expect(result.migrationSteps).toBe(3);
+    expect(result.migrationSteps).toBe(9);
   });
 
   it('save-v3.json migrates to the current version', async () => {
@@ -320,12 +329,130 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
+    expect(result.migrationSteps).toBe(8);
+  });
+
+  it('save-v4.json migrates three steps to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v4.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(7);
+  });
+
+  it('save-v5.json migrates three steps to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v5.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(6);
+  });
+
+  it('save-v6.json migrates two steps to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v6.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(5);
+  });
+
+  it('save-v7.json migrates one step to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v7.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(4);
+  });
+
+  it('save-v8.json migrates two steps, arriving with a null offline envelope', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v8.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(3);
+    /*
+     * `meter: null`, not a zeroed summary: a v8 save measured nothing, and the
+     * distinction is what keeps a migrated player's first return from being
+     * priced as pure wage loss (the v8→v9 migration's own comment).
+     */
+    expect(result.save.offline).toEqual({ meter: null, pending: null });
+  });
+
+  it('save-v8.json carries a stage, a placement and a payroll', () => {
+    /*
+     * The Phase 11 fixture is a Stage 3 diner mid-service: a cook, a waiter, a
+     * sign bought, and an object the player placed. A fixture at Stage 1 with an
+     * empty layout would migrate identically and prove nothing about the two
+     * sections this version exists for.
+     */
+    const save = JSON.parse(readFixture('save-v8.json')) as {
+      progression: { stage: number; pendingStage: number };
+      construction: { targetStage: number };
+      layout: { placed: unknown[]; revision: number };
+    };
+    expect(save.progression.stage).toBe(3);
+    expect(save.layout.placed).toHaveLength(1);
+    expect(save.layout.revision).toBeGreaterThan(0);
+    expect(save.construction.targetStage).toBe(0);
+  });
+
+  it('a v8 save arrives with no offline measurement and nothing pending', () => {
+    const outcome = migrateToCurrent({ schemaVersion: 8, economy: { cash: 12 } }, 8);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(3);
+    expect(outcome.save['schemaVersion']).toBe(11);
+    expect(outcome.save['offline']).toEqual({ meter: null, pending: null });
+    // Everything else is left exactly as it was.
+    expect(outcome.save['economy']).toEqual({ cash: 12 });
+  });
+
+  it('a v9 save arrives with an unplanned calendar, to be planned on first tick', () => {
+    const outcome = migrateToCurrent({ schemaVersion: 9, economy: { cash: 12 } }, 9);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.steps).toBe(2);
+    expect(outcome.save['schemaVersion']).toBe(11);
+    expect(outcome.save['environment']).toEqual({
+      plannedDay: -1,
+      weatherSegments: [0, 0, 0, 0],
+      eventTypes: [-1, -1, -1, -1, -1, -1],
+      eventStartMs: [0, 0, 0, 0, 0, 0],
+      eventEndMs: [0, 0, 0, 0, 0, 0],
+      lastWeather: -1,
+      lastActiveEvent: -1,
+    });
+  });
+
+  it('save-v9.json migrates two steps to the current version', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v9.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
     expect(result.migrationSteps).toBe(2);
   });
 
-  it('save-v4.json migrates one step to the current version', async () => {
+  it('save-v10.json migrates one step to the current version', async () => {
     const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v4.json'));
+    await storage.write('save', readFixture('save-v10.json'));
 
     const result = await new SaveManager(storage).load();
 
@@ -334,15 +461,94 @@ describe('committed save fixtures', () => {
     expect(result.migrationSteps).toBe(1);
   });
 
-  it('save-v5.json loads with no migration at all', async () => {
-    const storage = new MemoryStorageAdapter();
-    await storage.write('save', readFixture('save-v5.json'));
+  it('save-v10.json carries a calendar a session actually planned', () => {
+    /*
+     * The Phase 15 fixture is a played session like every one before it: the
+     * calendar — the field this version exists for — holds a genuinely planned
+     * day, so the round-trip proves values survive, not just shape.
+     */
+    const save = JSON.parse(readFixture('save-v10.json')) as {
+      environment: { plannedDay: number; weatherSegments: number[] };
+    };
+    expect(save.environment.plannedDay).toBeGreaterThanOrEqual(0);
+    expect(save.environment.weatherSegments).toHaveLength(4);
+  });
 
-    const result = await new SaveManager(storage).load();
+  it('save-v9.json carries a measurement somebody actually played', () => {
+    /*
+     * The Phase 14 fixture is a played session, like every fixture before it:
+     * five simulated minutes of an attentive Stage 1 cook, so the offline
+     * meter — the field this version exists for — holds a real throughput and
+     * a real average ticket rather than zeroes that would round-trip a shape
+     * without proving the values survive.
+     */
+    const save = JSON.parse(readFixture('save-v9.json')) as {
+      offline: {
+        meter: { throughputPerMin: number; avgTicket: number; utilization: number[] } | null;
+        pending: unknown;
+      };
+    };
+    expect(save.offline.meter).not.toBeNull();
+    expect(save.offline.meter?.throughputPerMin).toBeGreaterThan(0);
+    expect(save.offline.meter?.avgTicket).toBeGreaterThan(0);
+    expect(save.offline.meter?.utilization).toHaveLength(5);
+  });
 
-    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
-    if (!result.ok) return;
-    expect(result.migrationSteps).toBe(0);
+  it('a v7 save arrives at Stage 1 with nothing under construction', () => {
+    // `stage` is untouched by the migration: a v7 save legitimately holds
+    // whichever stage it was on, and inventing a transition here would evolve
+    // somebody's restaurant while they were not looking.
+    const outcome = migrateToCurrent(
+      { schemaVersion: 7, progression: { stage: 2, unlocks: [], milestones: [] } },
+      7,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    const progression = outcome.save['progression'] as { stage: number; pendingStage: number };
+    expect(progression.stage, 'the migration moved the player to another stage').toBe(2);
+    expect(progression.pendingStage).toBe(0);
+    expect(outcome.save['construction']).toEqual({ targetStage: 0, elapsedMs: 0, totalMs: 0 });
+  });
+
+  it('save-v7.json carries a payroll somebody actually hired', () => {
+    /*
+     * The Phase 10 fixture is a real session: ten minutes of play, a sign, then
+     * a cook hired with the proceeds and left to work for half a minute. A
+     * fixture with an empty staff list would migrate identically and prove
+     * nothing about the one section this version exists for.
+     */
+    const save = JSON.parse(readFixture('save-v7.json')) as {
+      staff: { employees: { role: number; skill: number; wagePerMinute: number }[] };
+    };
+    expect(save.staff.employees).toHaveLength(1);
+    expect(save.staff.employees[0]?.skill).toBeCloseTo(0.6, 6);
+    expect(save.staff.employees[0]?.wagePerMinute).toBeGreaterThan(0);
+  });
+
+  it('a v6 save arrives with an empty payroll rather than an invented one', () => {
+    // Zero is the honest value: a v6 save was written by a build where nobody
+    // could be hired, so the player genuinely had no staff.
+    const outcome = migrateToCurrent({ schemaVersion: 6, staff: { hired: [] } }, 6);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect((outcome.save['staff'] as { employees: unknown[] }).employees).toEqual([]);
+    expect((outcome.save['staff'] as { settleElapsedMs: number }).settleElapsedMs).toBe(0);
+  });
+
+  it('save-v6.json carries an upgrade the player actually bought', () => {
+    /*
+     * The Phase 9 fixture is a real session: ten minutes of play with an
+     * attentive cook, then a sign bought with the proceeds. A fixture with an
+     * empty upgrade map would migrate identically and prove nothing about the
+     * one field this version exists for.
+     */
+    const save = JSON.parse(readFixture('save-v6.json')) as {
+      layout: { upgrades: [string, number][] };
+      economy: { lifetimeSpend: number; revenueWindow: number[] };
+    };
+    expect(save.layout.upgrades).toContainEqual(['hand-painted-sign', 1]);
+    expect(save.economy.lifetimeSpend).toBeGreaterThan(0);
+    expect(save.economy.revenueWindow).toHaveLength(12);
   });
 
   it('save-v5.json carries a conversion funnel that actually ran', () => {
@@ -416,5 +622,41 @@ describe('committed save fixtures', () => {
 
     expect(a.world.tick).toBe(3_200);
     expect(a.world.hash()).toBe(b.world.hash());
+  });
+
+  it('save-v11.json loads with no migration at all', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v11.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
+    expect(result.migrationSteps).toBe(0);
+  });
+
+  it('save-v11.json carries a mix a session actually set', () => {
+    /*
+     * The Phase 17 fixture is a played session like every one before it: the
+     * sliders — the fields this version exists for — hold values a command
+     * actually set (ambience 0.7, music 0.55), so the round-trip proves values
+     * survive, not just shape.
+     */
+    const save = JSON.parse(readFixture('save-v11.json')) as {
+      settings: { audio: { ambience: number; music: number } };
+    };
+    expect(save.settings.audio.ambience).toBe(0.7);
+    expect(save.settings.audio.music).toBe(0.55);
+  });
+
+  it('v10 → v11 hands an existing save the ambience slider at full', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v10.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.settings.audio.ambience).toBe(1);
   });
 });

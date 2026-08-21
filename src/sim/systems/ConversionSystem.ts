@@ -1,4 +1,5 @@
 import { ARCHETYPE_SPECS } from '@config/archetypes';
+import { APPEARANCE_COUNT } from '@config/sprites';
 import {
   GLOBAL_DIFFICULTY_CURVE,
   MAX_CONVERSION,
@@ -20,8 +21,14 @@ import {
   VISIBILITY,
   WEATHER_FACTOR_PLACEHOLDER,
 } from '@config/conversion';
-import type { StageLayout } from '@config/layouts/stage1';
+import { DRIVE_THRU_SHARE } from '@config/driveThru';
+import { layoutForStage } from '@config/layouts';
+import { CHANNEL_COUNTER, CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
+import { queueCapacityOf } from './QueueSystem';
+import { environmentConversionFactor, environmentSeatedBias } from './EventSystem';
+import { upgradeLevel } from './UpgradeSystem';
+import { effectValue } from './UpgradeSystem';
 import type { World } from '../core/World';
 import { at, atIn } from '../math/typedArray';
 import type { LaneGraph } from '../nav/LaneGraph';
@@ -52,10 +59,11 @@ import { STATE_ENTERING } from '../ai/fsm/customerFsm';
  * moment the tick ends.
  */
 
-/** Values of `VehicleStore.decision`. */
-export const DECISION_PENDING = 0;
-export const DECISION_NO = 1;
-export const DECISION_YES = 2;
+// The decision values live on the store (leaf — see its comment); re-exported
+// here so the one-roll rule's documentation and its constants stay findable
+// together.
+export { DECISION_NO, DECISION_PENDING, DECISION_YES } from '../stores/VehicleStore';
+import { DECISION_NO, DECISION_PENDING, DECISION_YES } from '../stores/VehicleStore';
 
 /** One factor of the product, kept alongside the reason it maps to. */
 interface FactorReport {
@@ -89,10 +97,15 @@ export class ConversionSystem implements SimSystem {
    */
   private readonly factors: FactorReport[] = [];
 
-  constructor(
-    private readonly lanes: LaneGraph,
-    private readonly layout: StageLayout,
-  ) {
+  /**
+   * No layout is captured — Phase 11.
+   *
+   * It used to be a constructor argument, which was right while there was one
+   * stage and would have been a silent bug the moment there were four: a system
+   * holding Stage 1's layout after the player evolved would pull cars in to a
+   * point that no longer exists. The stage is asked for on every use instead.
+   */
+  constructor(private readonly lanes: LaneGraph) {
     for (let i = 0; i < 10; i++) {
       this.factors.push({ value: 1, reason: REASON_JUST_PASSING, blame: true });
     }
@@ -131,7 +144,15 @@ export class ConversionSystem implements SimSystem {
       const laneIndex = at(vehicles.lane, slot);
       if (laneIndex >= this.lanes.laneCount) continue;
       const lane = this.lanes.lane(laneIndex);
-      if (at(vehicles.laneS, slot) < lane.decisionS) continue;
+      /*
+       * A roadside marker moves the decision *earlier* — further back up the
+       * road — which is why the bonus is subtracted. Clamped at zero: a marker
+       * cannot make a driver decide before they have entered the world, and
+       * beyond that point further levels stop buying anything. That ceiling is
+       * measured rather than assumed, in `tests/integration/upgradeEffect.test.ts`.
+       */
+      const decisionS = Math.max(0, lane.decisionS - effectValue(world, 'decisionPointMetres'));
+      if (at(vehicles.laneS, slot) < decisionS) continue;
 
       this.decide(world, slot);
     }
@@ -186,17 +207,47 @@ export class ConversionSystem implements SimSystem {
     customer.entityId = world.allocateEntityId();
     customer.state = STATE_ENTERING;
     customer.archetype = archetype;
+    /*
+     * Who they look like, from the **cosmetic** stream.
+     *
+     * That stream exists so visual variation can never move the economy, and it
+     * is excluded from the world digest for the same reason. Rolling appearance
+     * from `customer` instead would make the hash depend on hair, and every
+     * later per-customer decision shift when a new hairstyle was added.
+     */
+    customer.appearance = world.rng.cosmetic.int(APPEARANCE_COUNT);
     customer.vehicleSlot = vehicleSlot;
     customer.parkingSlot = -1;
     customer.queueIndex = -1;
+    customer.laneSlot = -1;
+    /*
+     * The channel, decided once and never revisited — Phase 11.
+     *
+     * Rolled from the `customer` stream, which is the stream for per-customer
+     * decisions: using `conversion` would make the channel choice change the
+     * *next* conversion roll, so building a drive-thru would silently shift
+     * every subsequent customer's odds.
+     */
+    /*
+     * Phase 15: weather moves the split — "oturarak talebi ↑". The bias
+     * subtracts from the drive-thru share, floored at zero: rain sends people
+     * inside, it does not conjure a lane where none exists.
+     */
+    const layoutNow = layoutForStage(world.progression.stage);
+    const driveThruShare = Math.max(0, DRIVE_THRU_SHARE - environmentSeatedBias(world));
+    customer.channel =
+      layoutNow.driveThru !== null && world.rng.customer.next() < driveThruShare
+        ? CHANNEL_DRIVE_THRU
+        : CHANNEL_COUNTER;
     customer.visible = 0;
     customer.timerMs = 0;
     customer.patienceMs = 0;
     customer.patienceMaxMs = 0;
     customer.reason = REASON_JUST_PASSING;
     customer.arrivedAtMs = world.clock.simTimeMs;
-    customer.x = this.layout.pullIn.x;
-    customer.y = this.layout.pullIn.y;
+    const layout = layoutForStage(world.progression.stage);
+    customer.x = layout.pullIn.x;
+    customer.y = layout.pullIn.y;
     customer.z = 0;
 
     world.vehicles.customerSlot[vehicleSlot] = customerSlot;
@@ -216,15 +267,46 @@ export class ConversionSystem implements SimSystem {
     const hour = world.clock.gameHour;
     const queueLength = this.visibleQueueLength(world);
 
-    this.set(0, spec.baseAffinity, REASON_JUST_PASSING, false);
-    this.set(1, visibilityAt(hour), REASON_NOT_VISIBLE);
-    this.set(2, MENU_APPEAL_PLACEHOLDER, REASON_NO_DESIRED_ITEM);
+    /*
+     * Affinity, plus the two Phase 15 modifiers that are properties of the
+     * *driver*: the hour-of-day appetite (the long-haul truck eats at night)
+     * and the EV charger draw — GDD §9.4's Stage 4 hook, alive the moment an
+     * upgrade with that id exists and is owned, a no-op until then.
+     */
+    const hourBucket = Math.floor(((hour % 24) + 24) % 24);
+    const charger =
+      spec.chargerAffinityBoost !== 1 && upgradeLevel(world, 'ev-charger') > 0
+        ? spec.chargerAffinityBoost
+        : 1;
+    this.set(
+      0,
+      spec.baseAffinity * atIn(spec.hourAffinity, hourBucket, 1) * charger,
+      REASON_JUST_PASSING,
+      false,
+    );
+    // A sign does not make the stand visible at 3 a.m.; it multiplies whatever
+    // the hour already allows. Applied as a factor rather than added, so the
+    // time-of-day curve keeps its shape and a dark hour stays dark.
+    /*
+     * Visibility, and — after dark — the lighting on top of it. Phase 13's
+     * `nightVisibility` is a separate kind rather than a bigger `visibility`
+     * because that is the whole design of the upgrade: a lit sign does nothing
+     * at noon and changes the night completely (GAME_DESIGN_DOCUMENT §13.2).
+     * Applied as a factor on the hour's own figure, so a dark hour stays dark
+     * relative to a bright one.
+     */
+    const lighting = isNight(hour) ? effectValue(world, 'nightVisibility') : 1;
+    this.set(1, visibilityAt(hour) * effectValue(world, 'visibility') * lighting, REASON_NOT_VISIBLE);
+    this.set(2, MENU_APPEAL_PLACEHOLDER * effectValue(world, 'menuAppeal'), REASON_NO_DESIRED_ITEM);
     this.set(3, PRICE_FIT_PLACEHOLDER, REASON_PRICE_TOO_HIGH);
     this.set(4, queuePenalty(queueLength), REASON_QUEUE_TOO_LONG);
-    this.set(5, spilloverPenalty(queueLength, this.layout.queueCapacity), REASON_QUEUE_TOO_LONG);
+    const layout = layoutForStage(world.progression.stage);
+    this.set(5, spilloverPenalty(queueLength, queueCapacityOf(world, layout)), REASON_QUEUE_TOO_LONG);
     this.set(6, reputationFactor(world.economy.reputation), REASON_REPUTATION_LOW);
     this.set(7, timeOfDayFit(hour), REASON_WRONG_TIME);
-    this.set(8, WEATHER_FACTOR_PLACEHOLDER, REASON_WEATHER);
+    // Phase 15: the placeholder becomes the real §9.6 environment — weather
+    // times whatever event is in force. Config-driven end to end.
+    this.set(8, WEATHER_FACTOR_PLACEHOLDER * environmentConversionFactor(world), REASON_WEATHER);
     this.set(9, noveltyDecay(world, archetype), REASON_JUST_PASSING);
 
     let product = 1;
@@ -294,8 +376,7 @@ export class ConversionSystem implements SimSystem {
 }
 
 export function visibilityAt(hour: number): number {
-  const isDay = hour >= VISIBILITY.dawnHour && hour < VISIBILITY.duskHour;
-  return isDay ? VISIBILITY.day : VISIBILITY.night;
+  return isNight(hour) ? VISIBILITY.night : VISIBILITY.day;
 }
 
 export function queuePenalty(queueLength: number): number {
@@ -308,6 +389,11 @@ export function spilloverPenalty(queueLength: number, queueCapacity: number): nu
   if (queueLength <= queueCapacity) return 1;
   const overflow = queueLength - queueCapacity;
   return Math.max(SPILLOVER_PENALTY.floor, 1 - overflow * SPILLOVER_PENALTY.perOverflowCustomer);
+}
+
+/** Outside `[dawn, dusk)`. One definition, so lighting and visibility agree. */
+function isNight(hour: number): boolean {
+  return hour < VISIBILITY.dawnHour || hour >= VISIBILITY.duskHour;
 }
 
 /** ECONOMY_DESIGN §9 — reputation 0..100 to a 0.60..1.40 multiplier. */
