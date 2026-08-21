@@ -4,7 +4,13 @@ import { ECONOMY_BUCKET_COUNT } from '@config/economy/tuning';
 import { OFFLINE_LIMITERS, OFFLINE_METER_BUCKET_COUNT } from '@config/economy/offline';
 import { EVENT_SPECS } from '@config/events';
 import { WEATHER_SEGMENTS_PER_DAY } from '@config/weather';
-import { DEFAULT_SPEED_MULTIPLIER, ENTITY_CAPACITY } from '@config/simulation';
+import {
+  DEFAULT_SPEED_MULTIPLIER,
+  ENTITY_CAPACITY,
+  DEFAULT_GAME_START_HOUR,
+  HOURS_PER_GAME_DAY,
+  MS_PER_GAME_DAY,
+} from '@config/simulation';
 import { Hasher } from '../math/hash';
 import type { OrderRecord } from '../stores/OrderStore';
 import { createOrderPool, writeOrder } from '../stores/OrderStore';
@@ -170,7 +176,7 @@ export class World {
 
   constructor(options: WorldOptions) {
     this.seed = options.seed;
-    this.clock = new Clock();
+    this.clock = new Clock({ simTimeMs: (DEFAULT_GAME_START_HOUR / HOURS_PER_GAME_DAY) * MS_PER_GAME_DAY });
     this.rng = new RngStreams(options.seed);
 
     const caps = options.capacities ?? {};
@@ -322,7 +328,9 @@ export class World {
   reset(): void {
     this.tick = 0;
     this.nextId = 1;
-    this.clock.reset();
+    // Back to the fresh-world opening hour, not to midnight — reset must
+    // reproduce construction exactly or the pristine-digest test lies.
+    this.clock.setState({ simTimeMs: (DEFAULT_GAME_START_HOUR / HOURS_PER_GAME_DAY) * MS_PER_GAME_DAY });
     this.rng.loadStates(new RngStreams(this.seed).saveStates());
     this.vehicles.reset();
     this.customers.reset();

@@ -272,7 +272,7 @@ describe('DebugOverlay', () => {
 
     const text = document.querySelector('#debug-overlay')?.textContent ?? '';
     expect(text).toContain('tick     40');
-    expect(text).toContain('sim      2.0s');
+    expect(text).toContain('sim      242.0s'); // 08:00 opening (240 s) + the 2 s advanced here
     // Vehicle count comes from the live traffic system rather than the one the
     // test spawned, so it is matched by shape instead of by value.
     expect(text).toMatch(/entities v\d+ c1 e0 o0/);

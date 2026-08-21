@@ -158,14 +158,18 @@ describe('RenderBridge', () => {
     bridge.sync(sim.readView(), 0);
     expect(bridge.trackedCount).toBe(2);
 
+    const releasedId = sim.world.customers.at(1).entityId;
     sim.world.customers.release(1);
     sim.tick();
-    bridge.sync(sim.readView(), 0);
+    const view = sim.readView();
+    bridge.sync(view, 0);
 
     // Entity ids are never reused, so a stale entry could not be mistaken for a
-    // live one — but it would still grow the map for the whole session.
-    expect(bridge.trackedCount).toBe(1);
-    expect(bridge.visible).toHaveLength(1);
+    // live one — but it would still grow the map for the whole session. The
+    // 08:00 world may add morning traffic on that tick, so the counts are
+    // anchored to the live view rather than to a literal.
+    expect(bridge.trackedCount).toBe(view.actorCount);
+    expect(bridge.visible.some((v) => v.entityId === releasedId)).toBe(false);
   });
 
   it('drops actors beyond the pool rather than growing', () => {

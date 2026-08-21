@@ -121,6 +121,26 @@ describe('accrual', () => {
  */
 const BRUTE_FORCE_TIMEOUT_MS = 60_000;
 
+/**
+ * Make the fixture's payroll unserviceable by construction.
+ *
+ * These scenarios need "wages the takings cannot cover". They used to get it
+ * for free because a fresh world opened at midnight and earned nothing; the
+ * 08:00 daylight start (2026-08-21 decision) hands the stand real breakfast
+ * takings, and a full house of cooks now pays for itself. Scaling the hired
+ * wages keeps the premise explicit instead of borrowed from the clock — and
+ * ends the seed-scanning these fixtures needed every time the spawn stream
+ * moved. Relative wage order is preserved, so "highest-paid first" still
+ * observes the same ordering property.
+ */
+function makePayrollUnserviceable(sim: Sim): void {
+  const employees = sim.world.employees;
+  for (let slot = 0; slot < employees.scanLimit; slot++) {
+    if (!employees.isActive(slot)) continue;
+    employees.at(slot).wagePerMinute *= 20;
+  }
+}
+
 describe('cash never goes below zero', () => {
   it(
     'holds under a payroll it cannot possibly afford',
@@ -157,6 +177,7 @@ describe('cash never goes below zero', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 1000;
     for (let i = 0; i < MAX_EMPLOYEES; i++) expect(hire(sim.world, 'cook', 1)).toBe('ok');
+    makePayrollUnserviceable(sim);
     sim.world.economy.cash = 0;
 
     sim.advance(Math.ceil(UNPAID_GRACE_MS / TICK_MS) + TICKS_PER_MINUTE);
@@ -179,6 +200,7 @@ describe('unpaid wages cost an employee, deterministically', () => {
     sim.world.economy.cash = 1000;
     // A payroll the stand's ~₡14/min cannot service — see the note above.
     for (let i = 0; i < MAX_EMPLOYEES; i++) expect(hire(sim.world, 'cook', 1)).toBe('ok');
+    makePayrollUnserviceable(sim);
     sim.world.economy.cash = 0;
 
     // Just under the grace period.
@@ -242,6 +264,7 @@ describe('unpaid wages cost an employee, deterministically', () => {
     expect(expensive.wagePerMinute).toBeGreaterThan(cheap.wagePerMinute);
     const expensiveId = expensive.entityId;
 
+    makePayrollUnserviceable(sim);
     sim.world.economy.cash = 0;
     sim.advance(Math.ceil(UNPAID_GRACE_MS / TICK_MS) + TICKS_PER_MINUTE);
 
@@ -262,6 +285,7 @@ describe('unpaid wages cost an employee, deterministically', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 1000;
     for (let i = 0; i < MAX_EMPLOYEES; i++) hire(sim.world, 'cook', 1);
+    makePayrollUnserviceable(sim);
     sim.world.economy.cash = 0;
 
     let sawFirstDeparture = false;
@@ -285,6 +309,7 @@ describe('unpaid wages cost an employee, deterministically', () => {
     sim.world.economy.cash = 1000;
     // A payroll the stand's ~₡14/min cannot service — see the note above.
     for (let i = 0; i < MAX_EMPLOYEES; i++) expect(hire(sim.world, 'cook', 1)).toBe('ok');
+    makePayrollUnserviceable(sim);
     sim.world.economy.cash = 0;
 
     const reasons: string[] = [];
@@ -304,6 +329,7 @@ describe('unpaid wages cost an employee, deterministically', () => {
       hire(sim.world, 'cook', 0.5);
       hire(sim.world, 'cook', 0.5);
       hire(sim.world, 'waiter', 0.5);
+      makePayrollUnserviceable(sim);
       sim.world.economy.cash = 0;
       sim.advance(Math.ceil(UNPAID_GRACE_MS / TICK_MS) + 400);
       return sim;

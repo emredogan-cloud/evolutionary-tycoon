@@ -146,7 +146,7 @@ describe('scoring', () => {
     employee.y = 0;
 
     const kind = TASK_KINDS.indexOf('PREP_ORDER');
-    const score = scoreTask(sim.world, kind, 0, 3, 4, employee);
+    const score = scoreTask(sim.world, kind, sim.world.clock.simTimeMs, 3, 4, employee);
 
     // Age zero, so urgency is exactly 1; distance is 5 by Pythagoras.
     expect(score).toBeCloseTo(TASK_SCORING.reward.PREP_ORDER - 5 * TASK_SCORING.distanceCost, 9);

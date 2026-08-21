@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MS_PER_GAME_DAY, TICK_MS } from '@config/simulation';
+import { DEFAULT_GAME_START_HOUR, HOURS_PER_GAME_DAY, MS_PER_GAME_DAY, TICK_MS } from '@config/simulation';
 import { Sim, replay } from '@sim/core/Sim';
 import type { SimEvent } from '@sim/core/events';
 import type { SimSystem, SystemName } from '@sim/core/SystemPipeline';
@@ -13,6 +13,9 @@ function recordingSystems(log: string[]): SimSystem[] {
     },
   }));
 }
+
+/** Where a fresh clock opens — 08:00, the user's daylight-start decision. */
+const START_MS = (DEFAULT_GAME_START_HOUR / HOURS_PER_GAME_DAY) * MS_PER_GAME_DAY;
 
 describe('SystemPipeline', () => {
   it('reserves exactly the eighteen documented slots, in order', () => {
@@ -92,11 +95,11 @@ describe('Sim.tick', () => {
     const sim = new Sim({ seed: 1 });
     sim.tick();
     expect(sim.world.tick).toBe(1);
-    expect(sim.world.clock.simTimeMs).toBe(TICK_MS);
+    expect(sim.world.clock.simTimeMs).toBe(START_MS + TICK_MS);
 
     sim.advance(99);
     expect(sim.world.tick).toBe(100);
-    expect(sim.world.clock.simTimeMs).toBe(100 * TICK_MS);
+    expect(sim.world.clock.simTimeMs).toBe(START_MS + 100 * TICK_MS);
   });
 
   it('emits a day event exactly when the clock rolls over', () => {
@@ -190,6 +193,10 @@ describe('Sim.readView', () => {
   it('reports the current state', () => {
     const sim = new Sim({ seed: 1 });
     sim.advance(3);
+    // The 08:00 world may already have morning traffic three ticks in, so the
+    // counts are asserted as deltas over whatever the road brought.
+    const vehicles = sim.world.vehicles.activeCount;
+    const customers = sim.world.customers.activeCount;
     sim.world.vehicles.spawn(1);
     sim.world.customers.acquire();
     sim.world.employees.acquire();
@@ -197,9 +204,9 @@ describe('Sim.readView', () => {
 
     const view = sim.readView();
     expect(view.tick).toBe(3);
-    expect(view.simTimeMs).toBe(3 * TICK_MS);
-    expect(view.vehicleCount).toBe(1);
-    expect(view.customerCount).toBe(1);
+    expect(view.simTimeMs).toBe(START_MS + 3 * TICK_MS);
+    expect(view.vehicleCount).toBe(vehicles + 1);
+    expect(view.customerCount).toBe(customers + 1);
     expect(view.employeeCount).toBe(1);
     expect(view.orderCount).toBe(1);
   });

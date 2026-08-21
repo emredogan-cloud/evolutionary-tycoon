@@ -1,4 +1,5 @@
 import type { Sim } from '@sim/core/Sim';
+import { TICK_MS } from '@config/simulation';
 import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 import { offlineMeterSummary } from '@sim/systems/offlineMeter';
 import type { LoadResult, OfflineEnvelope, SaveManager } from '@persistence/SaveManager';
@@ -70,9 +71,11 @@ export class SaveService {
     const file = await this.saves.save(snapshotWorld(this.sim.world), {
       buildSha: this.buildSha,
       nowMs,
-      // Simulation time is the honest playtime: it advances only while ticks run,
-      // so a tab left open overnight does not claim eight hours of play.
-      playtimeMs: this.sim.world.clock.simTimeMs,
+      // Ticks are the honest playtime: they advance only while the sim runs,
+      // so a tab left open overnight does not claim eight hours of play. Not
+      // the raw clock — that opens at 08:00 now, and a fresh save must not
+      // claim the four minutes the opening hour is worth.
+      playtimeMs: this.sim.world.tick * TICK_MS,
       lastSeenServerAt: this.serverOffsetMs === null ? null : nowMs + this.serverOffsetMs,
       offline: {
         // Measured at the moment of the write — this save *is* the leaving

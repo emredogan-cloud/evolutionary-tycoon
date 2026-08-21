@@ -239,6 +239,12 @@ describe('the payroll survives a save', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 1000;
     for (let i = 0; i < MAX_EMPLOYEES; i++) expect(hire(sim.world, 'cook', 1)).toBe('ok');
+    // The 08:00 opening hands the stand real takings, and a payroll the
+    // morning trade can service never grows an unpaid clock — so the premise
+    // is built explicitly: wages far beyond anything the stand can earn.
+    for (let slot = 0; slot < sim.world.employees.scanLimit; slot++) {
+      if (sim.world.employees.isActive(slot)) sim.world.employees.at(slot).wagePerMinute *= 20;
+    }
     sim.world.economy.cash = 0;
     sim.advance(Math.floor(UNPAID_GRACE_MS / TICK_MS / 2));
 

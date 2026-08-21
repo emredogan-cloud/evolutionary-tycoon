@@ -350,10 +350,26 @@ function sumOwnAllocation(profile: ProfileNode & { readonly head?: ProfileNode }
  * and its cost is constant, so it does not skew the comparison between samples —
  * which is the only comparison this benchmark makes.
  */
+
+/**
+ * Pin a bench world to deep night so the empty-workload rows keep measuring
+ * what they have measured since Phase 2: the fixed per-tick overhead of an
+ * (almost) empty world. The 08:00 daylight start (user decision, 2026-08-21)
+ * made a *fresh* world open into the morning trade, which more than doubled
+ * these rows overnight with zero code change — a workload shift, not a
+ * regression. The busy-world cost has its own rows (populated / crowded /
+ * service / staffed / stage 4); letting it flood the empty rows too would
+ * bury exactly the fixed-overhead signal they exist to isolate.
+ */
+function pinToQuietHour(sim: Sim): void {
+  sim.world.clock.setState({ simTimeMs: (3 / 24) * 720_000 });
+}
+
 export function benchTicksFromFresh(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks from a fresh world', 1000, () => {
     sim.world.reset();
+    pinToQuietHour(sim);
     sim.advance(1000);
   });
 }
@@ -778,6 +794,7 @@ export function benchCommandProcessing(): TimingResult {
   const sim = new Sim({ seed: 1 });
   return timeIt('1000 ticks, one command each', 1000, () => {
     sim.world.reset();
+    pinToQuietHour(sim);
     for (let i = 0; i < 1000; i++) {
       sim.dispatch({ t: 'SET_SPEED', mult: i % 2 === 0 ? 2 : 4 });
       sim.tick();
@@ -795,6 +812,7 @@ export function benchEventFlush(): TimingResult {
   return timeIt('1000 ticks, 8 events per tick, 3 subscribers', 8000, () => {
     // Reset per sample — see `benchCommandProcessing`.
     sim.world.reset();
+    pinToQuietHour(sim);
     for (let i = 0; i < 1000; i++) {
       for (let e = 0; e < 8; e++) sim.world.eventQueue.emitDayStarted(e);
       sim.tick();

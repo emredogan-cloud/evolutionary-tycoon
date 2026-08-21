@@ -96,8 +96,20 @@ describe('determinism — save and resume', () => {
     const original = new Sim({ seed: 111 });
     original.advance(500);
     const snapshot = snapshotWorld(original.world);
-    original.advance(500);
-    const expected = original.world.hash();
+
+    /*
+     * The reference is a RIGHT-seed sim resumed from the same snapshot — not
+     * the uninterrupted original. Restore drops transients by design (the
+     * header of snapshot.ts), so an uninterrupted world only matched while a
+     * fresh world's first 500 ticks were empty midnight; the 08:00 start put
+     * cars on the road at tick 500 and exposed the vacuous comparison. What
+     * this test actually claims survives intact: the constructor seed is
+     * irrelevant after a restore, the saved RNG sequence governs.
+     */
+    const rightSeed = new Sim({ seed: 111 });
+    restoreWorld(rightSeed.world, snapshot);
+    rightSeed.advance(500);
+    const expected = rightSeed.world.hash();
 
     const wrongSeed = new Sim({ seed: 999 });
     restoreWorld(wrongSeed.world, snapshot);

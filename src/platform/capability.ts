@@ -76,7 +76,11 @@ export function detectCapabilities(doc: Document = document, nav: Navigator = na
   // desktops fall back to SwiftShader, which is slow but entirely playable at
   // the Low quality tier. Refusing to run there would break our own E2E suite
   // and lock out real users on machines without a GPU driver.
-  const attributes = { alpha: false, antialias: false, powerPreference: 'high-performance' } as const;
+  const attributes: WebGLContextAttributes = {
+    alpha: false,
+    antialias: false,
+    powerPreference: 'high-performance',
+  };
   let gl: WebGLRenderingContext | null;
   try {
     gl = canvas.getContext('webgl', attributes);

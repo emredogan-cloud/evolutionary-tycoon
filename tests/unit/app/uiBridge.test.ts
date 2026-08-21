@@ -187,7 +187,7 @@ describe('world markers', () => {
     const { order } = stageOrder(sim, 'hotdog', ORDER_COOKING);
     const record = sim.world.orders.at(order);
     record.station = 1;
-    record.startedAtMs = 0;
+    record.startedAtMs = sim.world.clock.simTimeMs; // "just started" — the clock opens at 08:00, not 0
 
     const item = menuItem(record.item);
     const duration = item.prepTimeMs / station(1).speed;
@@ -263,7 +263,7 @@ describe('plates on the pass', () => {
     const { order } = stageOrder(sim, 'hotdog', ORDER_ON_PASS);
     const record = sim.world.orders.at(order);
     record.quality = menuItem(record.item).qualityBase;
-    record.readyAtMs = 0;
+    record.readyAtMs = sim.world.clock.simTimeMs; // "just plated" — ditto
 
     const bridge = new UiBridge(sim, IDENTITY_PROJECTOR);
     const model = capture(bridge).latest();
@@ -281,7 +281,7 @@ describe('plates on the pass', () => {
     const record = sim.world.orders.at(order);
     const item = menuItem(record.item);
     record.quality = item.qualityBase;
-    record.readyAtMs = 0;
+    record.readyAtMs = sim.world.clock.simTimeMs; // "just plated" — ditto
 
     const bridge = new UiBridge(sim, IDENTITY_PROJECTOR);
     const seen = capture(bridge);

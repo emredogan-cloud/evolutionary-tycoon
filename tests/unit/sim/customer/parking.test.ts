@@ -314,11 +314,27 @@ describe('the customer lifecycle end to end', () => {
       const sim = new Sim({ seed: 9090 });
       sim.advance(TICKS_PER_MINUTE * 10);
 
+      /*
+       * Sample at a moment somebody is actually on site, scanning forward in
+       * half-minute steps instead of trusting one instant. An unstaffed stand
+       * holds each customer only for their patience window, so "who is here at
+       * exactly minute ten" is a coin flip on the arrival stream — the old
+       * fixed instant was a seed-lottery that the 08:00 opening re-rolled.
+       * The property under test is the drain, and it needs occupants, not a
+       * particular wall-clock.
+       */
       const midway = new Set<number>();
-      for (let slot = 0; slot < sim.world.customers.capacity; slot++) {
-        if (sim.world.customers.isActive(slot)) {
-          midway.add(sim.world.customers.at(slot).entityId);
+      const sampleOccupants = (): void => {
+        for (let slot = 0; slot < sim.world.customers.capacity; slot++) {
+          if (sim.world.customers.isActive(slot)) {
+            midway.add(sim.world.customers.at(slot).entityId);
+          }
         }
+      };
+      sampleOccupants();
+      for (let step = 0; midway.size === 0 && step < 30; step++) {
+        sim.advance(TICKS_PER_MINUTE / 2);
+        sampleOccupants();
       }
       expect(midway.size).toBeGreaterThan(0);
 
