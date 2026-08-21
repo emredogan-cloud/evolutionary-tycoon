@@ -81,7 +81,7 @@ jobs:
         # threshold may be lowered to make a batch pass. With no source art the
         # stage reports "0 assets" and passes, which is not the same as approving
         # anything — see the wording in tools/asset-pipeline/cli.ts.
-        run: pnpm assets:validate
+        run: pnpm assets:validate && pnpm assets:prompt-coverage
 
       - name: Build atlases, manifest and budget report
         # §13 budgets and the §7 atlas fill floor. Over budget is a red build:
