@@ -2,6 +2,7 @@ import { CATEGORY_WEIGHT, EFFECT_MODE_OF, UPGRADES, upgrade, upgradeCost } from 
 import type { EffectKind, Upgrade } from '@config/economy/upgrades';
 import { combineDiminishing } from '../math/combineDiminishing';
 import type { World } from '../core/World';
+import { playerLevel, upgradeLevelRequirement } from './playerLevel';
 
 /**
  * What the player has bought, turned into numbers the simulation uses.
@@ -210,6 +211,13 @@ export function buyUpgrade(world: World, id: string): PurchaseOutcome {
   for (const prereq of item.prereqs) {
     if (upgradeLevel(world, prereq) <= 0) return 'locked';
   }
+  /*
+   * The player-level gate, last of the locked family — consolidation pass,
+   * 2026-08-21. Derived from hashed counters (`playerLevel`), so a replayed
+   * log meets exactly the gate it met live. Set below the calibrated pace on
+   * purpose; the balance suite's asserted rows prove it does not bind.
+   */
+  if (playerLevel(world).level < upgradeLevelRequirement(id)) return 'locked';
 
   const cost = upgradeCost(item, level + 1, world.progression.stage);
   if (world.economy.cash < cost) return 'unaffordable';

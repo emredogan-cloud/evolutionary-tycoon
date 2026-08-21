@@ -30,6 +30,9 @@ const LONG_RUN_TIMEOUT_MS = 120_000;
  */
 function fund(sim: Sim, amount = 100_000): void {
   sim.world.economy.cash = amount;
+  // Max-level counters for the same reason as the cash: these tests measure
+  // effects, and the player-level gate has its own tests.
+  sim.world.stats.customersServed = Math.max(sim.world.stats.customersServed, 5_000);
 }
 
 /**
@@ -43,6 +46,13 @@ function fund(sim: Sim, amount = 100_000): void {
 function unlock(sim: Sim, id: string): void {
   const item = UPGRADES.find((candidate) => candidate.id === id);
   if (item === undefined) return;
+  /*
+   * The consolidation pass added player-level gates (derived from hashed
+   * counters). These tests measure *effects*, not gating, so the fixture puts
+   * the counters at max-level the same way `fund` puts cash in the till — the
+   * gate's own behaviour is covered by tests/unit/sim/upgrades/levelGate.
+   */
+  sim.world.stats.customersServed = Math.max(sim.world.stats.customersServed, 5_000);
   sim.world.progression.stage = item.stage;
   for (const prereq of item.prereqs) {
     unlock(sim, prereq);

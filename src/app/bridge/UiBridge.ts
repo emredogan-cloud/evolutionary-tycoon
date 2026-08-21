@@ -8,6 +8,11 @@ import { EMPLOYEE_ROLES, MAX_EMPLOYEES, TASK_KINDS, role } from '@config/employe
 import { requirementFor } from '@config/progression';
 import { PASS, station } from '@config/economy/stations';
 import type { Sim } from '@sim/core/Sim';
+import { ORDER_PAID, orderStateName } from '@sim/stores/OrderStore';
+import { nextStartable } from '@sim/systems/KitchenSystem';
+import { playerLevel, upgradeLevelRequirement } from '@sim/systems/playerLevel';
+import { effectValue } from '@sim/systems/UpgradeSystem';
+import { TICK_MS } from '@config/simulation';
 import type { World } from '@sim/core/World';
 import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
@@ -135,6 +140,8 @@ interface MutableUpgrade {
   stage: number;
   unlocked: boolean;
   missingPrereqs: string[];
+  requiredLevel: number;
+  levelLocked: boolean;
   shortBy: number;
 }
 type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
@@ -142,6 +149,9 @@ type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
 type MutableRole = { -readonly [K in keyof RoleView]: RoleView[K] };
 interface MutableHud {
   analytics: { sampleSize: number; converted: number; reasonCounts: number[] };
+  orders: MutableOrderCard[];
+  orderCount: number;
+  level: { level: number; xp: number; levelFloor: number; nextLevelXp: number };
   notices: { id: number; kind: string; text: string }[];
   showPauseVeil: boolean;
   audio: { master: number; music: number; sfx: number; ambience: number; muted: boolean };
@@ -193,6 +203,20 @@ interface MutableProgression {
   constructing: boolean;
   requirements: MutableRequirement[];
 }
+
+interface MutableOrderCard {
+  slot: number;
+  itemId: string;
+  state: 'PLACED' | 'COOKING' | 'ON_PASS' | 'DELIVERED' | 'PAID';
+  ageMs: number;
+  patience01: number;
+  startable: boolean;
+  price: number;
+  cook01: number;
+}
+
+/** Order cards shown at once; deeper queues summarise as a count. */
+export const MAX_ORDER_CARDS = 5;
 
 export class UiBridge implements HudSource {
   private readonly sim: Sim;
@@ -274,6 +298,8 @@ export class UiBridge implements HudSource {
       visible: false,
       family: item.family,
       stage: item.stage,
+      requiredLevel: 1,
+      levelLocked: false,
       unlocked: false,
       // Sized once from the config, refilled in place — like every other row
       // here, so a sample never allocates.
@@ -325,6 +351,18 @@ export class UiBridge implements HudSource {
       placedCount: 0,
       markerCount: 0,
       incomePerMinute: 0,
+      orders: Array.from({ length: MAX_ORDER_CARDS }, () => ({
+        slot: -1,
+        itemId: '',
+        state: 'PLACED' as const,
+        ageMs: 0,
+        patience01: -1,
+        startable: false,
+        price: 0,
+        cook01: 0,
+      })),
+      orderCount: 0,
+      level: { level: 1, xp: 0, levelFloor: 0, nextLevelXp: 60 },
       audio: { master: 1, music: 1, sfx: 1, ambience: 1, muted: false },
       reducedMotion: false,
       highContrast: false,
@@ -693,6 +731,12 @@ export class UiBridge implements HudSource {
     this.refillPlaced(world);
 
     model.incomePerMinute = netIncomePerMinute(world);
+    this.refillOrders(world);
+    const lvl = playerLevel(world);
+    model.level.level = lvl.level;
+    model.level.xp = lvl.xp;
+    model.level.levelFloor = lvl.levelFloor;
+    model.level.nextLevelXp = lvl.nextLevelXp;
     this.refillUpgrades(world);
     this.refillPrices(world);
     this.refillObjective(world);
@@ -803,6 +847,62 @@ export class UiBridge implements HudSource {
     this.model.payrollFull = count >= MAX_EMPLOYEES;
   }
 
+  /**
+   * The live order list, oldest first — the order cards' whole feed.
+   *
+   * Cap and order are deliberate: the cards sit at a screen edge, and a queue
+   * deeper than the cap is summarised by the count rather than scrolled — the
+   * player acts on the oldest anyway (so does `nextStartable`).
+   */
+  private refillOrders(world: World): void {
+    const model = this.model;
+    const nowMs = world.tick * TICK_MS;
+    const startableSlot = nextStartable(world);
+    let count = 0;
+    // Oldest first: collect live slots, then sort by orderedAtMs.
+    const live: number[] = [];
+    for (let slot = 0; slot < world.orders.scanLimit; slot++) {
+      if (!world.orders.isActive(slot)) continue;
+      const order = world.orders.at(slot);
+      if (order.state === ORDER_PAID) continue;
+      live.push(slot);
+    }
+    live.sort((a, b) => {
+      const oa = world.orders.at(a).orderedAtMs;
+      const ob = world.orders.at(b).orderedAtMs;
+      return oa === ob ? a - b : oa - ob;
+    });
+    for (const slot of live) {
+      if (count >= MAX_ORDER_CARDS) break;
+      const order = world.orders.at(slot);
+      const view = model.orders[count];
+      if (view === undefined) break;
+      view.slot = slot;
+      view.itemId = menuItem(order.item).id;
+      view.state = orderStateName(order.state);
+      view.ageMs = Math.max(0, nowMs - order.orderedAtMs);
+      view.price = order.price;
+      view.startable = slot === startableSlot;
+      view.cook01 = 0;
+      if (order.state === ORDER_COOKING && order.station >= 0) {
+        // The kitchen's own finish-time derivation, mirrored exactly.
+        const durationMs =
+          (menuItem(order.item).prepTimeMs * effectValue(world, 'prepSpeed')) / station(order.station).speed;
+        view.cook01 = durationMs > 0 ? Math.min(1, Math.max(0, (nowMs - order.startedAtMs) / durationMs)) : 0;
+      }
+      view.patience01 = -1;
+      if (order.customerSlot >= 0 && world.customers.isActive(order.customerSlot)) {
+        const customer = world.customers.at(order.customerSlot);
+        view.patience01 =
+          customer.patienceMaxMs > 0
+            ? Math.min(1, Math.max(0, customer.patienceMs / customer.patienceMaxMs))
+            : -1;
+      }
+      count++;
+    }
+    model.orderCount = count;
+  }
+
   private refillUpgrades(world: World): void {
     for (let i = 0; i < UPGRADES.length; i++) {
       const item = UPGRADES[i];
@@ -822,7 +922,11 @@ export class UiBridge implements HudSource {
       for (const prereq of item.prereqs) {
         if (upgradeLevel(world, prereq) <= 0) view.missingPrereqs.push(prereq);
       }
-      view.unlocked = item.stage <= world.progression.stage && view.missingPrereqs.length === 0;
+      view.requiredLevel = upgradeLevelRequirement(item.id);
+      const levelOk = playerLevel(world).level >= view.requiredLevel;
+      view.levelLocked =
+        !levelOk && item.stage <= world.progression.stage && view.missingPrereqs.length === 0;
+      view.unlocked = item.stage <= world.progression.stage && view.missingPrereqs.length === 0 && levelOk;
       view.shortBy = view.affordable ? 0 : Math.max(0, view.cost - world.economy.cash);
       view.visible = this.projectInto(item.anchor.x, item.anchor.y, UPGRADE_CARD_HEIGHT_METRES, view);
 

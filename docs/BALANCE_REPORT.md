@@ -5,7 +5,7 @@
 **Commit:** working tree
 **Policies:** greedy-cheapest, roi-optimal, throughput-first, margin-first, idle-player
 **Simulated:** 720 minutes per policy
-**Wall clock:** 84.2 s for all policies
+**Wall clock:** 87.3 s for all policies
 
 **Result: ✅ every evaluable assertion passed**, with 2 not evaluable.
 
@@ -13,17 +13,17 @@
 
 | | Assertion | Measured |
 | --- | --- | --- |
-| ✅ | Stage 2 reached between 10 and 22 minutes | greedy-cheapest: 17.9 min · roi-optimal: 17.9 min · throughput-first: 17.9 min · margin-first: 16.5 min |
-| ⊘ | Stage 3 reached between 28 and 70 minutes | stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 55.3 min · roi-optimal: 55.3 min · throughput-first: 59.8 min · margin-first: 52.6 min |
-| ⊘ | Stage 4 reached between 140 and 320 minutes | stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 343.8 min · roi-optimal: 343.8 min · throughput-first: 349.7 min · margin-first: 336.8 min |
-| ✅ | Net income per minute within ±25% of the designed envelope | stage 1: best peak ₡15.6/min vs corridor ₡6–₡15 — inside · stage 2: best peak ₡36.4/min vs corridor ₡20–₡55 — inside (measured, awaiting stage calibration) · stage 3: best peak ₡70.3/min vs corridor ₡62–₡179 — inside (measured, awaiting stage calibration) · stage 4: best peak ₡69.5/min vs corridor ₡190–₡483 — OUTSIDE (measured, awaiting stage calibration) |
-| ✅ | The cheapest upgrade never costs more than 90 s of income **(merge-blocking)** | worst: greedy-cheapest at 17.5 min — cheapest ₡13.0 = 68.9 s of income · uncalibrated stage 4's worst, reported not asserted: greedy-cheapest ₡1155.0 = 21780.4 s · idle-player's worst, reported not asserted: 7099.8 s |
+| ✅ | Stage 2 reached between 10 and 22 minutes | greedy-cheapest: 15.8 min · roi-optimal: 15.8 min · throughput-first: 15.8 min · margin-first: 16.5 min |
+| ⊘ | Stage 3 reached between 28 and 70 minutes | stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 60.2 min · roi-optimal: 60.2 min · throughput-first: 60.8 min · margin-first: 51.2 min |
+| ⊘ | Stage 4 reached between 140 and 320 minutes | stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 344.7 min · roi-optimal: 344.7 min · throughput-first: 343.3 min · margin-first: 340.0 min |
+| ✅ | Net income per minute within ±25% of the designed envelope | stage 1: best peak ₡15.6/min vs corridor ₡6–₡15 — inside · stage 2: best peak ₡36.6/min vs corridor ₡20–₡55 — inside (measured, awaiting stage calibration) · stage 3: best peak ₡71.6/min vs corridor ₡62–₡179 — inside (measured, awaiting stage calibration) · stage 4: best peak ₡74.4/min vs corridor ₡190–₡483 — OUTSIDE (measured, awaiting stage calibration) |
+| ✅ | The cheapest upgrade never costs more than 90 s of income **(merge-blocking)** | worst: greedy-cheapest at 11.5 min — cheapest ₡10.0 = 48.8 s of income · uncalibrated stage 4's worst, reported not asserted: throughput-first ₡963.0 = 32622.6 s · idle-player's worst, reported not asserted: 7828.1 s |
 | ✅ | No upgrade purchase reduces revenue | worst: shift-supervisor L2 — ₡272.9 with vs ₡272.9 without (Δ +0.0) |
-| ✅ | Best and worst policy differ by no more than 2.5× | greedy-cheapest 1894 · roi-optimal 1894 · throughput-first 1891 · margin-first 1916 → 1.0× |
-| ✅ | Income per minute stays under ₡600 after 12 hours | throughput-first peaked at ₡208.1/min |
+| ✅ | Best and worst policy differ by no more than 2.5× | greedy-cheapest 1991 · roi-optimal 1991 · throughput-first 1868 · margin-first 1881 → 1.1× |
+| ✅ | Income per minute stays under ₡600 after 12 hours | roi-optimal peaked at ₡230.3/min |
 | ✅ | Cash never goes below zero | lowest: idle-player at ₡0.0 |
-| ✅ | Stage 4 still has unbought upgrades after 6 hours | greedy-cheapest: 7 left · roi-optimal: 7 left · throughput-first: 7 left · margin-first: 7 left · idle-player: 13 left |
-| ✅ | At least two distinct investment paths leave each stage | stage 1: 5 policies left it, 2 distinct purchase sets · stage 2: 5 policies left it, 4 distinct purchase sets · stage 3: 5 policies left it, 4 distinct purchase sets |
+| ✅ | Stage 4 still has unbought upgrades after 6 hours | greedy-cheapest: 6 left · roi-optimal: 6 left · throughput-first: 7 left · margin-first: 7 left · idle-player: 13 left |
+| ✅ | At least two distinct investment paths leave each stage | stage 1: 5 policies left it, 2 distinct purchase sets · stage 2: 5 policies left it, 5 distinct purchase sets · stage 3: 5 policies left it, 4 distinct purchase sets |
 
 `⊘` means **not evaluable**, which is not the same as passing: the run had
 nothing to look at. Every one of them is explained in §"Blocked" below.
@@ -32,15 +32,15 @@ nothing to look at. Every one of them is explained in §"Blocked" below.
 
 | Policy | Served | Stage 2 | Stage 3 | Stage 4 | Upgrades | Peak sustained ₡/min | Final cash |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `greedy-cheapest` | 1894 | 17.9 min | 55.3 min | 343.8 min | 55 | ₡70.3 | ₡761 |
-| `roi-optimal` | 1894 | 17.9 min | 55.3 min | 343.8 min | 55 | ₡70.3 | ₡761 |
-| `throughput-first` | 1891 | 17.9 min | 59.8 min | 349.7 min | 55 | ₡69.5 | ₡626 |
-| `margin-first` | 1916 | 16.5 min | 52.6 min | 336.8 min | 55 | ₡68.1 | ₡1037 |
-| `idle-player` | 1641 | 80.2 min | 115.3 min | 390.5 min | 42 | ₡63.0 | ₡945 |
+| `greedy-cheapest` | 1991 | 15.8 min | 60.2 min | 344.7 min | 56 | ₡74.4 | ₡556 |
+| `roi-optimal` | 1991 | 15.8 min | 60.2 min | 344.7 min | 56 | ₡74.4 | ₡556 |
+| `throughput-first` | 1868 | 15.8 min | 60.8 min | 343.3 min | 54 | ₡71.6 | ₡655 |
+| `margin-first` | 1881 | 16.5 min | 51.2 min | 340.0 min | 54 | ₡70.3 | ₡1690 |
+| `idle-player` | 1693 | 65.2 min | 100.3 min | 390.5 min | 44 | ₡70.3 | ₡851 |
 
 ### Attention, measured but not asserted
 
-attentive best 1916 vs idle 1641 = 1.2×. An idle player *should* be slower; how much slower is a
+attentive best 1991 vs idle 1693 = 1.2×. An idle player *should* be slower; how much slower is a
 design decision nobody has taken, so this is reported rather than gated.
 
 ## The designed envelope — ECONOMY_DESIGN §3
@@ -48,9 +48,9 @@ design decision nobody has taken, so this is reported rather than gated.
 | Stage | Designed entry ₡/min | Designed ceiling ₡/min | Best observed (day average) |
 | ---: | ---: | ---: | ---: |
 | 1 | ₡6 | ₡15 | ₡15.6 |
-| 2 | ₡20 | ₡55 | ₡36.4 |
-| 3 | ₡62 | ₡179 | ₡70.3 |
-| 4 | ₡190 | ₡483 | ₡69.5 |
+| 2 | ₡20 | ₡55 | ₡36.6 |
+| 3 | ₡62 | ₡179 | ₡71.6 |
+| 4 | ₡190 | ₡483 | ₡74.4 |
 
 ## Does each upgrade earn its price?
 
@@ -149,6 +149,6 @@ numbers and WORKING_DISCIPLINE §6 makes that a decision rather than an edit.
 
 ## Blocked — assertions with nothing to evaluate
 
-- **Stage 3 reached between 28 and 70 minutes** — stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 55.3 min · roi-optimal: 55.3 min · throughput-first: 59.8 min · margin-first: 52.6 min
-- **Stage 4 reached between 140 and 320 minutes** — stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 343.8 min · roi-optimal: 343.8 min · throughput-first: 349.7 min · margin-first: 336.8 min
+- **Stage 3 reached between 28 and 70 minutes** — stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 60.2 min · roi-optimal: 60.2 min · throughput-first: 60.8 min · margin-first: 51.2 min
+- **Stage 4 reached between 140 and 320 minutes** — stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 344.7 min · roi-optimal: 344.7 min · throughput-first: 343.3 min · margin-first: 340.0 min
 

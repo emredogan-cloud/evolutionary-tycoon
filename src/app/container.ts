@@ -293,6 +293,9 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
        * would redraw with the state it already had. The next sample carries it,
        * within one tick plus one sample: 150 ms at worst.
        */
+      prep: (orderSlot: number) => {
+        sim.dispatch({ t: 'MANUAL_PREP', orderSlot });
+      },
       buyUpgrade: (id: string) => {
         sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: id });
       },

@@ -122,6 +122,7 @@ describe('the simulation enforces them', () => {
   it('refuses an upgrade whose prerequisite is not owned', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 100_000;
+    sim.world.stats.customersServed = 5_000;
     sim.world.progression.stage = 2;
 
     expect(buyUpgrade(sim.world, 'illuminated-sign')).toBe('locked');
@@ -132,6 +133,7 @@ describe('the simulation enforces them', () => {
   it('allows it the moment the prerequisite is owned', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 100_000;
+    sim.world.stats.customersServed = 5_000;
     sim.world.progression.stage = 2;
 
     expect(buyUpgrade(sim.world, 'hand-painted-sign')).toBe('ok');
@@ -147,6 +149,7 @@ describe('the simulation enforces them', () => {
      */
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 100_000;
+    sim.world.stats.customersServed = 5_000;
 
     expect(buyUpgrade(sim.world, 'express-window')).toBe('locked');
     sim.world.progression.stage = 4;
@@ -158,6 +161,7 @@ describe('the simulation enforces them', () => {
     // because that is the one the player has to do something about first.
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 0;
+    sim.world.stats.customersServed = 5_000;
     expect(buyUpgrade(sim.world, 'illuminated-sign')).toBe('locked');
     expect(upgrade('illuminated-sign').prereqs).toContain('hand-painted-sign');
   });
