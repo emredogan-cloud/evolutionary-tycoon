@@ -14,6 +14,7 @@
   import HudCash from './HudCash.svelte';
   import EvolutionPanel from './EvolutionPanel.svelte';
   import BuildMenu from '../screens/BuildMenu.svelte';
+  import AudioSettings from '../screens/AudioSettings.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
@@ -60,6 +61,7 @@
    * not be hashed, must not be saved, and must not survive a replay.
    */
   let openUpgrade = $state<string | null>(null);
+  let settingsOpen = $state(false);
 
   let cash = $state(0);
   let reputation = $state(0);
@@ -86,6 +88,8 @@
   let roles = $state<RoleView[]>([]);
   let payroll = $state(0);
   let payrollFull = $state(false);
+  let audioMix = $state({ master: 1, music: 1, sfx: 1, ambience: 1, muted: false });
+  let reducedMotion = $state(false);
   let progression = $state<ProgressionView>({
     stage: 1,
     pendingStage: 0,
@@ -98,6 +102,8 @@
   $effect(() =>
     source.subscribe((model) => {
       cash = model.cash;
+      audioMix = { ...model.audio };
+      reducedMotion = model.reducedMotion;
       reputation = model.reputation;
       customersServed = model.customersServed;
       customersWaiting = model.customersWaiting;
@@ -179,6 +185,27 @@
   {/each}
 
   <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
+
+  <button
+    type="button"
+    class="settings-gear"
+    data-testid="settings-gear"
+    aria-label="Ayarlar"
+    aria-expanded={settingsOpen}
+    onclick={() => {
+      settingsOpen = !settingsOpen;
+    }}>⚙</button
+  >
+  {#if settingsOpen}
+    <AudioSettings
+      audio={audioMix}
+      {reducedMotion}
+      {commands}
+      onclose={() => {
+        settingsOpen = false;
+      }}
+    />
+  {/if}
   <ObjectivePanel {objective} progress={objectiveProgress} />
   <!--
     The full list, for discovery — Phase 13. Selecting a row opens the card
@@ -239,5 +266,20 @@
     z-index: 10;
     pointer-events: none;
     font-family: var(--font-ui);
+  }
+  .settings-gear {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid #2b303d;
+    background: rgba(18, 20, 26, 0.85);
+    color: #e8e9ee;
+    font-size: 16px;
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 39;
   }
 </style>

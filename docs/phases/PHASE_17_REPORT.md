@@ -1,0 +1,91 @@
+# PHASE 17 REPORT — Animation / VFX / Audio
+
+**Batch:** P17–P18 (user-authorized 2026-08-21, stop after P18) · **Branch:** `phase/17-anim-vfx-audio`
+**Preceded in-batch by:** ADR-017 finalization (checkpoint AI) · start hour 08:00 (AK) ·
+stage 2–4 calibration (AJ) · the exhaustive asset audit (AG) · the 131-prompt catalog
+expansion + coverage gate (AH).
+
+## 1. Result, stated plainly
+
+**PARTIAL by external input, deliberately** — the same shape as P16. Every system the
+roadmap names is implemented, tested and wired: the full rig runtime with nine authored
+keyframe clips and three procedural layers, the twelve-effect particle library under a
+hard 400 budget, the complete audio director with every GDD §16 behaviour, the settings
+screen, reduced-motion, the clip editor. What does not ship is what the agent cannot
+produce: **zero audio files** (23 catalogued in `AUDIO_ASSET_REQUIREMENTS.md`, system
+wakes on delivery with no code change) and the two particle textures whose prompts the
+audit filed (fire/coin — drawing truthful neighbours until then, recorded in the code).
+
+## 2. IMPLEMENTED
+
+- **`DollRigRuntime`** (`src/render/rig/`): keyframe clips (linear channel sampling,
+  loop/one-shot), 120 ms cross-fade blending, procedural base (distance-driven stride
+  untouched from P7, breathing at idle), carry lock, mirror rule matching the sprite
+  pipeline, per-actor pooled state with TTL prune. Pure maths; sim-time driven, so a
+  frozen world holds a frozen pose and 4× cooks four times as fast.
+- **Nine clips** (`clips/library.data.ts`): take_order, cook, serve, clean, eat, pay,
+  wait_impatient, happy, angry — typed keyframe data validated at load (unknown part or
+  unsorted keys = build error). Three procedural: idle, walk, walk_carry.
+- **Activity vocabulary** (`@config/animation`): derived per view from the customer FSM
+  and the task board (`readView`), never stored/hashed; `ActorSnapshot.activity` carries
+  it to the renderer.
+- **`ParticleLibrary`** — twelve effects on the fx atlas, event-driven via `FxWiring`
+  (payment coins/tips, kitchen steam, angry puffs, upgrade bursts at their own anchors,
+  evolution celebration, construction dust, hire poofs); 400-particle wall enforced in
+  code; reduced-motion quarters counts; **never constructed** in `noParticles` mode.
+- **`AudioDirector`** — category lanes × master, progression ducking with real
+  attack/hold/release ramps, 400 ms same-key throttle, ±6% pitch on one-shots, 8→34 m
+  distance fade, 24-source ceiling, mute. Music-by-hour selection (day/evening/night).
+  Lazy manifest loader after the first playable frame; **silent no-op per missing file**.
+- **Settings** — `SET_AUDIO`/`SET_MUTED`/`SET_REDUCED_MOTION` commands (tick-stamped,
+  logged, replayable); schema **v11** adds `audio.ambience` with migration + a played
+  fixture; `AudioSettings.svelte` panel off a HUD gear, values round-tripping through
+  the world.
+- **`tools/rig-editor/`** — Vite-served preview over the _shipped_ rig maths
+  (`pnpm rig:editor`); not in the production build.
+
+## 3. VERIFIED
+
+| Gate               | Result                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm verify`      | **exit 0** — lint/format/typecheck(3+svelte)/depcruise/knip/assets(173, coverage 131-131-0-0-0)/coverage/balance/bench/build/size                                                          |
+| Unit + integration | **1 524 passed** (rig 28 · particles 6+1 · audio 7 · FxWiring 14 · activity 6 · persistence 85 incl. v11 chain)                                                                            |
+| Determinism        | **61/61**; reduced-motion & audio-mix outcome-invariance proven twice (unit `reducedMotion.test.ts`, e2e delta-exact 300/300)                                                              |
+| Bench              | **22/22** — new rig row: p50 ≈ 0.03–0.05 ms for 60 characters vs the 1.2 ms budget                                                                                                         |
+| E2E chromium       | **82 passed** (+`audioSettings.spec.ts` ×3: slider round-trip through the command log; two silent game-hours played by hand with the till moving; tick-for-tick reduced-motion)            |
+| Visual goldens     | **18/18 byte-identical** — no regen needed: breath offset is sub-pixel and frozen frames hold no clip states; noParticles keeps the library unconstructed, per the roadmap's own leak rule |
+| Coverage           | branches 85.45 % global (≥85), render floors met after the FxWiring/activity suites                                                                                                        |
+
+## 4. CI / DEPLOYMENT EVIDENCE
+
+> ⏳ Appended after push.
+
+## 5. NOT RUN / NOT POSSIBLE
+
+- **Audio files: none exist and none were faked.** The 20-minute real-device audio
+  fatigue pass the DoD names **cannot run against silence** — recorded as blocked on
+  the external audio delivery, protocol unchanged.
+- **Real-GPU frame time: NOT RUN.** Three flag combinations of headed Playwright all
+  landed on `ANGLE … SwiftShader driver` on this workstation (verified via
+  `WEBGL_debug_renderer_info`); the software reading (~40 ms) is deliberately not
+  reported as FPS (D-08). The rig's own budget is CPU maths and IS measured.
+- **Human playtest:** NOT RUN (protocol unchanged, agent-incapable).
+- **iOS device audio unlock:** no device; Phaser's unlock path is the mechanism
+  (RESEARCH_NOTES §13), untested on hardware.
+
+## 6. CHANGE CONTROL
+
+- Schema v10 → **v11** (`audio.ambience`) with migration, fixture `save-v11.json`
+  (played session), and the migration-step literals each growing by one.
+- `ECONOMY_DESIGN §6.2` visibility/menu-appeal curve rows updated to the calibrated
+  values **under the user's calibration authority**, old values retained in the §6.2
+  note; `upgradeEffect.test.ts` follows the document it quotes. (Caught by that very
+  test — the §6.2 pins did their job.)
+- `RenderContext.subscribeEvents` — the renderer may listen, never emit; handed in by
+  the composition root like every other capability.
+
+## 7. Open items this phase adds
+
+1. **23 audio files** — `AUDIO_ASSET_REQUIREMENTS.md`, external production.
+2. **fx_fire / fx_coin textures** — prompts P245–P246; recorded fallback until then.
+3. Real-GPU frame measurement owes a run on a machine whose browser can reach the GPU.

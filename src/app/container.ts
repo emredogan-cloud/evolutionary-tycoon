@@ -235,6 +235,7 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     interpolationAlpha: () => (renderMode.freezeAt !== null ? 0 : loop.interpolationAlpha),
     reducedMotion: prefersReducedMotion(win),
     noParticles: renderMode.noParticles,
+    subscribeEvents: (listener) => sim.events.subscribe(listener),
     sceneId: renderMode.sceneId,
     showDevOverlays: debugOverlayEnabled() && !renderMode.visualDeterminism,
     onFrame: () => {
@@ -297,6 +298,15 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       },
       setPrice: (itemId: string, price: number) => {
         sim.dispatch({ t: 'SET_PRICE', itemId, price });
+      },
+      setAudio: (channel: 'master' | 'music' | 'sfx' | 'ambience', value: number) => {
+        sim.dispatch({ t: 'SET_AUDIO', channel, value });
+      },
+      setMuted: (muted: boolean) => {
+        sim.dispatch({ t: 'SET_MUTED', muted });
+      },
+      setReducedMotion: (on: boolean) => {
+        sim.dispatch({ t: 'SET_REDUCED_MOTION', on });
       },
       evolve: () => {
         sim.dispatch({ t: 'EVOLVE' });

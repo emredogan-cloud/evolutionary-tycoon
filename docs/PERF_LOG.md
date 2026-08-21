@@ -374,3 +374,14 @@ after the §11 phase15 re-record is 3.58 ms. The calibrated 1.15× relative gate
 never fired — the flap is the stale absolute, not the code. Resize (5 → 8 ms)
 filed as a change request in PHASE_16_REPORT §7.4; **not applied** pending the
 user's decision.
+
+## P17 — Animation / VFX / Audio (2026-08-21)
+
+| Ölçüm                          | Değer                                                                                                                                                                                                                   | Nasıl                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Rig runtime, 60 karakter/kare  | **p50 ≈ 0.03–0.05 ms** (bütçe 1.2 ms)                                                                                                                                                                                   | node bench `tests/perf/rig.bench.test.ts`, 200 kare medyanı |
+| Partikül bütçesi               | 400 tavan, **kod zoruyla** (spawn reddi) + birim test                                                                                                                                                                   | `ParticleLibrary` muhasebesi                                |
+| Ses eşzamanlılık               | 24 tavan, kod zoruyla + birim test                                                                                                                                                                                      | `AudioDirector`                                             |
+| Boş-işyükü sim bench satırları | 22/22 yeşil, rig satırı eklendi (baseline'da yok → mutlak-yalnız, sonraki kayıtta katılır)                                                                                                                              | `pnpm bench:sim`                                            |
+| Görsel goldenlar               | 18/18 bayt-özdeş — rig nefes ofseti alt-piksel, donmuş karelerde klip durumu yok                                                                                                                                        | `pnpm test:visual`                                          |
+| Gerçek GPU kare süresi         | **KOŞULMADI** — bu istasyonda otomasyon Chromium'u her bayrak kombinasyonunda SwiftShader'a düşüyor (`ANGLE … SwiftShader driver` doğrulandı); yazılım rasterin 40 ms/25 fps okuması D-08 gereği FPS olarak RAPORLANMAZ | headed Playwright, 3 deneme                                 |

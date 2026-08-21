@@ -173,9 +173,15 @@ STAGE_MULTIPLIER = [1, 4, 14, 55]     // aşama 1..4
 | ------------------------------- | ----------------------------- | ----: | ----: | ----: | -----: |
 | Hız (süre çarpanı)              | `0.80^(L−1)`                  |  1.00 |  0.80 |  0.64 |  0.512 |
 | Kalite (toplamsal, sönümlü)     | `+0.10, +0.07, +0.05, +0.035` | +0.10 | +0.17 | +0.22 | +0.255 |
-| Görünürlük (toplamsal, sönümlü) | `+0.30, +0.22, +0.16, +0.12`  |  1.30 |  1.52 |  1.68 |   1.80 |
+| Görünürlük (toplamsal, sönümlü) | `+0.50, +0.28, +0.16, +0.12`  |  1.50 |  1.78 |  1.94 |   2.06 |
 | Kapasite (doğrusal)             | `+n`                          |    +1 |    +1 |    +2 |     +2 |
 | Hareket hızı                    | `1 + 0.12×(L−1)`              |  1.00 |  1.12 |  1.24 |   1.36 |
+
+> **Kalibrasyon güncellemesi (2026-08-21, kullanıcı yetkisiyle):** görünürlük eğrisinin ilk iki
+> adımı `+0.30/+0.22 → +0.50/+0.28`. Sebep aritmetik ve §3'ün kendisinden geliyor: Aşama 1'in
+> 12–18 dk penceresi, ₡140 evrim + ₡55 rung + modellenen oyuncu ihtiyatı (~₡80) toplamını zarfın
+> üst yarısında bir net gerektiriyor ve ölçülen tek kaldıraç ilk tabelaydı (STAGE_2_4_CALIBRATION_REPORT §2).
+> Menü çekiciliği aynı geçişte `+0.18/+0.13 → +0.25/+0.15`. Eski değerler bu notta korunur.
 
 **Kural:** Hiçbir yükseltme çarpanı bir başkasıyla serbestçe çarpılmaz. Aynı kategorideki etkiler `combineDiminishing()` ile birleştirilir:
 

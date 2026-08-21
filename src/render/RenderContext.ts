@@ -1,4 +1,5 @@
 import type { SimView } from '@sim/core/types';
+import type { SimEvent } from '@sim/core/events';
 import type { CameraState } from './camera/cameraMath';
 
 /**
@@ -57,6 +58,14 @@ export interface RenderContext {
    * building goes up four times faster and the mask has to agree.
    */
   constructionProgress?(): number;
+  /**
+   * Subscribe to simulation events — Phase 17.
+   *
+   * Handed in rather than imported, like everything else here: the renderer
+   * may listen, never emit. Particles and audio key off these. Returns an
+   * unsubscribe, called on scene shutdown.
+   */
+  subscribeEvents?(listener: (event: SimEvent) => void): () => void;
   /** `prefers-reduced-motion` — disables smoothing and shake outright. */
   readonly reducedMotion: boolean;
   /** `?noParticles=1` — the weather layers are not even created. */

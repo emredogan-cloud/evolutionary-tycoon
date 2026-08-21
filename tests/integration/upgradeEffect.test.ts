@@ -103,10 +103,10 @@ describe('every upgrade changes a number the simulation reads', () => {
 });
 
 describe('the sign — visibility', () => {
-  it('follows ECONOMY_DESIGN §6.2 exactly: 1.30, 1.52, 1.68, 1.80', () => {
+  it('follows ECONOMY_DESIGN §6.2 exactly: 1.50, 1.78, 1.94, 2.06', () => {
     const sim = new Sim({ seed: 1 });
     fund(sim);
-    const expected = [1.3, 1.52, 1.68, 1.8];
+    const expected = [1.5, 1.78, 1.94, 2.06];
 
     for (let level = 0; level < expected.length; level++) {
       buyUpgrade(sim.world, 'hand-painted-sign');
@@ -165,7 +165,7 @@ describe('the menu board — appeal and ordering speed', () => {
     buyUpgrade(sim.world, 'menu-board');
     const third = effectValue(sim.world, 'menuAppeal');
 
-    expect(first).toBeCloseTo(1.18, 9);
+    expect(first).toBeCloseTo(1.25, 9);
     expect(second - first).toBeLessThan(first - 1);
     expect(third - second).toBeLessThan(second - first);
   });
@@ -268,10 +268,10 @@ describe('the roadside marker — the decision point', () => {
 });
 
 describe('the sign — visibility', () => {
-  it('follows ECONOMY_DESIGN §6.2 exactly: 1.30, 1.52, 1.68, 1.80', () => {
+  it('follows ECONOMY_DESIGN §6.2 exactly: 1.50, 1.78, 1.94, 2.06', () => {
     const sim = new Sim({ seed: 1 });
     fund(sim);
-    const expected = [1.3, 1.52, 1.68, 1.8];
+    const expected = [1.5, 1.78, 1.94, 2.06];
 
     for (let level = 0; level < expected.length; level++) {
       buyUpgrade(sim.world, 'hand-painted-sign');
@@ -330,7 +330,7 @@ describe('the menu board — appeal and ordering speed', () => {
     buyUpgrade(sim.world, 'menu-board');
     const third = effectValue(sim.world, 'menuAppeal');
 
-    expect(first).toBeCloseTo(1.18, 9);
+    expect(first).toBeCloseTo(1.25, 9);
     expect(second - first).toBeLessThan(first - 1);
     expect(third - second).toBeLessThan(second - first);
   });

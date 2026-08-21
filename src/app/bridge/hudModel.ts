@@ -190,6 +190,16 @@ export interface HudModel {
   readonly placedCount: number;
   readonly markerCount: number;
 
+  /** The audio mix and motion preference — Phase 17's settings panel reads these. */
+  readonly audio: {
+    readonly master: number;
+    readonly music: number;
+    readonly sfx: number;
+    readonly ambience: number;
+    readonly muted: boolean;
+  };
+  readonly reducedMotion: boolean;
+
   /** Takings less costs over the last sixty seconds, per minute — Phase 9. */
   readonly incomePerMinute: number;
   /** Every upgrade, in config order. Reused, like `markers`. */
@@ -289,5 +299,9 @@ export interface UiCommands {
   previewPlacement(objectId: string, screenX: number, screenY: number): PlacementPreview | null;
   setPrice(itemId: string, price: number): void;
   hire(roleId: string, skill: number): void;
+  /** Move one audio slider — Phase 17. */
+  setAudio(channel: 'master' | 'music' | 'sfx' | 'ambience', value: number): void;
+  setMuted(muted: boolean): void;
+  setReducedMotion(on: boolean): void;
   fire(entityId: number): void;
 }

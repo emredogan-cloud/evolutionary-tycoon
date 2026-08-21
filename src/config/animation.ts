@@ -23,8 +23,6 @@ export const ACTIVITIES = [
   'angry',
 ] as const;
 
-export type ActivityName = (typeof ACTIVITIES)[number];
-
 export const ACTIVITY_IDLE = 0;
 export const ACTIVITY_WALK = 1;
 export const ACTIVITY_WALK_CARRY = 2;

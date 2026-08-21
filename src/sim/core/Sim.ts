@@ -101,8 +101,11 @@ export class Sim {
 
   /** Reused across ticks so the readonly view costs nothing per frame. */
   private readonly view: {
-    -readonly [K in Exclude<keyof SimView, 'actors'>]: SimView[K];
-  } & { actors: MutableActorSnapshot[] };
+    -readonly [K in Exclude<keyof SimView, 'actors' | 'audioSettings'>]: SimView[K];
+  } & {
+    actors: MutableActorSnapshot[];
+    audioSettings: { master: number; music: number; sfx: number; ambience: number; muted: boolean };
+  };
 
   /**
    * Preallocated actor records, sized to the stores.
@@ -186,6 +189,7 @@ export class Sim {
       actorCount: 0,
       upgradeLevels: this.upgradeLevelBuffer,
       upgradeRevision: 0,
+      audioSettings: { master: 1, music: 1, sfx: 1, ambience: 1, muted: false },
       stage: 1,
     };
   }
@@ -293,6 +297,12 @@ export class Sim {
       revision += level * (i + 1) * 31;
     }
     v.upgradeRevision = revision;
+    const mix = this.world.settings.audio;
+    v.audioSettings.master = mix.master;
+    v.audioSettings.music = mix.music;
+    v.audioSettings.sfx = mix.sfx;
+    v.audioSettings.ambience = mix.ambience;
+    v.audioSettings.muted = mix.muted;
 
     return v;
   }

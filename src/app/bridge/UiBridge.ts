@@ -133,6 +133,8 @@ type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
 type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
 type MutableRole = { -readonly [K in keyof RoleView]: RoleView[K] };
 interface MutableHud {
+  audio: { master: number; music: number; sfx: number; ambience: number; muted: boolean };
+  reducedMotion: boolean;
   cash: number;
   reputation: number;
   customersServed: number;
@@ -292,6 +294,8 @@ export class UiBridge implements HudSource {
       placedCount: 0,
       markerCount: 0,
       incomePerMinute: 0,
+      audio: { master: 1, music: 1, sfx: 1, ambience: 1, muted: false },
+      reducedMotion: false,
       upgrades,
       prices,
       objective: '',
@@ -411,6 +415,12 @@ export class UiBridge implements HudSource {
     const model = this.model;
 
     model.cash = world.economy.cash;
+    model.audio.master = world.settings.audio.master;
+    model.audio.music = world.settings.audio.music;
+    model.audio.sfx = world.settings.audio.sfx;
+    model.audio.ambience = world.settings.audio.ambience;
+    model.audio.muted = world.settings.audio.muted;
+    model.reducedMotion = world.settings.a11y.reducedMotion;
     model.reputation = world.economy.reputation;
     model.customersServed = world.stats.customersServed;
     model.ordersActive = world.orders.activeCount;

@@ -446,6 +446,19 @@ export interface SimView {
   readonly upgradeRevision: number;
 
   /**
+   * The audio mix, for the director — Phase 17. A stable sub-object refreshed
+   * in place like `actors`; the renderer multiplies these, never writes them
+   * (SET_AUDIO is the only way in).
+   */
+  readonly audioSettings: {
+    readonly master: number;
+    readonly music: number;
+    readonly sfx: number;
+    readonly ambience: number;
+    readonly muted: boolean;
+  };
+
+  /**
    * The evolution stage, 1..4 — Phase 11.
    *
    * The renderer needs it because the lot is not the same lot at every stage:

@@ -53,6 +53,8 @@ export interface ActorView extends DepthSortable {
   patience: number;
   /** Moving under its own power this tick. Drives the walk cycle in Phase 7. */
   moving: boolean;
+  /** ACTIVITIES index — Phase 17's clip selector. */
+  activity: number;
 }
 
 function createActorView(): ActorView {
@@ -73,6 +75,7 @@ function createActorView(): ActorView {
     travelled: 0,
     patience: 0,
     moving: false,
+    activity: 0,
   };
 }
 

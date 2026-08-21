@@ -12,6 +12,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "rig:editor": "vite tools/rig-editor --open",
     "build": "vite build",
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.test.json --noEmit && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",

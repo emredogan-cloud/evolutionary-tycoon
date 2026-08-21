@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { SimEvent } from '@sim/core/events';
 import {
   ACTOR_KIND_CUSTOMER,
   ACTOR_KIND_EMPLOYEE,
@@ -22,7 +23,12 @@ import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import type { Point2 } from '../iso/IsoProjection';
 import { placeholderTextures } from '../placeholderTextures';
 import { patienceRing } from '../views/CustomerView';
-import { createPose, poseIdle, poseWalk } from '../rig/DollRig';
+import { createPose } from '../rig/DollRig';
+import { DollRigRuntime } from '../rig/DollRigRuntime';
+import { ParticleLibrary } from '../fx/ParticleLibrary';
+import { AudioDirector } from '../audio/AudioDirector';
+import { wireFx } from '../fx/FxWiring';
+import { FX_FRAMES } from '@config/sprites';
 import type { RigPose } from '../rig/DollRig';
 import type { AssetRegistry } from '../AssetRegistry';
 import {
@@ -188,6 +194,14 @@ export class WorldScene extends Phaser.Scene {
   private readonly sprites: Phaser.GameObjects.Image[] = [];
   /** Reused every frame; the body motion helper writes into it. */
   private readonly walkPose = createPose();
+  /** Phase 17 — clips, blending and the procedural layer, per actor. */
+  private readonly rig = new DollRigRuntime();
+  private animNowMs = 0;
+  /** Phase 17 — the twelve effects. Null in noParticles mode by construction. */
+  private particles: ParticleLibrary | null = null;
+  private audio: AudioDirector | null = null;
+  private unsubscribeEvents: (() => void) | null = null;
+  private currentMusic: string | null = null;
   private readonly bodyMotion: VehicleBodyMotion = { bobY: 0, pitch: 0 };
   private readonly screenScratch: Point2 = { x: 0, y: 0 };
   private readonly originsByKey = new Map<string, { x: number; y: number }>();
@@ -229,6 +243,49 @@ export class WorldScene extends Phaser.Scene {
     // Nothing is owned at scene creation; `update` rebuilds on the first frame
     // and on every purchase after that.
     this.registerStatics([]);
+
+    /*
+     * Phase 17 — effects and audio. Particles are simply never constructed in
+     * noParticles mode: the goldens were captured without them and the
+     * roadmap's own instruction is that a moving golden means a leak. Audio
+     * needs a user gesture to unlock; Phaser handles that, and with no files
+     * shipped the director is a complete, silent instrument.
+     */
+    if (!this.context.noParticles) {
+      const fxAtlas = this.assets?.atlasOf(FX_FRAMES.steam);
+      if (fxAtlas !== undefined) {
+        this.particles = ParticleLibrary.forScene(this, fxAtlas, this.context.reducedMotion);
+      }
+      this.audio = new AudioDirector(this.sound);
+      /*
+       * Lazy, after the first playable frame — the roadmap's own requirement.
+       * `public/audio/manifest.json` lists the files that actually exist; with
+       * none shipped the fetch 404s and the director simply stays silent.
+       * Dropping files plus a manifest into public/audio wakes the whole
+       * system with no code change (docs/AUDIO_ASSET_REQUIREMENTS.md).
+       */
+      void fetch('audio/manifest.json')
+        .then(async (response) => (response.ok ? ((await response.json()) as { files: string[] }) : null))
+        .then((manifest) => {
+          if (manifest === null || manifest.files.length === 0) return;
+          for (const key of manifest.files) {
+            this.load.audio(key, [`audio/${key}.ogg`, `audio/${key}.m4a`]);
+          }
+          this.load.once('complete', () => {
+            this.audio?.markLoaded(manifest.files);
+          });
+          this.load.start();
+        })
+        .catch(() => undefined);
+      this.unsubscribeEvents =
+        this.context.subscribeEvents?.((event) => {
+          this.onSimEvent(event);
+        }) ?? null;
+      this.events.once('shutdown', () => {
+        this.unsubscribeEvents?.();
+        this.audio?.stopAll();
+      });
+    }
 
     const bounds = this.cameraBounds();
     this.camera = new CameraController(this, {
@@ -299,6 +356,25 @@ export class WorldScene extends Phaser.Scene {
       this.registerStatics(view.upgradeLevels);
     }
 
+    this.animNowMs = view.simTimeMs;
+    this.rig.prune(this.animNowMs);
+    /*
+     * GDD §16's three music variants follow the game hour. With no files
+     * shipped this selects silently; the day a music_* file lands it starts
+     * honouring the clock with no code change.
+     */
+    if (this.audio !== null) {
+      const desired =
+        view.gameHour >= 6 && view.gameHour < 17
+          ? 'music_day'
+          : view.gameHour < 22
+            ? 'music_evening'
+            : 'music_night';
+      if (desired !== this.currentMusic) {
+        this.currentMusic = desired;
+        this.audio.play(desired, this.animNowMs, view.audioSettings);
+      }
+    }
     this.bridge.sync(view, this.context.interpolationAlpha());
     this.environment?.update(view, this.bridge.visible);
     this.placeholderQuads = 0;
@@ -466,13 +542,56 @@ export class WorldScene extends Phaser.Scene {
    * `RIG_DRAW_ORDER` — back arm behind the torso, hair over the head — and take
    * consecutive depths, so a person never interleaves with the person behind them.
    */
+  /** Phase 17 — one world moment becomes one flash and one noise. */
+  private onSimEvent(event: SimEvent): void {
+    const settings = this.context.readView();
+    wireFx(event, {
+      spawnAtWorld: (effectId, worldX, worldY) => {
+        const screen = worldToScreen(worldX, worldY, 0, this.screenScratch);
+        this.particles?.spawn(effectId, screen.x, screen.y - 24);
+      },
+      play: (key, worldX, worldY) => {
+        const lot = this.layout.lot;
+        const focusX = (lot.minX + lot.maxX) / 2;
+        const focusY = (lot.minY + lot.maxY) / 2;
+        const distance =
+          worldX === undefined || worldY === undefined ? 0 : Math.hypot(worldX - focusX, worldY - focusY);
+        this.audio?.play(key, this.animNowMs, settings.audioSettings, distance);
+      },
+      positionOf: (entityId) => {
+        for (const view of this.bridge.visible) {
+          if (view.entityId === entityId) return { x: view.worldX, y: view.worldY };
+        }
+        return null;
+      },
+      lotCentre: () => ({
+        x: (this.layout.lot.minX + this.layout.lot.maxX) / 2,
+        y: (this.layout.lot.minY + this.layout.lot.maxY) / 2,
+      }),
+    });
+  }
+
   private drawPerson(view: ActorView, index: number): number {
     const appearance = unpackAppearance(view.variant);
     const facing = RIG_DIRECTION_FOR[directionFor(view.headingX, view.headingY)];
 
-    const pose: RigPose = view.moving
-      ? poseWalk(view.travelled, WALK_SPEED_METRES_PER_SECOND, this.walkPose)
-      : poseIdle(this.walkPose);
+    /*
+     * Sim time drives the clips, not the wall clock: a frozen world holds a
+     * frozen pose (visual determinism gets this for free), and a 4x world
+     * cooks four times as fast, which is what 4x means.
+     */
+    // Rig facings collapse to four; sw/nw are the mirrored pair (sprites.ts).
+    const mirrored = facing === 'sw' || facing === 'nw';
+    const pose: RigPose = this.rig.pose(
+      view.entityId,
+      view.activity,
+      view.moving,
+      view.travelled,
+      WALK_SPEED_METRES_PER_SECOND,
+      mirrored,
+      this.animNowMs,
+      this.walkPose,
+    );
 
     // The whole figure rises and falls with the stride; the parts' own offsets
     // are relative to their rest heights, so the bob is read once from the torso.
