@@ -86,6 +86,9 @@ export function shouldExposeTestHooks(search: string): boolean {
 
 function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(patch)) {
+    // A tamper patch is attacker-shaped by definition (it exists to corrupt
+    // saves) — never let it walk the prototype chain instead of the save.
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
     const existing = base[key];
     if (
       typeof value === 'object' &&

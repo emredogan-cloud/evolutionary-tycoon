@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { worldObject } from '@config/sprites';
@@ -33,13 +33,15 @@ const SIM_ROOT = resolve(import.meta.dirname, '../../../../src/sim');
 function simSources(): string {
   const parts: string[] = [];
   const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir)) {
-      const path = join(dir, entry);
-      if (statSync(path).isDirectory()) {
+    // Dirent types come from the readdir itself — one syscall, no
+    // check-then-read race on a path that could change between the two.
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
         walk(path);
         continue;
       }
-      if (entry.endsWith('.ts')) parts.push(readFileSync(path, 'utf8'));
+      if (entry.name.endsWith('.ts')) parts.push(readFileSync(path, 'utf8'));
     }
   };
   walk(SIM_ROOT);
