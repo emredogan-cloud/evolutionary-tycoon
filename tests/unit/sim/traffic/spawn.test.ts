@@ -355,9 +355,12 @@ describe('archetype mix', () => {
     () => {
       const { archetypes } = spawnTimeline(2468, TICKS_PER_MINUTE * 60);
       const seen = new Set(archetypes);
-      // Every archetype that is actually on the road. The artless six hold
-      // zero share (archetypes.test.ts pins that) and cannot appear.
-      const live = ARCHETYPE_SPECS.filter((spec) => spec.baseShare > 0).length;
+      /*
+       * Every archetype that can appear at boot: positive share AND a
+       * reputation gate at or under the starting 50 — the limo's 75 keeps it
+       * off the road until the stand has earned it, by design (GDD 9.4).
+       */
+      const live = ARCHETYPE_SPECS.filter((spec) => spec.baseShare > 0 && spec.minReputation <= 50).length;
       expect(seen.size).toBe(live);
     },
     LONG_RUN_TIMEOUT_MS,

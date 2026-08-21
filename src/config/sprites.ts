@@ -194,6 +194,20 @@ export function vehicleFrame(archetype: number, direction: SpriteDirectionName):
 }
 
 /**
+ * The brake-lit frame for a facing, or null where the art has none.
+ *
+ * The 2026-08-21 delivery draws brake lights only where they can be seen —
+ * the rear-facing n/ne (nw arrives by the import's mirror). Every other
+ * heading keeps the default frame; a brake light you cannot see is not a
+ * missing picture.
+ */
+export function vehicleBrakeFrame(archetype: number, direction: SpriteDirectionName): string | null {
+  if (direction !== 'n' && direction !== 'ne' && direction !== 'nw') return null;
+  const spec = ARCHETYPE_SPECS[archetype] ?? ARCHETYPE_SPECS[0];
+  return `${spec?.textureStem ?? 'veh_sedan'}_brake_${direction}${SUFFIX}`;
+}
+
+/**
  * The world objects a stage layout can place, by the id its `statics` use.
  *
  * The ids were `ph-prop-short` and `ph-prop-tall` with a comment saying what

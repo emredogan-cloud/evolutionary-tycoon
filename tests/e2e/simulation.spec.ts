@@ -126,7 +126,17 @@ const REFERENCE = {
    * already equalled the sqrt form; it was V8's that strayed. Tick 0 is
    * motionless and did not move.
    */
-  hashAtTick1000: 'ae855a2b076f9f8f',
+  /*
+   * A thirteenth time — the reserve fleet goes live (consolidation pass,
+   * 2026-08-22). The six Phase 15 archetypes hold eight percent of the mix
+   * (their delivered art validated 0-failing; the original four keep 92%,
+   * ratios intact), the bay manoeuvres run the clearance corridor instead of
+   * sweeping through parked neighbours, so every spawn draw and every
+   * parking path lands differently and the thousandth tick moves with it.
+   * The balance gate's asserted rows ran green with the ten-archetype mix in
+   * the same commit; tick 0 is motionless and did not move.
+   */
+  hashAtTick1000: 'd264cc8d3e33a4f5',
 } as const;
 
 interface TestApi {

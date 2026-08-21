@@ -40,6 +40,7 @@ import {
   RIG_PIVOTS,
   rigFrame,
   unpackAppearance,
+  vehicleBrakeFrame,
   vehicleFrame,
   worldObjectAt,
   worldObjectIndexOf,
@@ -504,8 +505,26 @@ export class WorldScene extends Phaser.Scene {
    */
   private drawVehicle(view: ActorView, index: number): number {
     const direction = directionFor(view.headingX, view.headingY);
-    const frame = this.frameOf(vehicleFrame(view.variant, direction));
-    if (frame === null) return this.drawPlaceholder(view, index);
+    /*
+     * Brake lights are frames now, not tints: the 2026-08-21 delivery has a
+     * `_brake` view wherever the lights are visible (rear-facing headings);
+     * everywhere else the default frame is already the truth.
+     */
+    const brake = view.braking ? vehicleBrakeFrame(view.variant, direction) : null;
+    const frame =
+      (brake !== null ? this.frameOf(brake) : null) ?? this.frameOf(vehicleFrame(view.variant, direction));
+    if (frame === null) {
+      /*
+       * The reserve fleet's atlas (`vehicles2`) is a deferred tier: a live
+       * session streams it in behind the first frame. A bus whose texture has
+       * not arrived is *skipped*, never placeholdered — an unmistakably-wrong
+       * box on the road would violate the production-placeholder zero, and
+       * the vehicle simply becomes visible at the road edge a moment later,
+       * which reads as a spawn.
+       */
+      if (this.assets?.hasAtlas('vehicles2') !== true) return index;
+      return this.drawPlaceholder(view, index);
+    }
 
     const atlas = this.assets?.atlasOf(frame);
     if (atlas === undefined) return this.drawPlaceholder(view, index);
@@ -513,25 +532,6 @@ export class WorldScene extends Phaser.Scene {
     const sprite = this.quadFor(index, atlas, frame);
     vehicleBodyMotion(view.travelled, view.braking ? -4 : 0, this.bodyMotion);
     sprite.setRotation(this.bodyMotion.pitch);
-    /*
-     * Braking is still a tint, because the art has no `_brake` frame: the batch
-     * list asks for one per side-on direction and the delivered set contains
-     * none. A red wash over a white car reads as brake lights at this size, and
-     * it is registered as an art gap rather than left to look intentional.
-     */
-    /*
-     * No tint at all — and that is a recorded gap, not an oversight.
-     *
-     * The placeholder era showed braking as a loud `0xffb0b0` wash, deliberately
-     * obvious against a grey quad. On the delivered near-white bodies every
-     * strength of that wash reads as *paint*: the first golden with real art
-     * froze what looks like a rose-pink sedan, which misleads harder than a
-     * missing indicator does. Deceleration still reads through the nose-dip
-     * `vehicleBodyMotion` applies; the honest fix is the `_brake` frames the
-     * batch list asked for and the drop did not contain — listed with the other
-     * regeneration work in docs/ASSET_INTEGRATION_REPORT.md.
-     */
-
     this.place(sprite, frame, view.screenX, view.screenY + this.bodyMotion.bobY);
     return index + 1;
   }

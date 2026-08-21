@@ -120,9 +120,7 @@ export class LoadScene extends Phaser.Scene {
 
     let failed = 0;
     for (const atlas of manifest.atlases) {
-      // Deferred atlases are fetched when something first needs them
-      // (`installDeferredAtlas`) — not before the world starts, and never as
-      // part of this bar's denominator.
+      // Deferred atlases stream in behind the first frame — see below.
       if (atlas.priority === 'deferred') continue;
       const ok = await this.addAtlas(loader, atlas);
       if (!ok) {
@@ -136,6 +134,25 @@ export class LoadScene extends Phaser.Scene {
     for (const single of manifest.singles) {
       if (single.priority === 'deferred') continue;
       await this.addSingle(loader, single);
+    }
+
+    /*
+     * The reserve fleet's atlas. Their spawn shares are live (archetypes.ts,
+     * 2026-08-22), so the art is *needed*, just never before the first frame:
+     * a live session streams it while the world already runs, and a vehicle
+     * whose texture is still in flight stays undrawn (WorldScene skips it) —
+     * it surfaces at the road edge a beat later, which reads as a spawn.
+     * Deterministic sessions (the E2E hook, frozen fixtures, goldens) await
+     * it instead, because "which vehicles are visible" must not depend on
+     * network timing there.
+     */
+    const reserve = manifest.atlases.find((atlas) => atlas.id === 'vehicles2');
+    if (reserve !== undefined) {
+      const params = new URLSearchParams(location.search);
+      const deterministic = params.get('e2e') === '1' || params.has('freezeAt') || params.has('scene');
+      const install = this.addAtlas(loader, reserve);
+      if (deterministic) await install;
+      else void install.then(() => undefined);
     }
 
     this.finish(this.registry_.frameCount > 0 ? 'loaded' : 'placeholder', manifest);
