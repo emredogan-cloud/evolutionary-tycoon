@@ -56,6 +56,26 @@ audit filed (fire/coin — drawing truthful neighbours until then, recorded in t
 | Visual goldens     | **18/18 byte-identical** — no regen needed: breath offset is sub-pixel and frozen frames hold no clip states; noParticles keeps the library unconstructed, per the roadmap's own leak rule |
 | Coverage           | branches 85.45 % global (≥85), render floors met after the FxWiring/activity suites                                                                                                        |
 
+## 3.1 The gate caught two real defects on the way out
+
+1. **The eleventh pin renewal, missed** — schema v11 hashed the ambience
+   slider; tick 0 moved by one written double; the local chromium suite had
+   been run before that write landed. CI caught it, the desk had not
+   (run 32450020298). Renewed with the note in the pin block (978e126).
+2. **A latent P15 defect, exposed by the 08:00 start and caught as a
+   Firefox-only hash mismatch (run 32450756322)** — and it was never about
+   Firefox. The UI bridge samples weather on the boot frame, deriving against
+   the _unplanned_ day and caching at tick 0; `planDay` rewrote the schedule
+   without invalidating, so the tick's own derive read the poisoned cache and
+   `lastWeather` — hashed state — depended on whether a frame painted before
+   the first tick. Invisible at the midnight boot (pre-plan default equalled
+   hour-0's planned weather); the daylight start put hour 8 in a rain segment
+   and the race became a digest. Fixed at the root: `planDay` ends by
+   invalidating the derivation cache; the regression test replays the browser
+   boot order in miniature (91a5f09). The hunt leaves permanent forensics —
+   `World.hashSections()` plus hook getters that name the diverging
+   neighbourhood instead of a sixteen-hex shrug.
+
 ## 4. CI / DEPLOYMENT EVIDENCE
 
 > ⏳ Appended after push.
