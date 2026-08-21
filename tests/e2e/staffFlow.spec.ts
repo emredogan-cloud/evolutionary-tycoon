@@ -86,7 +86,6 @@ test.describe('the staff panel', () => {
      * against an empty till and asserts the simulation refuses it too.
      */
     await boot(page);
-    await page.locator('[data-testid="staff-toggle"]').click();
 
     await expect(page.locator('[data-testid="staff-hire"][data-role="cook"]')).toBeDisabled();
   });
@@ -94,7 +93,6 @@ test.describe('the staff panel', () => {
   test('hires a cook, takes the money, and shows them on the payroll', async ({ page }) => {
     await boot(page);
     await earnFor(page, 20);
-    await page.locator('[data-testid="staff-toggle"]').click();
 
     const before = await readCash(page);
     const hire = page.locator('[data-testid="staff-hire"][data-role="cook"]');
@@ -115,7 +113,6 @@ test.describe('the staff panel', () => {
   test('lets the player fire somebody again', async ({ page }) => {
     await boot(page);
     await earnFor(page, 20);
-    await page.locator('[data-testid="staff-toggle"]').click();
     await page.locator('[data-testid="staff-hire"][data-role="cook"]').click();
     await advance(page, 1);
     await expect(page.locator('[data-testid="staff-row"]')).toHaveCount(1);
@@ -137,7 +134,6 @@ test.describe('an employee in the world', () => {
      */
     await boot(page);
     await earnFor(page, 20);
-    await page.locator('[data-testid="staff-toggle"]').click();
     await page.locator('[data-testid="staff-hire"][data-role="cook"]').click();
     await advance(page, 1);
 
@@ -154,7 +150,6 @@ test.describe('an employee in the world', () => {
      */
     await boot(page);
     await earnFor(page, 20);
-    await page.locator('[data-testid="staff-toggle"]').click();
     await page.locator('[data-testid="staff-hire"][data-role="cook"]').click();
     await advance(page, 1);
 

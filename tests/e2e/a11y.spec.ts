@@ -65,7 +65,18 @@ test.describe('axe over the main screens', () => {
 
   test('pause overlay', async ({ page }) => {
     await boot(page);
-    await page.keyboard.press(' ');
+    // Through the command door rather than the keyboard: the subject here is
+    // the overlay's accessibility, not the key binding (audioSettings.spec
+    // owns Space), and a keydown races HUD listener attachment on slower
+    // engines.
+    await page.evaluate(() => {
+      (
+        window as unknown as Record<
+          '__EVOTYCOON__',
+          { dispatch(c: { t: 'SET_PAUSED'; paused: boolean }): void }
+        >
+      ).__EVOTYCOON__.dispatch({ t: 'SET_PAUSED', paused: true });
+    });
     await expect(page.getByTestId('pause-overlay')).toBeVisible();
     await analyse(page, 'pause');
   });
