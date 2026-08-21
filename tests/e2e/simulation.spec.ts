@@ -118,7 +118,15 @@ const REFERENCE = {
    * the pre-P15 one again and the thousandth tick moved with it. Tick 0 is
    * unchanged — the calendar state at tick 0 is the same either way.
    */
-  hashAtTick1000: '86c82ea944ad614c',
+  /*
+   * A twelfth time, closing the P17 divergence hunt: every sim distance now
+   * goes through `euclidean()` (correctly-rounded sqrt) instead of
+   * `Math.hypot`, whose rounding engines do not agree on. The new figure is
+   * the one Firefox had been producing all along — SpiderMonkey's hypot
+   * already equalled the sqrt form; it was V8's that strayed. Tick 0 is
+   * motionless and did not move.
+   */
+  hashAtTick1000: 'ae855a2b076f9f8f',
 } as const;
 
 interface TestApi {

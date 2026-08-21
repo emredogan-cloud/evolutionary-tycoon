@@ -1,3 +1,4 @@
+import { euclidean } from '../math/length';
 import type { NavGrid } from './NavGrid';
 
 /**
@@ -217,7 +218,7 @@ export class FlowField {
         }
 
         if (bestX === 0 && bestY === 0) continue;
-        const length = Math.hypot(bestX, bestY);
+        const length = euclidean(bestX, bestY);
         this.dirX[index] = bestX / length;
         this.dirY[index] = bestY / length;
       }

@@ -11,6 +11,7 @@
  * per vehicle per tick.
  */
 
+import { euclidean } from '../math/length';
 import { at } from '../math/typedArray';
 
 export interface Point2 {
@@ -68,7 +69,7 @@ export class Polyline {
     for (let i = 0; i < points.length - 1; i++) {
       const dx = at(this.xs, i + 1) - at(this.xs, i);
       const dy = at(this.ys, i + 1) - at(this.ys, i);
-      const segment = Math.hypot(dx, dy);
+      const segment = euclidean(dx, dy);
       if (segment === 0) {
         throw new RangeError(`lane polyline has a zero-length segment at index ${i}`);
       }

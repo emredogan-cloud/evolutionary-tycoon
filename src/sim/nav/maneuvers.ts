@@ -1,3 +1,4 @@
+import { euclidean } from '../math/length';
 import type { StageLayout } from '@config/layouts/stage1';
 import type { LaneGraph } from './LaneGraph';
 import { Polyline } from './spline';
@@ -97,7 +98,7 @@ export function buildManeuver(
   endTangentX: number,
   endTangentY: number,
 ): Maneuver {
-  const span = Math.hypot(endX - startX, endY - startY);
+  const span = euclidean(endX - startX, endY - startY);
   const handle = Math.max(1, span * HANDLE_FRACTION);
 
   const c0x = startX + startTangentX * handle;
@@ -116,7 +117,7 @@ export function buildManeuver(
      * than defensive: two identical successive samples describe no motion.
      */
     const previous = points[points.length - 1];
-    if (previous !== undefined && Math.hypot(point.x - previous.x, point.y - previous.y) < 1e-6) {
+    if (previous !== undefined && euclidean(point.x - previous.x, point.y - previous.y) < 1e-6) {
       continue;
     }
     points.push(point);
@@ -162,7 +163,7 @@ function bayAt(
    * same spot would be a layout error, and dividing by zero would produce a NaN
    * heading that propagates silently into every curve built from it.
    */
-  const raw = Math.hypot(dx, dy);
+  const raw = euclidean(dx, dy);
   const length = raw === 0 ? 1 : raw;
   return { x: here.x, y: here.y, heading: { x: dx / length, y: dy / length } };
 }

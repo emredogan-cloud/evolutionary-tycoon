@@ -131,6 +131,15 @@ export default tseslint.config(
     rules: {
       'no-restricted-syntax': ['error', ...SIM_FORBIDDEN_SYNTAX],
       'no-restricted-globals': ['error', ...SIM_FORBIDDEN_GLOBALS],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'Math',
+          property: 'hypot',
+          message:
+            'Math.hypot is not correctly rounded and differs across engines — a Firefox-only hash divergence found it (P17). Use euclidean() from src/sim/math/length.',
+        },
+      ],
       'no-restricted-imports': [
         'error',
         {

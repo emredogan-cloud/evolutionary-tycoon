@@ -1,4 +1,5 @@
 import { ARRIVAL_EPSILON_METRES, taskDuration, walkSpeed } from '@config/employees';
+import { euclidean } from '../math/length';
 import type { World } from '../core/World';
 import { effectValue } from '../systems/UpgradeSystem';
 import type { EmployeeRecord } from '../stores/employees';
@@ -96,7 +97,7 @@ export function stepEmployee(world: World, employee: EmployeeRecord, deltaMs: nu
 function moveToward(world: World, employee: EmployeeRecord, deltaMs: number): void {
   const dx = employee.targetX - employee.x;
   const dy = employee.targetY - employee.y;
-  const remaining = Math.hypot(dx, dy);
+  const remaining = euclidean(dx, dy);
 
   if (remaining <= ARRIVAL_EPSILON_METRES) {
     employee.state = STATE_PERFORMING;
@@ -116,7 +117,7 @@ function moveToward(world: World, employee: EmployeeRecord, deltaMs: number): vo
 
   // Arrival is checked again *after* the step, so a walk that finishes inside
   // this tick starts its work on this tick rather than idling for one more.
-  if (Math.hypot(employee.targetX - employee.x, employee.targetY - employee.y) <= ARRIVAL_EPSILON_METRES) {
+  if (euclidean(employee.targetX - employee.x, employee.targetY - employee.y) <= ARRIVAL_EPSILON_METRES) {
     employee.state = STATE_PERFORMING;
     employee.progressMs = 0;
   }

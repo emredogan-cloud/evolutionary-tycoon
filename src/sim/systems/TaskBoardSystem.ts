@@ -1,3 +1,4 @@
+import { euclidean } from '../math/length';
 import { PASS, station } from '@config/economy/stations';
 import { layoutForStage } from '@config/layouts';
 import { TASK_BASE_MS, TASK_KINDS, TASK_SCORING, role } from '@config/employees';
@@ -332,7 +333,7 @@ export function scoreTask(
   const ageSeconds = Math.max(0, world.clock.simTimeMs - postedAtMs) / 1000;
   const urgency = 1 + Math.min(TASK_SCORING.maxUrgency, ageSeconds * TASK_SCORING.urgencyPerSecond);
   const reward = TASK_SCORING.reward[kind];
-  const distance = Math.hypot(x - employee.x, y - employee.y);
+  const distance = euclidean(x - employee.x, y - employee.y);
 
   return urgency * reward - distance * TASK_SCORING.distanceCost;
 }

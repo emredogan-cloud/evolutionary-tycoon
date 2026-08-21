@@ -1,3 +1,4 @@
+import { euclidean } from '../math/length';
 import { TICK_MS } from '@config/simulation';
 import { UPGRADES } from '@config/economy/upgrades';
 import { createDefaultSystems } from '../systems/noop';
@@ -357,7 +358,7 @@ export class Sim {
        */
       const towardX = record.targetX - record.x;
       const towardY = record.targetY - record.y;
-      const distance = Math.hypot(towardX, towardY);
+      const distance = euclidean(towardX, towardY);
       if (distance > ARRIVAL_EPSILON_METRES) {
         out.headingX = towardX / distance;
         out.headingY = towardY / distance;
@@ -446,7 +447,7 @@ export class Sim {
        * would have played forever on someone standing perfectly still.
        */
       target.moving =
-        Math.hypot(record.targetX - record.x, record.targetY - record.y) > ARRIVAL_EPSILON_METRES;
+        euclidean(record.targetX - record.x, record.targetY - record.y) > ARRIVAL_EPSILON_METRES;
       target.activity = customerActivity(record.state, target.moving, target.patience);
       index++;
     }
