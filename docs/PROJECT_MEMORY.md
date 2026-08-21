@@ -14,33 +14,37 @@
 
 ## 1. Project Identity
 
-|                    |                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------ |
-| **Proje adı**      | Evolutionary Tycoon                                                                  |
-| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)               |
-| **Sürüm**          | 0.1.0                                                                                |
-| **Mevcut faz**     | **PHASE 14 — Offline Progression** (BATCH P14→P16'nın ilk fazı)                      |
-| **Mevcut kapı**    | Kullanıcı 2026-08-20'de P14+P15+P16'yı toplu yetkilendirdi (otonom, P16 sonunda DUR) |
-| **Durum**          | 🟢 **BATCH P14–P16 YÜRÜTÜLÜYOR.** P0–P13 ✅ + konsolidasyon ✅. P17+ yetkisiz.       |
-| **Son güncelleme** | 2026-08-20 — CHECKPOINT Z (P14–P16 batch başlangıcı)                                 |
-| **Son commit SHA** | `4394acfc1463252f8e7d724f79c792ed72faf53e` (phase/consolidation-art)                 |
-| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                           |
+|                    |                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Proje adı**      | Evolutionary Tycoon                                                                          |
+| **Repository**     | <https://github.com/emredogan-cloud/evolutionary-tycoon> (public, MIT)                       |
+| **Sürüm**          | 0.1.0                                                                                        |
+| **Mevcut faz**     | — (BATCH P17–P18 kapandı; sonraki faz yetkilendirilmedi)                                     |
+| **Mevcut kapı**    | Kullanıcı 2026-08-21 yönergesi: 3 karar + asset pasosu + P17→P18 otonom, **P18 sonunda DUR** |
+| **Durum**          | 🔴 **DURULDU.** P0–P18 ✅ (P16/P17/P18 dış-girdi kısmileri adlandırılmış). P19+ yetkisiz.    |
+| **Son güncelleme** | 2026-08-21 — CHECKPOINT AN (P17–P18 batch kapanışı)                                          |
+| **Son commit SHA** | `d0cbae421a748c6d4d6821a8281d9975d2eae74d` (phase/18-premium-ui)                             |
+| **Yerel dizin**    | `/home/emre/Downloads/Evolutionary-Tycoon`                                                   |
 
 ---
 
 ## 2. Current Mission
 
-**BATCH P2 → P3 → P4** (kullanıcı tarafından 2026-08-14'te toplu yetkilendirildi, otonom yürütme).
+**Son yürütülen: BATCH P17 → P18** (2026-08-21 yönergesi; üç kullanıcı kararı + kapsamlı
+asset pasosu + iki faz, otonom, P18 sonunda DUR). **KAPANDI** — sonuç `BATCH_17_18_REPORT.md`.
 
-| Faz    | Misyon                                                                                                                                                                                                                      |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **P2** | Motordan bağımsız, deterministik, headless simülasyon çekirdeği: Clock, 6 RNG stream'i, World+hash, 18 slotluk sistem hattı, CommandLog, EventBus, store'lar, SaveManager v1, GameLoop, determinizm süiti, sim benchmark'ı. |
-| **P3** | İzometrik render temeli: Phaser 4 bootstrap, 2:1 dimetrik projeksiyon, depth sort, 9 katmanlı sahne, kamera, RenderBridge, görsel determinizm modu, ilk visual golden'lar, gerçek GPU perf ölçümü.                          |
-| **P4** | Sanat yönü + asset pipeline v1: lisans kapısı (9 madde, birincil kaynak), palet, validate/process/atlas/manifest/report, deterministik asset build'i, bütçeler.                                                             |
+| İş          | Misyon (özet)                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **KARAR 1** | WebGL1 onayı: ADR-017 Accepted, yetenek kapısı WebGL1, bayat "WebGL2 zorunlu" ifadeleri süpürüldü.                                       |
+| **KARAR 2** | Aşama 2–4 ekonomi kalibrasyonu — yalnız config, gerçek balance simülatörü; çözülemeyenler karar olarak dosyalandı.                       |
+| **KARAR 3** | Oyun 08:00'de başlar (`DEFAULT_GAME_START_HOUR`); pinler/fixture'lar bilinçli yenilendi.                                                 |
+| **Asset**   | 300 satırlık nihai gereksinim matrisi + katalog 303 karta (131 yeni, ekleme-yalnız) + build-kıran kapsama kapısı (0/0/0).                |
+| **P17**     | Animasyon/VFX/Ses: DollRigRuntime + 9 klip, 12 efektlik ParticleLibrary, AudioDirector (0 sahte dosya); dış-girdiyle kısmi.              |
+| **P18**     | Premium UI/UX + A11y + Responsive: token sistemi, Conversion Analytics, dock, axe CI kapısı, 7-viewport matrisi; insan-girdisiyle kısmi. |
 
-**Batch kuralı:** faz geçişleri otomatik, ama her geçiş tam doğrulama kapısı gerektirir
+**Batch kuralı:** faz geçişleri otomatik, her geçiş tam doğrulama kapısı
 (implementasyon + testler + CI + preview E2E + dokümantasyon + memory + faz raporu).
-**P4 sonunda DUR.** P5–P7 yetkilendirilmemiştir.
+**P18 sonunda DURULDU.** P19+ yetkilendirilmemiştir.
 
 ---
 
@@ -115,34 +119,36 @@ Onay: onaylandı — 2026-08-20 (batch yetkisi kapsamında).
 
 ## 5. Phase State
 
-| Faz                     | Durum                | Başlangıç  | Bitiş      | Commit/PR                 | Kapı                    | Kanıt                                                                                                                                        |
-| ----------------------- | -------------------- | ---------- | ---------- | ------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0 Research & Design    | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                | **GATE 0 ✅ ONAYLANDI** | 8 doküman, ~55k kelime                                                                                                                       |
-| P1 Foundation           | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`     | **GATE 1 ✅ ONAYLANDI** | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md)                                                                                                   |
-| P2 Sim Core             | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-15 | PR #8, main `4643d88`     | Batch içi kapı ✅       | [PHASE_2_REPORT](phases/PHASE_2_REPORT.md)                                                                                                   |
-| P3 Iso Render           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | main `a60b641`            | Batch içi kapı ✅       | [PHASE_3_REPORT](phases/PHASE_3_REPORT.md)                                                                                                   |
-| P4 Asset Pipeline v1    | ✅ TAMAMLANDI\*      | 2026-08-15 | 2026-08-15 | `phase/04-asset-pipeline` | Batch içi kapı ✅       | [PHASE_4_REPORT](phases/PHASE_4_REPORT.md) — pipeline ✅; sanat 2026-08-18 konsolidasyonda entegre (ADR-013)                                 |
-| P5 Traffic              | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/05-traffic`        | Batch içi kapı ✅       | [PHASE_5_REPORT](phases/PHASE_5_REPORT.md) — yoğunluk çelişkisi #7 hâlâ açık                                                                 |
-| P6 Customer             | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/6-customer-system` | Batch içi kapı ✅       | [PHASE_6_REPORT](phases/PHASE_6_REPORT.md)                                                                                                   |
-| P7 Navigation           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/7-navigation`      | Batch çıkış kapısı ✅   | [PHASE_7_REPORT](phases/PHASE_7_REPORT.md)                                                                                                   |
-| P8 Service Loop         | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch içi kapı ✅       | [PHASE_8_REPORT](phases/PHASE_8_REPORT.md)                                                                                                   |
-| P9 Economy v1           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch içi kapı ✅       | [PHASE_9_REPORT](phases/PHASE_9_REPORT.md) — vertical slice insan ölçütleri açık                                                             |
-| P10 Employee AI         | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch çıkış kapısı ✅   | [PHASE_10_REPORT](phases/PHASE_10_REPORT.md)                                                                                                 |
-| P11 Evolution           | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch içi kapı ✅       | [PHASE_11_REPORT](phases/PHASE_11_REPORT.md)                                                                                                 |
-| P12 Balancing           | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch içi kapı ✅       | [PHASE_12_REPORT](phases/PHASE_12_REPORT.md) — `CALIBRATED_STAGES=[1]`                                                                       |
-| P13 Upgrade v2          | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch çıkış kapısı ✅   | [PHASE_13_REPORT](phases/PHASE_13_REPORT.md)                                                                                                 |
-| — Konsolidasyon (sanat) | ✅ TAMAMLANDI        | 2026-08-18 | 2026-08-19 | `phase/consolidation-art` | Yönerge kapısı ✅       | [ASSET_INTEGRATION_REPORT](ASSET_INTEGRATION_REPORT.md) · [FINAL_PRE_NEXT_BATCH_REPORT](FINAL_PRE_NEXT_BATCH_REPORT.md) — CI yeşil `d720a3f` |
-| **P14 Offline**         | 🟦 **YÜRÜTÜLÜYOR**   | 2026-08-20 | —          | `phase/14-offline`        | Batch içi kapı          | —                                                                                                                                            |
-| P15 Events/Weather      | 🟨 Yetkili, sırada   | —          | —          | —                         | Batch içi kapı          | —                                                                                                                                            |
-| P16 Asset v2            | 🟨 Yetkili, sırada   | —          | —          | —                         | **BATCH ÇIKIŞ KAPISI**  | —                                                                                                                                            |
-| P17–P24                 | ⬜ Yetkilendirilmedi | —          | —          | —                         | —                       | —                                                                                                                                            |
+| Faz                     | Durum                | Başlangıç  | Bitiş      | Commit/PR                 | Kapı                      | Kanıt                                                                                                                                           |
+| ----------------------- | -------------------- | ---------- | ---------- | ------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0 Research & Design    | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | (pre-repo)                | **GATE 0 ✅ ONAYLANDI**   | 8 doküman, ~55k kelime                                                                                                                          |
+| P1 Foundation           | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-14 | PR #1, main `cbdaef4`     | **GATE 1 ✅ ONAYLANDI**   | [PHASE_1_REPORT](phases/PHASE_1_REPORT.md)                                                                                                      |
+| P2 Sim Core             | ✅ TAMAMLANDI        | 2026-08-14 | 2026-08-15 | PR #8, main `4643d88`     | Batch içi kapı ✅         | [PHASE_2_REPORT](phases/PHASE_2_REPORT.md)                                                                                                      |
+| P3 Iso Render           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | main `a60b641`            | Batch içi kapı ✅         | [PHASE_3_REPORT](phases/PHASE_3_REPORT.md)                                                                                                      |
+| P4 Asset Pipeline v1    | ✅ TAMAMLANDI\*      | 2026-08-15 | 2026-08-15 | `phase/04-asset-pipeline` | Batch içi kapı ✅         | [PHASE_4_REPORT](phases/PHASE_4_REPORT.md) — pipeline ✅; sanat 2026-08-18 konsolidasyonda entegre (ADR-013)                                    |
+| P5 Traffic              | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/05-traffic`        | Batch içi kapı ✅         | [PHASE_5_REPORT](phases/PHASE_5_REPORT.md) — yoğunluk çelişkisi #7 hâlâ açık                                                                    |
+| P6 Customer             | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/6-customer-system` | Batch içi kapı ✅         | [PHASE_6_REPORT](phases/PHASE_6_REPORT.md)                                                                                                      |
+| P7 Navigation           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | `phase/7-navigation`      | Batch çıkış kapısı ✅     | [PHASE_7_REPORT](phases/PHASE_7_REPORT.md)                                                                                                      |
+| P8 Service Loop         | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch içi kapı ✅         | [PHASE_8_REPORT](phases/PHASE_8_REPORT.md)                                                                                                      |
+| P9 Economy v1           | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch içi kapı ✅         | [PHASE_9_REPORT](phases/PHASE_9_REPORT.md) — vertical slice insan ölçütleri açık                                                                |
+| P10 Employee AI         | ✅ TAMAMLANDI        | 2026-08-15 | 2026-08-15 | PR #17 (açık)             | Batch çıkış kapısı ✅     | [PHASE_10_REPORT](phases/PHASE_10_REPORT.md)                                                                                                    |
+| P11 Evolution           | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch içi kapı ✅         | [PHASE_11_REPORT](phases/PHASE_11_REPORT.md)                                                                                                    |
+| P12 Balancing           | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch içi kapı ✅         | [PHASE_12_REPORT](phases/PHASE_12_REPORT.md) — `CALIBRATED_STAGES=[1]`                                                                          |
+| P13 Upgrade v2          | ✅ TAMAMLANDI        | 2026-08-16 | 2026-08-16 | `phase/11-evolution`      | Batch çıkış kapısı ✅     | [PHASE_13_REPORT](phases/PHASE_13_REPORT.md)                                                                                                    |
+| — Konsolidasyon (sanat) | ✅ TAMAMLANDI        | 2026-08-18 | 2026-08-19 | `phase/consolidation-art` | Yönerge kapısı ✅         | [ASSET_INTEGRATION_REPORT](ASSET_INTEGRATION_REPORT.md) · [FINAL_PRE_NEXT_BATCH_REPORT](FINAL_PRE_NEXT_BATCH_REPORT.md) — CI yeşil `d720a3f`    |
+| P14 Offline             | ✅ TAMAMLANDI        | 2026-08-20 | 2026-08-20 | `phase/14-offline`        | Batch içi kapı ✅         | [PHASE_14_REPORT](phases/PHASE_14_REPORT.md)                                                                                                    |
+| P15 Events/Weather      | ✅ TAMAMLANDI        | 2026-08-20 | 2026-08-20 | `phase/15-events-weather` | Batch içi kapı ✅         | [PHASE_15_REPORT](phases/PHASE_15_REPORT.md) — S6 kararı GDD §25.3                                                                              |
+| P16 Asset v2            | ✅ TAMAMLANDI\*      | 2026-08-20 | 2026-08-20 | `phase/16-asset-v2`       | Batch çıkış kapısı ✅     | [PHASE_16_REPORT](phases/PHASE_16_REPORT.md) · [BATCH_14_16_REPORT](BATCH_14_16_REPORT.md) — \*görüntü üretimi gerektirenler adlandırılmış borç |
+| P17 Anim/VFX/Audio      | ✅ TAMAMLANDI\*      | 2026-08-20 | 2026-08-21 | `phase/17-anim-vfx-audio` | Batch içi kapı ✅         | [PHASE_17_REPORT](phases/PHASE_17_REPORT.md) — \*dış girdi: 23 ses dosyası; kod+testler tam                                                     |
+| P18 Premium UI/A11y     | ✅ TAMAMLANDI\*      | 2026-08-21 | 2026-08-21 | `phase/18-premium-ui`     | **BATCH ÇIKIŞ KAPISI** ✅ | [PHASE_18_REPORT](phases/PHASE_18_REPORT.md) · [BATCH_17_18_REPORT](BATCH_17_18_REPORT.md) — \*insan girdisi: playtest + OFL font               |
+| P19–P24                 | ⬜ Yetkilendirilmedi | —          | —          | —                         | —                         | —                                                                                                                                               |
 
 **Onaylı roadmap:** 25 faz (P0–P24). Orijinal 22 fazlık yapıya **dönülmeyecek**.
 Onaylı 6 değişiklik: D1 (yeni P2 Sim Core) · D2 (Pathfinding→P7) · D3 (Asset P4+P16) · D4 (Economy P9+P12+P13) · D5 (Employee AI, Evolution'dan önce) · D6 (P9 sonunda Vertical Slice Kapısı).
 
 ---
 
-## 6. Current Phase — BATCH P2 → P4
+## 6. Erken Batch Anlatıları (arşiv — P2→P10 dönemi; güncel durum §21, kanıt zinciri §22)
 
 ### CHECKPOINT F — Batch başlangıcı (2026-08-14)
 
@@ -845,6 +851,11 @@ tam da o talimatın önlemek istediği şey olurdu.
 | S6  | Gece ayrı bir mekanik mi, yalnızca görsel mi?    | P15                    |
 | S7  | i18n mimarisi (MVP: TR + EN)                     | P18                    |
 
+- **S6 karara bağlandı** (P15, 2026-08-20): gece = zaten onaylı mekanikler + ışıklandırma
+  pasosu; yeni mekanik yok — GDD §25.3, PHASE_15_REPORT.
+- **S7 için öneri dosyalandı** (P18 kapanışı, 2026-08-21): MVP TR-only, string'ler
+  post-MVP'de çıkarılır — **karar kullanıcıda**, PHASE_18_REPORT §7.
+
 ---
 
 ## 11. Risks (mevcut)
@@ -1067,46 +1078,40 @@ medyan %15'i tesadüfen aşıyor ve rastgele patlayan kapı, kapı olmamaktan k�
 
 ## 15. Test / CI State
 
-CI run [31836097461](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/31836097461) — **7/7 yeşil**.
+BATCH P17–P18 kapanış durumu (kaynak: faz raporları + CI [32467140143](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/32467140143) yeşil + Preview E2E [32467368549](https://github.com/emredogan-cloud/evolutionary-tycoon/actions/runs/32467368549) yeşil, `d0cbae4`):
 
-|                                        | Durum | Kanıt (Faz 2 sonu)                                                           |
-| -------------------------------------- | ----- | ---------------------------------------------------------------------------- |
-| lint (ESLint 10, type-aware)           | ✅    | exit 0                                                                       |
-| format check (Prettier)                | ✅    | "All matched files use Prettier code style!"                                 |
-| typecheck (3 proje + svelte-check)     | ✅    | **196 dosya**, 0 hata, 0 uyarı                                               |
-| architecture (dependency-cruiser)      | ✅    | **43 modül, 100 bağımlılık**, 0 ihlal                                        |
-| dead code (knip)                       | ✅    | exit 0                                                                       |
-| unit + integration (Vitest)            | ✅    | **314 test**; lines %99.53, branches %91.73, functions %99.47                |
-| **determinizm süiti**                  | ✅    | **58 test** (`pnpm test:determinism`) — ayrı CI adımı                        |
-| **architecture enforcement (12 vaka)** | ✅    | Yasak import ve global'lerin gerçekten reddedildiği kanıtlandı               |
-| **`src/sim` AST taraması**             | ✅    | Gerçek TypeScript parser, opt-out yok; tarayıcının kendisi 20 probe ile test |
-| E2E chromium                           | ✅    | yerel 17/6 skip · CI ✅ · **canlı preview 23/23**                            |
-| E2E firefox                            | ✅    | yerel 17/6 skip · CI ✅ (xvfb + HOME=/root)                                  |
-| WebKit smoke                           | ✅    | CI ✅ (yerelde sistem kütüphanesi eksik)                                     |
-| visual regression                      | ⬜    | Altyapı hazır; golden'lar Faz 3                                              |
-| balance                                | ⬜    | Faz 12                                                                       |
-| **performance (sim)**                  | ✅    | 7 bütçe ölçüldü ve geçti; CI baseline kaydedildi, %15 regresyon kapısı canlı |
-| security (`pnpm audit`)                | ✅    | **No known vulnerabilities found**                                           |
-| CodeQL                                 | ✅    | Analyze (javascript-typescript) pass                                         |
-| build + bundle budget                  | ✅    | 41.23 kB / 550 kB                                                            |
-| **preview deployment doğrulaması**     | ✅    | **Artık BLOKE EDİCİ** ve gerçekten koşuyor — §16                             |
+| Kapı                             | Durum | Kanıt (batch sonu)                                                                                            |
+| -------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify` zinciri            | ✅    | exit 0 her faz kapanışında (lint · format · typecheck ×3+svelte · depcruise · knip · config:check)            |
+| unit + integration (Vitest)      | ✅    | **1 531 test** — analytics ring, strip, rig/klip, AudioDirector, migration v11, kapsama aracı dahil           |
+| **determinizm süiti**            | ✅    | **61 test** — yeni komutların tümü sonuç-nötr (invariance testli); 12. pin yenilemesi gerekçeli               |
+| E2E chromium                     | ✅    | **92 test** (+6 deployment skip yerel) — a11y (axe, 6 ekran), responsive (7 viewport), onboarding dahil       |
+| E2E firefox                      | ✅    | CI matrisinde `xvfb-run` altında (yerel host'ta GL yok — bilinen ortam sınırı, ci.yml yorumu)                 |
+| WebKit smoke                     | ✅    | CI                                                                                                            |
+| **a11y kapısı (axe-core)**       | ✅    | kritik+ciddi = build kırmızı; iki gerçek ihlal bulup düzelttirdi                                              |
+| visual regression                | ✅    | dünya 18/18 konteyner-üretimi + host-bayt-özdeş; panel golden'ları konteyner-kanonik (capture.css, host skip) |
+| balance                          | ✅    | stage-1 + stage-2-timing asserted; dead-end 68.9 s ≤ 90; policy spread 1.0× ≤ 2.5; `CALIBRATED_STAGES=[1]`    |
+| performance (sim bench)          | ✅    | bütçeler yeşil; baseline `phase15` disipliniyle; boş-dünya satırları 03:00'e pinli (fixture, eşik değil)      |
+| **prompt kapsama kapısı**        | ✅    | `pnpm assets:prompt-coverage` — 131 gerekli / 0 eksik / 0 çift / 0 yetim (verify + CI + unit)                 |
+| build + bundle budget            | ✅    | **477.86 kB gz / 550** · CSS 6.08 / 30                                                                        |
+| security (`pnpm audit`) + CodeQL | ✅    | CI                                                                                                            |
 
 **Branch protection:** `main` korumalı — 7 zorunlu check, strict (branch güncel olmalı), linear history, force push ve silme kapalı.
 `required_approving_review_count = 0` (tek kişilik repo kendini onaylayamaz; kapı status check'ler).
 
 ## 16. Deployment State
 
-|                     |                                                                                                          |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| Sağlayıcı           | Vercel (statik)                                                                                          |
-| Hesap / takım       | `emre30283-4955` / `team_fxgx9kPUVBKzipApcn3Mvp5S`                                                       |
-| Proje               | `evolutionary-tycoon` (`prj_LwjS85pq8YU6IcFMTzOVKdj9Q7mV`)                                               |
-| Plan                | Hobby — ⚠ ticari kullanıma kapalı; monetizasyon öncesi Pro (Faz 23 görevi)                               |
-| GitHub entegrasyonu | ✅ bağlı, push'ta otomatik deploy                                                                        |
-| **Production URL**  | **<https://evolutionary-tycoon.vercel.app>**                                                             |
-| Build SHA (canlı)   | `9b2570f667115537a98c85bfb3de3370e5709e90` — main ile eşleşiyor, schema v2, production smoke ✅ yeşil    |
-| Sağlık              | ✅ `/health.json` 200 · header'lar doğru · `/assets/**` immutable · SPA rewrite · `/api/time` 204 + Date |
-| Config kaynağı      | `vercel.ts` (tek kaynak; `vercel.json` yok)                                                              |
+|                     |                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sağlayıcı           | Vercel (statik)                                                                                                                                                                            |
+| Hesap / takım       | `emre30283-4955` / `team_fxgx9kPUVBKzipApcn3Mvp5S`                                                                                                                                         |
+| Proje               | `evolutionary-tycoon` (`prj_LwjS85pq8YU6IcFMTzOVKdj9Q7mV`)                                                                                                                                 |
+| Plan                | Hobby — ⚠ ticari kullanıma kapalı; monetizasyon öncesi Pro (Faz 23 görevi)                                                                                                                 |
+| GitHub entegrasyonu | ✅ bağlı, push'ta otomatik deploy                                                                                                                                                          |
+| **Production URL**  | **<https://evolutionary-tycoon.vercel.app>**                                                                                                                                               |
+| Build SHA (canlı)   | Production (main): `3d3b036` / schema 5 — **batch main'e değmedi** (şube modeli). Batch önizlemesi `jj7uchzwj`: health `d0cbae42…` birebir, **schemaVersion 11**, yol asset'i 200/1.63 MB. |
+| Sağlık              | ✅ `/health.json` 200 · header'lar doğru · `/assets/**` immutable · SPA rewrite · `/api/time` 204 + Date                                                                                   |
+| Config kaynağı      | `vercel.ts` (tek kaynak; `vercel.json` yok)                                                                                                                                                |
 
 ### ✅ ÇÖZÜLDÜ — Deployment Protection (2026-08-14, CHECKPOINT F)
 
@@ -1132,36 +1137,35 @@ bloke edici gerçek doğrulamadır (§13, geçici çözüm #1 kapatıldı).
 
 ## 17. Asset State
 
-|                              |                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pipeline                     | ✅ **KURULDU** (Faz 4) — `tools/asset-pipeline/`: validate (9 kontrol) · process · atlas · audio · manifest · report · contactSheet. CI'da `assets` job'ı olarak koşuyor.                                                                                                                                                                                  |
-| Palet                        | ✅ `docs/assets/palette.json` — 48 renk, 12 rampa × 4 basamak. Renk körlüğü simülasyonu testte.                                                                                                                                                                                                                                                            |
-| Prompt bloğu                 | ✅ `docs/assets/PROMPT_BLOCK.md` v1 — SHA-256 `1c4f4b4e…`, testle zorlanıyor.                                                                                                                                                                                                                                                                              |
-| Konu boyutları               | ✅ `docs/assets/subjectDimensions.json` — her konu **metre** cinsinden (nesneler hakkında olgu), sprite boyu/anchor/bölme kararı `tools/shared/spriteMetrics.ts` ile **türetiliyor**. Piksel yüksekliği elle yazılmıyor.                                                                                                                                   |
-| Batch listesi                | ✅ `docs/assets/productionBatches.json` — 12 batch, 172 asset. `pnpm assets:prompts` gönderilecek metni üretiyor.                                                                                                                                                                                                                                          |
-| **Lisans durumu**            | 🟠 **Yönetici kararıyla açıldı** (2026-08-15, [assets/LICENSES.md](../assets/LICENSES.md) §1.5) — God Mode AI, madde 5 ve 8 bilinçli kabul. MVP kapsamlı; Faz 16 ve Faz 23'te yeniden açılacak. Kapı "geçti" değil, "karar verildi".                                                                                                                       |
-| **Üretim asset'i**           | ✅ **172/172 entegre (2026-08-18, konsolidasyon).** Kaynak: `docs/assets/sources` (153 MB drop, gitignore'lu) → `assets:import` (yeni aşama) → `assets/source` commit'li. `172 asset, 0 failing, 60 kabul edilmiş istisna, 17 off-family uyarı` (ADR-013).                                                                                                 |
-| Placeholder sayısı           | **Üretim ekranlarında 0** — `data-asset-placeholders` her karede sayılıyor, `tests/e2e/productionArt.spec.ts` dört aşamada da assert ediyor. 6 üretilmiş sprite **yalnız ağ-hatası fallback'i** olarak diskte; yol yüzeyi hâlâ prosedürel (drop'ta yol dilimi yoktu).                                                                                      |
-| Texture memory               | **21.13 MB / 96 MB** (decode edilmiş, 7 atlas — her sayfa içeriğine göre küçültülmüş power-of-two). Fill oranı ADR-013 ile _raporlanıyor_, bellek toplamı _zorlanıyor_.                                                                                                                                                                                    |
-| Doğrulanmış asset kategorisi | **Hepsi** — araç (yön atama `DIRECTION_AUDIT.json` ile), karakter (5 parçalı rig — teslim edilen gövde bacaklı, "bacak" dosyaları ikinci kol çifti; 8 dosya çizilmiyor), yapı, mobilya, doğa (split çiftler), zemin bake, yemek ikonları (DOM sipariş balonu), UI ikonları (7'si off-family), fx (yüklü, tüketen emitter yok — P13 burst'leri prosedürel). |
-| **Sanat borcu (regen)**      | 10 araç arka görünüşü · 8 gerçek bacak · 8 `_brake` karesi · 5 yemek ikonu · 7 UI ikonu (palet ailesine) · yol bake'i · aşama 2-4 zemin bake'leri — [ASSET_INTEGRATION_REPORT §5](ASSET_INTEGRATION_REPORT.md).                                                                                                                                            |
+|                              |                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pipeline                     | ✅ **KURULDU** (Faz 4) — `tools/asset-pipeline/`: validate (9 kontrol) · process · atlas · audio · manifest · report · contactSheet. CI'da `assets` job'ı olarak koşuyor.                                                                                                                                                                                                 |
+| Palet                        | ✅ `docs/assets/palette.json` — 48 renk, 12 rampa × 4 basamak. Renk körlüğü simülasyonu testte.                                                                                                                                                                                                                                                                           |
+| Prompt bloğu                 | ✅ `docs/assets/PROMPT_BLOCK.md` v1 — SHA-256 `1c4f4b4e…`, testle zorlanıyor.                                                                                                                                                                                                                                                                                             |
+| Konu boyutları               | ✅ `docs/assets/subjectDimensions.json` — her konu **metre** cinsinden (nesneler hakkında olgu), sprite boyu/anchor/bölme kararı `tools/shared/spriteMetrics.ts` ile **türetiliyor**. Piksel yüksekliği elle yazılmıyor.                                                                                                                                                  |
+| Batch listesi                | ✅ `docs/assets/productionBatches.json` — 12 batch, 172 asset; katalog artık **303 kart** (278 kanonik + 25 superseded; 131 denetim promptu P173–P303) — `pnpm assets:prompts`, sayfa üreteçten.                                                                                                                                                                          |
+| **Lisans durumu**            | 🟠 **Yönetici kararıyla açıldı** (2026-08-15, [assets/LICENSES.md](../assets/LICENSES.md) §1.5) — God Mode AI, madde 5 ve 8 bilinçli kabul. MVP kapsamlı; Faz 16 ve Faz 23'te yeniden açılacak. Kapı "geçti" değil, "karar verildi".                                                                                                                                      |
+| **Üretim asset'i**           | ✅ **172/172 entegre (2026-08-18, konsolidasyon).** Kaynak: `docs/assets/sources` (153 MB drop, gitignore'lu) → `assets:import` (yeni aşama) → `assets/source` commit'li. `172 asset, 0 failing, 60 kabul edilmiş istisna, 17 off-family uyarı` (ADR-013).                                                                                                                |
+| Placeholder sayısı           | **Üretim ekranlarında 0** — `data-asset-placeholders` her karede sayılıyor, `tests/e2e/productionArt.spec.ts` dört aşamada da assert ediyor. 6 üretilmiş sprite **yalnız ağ-hatası fallback'i** olarak diskte; yol yüzeyi hâlâ prosedürel (drop'ta yol dilimi yoktu).                                                                                                     |
+| Texture memory               | **21.13 MB / 96 MB** (decode edilmiş, 7 atlas — her sayfa içeriğine göre küçültülmüş power-of-two). Fill oranı ADR-013 ile _raporlanıyor_, bellek toplamı _zorlanıyor_.                                                                                                                                                                                                   |
+| Doğrulanmış asset kategorisi | **Hepsi** — araç (yön atama `DIRECTION_AUDIT.json` ile), karakter (5 parçalı rig — teslim edilen gövde bacaklı, "bacak" dosyaları ikinci kol çifti; 8 dosya çizilmiyor), yapı, mobilya, doğa (split çiftler), zemin bake, yemek ikonları (DOM sipariş balonu), UI ikonları (7'si off-family), fx (yüklü, tüketen emitter yok — P13 burst'leri prosedürel).                |
+| **Sanat borcu (tek kaynak)** | 🟠 `docs/FINAL_ASSET_REQUIREMENTS.md` + makine ikizi `assetRequirements.json` — **300 satır**: 158 PRESENT+VERIFIED · 116 MISSING+PROMPT ADDED · 15 PRESENT+NEEDS REGEN · 9 PROCEDURAL · 1 NOT REQUIRED · 1 DEBUG ONLY. Kapsama kapısı 131/0/0/0 build-kıran. Ek dış girdi: **23 ses dosyası** (`AUDIO_ASSET_REQUIREMENTS.md`, sahte ses yok) + **1 OFL disleksi fontu**. |
 
 ---
 
 ## 18. Economy State
 
-|                        |                                                                                                                                                |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Zarf durumu            | Tasarlandı ([ECONOMY_DESIGN §3](ECONOMY_DESIGN.md#3-aşama-zarfları--sistemin-iskeleti)), **kısmen ölçüldü** — Faz 8 ilk gerçek sayıları üretti |
-| Menü                   | ✅ Aşama 1 üç kalem, `src/config/economy/menu.ts`, Zod ile modül yüklenirken doğrulanıyor, **append-only** (indeks dünya digest'ine giriyor)   |
-| İstasyonlar            | ✅ üç istasyon + pass (kapasite 6), `src/config/economy/stations.ts`                                                                           |
-| Ölçülen verim          | **1.8 müşteri/dk** (Aşama 1, sıfır yükseltme) — dönüşüm sınırlı, mutfak değil. Roadmap 3/dk istiyor → **AÇIK ÇELİŞKİ #7**                      |
-| Ölçülen marj           | Nakit malzeme maliyeti düşülerek işleniyor; 10 dk'da ₡52.34, hiç zarar eden satış yok                                                          |
-| Memnuniyet             | ✅ bekleme + kalite + fiyat canlı; temizlik/atmosfer/servis/erişilebilirlik **1.0 sabit**, TODO'ları fazlarıyla yazılı                         |
-| Sıcaklık düşüşü        | ✅ formül birebir, 8 test — **ama Aşama 1'de hiç tetiklenmiyor** (24 000 tick'te 0 tabak pass'te bekledi). Faz 10'da canlanır                  |
-| Balance simülatörü     | ⬜ P12'de                                                                                                                                      |
-| **Dead-end kapısı**    | **90 sn, merge-blocking** (kanonik, D-02)                                                                                                      |
-| Bilinen ayar sorunları | AÇIK ÇELİŞKİ #7 (verim hedefi) — kullanıcı kararı bekliyor                                                                                     |
+Kaynak: [STAGE_2_4_CALIBRATION_REPORT](STAGE_2_4_CALIBRATION_REPORT.md) (KARAR 2, 2026-08-21 — yalnız config).
+
+|                          |                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Balance simülatörü       | ✅ canlı ve kapı: 5 politika × deterministik çoklu seed × 720 dk; `pnpm balance` CI'da                                               |
+| Aşama pencereleri        | S2 **16.5–19.0 dk** (hedef 10–22, 12/12) ✅ asserted · S3 **51.5–59.8** (28–70) ✅ ölçülü · S4 **332–350** (140–320) ❌ yapısal blok |
+| Zarf (±%25, tepe net/dk) | S1 15.6 ✅ · S2 36.4 ✅ · S3 74.9 ✅ · S4 55–78 ❌ **kapasite-bloklu** (tek şerit ~45 araç/dk → tavan ₡98/dk < giriş ₡190)           |
+| Diğer asserted satırlar  | dead-end **68.9 s** ≤ 90 · policy spread **1.0×** ≤ 2.5 · üstel kaçış yok (tepe ₡208/dk ≤ 600) · nakit tabanı 0 ihlalsiz             |
+| `CALIBRATED_STAGES`      | **[1]** — S2 üyeliği GDD **§8 (30 sn ritmi) ⊗ §6.1 (2.2× büyüme)** çatışmasına bağlı (en kötü 139–147 s); `stage-2-timing` ayrıca ✅ |
+| Açık çelişkiler          | #7 trafik yoğunluğu ⊗ yol genişliği ⊗ şerit aktivasyonu ⊗ S4 kapasite — **tek dolaşık yol/arsa kararı, kullanıcıda** (rapor §4)      |
+| Yaya kanalı              | Yok — S3/S4 hedefleri yalnız araç akışıyla fiyatlanmış; kalibrasyon raporu karar menüsünde                                           |
 
 ---
 
@@ -1384,33 +1388,39 @@ WebKit smoke bu makinede hâlâ koşmuyor (`libevent-2.1-7t64`).
 
 ## 21. Next Authorized Action
 
-> ## 🔴 DUR — BATCH P14–P16 TAMAMLANDI. P17+ YETKİSİZ.
+> ## 🔴 DUR — BATCH P17–P18 TAMAMLANDI. P19+ YETKİSİZ.
 >
-> 2026-08-20: P14 (Offline) ✅ PASS · P15 (Takvim/Gece) ✅ PASS · P16 (Asset v2)
-> 🟡 KISMİ — yetenek sınırıyla, bilerek: görüntü üretimi gerektiren her şey
-> adlandırılmış borç, kaynak malzemesi olan her şey (yol bake'i) canlı ve
-> doğrulanmış. Raporlar: `phases/PHASE_14_REPORT.md`, `phases/PHASE_15_REPORT.md`,
-> `phases/PHASE_16_REPORT.md`, `BATCH_14_16_REPORT.md`.
+> 2026-08-21: Üç kullanıcı kararı (WebGL1 · kalibrasyon · 08:00) ✅ + kapsamlı asset
+> pasosu ✅ + P17 (Anim/VFX/Ses) ✅ KISMİ-dış-girdiyle + P18 (Premium UI/A11y) ✅
+> KISMİ-insan-girdisiyle. Raporlar: `phases/PHASE_17_REPORT.md`,
+> `phases/PHASE_18_REPORT.md`, `BATCH_17_18_REPORT.md`,
+> `STAGE_2_4_CALIBRATION_REPORT.md`, `FINAL_ASSET_REQUIREMENTS.md`.
+> Kanıt zinciri: §22 CHECKPOINT AN.
 >
 > ### Kullanıcının önündeki kararlar
 >
-> 1. 🔴 **ADR-017 (WebGL kapısı)** — hâlâ Proposed; batch dokunmadı.
-> 2. 🔴 **Yol genişliği ⊗ trafik yoğunluğu (#7) ⊗ şerit-değiştirme aktivasyonu ⊗
->    teslim edilen yol sanatının 2×2 görünümü** — tek dolaşık karar.
-> 3. 🟠 **Oyun başlangıç saati** (00:00 → örn. 08:00) — ışık gelince görünür
->    oldu; §19 "ilk araç 8 sn" hedefiyle gerilimde; hash+fixture yenileme bedeli.
-> 4. 🟠 **Aşama 2–4 gelir kalibrasyonu** — `CALIBRATED_STAGES=[1]` duruyor.
-> 5. 🟠 **Yol dilimi araç/lisans teyidi** (assets/LICENSES.md eki).
-> 6. 🟠 **Sanat regen listesi** — PHASE_16_REPORT §6 (arketip sanatı dahil büyüdü).
+> 1. 🔴 **Yol/arsa yapısı** — S4 hem pencere hem zarf tek-şerit kapasitesiyle bloklu
+>    (tavan ₡98/dk < giriş ₡190); #7 yoğunluk ⊗ yol genişliği ⊗ şerit aktivasyonu ⊗
+>    2×2 yol görünümü ile **tek dolaşık karar** — menü: kalibrasyon raporu §4.
+> 2. 🔴 **GDD §8 (30 sn ritmi) ⊗ §6.1 (2.2× büyüme)** — S2 kapasitesinde birlikte
+>    sağlanamaz (ölçülü en kötü 139–147 s); hangisi esner? S2'nin
+>    `CALIBRATED_STAGES` üyeliği bu karara bağlı.
+> 3. 🟠 **S7 i18n** — öneri: MVP TR-only, string çıkarımı post-MVP (PHASE_18_REPORT §7).
+> 4. 🟠 **Perf yedeği 5→8 ms** — CHANGE REQUEST PHASE_16_REPORT §7.4'te, uygulanmadı.
+> 5. 🟠 **Dış üretim kuyruğu** — 131 görsel (katalog P173–P303, kopyala-hazır) +
+>    15 regen + **23 ses dosyası** (`AUDIO_ASSET_REQUIREMENTS.md`) + **1 OFL font**.
+>    Üretimi kullanıcı yapar; ajan görsel/ses üretemez ve **sahtesini asla koymaz**.
 >
 > ### Şimdi ne yapılıyor
 >
-> **HİÇBİR ŞEY.** P17 (Animation/VFX/Audio) açık kullanıcı onayı bekliyor.
+> **HİÇBİR ŞEY.** P19 (Cloud — koşullu) dahil hiçbir sonraki faz yetkili değil;
+> açık kullanıcı onayı bekleniyor. "tamam/iyi/güzel" onay değildir.
 
 ## 22. Change Log
 
 | Tarih      | Checkpoint | Değişiklik                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | **AN**     | **BATCH P17–P18 KAPANDI.** P18 CI kırmızısı (e8a0b25, run 32461797407) üç kökte çözüldü, hiçbir eşik gevşetilmedi: (1) staffFlow'un dock öncesi beş `staff-toggle` tıklaması paneli kapatıyordu → spec oyuncunun yolunu yürüyor; StaffPanel dock'un altına giriyordu → offset+z-index (gerçek ürün hatası). (2) a11y pause testi Space'e basıyordu → HUD listener yarışı; test SET_PAUSED komut kapısından geçiyor. (3) Panel golden'ları CI'da SIFIR tamamlanmış karşılaştırmayla zaman aşımıydı (piksel farkı değil): yarı saydam panel arkasındaki canlı WebGL kanvası SwiftShader'da kompozit anına yetişemiyor → `capture.css` yakalama sırasında kanvası gizler (düz token zemini; aynı saydamlık/blur/radius korunur), goldenlar konteynerde yeniden üretildi (digest `dcc5531e` CI ile birebir doğrulandı), iki doğrulama koşusu stabil, dünya golden'ları bayta kadar değişmedi. Yerel firefox e2e bu host'ta koşamaz (xvfb-run yok, GL bağlamı açılmıyor — ölçüldü; CI konteyneri xvfb ile koşar, ci.yml:267). Bellek bakımı: §1/§2/§5/§6/§10/§15/§16/§17/§18/§21 batch-sonu gerçeğine getirildi (birkaç batch'tir bayat kalan durum katmanı düzeltildi). SON KOD SHA `d0cbae4`: CI **32467140143 YEŞİL** (8 dk 45 sn) + Preview E2E **32467368549 YEŞİL** (5 dk 59 sn); e8a0b25 kırmızıları aynı işlerin önceki koşularıydı. Deployment: önizleme `jj7uchzwj` health `d0cbae42…` birebir/schema 11; yol 200/1.63 MB; CDN soğuk 10.0 sn/5.53 MB tel (SW kuruldu), sıcak 1.6 sn/~0 ağ baytı; canlı 5 dk oynayış {tick 6112, hava 1, droppedTicks 0, pageErrors []}. Production (main) `3d3b036`/schema 5 — batch main'e değmedi, şube modeli. **P19+ YETKİSİZ — DURULDU.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-08-21 | **AK**     | **Başlangıç saati 08:00 (kullanıcı kararı).** `DEFAULT_GAME_START_HOUR=8` config'te; yalnız taze dünya okur, save kendi saatini korur, pinler üstünü ezer. Anlamla çözülen serpinti: playtime artık tick'ten (taze kayıt 4 dk iddia etmez), `World.reset()` açılış saatine döner (reset ≡ kuruluş), boş-işyükü bench satırları derin geceye sabitlendi (sabit ek yük sinyali korunur — eşik/baseline DOKUNULMADI), maaş/drenaj fixture'ları yoksulluk öncülünü açıkça kurar, save-resume testleri snapshot.ts'in belgelediği gerçek sözleşmeyi assert eder (geçiciler tasarımca düşer — gece yarısı boşluğunda bedava yeşildi). Birim 1382/1382, determinizm 61/61, entegrasyon 97/97, bench 21/21. Balance stage-2 penceresi bilerek kırmızı (24.3 dk > 22) — kalibrasyon commit'i sahiplenecek. Commit 192218d.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | 2026-08-21 | **AM**     | **P18 (Premium UI/UX + A11y + Responsive) kapandı — İNSAN-GİRDİSİYLE KISMİ, bilerek.** Token sistemi 48'lik kilitli paletin kendisi (krom ve dünya aynı pigmentler; --c-* takma adlarla yaşıyor). İmza ekran Dönüşüm Analizi: köprü tarafında son-100 halkası (event akışı; replay-güvenli, hash'siz, sim değişikliği SIFIR) → sıralı neden çubukları + tek kazanç satırı. Dock (Personel/Menü/Analiz/Ayarlar/Tanılama), tek panel kuralı; kalıcı fiyat listesi ve hep-açık paneller dock arkasına — %22/28 HUD payı ÖLÇÜMÜ mahkûm etti (önce %29-33), boyalı-krom birleşim ızgarasıyla 7 viewport'ta ölçülüyor. Bildirim şeridi sim-zamanı TTL (pause satırları tutar), aria-live, renk+ikon+metin. Pause peçesi Space/Esc; harness-paused boot'lar ASLA peçelenmez. Ayarlar: yüksek kontrast (komut, hash'li), UI ölçeği 0.9-1.3 + disleksi yazı (app-yerel). Tanılama kopyala. Onboarding tasarım-olarak assert: modal yok + ilk araç 8 sn içinde. axe CI kapısı (@axe-core/playwright 4.10.2 tam pin — DEPENDENCY CHANGE #2) 6 ekranda; İKİ GERÇEK İHLALİ yakalattı ve kaynakta düzelttirdi. Goldenlar: dünya 18/18 host-bayt-özdeş; +6 panel goldeni KONTEYNER-KANONİK (DOM fontu host sözü veremez — başlıkta gerekçeli, host atlar). verify exit 0 (bundle 477.86/550 gz), birim+entegrasyon 1531, e2e chromium 92+6, determinizm 61/61. KOŞULMAYAN: 3-oyunculu onboarding (insan), OFL disleksi font dosyası (dış asset), gerçek cihaz dokunuşu. S7 (i18n) TEKLİF olarak dosyalandı, karar kullanıcının. CI kanıtı push sonrası eklenecek.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | 2026-08-21 | **AL**     | **P17 (Animation/VFX/Audio) kapandı — DIŞ GİRDİYLE KISMİ, bilerek.** Uygulanmış: tam `DollRigRuntime` (9 keyframe klip + 3 prosedürel, 120 ms cross-fade, ayna kuralı, sim-zamanı sürüşü — donmuş dünya donmuş poz), aktivite sözlüğü readView'de türetilir (saklanmaz/hash'lenmez), 12 efektli `ParticleLibrary` (400 tavan KODLA, reduced-motion çeyrekler, noParticles'ta hiç kurulmaz — goldenlar 18/18 bayt-özdeş kaldı), eksiksiz `AudioDirector` (kanal şeritleri, ducking rampaları, 400 ms throttle, ±%6 pitch, mesafe, 24 tavan, saat-müziği, tembel manifest yükleyici), SET_AUDIO/SET_MUTED/SET_REDUCED_MOTION komutları + şema v11 (`ambience`, migration+oynanmış fixture), ayarlar paneli, `pnpm rig:editor`. SEVK EDİLMEYEN: ses dosyaları (23 kalem `AUDIO_ASSET_REQUIREMENTS.md` — sistem manifest'le kod değişmeden uyanır) ve fire/coin dokuları (P245-246; kayıtlı fallback). Doğrulama: verify exit 0, birim 1524, determinizm 61/61 + iki değişmezlik kanıtı (reduced-motion/mix sonuç değiştirmez), bench 22/22 (rig p50 ~0.04 ms / 1.2 bütçe), e2e 82, goldenlar değişmedi. GPU kare ölçümü KOŞULMADI (otomasyon Chromium'u üç bayrakta da SwiftShader — D-08 gereği FPS raporlanmadı); 20 dk ses yorgunluk testi sessizliğe karşı koşulamaz (dış teslime bloke). ECONOMY §6.2 eğri satırları kalibrasyon yetkisiyle güncellendi (eski değerler notta) — kendi pin testi yakaladı, doküman+test birlikte düzeltildi. KAPI ÜÇ GERÇEK KUSUR YAKALADI: (1) atlanmış 11. pin yenilemesi (ambience hash'i); (2) planDay önbellek geçersiz kılmıyordu - boot karesi yarışı lastWeather'ı bozuyordu (gizli P15, 08:00 görünür kıldı); (3) Math.hypot yuvarlama garantisizliği - yalnız customers bölümü, ilk yaya adımından; sqrt-süpürmesi sonrası node t1000 == Firefox'un baştan beri ürettiği değer. 15 çağrı euclidean()'a, eslint yasağı + hashSections() forensiği kalıcı, 12. pin yenilemesi kayıtlı. SON: d5e068b - CI 32454056716 TÜMÜ YEŞİL + Preview E2E 32454300583 YEŞİL.                                                                                                                                                                                                                                                                                                                                            |

@@ -45,19 +45,34 @@ fallback and the toggle are live).
 
 ## 3. VERIFIED
 
-| Gate                                     | Result                                                                                                                                                                                                                                                    |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm verify`                            | **exit 0** — bundle 477.86 kB gz of 550 · CSS 6.08 of 30                                                                                                                                                                                                  |
-| Unit + integration                       | **1 531 passed** (analytics ring ×2, strip feed, + the P17 set)                                                                                                                                                                                           |
-| E2E chromium                             | **92 passed + 6 deployment skips** — includes `a11y.spec.ts` (axe over 6 screens, critical+serious = build-red), `responsive.spec.ts` (7 viewports: no overflow, 44-px targets, HUD share ≤22 %/28 % via painted-chrome union grid), `onboarding.spec.ts` |
-| axe findings fixed at source             | unnamed progressbars ×2, unfocusable scrollable region — found by the gate, fixed in the components                                                                                                                                                       |
-| The HUD share test convicted real chrome | 29–33 % measured before the fix; the permanent price list and the always-open panels went behind the dock; now ≤22 %/28 % on all seven viewports                                                                                                          |
-| Visual goldens                           | world 18/18 container-regenerated and **host-byte-identical**; +6 **panel goldens (container-canonical, host-skipped — DOM text cannot promise cross-host font rasters; the header says so)** — 24/24 in the pinned container                             |
-| Determinism                              | 61/61 — high-contrast/paused commands ride the log like every setting                                                                                                                                                                                     |
+| Gate                                     | Result                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | **exit 0** — bundle 477.86 kB gz of 550 · CSS 6.08 of 30                                                                                                                                                                                                                                                                                                   |
+| Unit + integration                       | **1 531 passed** (analytics ring ×2, strip feed, + the P17 set)                                                                                                                                                                                                                                                                                            |
+| E2E chromium                             | **92 passed + 6 deployment skips** — includes `a11y.spec.ts` (axe over 6 screens, critical+serious = build-red), `responsive.spec.ts` (7 viewports: no overflow, 44-px targets, HUD share ≤22 %/28 % via painted-chrome union grid), `onboarding.spec.ts`                                                                                                  |
+| axe findings fixed at source             | unnamed progressbars ×2, unfocusable scrollable region — found by the gate, fixed in the components                                                                                                                                                                                                                                                        |
+| The HUD share test convicted real chrome | 29–33 % measured before the fix; the permanent price list and the always-open panels went behind the dock; now ≤22 %/28 % on all seven viewports                                                                                                                                                                                                           |
+| Visual goldens                           | world 18/18 container-regenerated and **host-byte-identical**; +6 **panel goldens (container-canonical, host-skipped — DOM text cannot promise cross-host font rasters; the header says so; `capture.css` hides the canvas during capture so SwiftShader compositing cannot flicker the backdrop)** — 24/24 in the pinned container across two verify runs |
+| Determinism                              | 61/61 — high-contrast/paused commands ride the log like every setting                                                                                                                                                                                                                                                                                      |
 
 ## 4. CI / DEPLOYMENT EVIDENCE
 
-> ⏳ Appended after push.
+| SHA       | Change                  | CI                                                                                                                                                                                                             | Preview E2E                    |
+| --------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `e8a0b25` | P18 complete            | 32461797407 - red in three groups: staffFlow (stale toggle clicks + dock overlap), firefox pause a11y (Space races listener attachment), and every panel golden timing out with **zero completed comparisons** | 32462020792 - red (same specs) |
+| `d0cbae4` | the three fixes at root | **32467140143 - GREEN**                                                                                                                                                                                        | **32467368549 - GREEN**        |
+
+The panel-golden diagnosis mattered: the failure was never a pixel diff. The
+translucent panels sit over the live WebGL canvas, and on CI's SwiftShader the
+compositor catches the canvas between presents — the screenshot never
+stabilises. `capture.css` hides the canvas during capture (flat token
+background behind the same translucency, blur and radii), goldens were
+regenerated in the pinned container (image digest `dcc5531e` verified
+byte-identical to CI's pull), and two container verify runs held stable. The
+world goldens never moved a byte. No pixel tolerance was touched.
+
+> Final-state evidence (this docs SHA's own runs) is appended at the batch
+> close, per the addendum precedent.
 
 ## 5. NOT RUN / NOT POSSIBLE
 
