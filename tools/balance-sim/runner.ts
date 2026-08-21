@@ -82,6 +82,13 @@ export interface RunOptions {
   readonly policy: Policy;
   readonly seed: number;
   readonly minutes: number;
+  /**
+   * Called at every sample point with the live world — calibration tooling's
+   * window into counters the summary rows do not carry (conversion refusal
+   * reasons, parking turnaways, waste). Read-only by convention; the runner
+   * hands the world over and keeps going.
+   */
+  readonly onSample?: (world: World, minutes: number) => void;
 }
 
 /**
@@ -300,6 +307,7 @@ export function runPolicy(options: RunOptions): RunResult {
           : daySamples.reduce((total, value) => total + value, 0) / daySamples.length;
       if (sustained > peakSustainedIncome) peakSustainedIncome = sustained;
 
+      options.onSample?.(sim.world, (tick * TICK_MS) / 60_000);
       samples.push({
         minutes: (tick * TICK_MS) / 60_000,
         stage: world.progression.stage,
