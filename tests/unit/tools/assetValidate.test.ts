@@ -247,10 +247,20 @@ describe('check 6 — the split rule', () => {
   it('does NOT split a car, which is long rather than tall', async () => {
     // The defect this check used to have. A sedan's sprite is 301px, but only
     // 96px of that is body — measured against the sprite, every vehicle in the
-    // game would have been forced into halves.
+    // game would have been forced into halves. Since the 2026-08-21 scope
+    // correction the exemption is categorical: vehicles are kinematic units.
     const result = await check('veh_sedan_default_se@2x.png', sizeFor('veh/sedan'));
     expect(finding(result, 'split-rule').ok).toBe(true);
-    expect(finding(result, 'split-rule').detail).toMatch(/96px body height, within/);
+    expect(finding(result, 'split-rule').detail).toMatch(/kinematic unit/);
+  });
+
+  it('does NOT split a bus either — tall, but nobody walks between its halves', async () => {
+    // The case the scope correction exists for: a 3.3 m body exceeds the
+    // 160px limit, yet a vehicle is one unit on the road plane and a
+    // bus_lower/bus_upper pair would be files nothing can consume.
+    const result = await check('veh_bus_default_se@2x.png', sizeFor('veh/bus'));
+    expect(finding(result, 'split-rule').ok).toBe(true);
+    expect(finding(result, 'split-rule').detail).toMatch(/kinematic unit/);
   });
 
   it('rejects splitting an object that does not need it', async () => {

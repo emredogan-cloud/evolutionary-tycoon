@@ -150,6 +150,15 @@ export function directionSourceFor(
   audit: DirectionAuditFile = loadDirectionAudit(),
 ): DirectionAssignment | null {
   if (name.category.id !== 'veh' || name.direction === null) return null;
+  /*
+   * The v1 reassignments were read from the `default` files of the original
+   * drop, whose labels lied. Every later variant (`brake`, delivered
+   * 2026-08-21) arrived honestly labelled — verified by eye, recorded in the
+   * audit's `deliveries` — so a variant other than `default` is used as
+   * named. A default-set rule applied to a brake file would demand views
+   * (brake_e, brake_sw) that rightly never existed.
+   */
+  if (name.variant !== 'default') return null;
   return audit.archetypes[name.subject]?.assign[name.direction] ?? null;
 }
 
@@ -171,11 +180,55 @@ export interface ImportEntry {
 }
 
 /** The staging filename, as the contract name. Recorded, never silent. */
+
+/**
+ * The 2026-08-21 delivery names its 30 upgrade-card icons after the config's
+ * historical iconKey vocabulary (`struct_automation@2x`), which has two
+ * segments where ASSET_PIPELINE §3 requires three — and `struct` would file a
+ * flat UI icon among world sprites besides. The canonical home is
+ * `ui/upgrade/<slug>`: the `ui/*` fixed-canvas rule applies and the atlas
+ * groups it with the other interface art. Recorded here, printed by the
+ * report, mirrored by the config's iconKey update — never silent.
+ */
+export const UPGRADE_ICON_RENAMES: ReadonlyMap<string, string> = new Map([
+  ['struct_automation@2x.png', 'ui_upgrade_automation@2x.png'],
+  ['struct_badge@2x.png', 'ui_upgrade_badge@2x.png'],
+  ['struct_barrier@2x.png', 'ui_upgrade_barrier@2x.png'],
+  ['struct_bench@2x.png', 'ui_upgrade_bench@2x.png'],
+  ['struct_canopy@2x.png', 'ui_upgrade_canopy@2x.png'],
+  ['struct_cooler@2x.png', 'ui_upgrade_cooler@2x.png'],
+  ['struct_counter_wide@2x.png', 'ui_upgrade_counter-wide@2x.png'],
+  ['struct_crates@2x.png', 'ui_upgrade_crates@2x.png'],
+  ['struct_dispenser@2x.png', 'ui_upgrade_dispenser@2x.png'],
+  ['struct_forecourt@2x.png', 'ui_upgrade_forecourt@2x.png'],
+  ['struct_headset@2x.png', 'ui_upgrade_headset@2x.png'],
+  ['struct_heatlamp@2x.png', 'ui_upgrade_heatlamp@2x.png'],
+  ['struct_knives@2x.png', 'ui_upgrade_knives@2x.png'],
+  ['struct_lane@2x.png', 'ui_upgrade_lane@2x.png'],
+  ['struct_menuboard@2x.png', 'ui_upgrade_menuboard@2x.png'],
+  ['struct_neon@2x.png', 'ui_upgrade_neon@2x.png'],
+  ['struct_orderpost@2x.png', 'ui_upgrade_orderpost@2x.png'],
+  ['struct_oven@2x.png', 'ui_upgrade_oven@2x.png'],
+  ['struct_planter@2x.png', 'ui_upgrade_planter@2x.png'],
+  ['struct_prep_station@2x.png', 'ui_upgrade_prep-station@2x.png'],
+  ['struct_pylon@2x.png', 'ui_upgrade_pylon@2x.png'],
+  ['struct_reader@2x.png', 'ui_upgrade_reader@2x.png'],
+  ['struct_register@2x.png', 'ui_upgrade_register@2x.png'],
+  ['struct_shoes@2x.png', 'ui_upgrade_shoes@2x.png'],
+  ['struct_sign_lit@2x.png', 'ui_upgrade_sign-lit@2x.png'],
+  ['struct_sign_painted@2x.png', 'ui_upgrade_sign-painted@2x.png'],
+  ['struct_staffroom@2x.png', 'ui_upgrade_staffroom@2x.png'],
+  ['struct_supervisor@2x.png', 'ui_upgrade_supervisor@2x.png'],
+  ['struct_terrace@2x.png', 'ui_upgrade_terrace@2x.png'],
+  ['struct_window@2x.png', 'ui_upgrade_window@2x.png'],
+]);
+
 export function canonicalName(raw: string): string {
-  return raw
+  const stripped = raw
     .replace(/\.png\.png$/i, '.png')
     .replace(/^\s*\d+\s*-?\s*/, '')
     .replace(/\s+/g, '');
+  return UPGRADE_ICON_RENAMES.get(stripped) ?? stripped;
 }
 
 export function importPlan(dir: string): ImportEntry[] {

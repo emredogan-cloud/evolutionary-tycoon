@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { basename, join } from 'node:path';
 import { packAsync } from 'free-tex-packer-core';
 import sharp from 'sharp';
-import { ATLASES, ATLAS_MIN_FILL } from '../../src/config/assets.ts';
+import { ATLASES, ATLAS_MIN_FILL, ATLAS_SUBJECT_ROUTES } from '../../src/config/assets.ts';
 import type { AtlasSpec } from '../../src/config/assets.ts';
 import { parseAssetName } from './naming.ts';
 import { PATHS } from './paths.ts';
@@ -115,7 +115,13 @@ export interface PackedAtlas {
 export function atlasFor(filename: string): AtlasSpec | null {
   const parsed = parseAssetName(filename);
   if (!parsed.ok || parsed.name.category.atlas === null) return null;
-  return ATLASES.find((atlas) => atlas.id === parsed.name.category.atlas) ?? null;
+  const route = ATLAS_SUBJECT_ROUTES.find(
+    (r) =>
+      r.category === parsed.name.category.id &&
+      (r.subjects as readonly string[]).includes(parsed.name.subject),
+  );
+  const id = route?.atlas ?? parsed.name.category.atlas;
+  return ATLASES.find((atlas) => atlas.id === id) ?? null;
 }
 
 export function groupByAtlas(files: readonly string[]): Map<string, string[]> {

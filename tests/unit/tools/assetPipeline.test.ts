@@ -345,7 +345,7 @@ describe('report', () => {
     const manifest = buildManifest({ atlasDir: join(root, 'report-atlas') });
     const over = {
       ...manifest,
-      totals: { bytes: 999 * 1024 * 1024, bootBytes: 0, criticalBytes: 0 },
+      totals: { bytes: 999 * 1024 * 1024, bootBytes: 0, criticalBytes: 0, deferredBytes: 0 },
     };
     const report = buildReport({ manifest: over, processedDir: processed, atlases: built.atlases });
     expect(report.ok).toBe(false);

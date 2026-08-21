@@ -2,6 +2,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import {
   ASSET_CATEGORIES,
+  ATLAS_SUBJECT_ROUTES,
   ATLAS_MIN_FILL,
   TEXTURE_MEMORY_BUDGET_BYTES,
   BOOT_BUDGET_BYTES,
@@ -80,6 +81,14 @@ export function atlasBudgetGroups(): Map<string, string> {
     const target = SHARED_BUDGETS[category.id] ?? category.id;
     const existing = groups.get(category.atlas);
     if (existing === undefined) groups.set(category.atlas, new Set([target]));
+    else existing.add(target);
+  }
+  // Routed atlases (ATLAS_SUBJECT_ROUTES) hold subjects of exactly one
+  // category, so they attribute to that category's budget group.
+  for (const route of ATLAS_SUBJECT_ROUTES) {
+    const target = SHARED_BUDGETS[route.category] ?? route.category;
+    const existing = groups.get(route.atlas);
+    if (existing === undefined) groups.set(route.atlas, new Set([target]));
     else existing.add(target);
   }
   const single = new Map<string, string>();

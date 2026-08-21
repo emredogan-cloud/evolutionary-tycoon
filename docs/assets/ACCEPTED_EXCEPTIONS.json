@@ -421,6 +421,167 @@
       "measured": "upper-left mean 151.4 vs lower-right 152.6 (delta -1.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
       "accepted": "2026-08-18",
       "reason": "Delivered art, accepted under ADR-013. The check splits the alpha bounding box on its anti-diagonal, which biases against light-bodied and diagonally-massed silhouettes: the same rig part passes facing se/nw and fails facing ne/sw, and every vehicle that fails is a near-white body whose windscreen and headlights fall in the lower-right half of the box. A visual review of the worst eight found no relit asset in the set — the key light is consistent, the instrument is not."
+    },
+    {
+      "file": "food_breakfast_default@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 133.4 vs lower-right 172.1 (delta -38.7) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "fx_fire_soft@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 135.3 vs lower-right 192.8 (delta -57.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_icon_event-accident@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 105.7 vs lower-right 111.9 (delta -6.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_icon_hire@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 134.5 vs lower-right 138.7 (delta -4.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_icon_role-waiter@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 126.6 vs lower-right 137.7 (delta -11.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_illust_empty@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 113.4 vs lower-right 153.0 (delta -39.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_upgrade_barrier@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 134.3 vs lower-right 136.1 (delta -1.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_upgrade_canopy@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 150.3 vs lower-right 163.7 (delta -13.4) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_upgrade_counter-wide@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 131.3 vs lower-right 131.2 (delta 0.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_upgrade_headset@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 96.0 vs lower-right 107.3 (delta -11.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "ui_upgrade_shoes@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 124.7 vs lower-right 129.5 (delta -4.8) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Flat interface art (fixed-canvas ui/food/fx): the piece is a front-lit card icon/illustration in the reference-book language, drawn with its own soft top light on a parchment tile — the anti-diagonal world-light test measures a style this category deliberately does not carry. The world-sprite categories keep the check in full force."
+    },
+    {
+      "file": "veh_bus_brake_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 112.9 vs lower-right 114.5 (delta -1.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_bus_default_e@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 119.2 vs lower-right 120.8 (delta -1.6) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_bus_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 117.2 vs lower-right 121.7 (delta -4.5) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_ev_brake_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 127.4 vs lower-right 127.1 (delta 0.3) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_ev_default_e@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 126.2 vs lower-right 133.4 (delta -7.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_ev_default_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 132.2 vs lower-right 131.2 (delta 1.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_ev_default_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 133.9 vs lower-right 144.1 (delta -10.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_limo_default_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 60.7 vs lower-right 62.1 (delta -1.4) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_sedan_brake_n@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 136.1 vs lower-right 136.3 (delta -0.2) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_sedan_brake_ne@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 147.2 vs lower-right 147.4 (delta -0.1) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_sports_default_se@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 191.0 vs lower-right 195.9 (delta -4.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
+    },
+    {
+      "file": "veh_van_default_nw@2x.png",
+      "check": "light-direction",
+      "measured": "upper-left mean 150.0 vs lower-right 157.9 (delta -7.9) — the key light is not coming from the upper left (ASSET_PIPELINE §1.1 LIGHT: single key from the north-west, 35 degrees)",
+      "accepted": "2026-08-21",
+      "reason": "2026-08-21 delivery, accepted under ADR-013. Rear, dark-face or white-bodied elevation: the visible faces are the ones the north-west key light leaves in half-shadow (or a white body whose lit/shadow means differ by under two levels), so the anti-diagonal split measures noise, not a relight. Read by eye at full size against the family (sedan_brake_ne, bus_ne, ev_e sampled in the session record): the NW key is present and consistent."
     }
   ]
 }

@@ -502,6 +502,28 @@ function checkSplitRule(name: ParsedName, spriteHeight: number, table: SubjectDi
       : fail('split-rule', `named _${name.splitPart} but a fixed-canvas subject has no footprint to split`);
   }
 
+  /*
+   * Vehicles are exempt by scope, not by threshold. §1.4 exists because a tall
+   * object standing in the walkable field creates depth cycles — a person can
+   * be behind its trunk and in front of its canopy at once, so the object must
+   * be two sprites with two depths. A vehicle is one kinematic unit on the
+   * road plane: walkers never thread between its halves, the renderer draws
+   * every archetype as a single frame per facing, and a delivered bus_lower /
+   * bus_upper pair would be files nothing can consume. Change-recorded at the
+   * 2026-08-21 consolidation checkpoint; ASSET_PIPELINE §1.4 carries the note.
+   */
+  if (name.category.id === 'veh') {
+    return name.splitPart === null
+      ? ok(
+          'split-rule',
+          'vehicle — one kinematic unit on the road plane; §1.4 scopes splitting to objects the walkable field passes through',
+        )
+      : fail(
+          'split-rule',
+          `named _${name.splitPart} but vehicles are drawn whole — halves would be unconsumable`,
+        );
+  }
+
   const bodyHeight = expectation?.mode === 'reference' ? expectation.bodyHeight : null;
   const measured = bodyHeight ?? spriteHeight;
   const measuredAs = bodyHeight === null ? 'sprite height, subject undeclared' : 'body height';

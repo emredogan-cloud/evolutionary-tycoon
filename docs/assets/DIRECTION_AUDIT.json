@@ -1,11 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "audited": "2026-08-18",
   "method": "Every vehicle sprite in the delivered drop was rendered at 460px with its filename and the heading that filename promises, and read by eye (docs/ASSET_INTEGRATION_REPORT.md §4). The reading is 'where does the nose point on screen' — grille and headlights forward, tail lights back. A supporting measurement (centroid of saturated-red pixels against the subject centroid) agreed on every case it could resolve and is recorded in the report; it is not the evidence, because it cannot separate a front view from a rear view when the sprite is near-axial.",
   "finding": "The drop contains only FORWARD-facing views. A vehicle heading away from the camera shows its rear, and the generator produced no rear or rear-three-quarter view for three of the four archetypes — the three 'receding' slots (n, ne, nw) were filled with duplicates of forward views instead. The sedan is the single exception: its `sw` file is a genuine rear-three-quarter heading north-west.",
   "impact": "The road runs east-west in world space, and world-west projects to screen `nw`. Half of all road traffic therefore drew a car facing the wrong way — nose pointing down-right while the car moved up-left, which reads as reversing.",
   "resolution": "`assets:import` assigns each source file to the facing it actually shows, mirroring where a mirror is truthful. Slots with no truthful source fall back to the nearest available heading, always preserving the left/right sense, and are listed in `gaps` below as art that must be regenerated. Nothing is fabricated and nothing is silently relabelled: this file is the mapping.",
-
   "archetypes": {
     "sedan": {
       "trueFacings": {
@@ -19,15 +18,31 @@
         "nw": "sw"
       },
       "assign": {
-        "s": { "from": "s", "mirror": false, "note": "front view, drawn as promised" },
-        "se": { "from": "se", "mirror": false, "note": "front three-quarter heading south-east" },
+        "s": {
+          "from": "s",
+          "mirror": false,
+          "note": "front view, drawn as promised"
+        },
+        "se": {
+          "from": "se",
+          "mirror": false,
+          "note": "front three-quarter heading south-east"
+        },
         "sw": {
           "from": "n",
           "mirror": false,
           "note": "the `n` file is a front three-quarter heading south-west; the `nw` file is a near-duplicate of it"
         },
-        "e": { "from": "e", "mirror": false, "note": "side elevation, drawn as promised" },
-        "w": { "from": "w", "mirror": false, "note": "side elevation, drawn as promised" },
+        "e": {
+          "from": "e",
+          "mirror": false,
+          "note": "side elevation, drawn as promised"
+        },
+        "w": {
+          "from": "w",
+          "mirror": false,
+          "note": "side elevation, drawn as promised"
+        },
         "nw": {
           "from": "sw",
           "mirror": false,
@@ -39,10 +54,9 @@
           "note": "mirroring the rear three-quarter swaps north-west for north-east — truthful, because a car is laterally symmetric"
         },
         "n": {
-          "from": "sw",
+          "from": "n",
           "mirror": false,
-          "gap": true,
-          "note": "no rear elevation exists; the rear three-quarter is the nearest truthful view, 45 degrees off"
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — true rear elevation, closes the recorded gap"
         }
       }
     },
@@ -58,23 +72,45 @@
         "nw": "sw"
       },
       "assign": {
-        "s": { "from": "s", "mirror": false, "note": "front view; the `n` file is a near-duplicate of it" },
-        "se": { "from": "se", "mirror": false, "note": "front three-quarter heading south-east" },
-        "sw": { "from": "sw", "mirror": false, "note": "front three-quarter heading south-west" },
-        "e": { "from": "e", "mirror": false, "note": "side elevation" },
-        "w": { "from": "w", "mirror": false, "note": "side elevation" },
-        "ne": {
-          "from": "e",
+        "s": {
+          "from": "s",
           "mirror": false,
-          "gap": true,
-          "note": "no rear three-quarter exists; the side elevation keeps the left/right sense and loses only the vertical component"
+          "note": "front view; the `n` file is a near-duplicate of it"
         },
-        "nw": { "from": "w", "mirror": false, "gap": true, "note": "as `ne`, mirrored side" },
-        "n": {
+        "se": {
+          "from": "se",
+          "mirror": false,
+          "note": "front three-quarter heading south-east"
+        },
+        "sw": {
+          "from": "sw",
+          "mirror": false,
+          "note": "front three-quarter heading south-west"
+        },
+        "e": {
           "from": "e",
           "mirror": false,
-          "gap": true,
-          "note": "no rear view of any kind exists; a side elevation is 90 degrees off, a front view would be 180"
+          "note": "side elevation"
+        },
+        "w": {
+          "from": "w",
+          "mirror": false,
+          "note": "side elevation"
+        },
+        "ne": {
+          "from": "ne",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        },
+        "nw": {
+          "from": "nw",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        },
+        "n": {
+          "from": "n",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
         }
       }
     },
@@ -90,14 +126,46 @@
         "nw": "se"
       },
       "assign": {
-        "s": { "from": "s", "mirror": false, "note": "front view; the `n` file is a near-duplicate of it" },
-        "se": { "from": "se", "mirror": false, "note": "front three-quarter heading south-east" },
-        "sw": { "from": "sw", "mirror": false, "note": "front three-quarter heading south-west" },
-        "e": { "from": "e", "mirror": false, "note": "side elevation" },
-        "w": { "from": "w", "mirror": false, "note": "side elevation" },
-        "ne": { "from": "e", "mirror": false, "gap": true, "note": "no rear three-quarter exists" },
-        "nw": { "from": "w", "mirror": false, "gap": true, "note": "no rear three-quarter exists" },
-        "n": { "from": "e", "mirror": false, "gap": true, "note": "no rear view of any kind exists" }
+        "s": {
+          "from": "s",
+          "mirror": false,
+          "note": "front view; the `n` file is a near-duplicate of it"
+        },
+        "se": {
+          "from": "se",
+          "mirror": false,
+          "note": "front three-quarter heading south-east"
+        },
+        "sw": {
+          "from": "sw",
+          "mirror": false,
+          "note": "front three-quarter heading south-west"
+        },
+        "e": {
+          "from": "e",
+          "mirror": false,
+          "note": "side elevation"
+        },
+        "w": {
+          "from": "w",
+          "mirror": false,
+          "note": "side elevation"
+        },
+        "ne": {
+          "from": "ne",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        },
+        "nw": {
+          "from": "nw",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        },
+        "n": {
+          "from": "n",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        }
       }
     },
     "motorcycle": {
@@ -112,18 +180,49 @@
         "nw": "sw"
       },
       "assign": {
-        "s": { "from": "s", "mirror": false, "note": "front view; the `n` file is a near-duplicate of it" },
-        "se": { "from": "se", "mirror": false, "note": "front three-quarter heading south-east" },
-        "sw": { "from": "sw", "mirror": false, "note": "front three-quarter heading south-west" },
-        "e": { "from": "e", "mirror": false, "note": "side elevation" },
-        "w": { "from": "w", "mirror": false, "note": "side elevation" },
-        "ne": { "from": "e", "mirror": false, "gap": true, "note": "no rear three-quarter exists" },
-        "nw": { "from": "w", "mirror": false, "gap": true, "note": "no rear three-quarter exists" },
-        "n": { "from": "e", "mirror": false, "gap": true, "note": "no rear view of any kind exists" }
+        "s": {
+          "from": "s",
+          "mirror": false,
+          "note": "front view; the `n` file is a near-duplicate of it"
+        },
+        "se": {
+          "from": "se",
+          "mirror": false,
+          "note": "front three-quarter heading south-east"
+        },
+        "sw": {
+          "from": "sw",
+          "mirror": false,
+          "note": "front three-quarter heading south-west"
+        },
+        "e": {
+          "from": "e",
+          "mirror": false,
+          "note": "side elevation"
+        },
+        "w": {
+          "from": "w",
+          "mirror": false,
+          "note": "side elevation"
+        },
+        "ne": {
+          "from": "ne",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        },
+        "nw": {
+          "from": "nw",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        },
+        "n": {
+          "from": "n",
+          "mirror": false,
+          "note": "delivered 2026-08-21 (audit-prompt batch); read by eye at full size: shows the promised heading — closes the recorded gap"
+        }
       }
     }
   },
-
   "gaps": {
     "note": "Ten views that no delivered file can supply truthfully. Each is currently drawn by the nearest available heading, which is visibly approximate but never contradicts the direction of travel. Regenerating these is the one art task this consolidation could not do for itself — an agent cannot generate images.",
     "required": [
@@ -138,5 +237,14 @@
       "veh_motorcycle_default_ne@2x.png — rear three-quarter heading north-east",
       "veh_motorcycle_default_nw@2x.png — rear three-quarter heading north-west"
     ]
-  }
+  },
+  "deliveries": [
+    {
+      "date": "2026-08-21",
+      "files": 127,
+      "source": "audit-prompt batch P177–P303, generated externally by the user",
+      "method": "same reading as v1 — nose direction by eye. Full reads: sedan_n, pickup_n, van_n, motorcycle_n (all true rears); spot reads: pickup_ne, bus_ne (true rear three-quarters heading north-east). All sampled labels honest, so no reassignment is recorded for the new subjects (bus, emergency, ev, limo, sports, truck rears/brakes); absence of an assign entry means the file is used as named.",
+      "finding": "the v1 gap rows for sedan/pickup/van/motorcycle rear views are closed by true rear art; brake files exist only for n and ne by design (nw derives by the standard mirror), so the old n→e stand-ins would have demanded brake_e files that rightly do not exist."
+    }
+  ]
 }

@@ -120,6 +120,10 @@ export class LoadScene extends Phaser.Scene {
 
     let failed = 0;
     for (const atlas of manifest.atlases) {
+      // Deferred atlases are fetched when something first needs them
+      // (`installDeferredAtlas`) — not before the world starts, and never as
+      // part of this bar's denominator.
+      if (atlas.priority === 'deferred') continue;
       const ok = await this.addAtlas(loader, atlas);
       if (!ok) {
         failed++;
@@ -130,6 +134,7 @@ export class LoadScene extends Phaser.Scene {
     }
 
     for (const single of manifest.singles) {
+      if (single.priority === 'deferred') continue;
       await this.addSingle(loader, single);
     }
 
