@@ -24,7 +24,12 @@
 
   const { staff, roles, payroll, full, onhire, onfire }: Props = $props();
 
-  let open = $state(false);
+  /*
+   * Phase 18: the dock owns opening this panel, so it arrives expanded — a
+   * player who pressed "Personel" asked to see the staff, not a second
+   * closed door. The internal toggle stays for collapsing in place.
+   */
+  let open = $state(true);
 
   const ROLE_LABELS: Record<string, string> = {
     cook: 'Aşçı',

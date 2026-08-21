@@ -146,4 +146,10 @@
     font-variant-numeric: tabular-nums;
     color: var(--c-text);
   }
+  @media (max-width: 700px), (max-height: 420px) {
+    /* Minimum HUD (GDD §14.8): one compact line, the stat grid folds away. */
+    .stats {
+      display: none;
+    }
+  }
 </style>

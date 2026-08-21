@@ -19,10 +19,13 @@
    */
   interface Props {
     progression: ProgressionView;
+    /** Phase 18 — collapsed to one line until the offer is live (GDD §14.1). */
+    compact?: boolean;
     onevolve: () => void;
   }
 
-  const { progression, onevolve }: Props = $props();
+  const { progression, compact = false, onevolve }: Props = $props();
+  let expanded = $state(false);
 
   const STAGE_NAMES: Record<number, string> = {
     1: 'Yol kenarı tezgâhı',
@@ -64,6 +67,7 @@
     <div
       class="bar"
       role="progressbar"
+      aria-label="Evrim ilerlemesi"
       aria-valuenow={percent}
       aria-valuemin="0"
       aria-valuemax="100"
@@ -79,8 +83,30 @@
     <!-- The stand keeps trading while this sits here unanswered; the offer does
          not expire. That is the whole point of asking. -->
     <button class="evolve" type="button" data-testid="evolve-button" onclick={onevolve}> Büyüt </button>
+  {:else if rows.length > 0 && compact && !expanded}
+    <button
+      type="button"
+      class="peek"
+      data-testid="evolution-peek"
+      aria-expanded="false"
+      onclick={() => {
+        expanded = true;
+      }}>Sıradaki: {STAGE_NAMES[next] ?? '—'} ▸</button
+    >
   {:else if rows.length > 0}
-    <p class="eyebrow">Sıradaki: {STAGE_NAMES[next] ?? '—'}</p>
+    {#if compact}
+      <button
+        type="button"
+        class="peek"
+        data-testid="evolution-peek"
+        aria-expanded="true"
+        onclick={() => {
+          expanded = false;
+        }}>Sıradaki: {STAGE_NAMES[next] ?? '—'} ▾</button
+      >
+    {:else}
+      <p class="eyebrow">Sıradaki: {STAGE_NAMES[next] ?? '—'}</p>
+    {/if}
     <dl class="reqs">
       {#each rows as row (row.label)}
         <div class:met={row.met} data-testid="requirement" data-key={row.label}>
@@ -187,5 +213,19 @@
     display: block;
     height: 100%;
     background: var(--c-accent);
+  }
+  .peek {
+    background: none;
+    border: none;
+    color: var(--c-text-muted);
+    font-size: var(--fs-xs);
+    cursor: pointer;
+    padding: var(--sp-1) 0;
+    min-height: 32px;
+  }
+  .peek:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-sm);
   }
 </style>

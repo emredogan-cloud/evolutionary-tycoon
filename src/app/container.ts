@@ -136,7 +136,7 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
    */
   let unprojector: WorldUnprojector = NULL_UNPROJECTOR;
   const unproject = (x: number, y: number): { x: number; y: number } | null => unprojector(x, y);
-  const ui = new UiBridge(sim, (x, y, z, out) => projector(x, y, z, out));
+  const ui = new UiBridge(sim, (x, y, z, out) => projector(x, y, z, out), startPaused);
   ui.start();
 
   /*
@@ -307,6 +307,12 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       },
       setReducedMotion: (on: boolean) => {
         sim.dispatch({ t: 'SET_REDUCED_MOTION', on });
+      },
+      setPaused: (paused: boolean) => {
+        sim.dispatch({ t: 'SET_PAUSED', paused });
+      },
+      setHighContrast: (on: boolean) => {
+        sim.dispatch({ t: 'SET_HIGH_CONTRAST', on });
       },
       evolve: () => {
         sim.dispatch({ t: 'EVOLVE' });

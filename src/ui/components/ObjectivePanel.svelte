@@ -39,6 +39,7 @@
     <div
       class="bar"
       role="progressbar"
+      aria-label="Hedef ilerlemesi"
       aria-valuenow={percent}
       aria-valuemin="0"
       aria-valuemax="100"
@@ -90,5 +91,12 @@
     display: block;
     height: 100%;
     background: var(--c-accent);
+  }
+  @media (max-height: 420px) {
+    /* Landscape phones: the objective yields to the world; the goal is one
+       tap away on the evolution chip. */
+    section {
+      display: none;
+    }
   }
 </style>

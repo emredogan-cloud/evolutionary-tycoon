@@ -100,6 +100,8 @@ test.describe('evolution', () => {
 
     // 1. The panel says what is still missing, before anything is met.
     await expect(page.locator('[data-testid="evolution-panel"]')).toBeVisible();
+    // Phase 18 collapses the requirement list behind a one-line chip.
+    await page.getByTestId('evolution-peek').click();
     await expect(page.locator('[data-testid="requirement"]').first()).toBeVisible();
     await expect(page.locator('[data-testid="evolve-button"]')).toHaveCount(0);
 

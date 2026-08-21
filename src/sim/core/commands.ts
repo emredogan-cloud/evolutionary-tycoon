@@ -65,6 +65,13 @@ interface SetReducedMotionCommand {
   readonly on: boolean;
 }
 
+/** The a11y contrast preference — Phase 18. Presentation-only, like motion. */
+interface SetHighContrastCommand {
+  readonly t: 'SET_HIGH_CONTRAST';
+  readonly tick: number;
+  readonly on: boolean;
+}
+
 /**
  * Start preparing an order — the player being the cook, in Stage 1.
  *
@@ -201,7 +208,8 @@ export type Command =
   | CollectOfflineCommand
   | SetAudioCommand
   | SetMutedCommand
-  | SetReducedMotionCommand;
+  | SetReducedMotionCommand
+  | SetHighContrastCommand;
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
@@ -218,7 +226,8 @@ export type CommandInput =
   | Omit<CollectOfflineCommand, 'tick'>
   | Omit<SetAudioCommand, 'tick'>
   | Omit<SetMutedCommand, 'tick'>
-  | Omit<SetReducedMotionCommand, 'tick'>;
+  | Omit<SetReducedMotionCommand, 'tick'>
+  | Omit<SetHighContrastCommand, 'tick'>;
 
 /**
  * Apply one command to the world.
@@ -258,6 +267,10 @@ export function apply(world: World, command: Command): void {
     }
     case 'SET_REDUCED_MOTION': {
       world.settings.a11y.reducedMotion = command.on;
+      break;
+    }
+    case 'SET_HIGH_CONTRAST': {
+      world.settings.a11y.highContrast = command.on;
       break;
     }
     case 'MANUAL_PREP': {
@@ -351,6 +364,8 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'SET_MUTED', tick, muted: input.muted };
     case 'SET_REDUCED_MOTION':
       return { t: 'SET_REDUCED_MOTION', tick, on: input.on };
+    case 'SET_HIGH_CONTRAST':
+      return { t: 'SET_HIGH_CONTRAST', tick, on: input.on };
     case 'MANUAL_PREP':
       return { t: 'MANUAL_PREP', tick, orderSlot: input.orderSlot };
     case 'BUY_UPGRADE':

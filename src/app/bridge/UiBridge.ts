@@ -1,4 +1,5 @@
 import { MENU, PRICE_BAND, menuItem } from '@config/economy/menu';
+import { CONVERSION_REASONS } from '@config/conversion';
 import { EVENT_SPECS } from '@config/events';
 import { WEATHER_STATES } from '@config/weather';
 import { activeEventSlot, currentWeather } from '@sim/systems/EventSystem';
@@ -72,6 +73,13 @@ export const COIN_POPUP_MS = 1600;
 /** Concurrent coin popups. Beyond this the oldest is dropped. */
 export const MAX_COIN_POPUPS = 12;
 
+/** GDD §14.4 — the panel reads the last hundred decisions. */
+export const CONVERSION_RING_SIZE = 100;
+/** Strip depth; older lines yield. */
+const MAX_NOTICES = 5;
+/** A strip line dismisses itself after this long on screen. */
+const NOTICE_TTL_MS = 6_000;
+
 /** How high the coin floats, in metres, over its life. */
 const COIN_RISE_METRES = 0.9;
 
@@ -133,8 +141,12 @@ type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
 type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
 type MutableRole = { -readonly [K in keyof RoleView]: RoleView[K] };
 interface MutableHud {
+  analytics: { sampleSize: number; converted: number; reasonCounts: number[] };
+  notices: { id: number; kind: string; text: string }[];
+  showPauseVeil: boolean;
   audio: { master: number; music: number; sfx: number; ambience: number; muted: boolean };
   reducedMotion: boolean;
+  highContrast: boolean;
   cash: number;
   reputation: number;
   customersServed: number;
@@ -196,12 +208,31 @@ export class UiBridge implements HudSource {
    */
   private readonly coins: CoinPopup[] = [];
   private unsubscribeEvents: (() => void) | null = null;
+  /**
+   * The last hundred conversion decisions — the Analytics panel's whole feed
+   * (GDD §14.4). App-side ring over the event stream: replay-safe, never
+   * hashed, no sim change. Index 0 is oldest.
+   */
+  private readonly conversionRing: { readonly converted: boolean; readonly reason: number }[] = [];
+  /** Self-dismissing notification strip entries — GDD §14.2, never modal. */
+  private readonly notices: { id: number; kind: string; text: string; bornAt: number }[] = [];
+  private nextNoticeId = 1;
 
   private lastSampleMs = Number.NEGATIVE_INFINITY;
   private readonly model: MutableHud;
   private readonly scratch = { x: 0, y: 0 };
 
-  constructor(sim: Sim, project: ScreenProjector) {
+  constructor(
+    sim: Sim,
+    project: ScreenProjector,
+    /**
+     * True when the HARNESS booted the world paused (`?paused=1`, freezeAt).
+     * The pause veil is player UX; a fixture that pins the clock is not a
+     * player taking a break, and a veil over an instrumented boot would block
+     * every pointer the suite owns.
+     */
+    private readonly harnessPaused = false,
+  ) {
     this.sim = sim;
     this.project = project;
 
@@ -296,6 +327,14 @@ export class UiBridge implements HudSource {
       incomePerMinute: 0,
       audio: { master: 1, music: 1, sfx: 1, ambience: 1, muted: false },
       reducedMotion: false,
+      highContrast: false,
+      analytics: {
+        sampleSize: 0,
+        converted: 0,
+        reasonCounts: new Array<number>(CONVERSION_REASONS.length).fill(0),
+      },
+      notices: [],
+      showPauseVeil: false,
       upgrades,
       prices,
       objective: '',
@@ -373,7 +412,84 @@ export class UiBridge implements HudSource {
     };
   }
 
+  private pushConversion(converted: boolean, reason: number): void {
+    if (this.conversionRing.length >= CONVERSION_RING_SIZE) this.conversionRing.shift();
+    this.conversionRing.push({ converted, reason });
+  }
+
+  /** Which world moments earn a strip line. Quiet by default — a strip that
+   *  narrates everything is a log, not a notification. */
+  private noticeFor(event: ReadonlySimEvent): void {
+    let kind: string | null = null;
+    let text: string | null = null;
+    switch (event.t) {
+      case 'STAGE_UNLOCKED':
+        kind = 'progress';
+        text = 'Yeni aşama açıldı — evrim hazır';
+        break;
+      case 'EMPLOYEE_LEFT':
+        kind = 'warning';
+        text = event.reason === 'unpaid' ? 'Bir çalışan maaş alamadığı için ayrıldı' : 'Bir çalışan ayrıldı';
+        break;
+      case 'ROAD_EVENT_STARTED': {
+        const spec = EVENT_SPECS[event.kind];
+        kind = 'info';
+        text = spec === undefined ? 'Yolda bir şeyler oluyor' : `${spec.label} başladı`;
+        break;
+      }
+      case 'ROAD_EVENT_ENDED': {
+        const spec = EVENT_SPECS[event.kind];
+        kind = 'info';
+        text = spec === undefined ? null : `${spec.label} sona erdi`;
+        break;
+      }
+      case 'WEATHER_CHANGED': {
+        const state = WEATHER_STATES[event.state];
+        kind = 'info';
+        text = state === undefined ? null : `Hava değişti: ${state.label}`;
+        break;
+      }
+      case 'STAGE_CHANGED':
+        kind = 'progress';
+        text = 'Mekân evrildi';
+        break;
+      case 'DAY_STARTED':
+      case 'SPEED_CHANGED':
+      case 'PAUSE_CHANGED':
+      case 'VEHICLE_SPAWNED':
+      case 'VEHICLE_BRAKED':
+      case 'VEHICLE_DESPAWNED':
+      case 'CONVERSION_SUCCEEDED':
+      case 'CONVERSION_FAILED':
+      case 'VEHICLE_PARKED':
+      case 'CUSTOMER_SPAWNED':
+      case 'CUSTOMER_LEFT_ANGRY':
+      case 'ORDER_PLACED':
+      case 'PREP_STARTED':
+      case 'ORDER_READY':
+      case 'ORDER_DELIVERED':
+      case 'PAYMENT':
+      case 'UPGRADE_APPLIED':
+      case 'PRICE_CHANGED':
+      case 'EMPLOYEE_HIRED':
+      case 'CONSTRUCTION_STARTED':
+      case 'OBJECT_PLACED':
+      case 'OBJECT_REMOVED':
+        // Quiet moments by decision — a strip narrating everything is a log.
+        return;
+    }
+    if (text === null) return;
+    if (this.notices.length >= MAX_NOTICES) this.notices.shift();
+    this.notices.push({ id: this.nextNoticeId++, kind, text, bornAt: this.sim.world.clock.simTimeMs });
+  }
+
   private onEvent(event: ReadonlySimEvent): void {
+    if (event.t === 'CONVERSION_SUCCEEDED') {
+      this.pushConversion(true, -1);
+    } else if (event.t === 'CONVERSION_FAILED') {
+      this.pushConversion(false, event.reason);
+    }
+    this.noticeFor(event);
     if (event.t !== 'PAYMENT') return;
 
     const world = this.sim.world;
@@ -421,6 +537,29 @@ export class UiBridge implements HudSource {
     model.audio.ambience = world.settings.audio.ambience;
     model.audio.muted = world.settings.audio.muted;
     model.reducedMotion = world.settings.a11y.reducedMotion;
+    model.highContrast = world.settings.a11y.highContrast;
+    {
+      // GDD §14.4 — the ranked reason histogram over the last hundred.
+      const totals = model.analytics.reasonCounts;
+      totals.fill(0);
+      let converted = 0;
+      for (const entry of this.conversionRing) {
+        if (entry.converted) converted++;
+        else if (entry.reason >= 0 && entry.reason < totals.length)
+          totals[entry.reason] = (totals[entry.reason] ?? 0) + 1;
+      }
+      model.analytics.sampleSize = this.conversionRing.length;
+      model.analytics.converted = converted;
+    }
+    {
+      // Self-dismissal: age out, then copy what remains.
+      // Sim-time ageing: deterministic, and a paused world holds its lines —
+      // a notice that expires while nobody could read it served nobody.
+      const alive = this.notices.filter((notice) => world.clock.simTimeMs - notice.bornAt < NOTICE_TTL_MS);
+      this.notices.length = 0;
+      this.notices.push(...alive);
+      model.notices = alive.map((notice) => ({ id: notice.id, kind: notice.kind, text: notice.text }));
+    }
     model.reputation = world.economy.reputation;
     model.customersServed = world.stats.customersServed;
     model.ordersActive = world.orders.activeCount;
@@ -440,6 +579,7 @@ export class UiBridge implements HudSource {
         activeSlot < 0 ? 0 : Math.max(0, (world.environment.eventEndMs[activeSlot] ?? 0) - nowMs);
     }
     model.paused = world.control.paused;
+    model.showPauseVeil = world.control.paused && !this.harnessPaused;
     model.speedMultiplier = world.control.speedMultiplier;
 
     let count = 0;

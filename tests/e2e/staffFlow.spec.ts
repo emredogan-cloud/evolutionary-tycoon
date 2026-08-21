@@ -31,6 +31,8 @@ async function boot(page: Page): Promise<void> {
     timeout: 30_000,
   });
   await expect(page.locator('[data-testid="hud"]')).toBeVisible();
+  // Phase 18 moved the panel behind the dock — the test walks the player's path.
+  await page.getByTestId('dock-staff').click();
 }
 
 async function cookFor(page: Page, ticks: number): Promise<void> {
@@ -173,7 +175,8 @@ test.describe('an employee in the world', () => {
     // actually reads rather than only in the simulation.
     await boot(page);
     await earnFor(page, 40);
-    await page.locator('[data-testid="staff-toggle"]').click();
+    // The dock already opened the panel expanded; the old toggle click would
+    // now close it.
     await page.locator('[data-testid="staff-hire"][data-role="cook"]').click();
     await advance(page, 1);
     await page.locator('[data-testid="staff-hire"][data-role="cleaner"]').click();

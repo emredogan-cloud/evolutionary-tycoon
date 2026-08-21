@@ -218,6 +218,8 @@ test.describe('the price panel', () => {
   test('moves a price and keeps it inside the band', async ({ page }) => {
     await boot(page);
 
+    // Phase 18: prices live behind the dock's Menü action.
+    await page.getByTestId('dock-menu').click();
     const slider = page.locator('[data-testid="price-slider"][data-item="hotdog"]');
     await expect(slider).toBeVisible();
 

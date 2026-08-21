@@ -15,6 +15,10 @@
   import EvolutionPanel from './EvolutionPanel.svelte';
   import BuildMenu from '../screens/BuildMenu.svelte';
   import AudioSettings from '../screens/AudioSettings.svelte';
+  import AnalyticsPanel from '../screens/AnalyticsPanel.svelte';
+  import DiagnosticsPanel from '../screens/DiagnosticsPanel.svelte';
+  import NotificationStrip from './NotificationStrip.svelte';
+  import PauseOverlay from './PauseOverlay.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
@@ -61,7 +65,8 @@
    * not be hashed, must not be saved, and must not survive a replay.
    */
   let openUpgrade = $state<string | null>(null);
-  let settingsOpen = $state(false);
+  /** One panel at a time — GDD §14.2's world-dominance rule made mechanical. */
+  let openPanel = $state<'settings' | 'staff' | 'analytics' | 'diagnostics' | 'menu' | null>(null);
 
   let cash = $state(0);
   let reputation = $state(0);
@@ -90,6 +95,32 @@
   let payrollFull = $state(false);
   let audioMix = $state({ master: 1, music: 1, sfx: 1, ambience: 1, muted: false });
   let reducedMotion = $state(false);
+  let analytics = $state({ sampleSize: 0, converted: 0, reasonCounts: [] as number[] });
+  let notices = $state<{ id: number; kind: string; text: string }[]>([]);
+  let paused = $state(false);
+  let showPauseVeil = $state(false);
+  let highContrast = $state(false);
+
+  /*
+   * Presentation-only preferences live outside the world: they must survive
+   * page loads (localStorage) but never enter a save, a hash, or a replay.
+   */
+  const storedScale = Number(localStorage.getItem('evo-ui-scale') ?? '1');
+  let uiScale = $state(Number.isFinite(storedScale) && storedScale > 0 ? storedScale : 1);
+  let dyslexiaFont = $state(localStorage.getItem('evo-dyslexia-font') === '1');
+
+  $effect(() => {
+    document.documentElement.style.setProperty('--ui-scale', String(uiScale));
+    document.documentElement.style.fontSize = `${String(16 * uiScale)}px`;
+    localStorage.setItem('evo-ui-scale', String(uiScale));
+  });
+  $effect(() => {
+    document.documentElement.classList.toggle('dyslexia-font', dyslexiaFont);
+    localStorage.setItem('evo-dyslexia-font', dyslexiaFont ? '1' : '0');
+  });
+  $effect(() => {
+    document.documentElement.classList.toggle('high-contrast', highContrast);
+  });
   let progression = $state<ProgressionView>({
     stage: 1,
     pendingStage: 0,
@@ -103,6 +134,15 @@
     source.subscribe((model) => {
       cash = model.cash;
       audioMix = { ...model.audio };
+      analytics = {
+        sampleSize: model.analytics.sampleSize,
+        converted: model.analytics.converted,
+        reasonCounts: [...model.analytics.reasonCounts],
+      };
+      notices = [...model.notices];
+      paused = model.paused;
+      showPauseVeil = model.showPauseVeil;
+      highContrast = model.highContrast;
       reducedMotion = model.reducedMotion;
       reputation = model.reputation;
       customersServed = model.customersServed;
@@ -156,6 +196,19 @@
   );
 </script>
 
+<svelte:window
+  onkeydown={(event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (event.key === 'Escape' && openPanel !== null) {
+      openPanel = null;
+      event.preventDefault();
+    } else if (event.key === ' ' && target?.tagName !== 'INPUT' && target?.tagName !== 'BUTTON') {
+      commands.setPaused(!paused);
+      event.preventDefault();
+    }
+  }}
+/>
+
 <div class="overlay" data-testid="game-hud">
   <EnvironmentStrip {gameHour} {weatherId} {weatherLabel} {eventId} {eventLabel} {eventRemainingMs} />
   <WorldMarkers {markers} />
@@ -186,26 +239,97 @@
 
   <HudCash {cash} {reputation} {customersServed} {customersWaiting} {gameDay} {gameHour} {incomePerMinute} />
 
-  <button
-    type="button"
-    class="settings-gear"
-    data-testid="settings-gear"
-    aria-label="Ayarlar"
-    aria-expanded={settingsOpen}
-    onclick={() => {
-      settingsOpen = !settingsOpen;
-    }}>⚙</button
-  >
-  {#if settingsOpen}
+  <nav class="action-dock" aria-label="Birincil eylemler">
+    <button
+      type="button"
+      data-testid="dock-staff"
+      aria-pressed={openPanel === 'staff'}
+      onclick={() => {
+        openPanel = openPanel === 'staff' ? null : 'staff';
+      }}><span aria-hidden="true">👥</span> Personel</button
+    >
+    <button
+      type="button"
+      data-testid="dock-menu"
+      aria-pressed={openPanel === 'menu'}
+      onclick={() => {
+        openPanel = openPanel === 'menu' ? null : 'menu';
+      }}><span aria-hidden="true">🧾</span> Menü</button
+    >
+    <button
+      type="button"
+      data-testid="dock-analytics"
+      aria-pressed={openPanel === 'analytics'}
+      onclick={() => {
+        openPanel = openPanel === 'analytics' ? null : 'analytics';
+      }}><span aria-hidden="true">📊</span> Analiz</button
+    >
+    <button
+      type="button"
+      data-testid="settings-gear"
+      aria-pressed={openPanel === 'settings'}
+      aria-label="Ayarlar"
+      onclick={() => {
+        openPanel = openPanel === 'settings' ? null : 'settings';
+      }}><span aria-hidden="true">⚙</span> Ayarlar</button
+    >
+    <button
+      type="button"
+      data-testid="dock-diagnostics"
+      aria-pressed={openPanel === 'diagnostics'}
+      aria-label="Tanılama"
+      onclick={() => {
+        openPanel = openPanel === 'diagnostics' ? null : 'diagnostics';
+      }}><span aria-hidden="true">🛠</span></button
+    >
+  </nav>
+
+  {#if openPanel === 'settings'}
     <AudioSettings
       audio={audioMix}
       {reducedMotion}
+      {highContrast}
+      {uiScale}
+      {dyslexiaFont}
       {commands}
+      onUiScale={(scale: number) => {
+        uiScale = scale;
+      }}
+      onDyslexiaFont={(on: boolean) => {
+        dyslexiaFont = on;
+      }}
       onclose={() => {
-        settingsOpen = false;
+        openPanel = null;
       }}
     />
   {/if}
+
+  {#if openPanel === 'analytics'}
+    <AnalyticsPanel
+      {analytics}
+      onclose={() => {
+        openPanel = null;
+      }}
+    />
+  {/if}
+  {#if openPanel === 'diagnostics'}
+    <DiagnosticsPanel
+      {gameDay}
+      {gameHour}
+      stage={progression.stage}
+      onclose={() => {
+        openPanel = null;
+      }}
+    />
+  {/if}
+
+  <NotificationStrip {notices} />
+  <PauseOverlay
+    paused={showPauseVeil}
+    ontoggle={() => {
+      commands.setPaused(!paused);
+    }}
+  />
   <ObjectivePanel {objective} progress={objectiveProgress} />
   <!--
     The full list, for discovery — Phase 13. Selecting a row opens the card
@@ -231,30 +355,37 @@
     preview={(objectId: string, screenX: number, screenY: number) =>
       commands.previewPlacement(objectId, screenX, screenY)}
   />
-  <EvolutionPanel
-    {progression}
-    onevolve={() => {
-      commands.evolve();
-    }}
-  />
-  <StaffPanel
-    {staff}
-    {roles}
-    {payroll}
-    full={payrollFull}
-    onhire={(roleId: string, skill: number) => {
-      commands.hire(roleId, skill);
-    }}
-    onfire={(entityId: number) => {
-      commands.fire(entityId);
-    }}
-  />
-  <PricePanel
-    {prices}
-    onprice={(itemId: string, price: number) => {
-      commands.setPrice(itemId, price);
-    }}
-  />
+  {#if progression.pendingStage > 0 || progression.stage < 4}
+    <EvolutionPanel
+      {progression}
+      compact={progression.pendingStage === 0}
+      onevolve={() => {
+        commands.evolve();
+      }}
+    />
+  {/if}
+  {#if openPanel === 'staff'}
+    <StaffPanel
+      {staff}
+      {roles}
+      {payroll}
+      full={payrollFull}
+      onhire={(roleId: string, skill: number) => {
+        commands.hire(roleId, skill);
+      }}
+      onfire={(entityId: number) => {
+        commands.fire(entityId);
+      }}
+    />
+  {/if}
+  {#if openPanel === 'menu'}
+    <PricePanel
+      {prices}
+      onprice={(itemId: string, price: number) => {
+        commands.setPrice(itemId, price);
+      }}
+    />
+  {/if}
 </div>
 
 <style>
@@ -267,19 +398,41 @@
     pointer-events: none;
     font-family: var(--font-ui);
   }
-  .settings-gear {
+  .action-dock {
     position: absolute;
-    top: 10px;
-    right: 12px;
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    border: 1px solid #2b303d;
-    background: rgba(18, 20, 26, 0.85);
-    color: #e8e9ee;
-    font-size: 16px;
-    cursor: pointer;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    display: flex;
+    gap: var(--space-2);
+    z-index: var(--z-hud);
     pointer-events: auto;
-    z-index: 39;
+  }
+  .action-dock button {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+    padding: 0 var(--space-3);
+    background: var(--surface-raised);
+    border: var(--border);
+    border-radius: var(--radius-md);
+    color: var(--ink);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    box-shadow: var(--shadow-card);
+  }
+  .action-dock button[aria-pressed='true'] {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .action-dock button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  @media (max-width: 700px) {
+    .action-dock {
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      bottom: max(var(--space-2), env(safe-area-inset-bottom));
+    }
   }
 </style>

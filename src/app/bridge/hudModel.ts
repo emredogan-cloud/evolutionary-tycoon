@@ -199,6 +199,22 @@ export interface HudModel {
     readonly muted: boolean;
   };
   readonly reducedMotion: boolean;
+  readonly highContrast: boolean;
+
+  /**
+   * The Conversion Analytics feed — GDD §14.4's signature panel. Reason
+   * indices follow `CONVERSION_REASONS`; it states what happened, never what
+   * to do.
+   */
+  readonly analytics: {
+    readonly sampleSize: number;
+    readonly converted: number;
+    readonly reasonCounts: number[];
+  };
+  /** Player-pause veil visibility — false for harness-paused boots. */
+  readonly showPauseVeil: boolean;
+  /** The right-edge strip — self-dismissing, stackable, never modal. */
+  readonly notices: readonly { readonly id: number; readonly kind: string; readonly text: string }[];
 
   /** Takings less costs over the last sixty seconds, per minute — Phase 9. */
   readonly incomePerMinute: number;
@@ -303,5 +319,7 @@ export interface UiCommands {
   setAudio(channel: 'master' | 'music' | 'sfx' | 'ambience', value: number): void;
   setMuted(muted: boolean): void;
   setReducedMotion(on: boolean): void;
+  setPaused(paused: boolean): void;
+  setHighContrast(on: boolean): void;
   fire(entityId: number): void;
 }
