@@ -221,6 +221,123 @@ export class World {
    * Everything else is written in a fixed order with raw IEEE-754 bytes, so a
    * one-bit divergence after 10 000 ticks changes the digest.
    */
+  /**
+   * Per-section digests — divergence forensics, Phase 17.
+   *
+   * Same fields, same order, same encodings as `hash()`, but each section
+   * digested alone, so a cross-engine or cross-build mismatch names its
+   * neighbourhood instead of a sixteen-hex shrug. Not on any hot path;
+   * allocates freely.
+   */
+  hashSections(): Record<string, string> {
+    const out: Record<string, string> = {};
+    const section = (name: string, write: (h: Hasher) => void): void => {
+      const h = new Hasher();
+      write(h);
+      out[name] = h.digest();
+    };
+    section('meta', (h) => {
+      h.writeU32(this.tick);
+      h.writeF64(this.clock.simTimeMs);
+      h.writeI32(this.nextId);
+    });
+    section('rng', (h) => {
+      for (const name of RNG_STREAM_NAMES) {
+        if (name === COSMETIC_STREAM) continue;
+        const state = this.rng.get(name).saveState();
+        h.writeI32(state.a);
+        h.writeI32(state.b);
+        h.writeI32(state.c);
+        h.writeI32(state.d);
+      }
+    });
+    section('vehicles', (h) => {
+      this.vehicles.hashInto(h);
+      h.writeF64(this.traffic.nextCandidateMs);
+      h.writeF64(this.traffic.nextDecorativeMs);
+    });
+    section('customers', (h) => {
+      this.customers.hashInto(h, writeCustomer);
+    });
+    section('employees', (h) => {
+      this.employees.hashInto(h, writeEmployee);
+    });
+    section('tasks', (h) => {
+      this.tasks.hashInto(h, writeTask);
+    });
+    section('orders', (h) => {
+      this.orders.hashInto(h, writeOrder);
+    });
+    section('economy', (h) => {
+      h.writeF64(this.economy.cash);
+      h.writeF64(this.economy.reputation);
+      h.writeF64(this.economy.lifetimeRevenue);
+      h.writeF64(this.economy.lifetimeSpend);
+      hashStringNumberMap(h, this.economy.prices);
+      for (const value of this.economy.revenueWindow) h.writeF64(value);
+      for (const value of this.economy.expenseWindow) h.writeF64(value);
+      h.writeU32(this.economy.bucketIndex);
+      h.writeF64(this.economy.bucketElapsedMs);
+    });
+    section('layout', (h) => {
+      h.writeU32(this.layout.placed.length);
+      for (const object of this.layout.placed) {
+        h.writeString(object.objectId);
+        h.writeF64(object.x);
+        h.writeF64(object.y);
+        h.writeF64(object.z);
+      }
+      h.writeU32(this.layout.revision);
+      hashStringNumberMap(h, this.layout.upgrades);
+    });
+    section('progression', (h) => {
+      h.writeU8(this.progression.stage);
+      hashStringList(h, this.progression.unlocks);
+      hashStringList(h, this.progression.milestones);
+      h.writeU8(this.progression.pendingStage);
+      h.writeU8(this.construction.targetStage);
+      h.writeF64(this.construction.elapsedMs);
+      h.writeF64(this.construction.totalMs);
+    });
+    section('staff', (h) => {
+      h.writeU32(this.staff.hired.length);
+      for (const employee of this.staff.hired) {
+        h.writeI32(employee.entityId);
+        h.writeString(employee.roleId);
+      }
+    });
+    section('environment', (h) => {
+      h.writeU32(this.environment.plannedDay >>> 0);
+      for (const segment of this.environment.weatherSegments) h.writeU32(segment >>> 0);
+      for (const type of this.environment.eventTypes) h.writeU32(type >>> 0);
+      for (const start of this.environment.eventStartMs) h.writeF64(start);
+      for (const end of this.environment.eventEndMs) h.writeF64(end);
+      h.writeU32(this.environment.lastWeather >>> 0);
+      h.writeU32(this.environment.lastActiveEvent >>> 0);
+    });
+    section('stats', (h) => {
+      h.writeU32(this.stats.customersServed);
+      h.writeU32(this.stats.conversionsSucceeded);
+      h.writeU32(this.stats.conversionsFailed);
+      h.writeU32(this.stats.turnedAwayNoParking);
+      h.writeU32(this.stats.customersAbandoned);
+      h.writeU32(this.stats.ordersWasted);
+      h.writeU32(this.stats.vehiclesSpawned);
+      h.writeU32(this.stats.convertibleSpawned);
+      h.writeU32(this.stats.commandsApplied);
+    });
+    section('settings', (h) => {
+      h.writeF64(this.settings.audio.master);
+      h.writeF64(this.settings.audio.music);
+      h.writeF64(this.settings.audio.sfx);
+      h.writeBool(this.settings.audio.muted);
+      h.writeF64(this.settings.audio.ambience);
+      h.writeBool(this.settings.a11y.reducedMotion);
+      h.writeBool(this.settings.a11y.highContrast);
+    });
+    return out;
+  }
+
   hash(): string {
     const h = this.hasher.reset();
 

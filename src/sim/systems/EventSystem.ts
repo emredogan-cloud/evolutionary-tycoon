@@ -148,6 +148,16 @@ export function planDay(world: World, day: number): void {
   }
 
   env.plannedDay = day;
+  /*
+   * The plan just rewrote the schedule, so any derivation made earlier this
+   * tick is describing a day that no longer exists. The boot frame makes that
+   * real, not hypothetical: the UI bridge samples the weather before the
+   * first tick plans day 0, and without this line EventSystem's own derive
+   * then reads the poisoned pre-plan cache — the browser's `lastWeather`
+   * diverges from a headless run by whether a frame happened to paint first.
+   * Found as a Firefox-only hash mismatch in CI; it was never about Firefox.
+   */
+  invalidateEnvironmentCache(world);
 }
 
 /** Weighted pick over WEATHER_STATES. */

@@ -41,6 +41,16 @@ interface TestLoadResult {
 export interface EvoTycoonTestApi {
   getState(): SimView;
   getWorldHash(): string;
+  getWorldHashSections(): Record<string, string>;
+  getEnvironment(): {
+    plannedDay: number;
+    weatherSegments: number[];
+    eventTypes: number[];
+    eventStartMs: number[];
+    eventEndMs: number[];
+    lastWeather: number;
+    lastActiveEvent: number;
+  };
   dispatch(command: CommandInput): void;
   advanceTicks(count: number): void;
   /** Events published since the last call, oldest first. Drains the buffer. */
@@ -111,6 +121,16 @@ export function installTestHooks(
   const api: EvoTycoonTestApi = {
     getState: () => sim.readView(),
     getWorldHash: () => sim.world.hash(),
+    getWorldHashSections: () => sim.world.hashSections(),
+    getEnvironment: () => ({
+      plannedDay: sim.world.environment.plannedDay,
+      weatherSegments: [...sim.world.environment.weatherSegments],
+      eventTypes: [...sim.world.environment.eventTypes],
+      eventStartMs: [...sim.world.environment.eventStartMs],
+      eventEndMs: [...sim.world.environment.eventEndMs],
+      lastWeather: sim.world.environment.lastWeather,
+      lastActiveEvent: sim.world.environment.lastActiveEvent,
+    }),
     dispatch: (command) => {
       sim.dispatch(command);
     },
