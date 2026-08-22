@@ -122,6 +122,8 @@ interface MutablePlaced {
   objectId: string;
   worldX: number;
   worldY: number;
+  /** `''` for anything the player did not buy — see `PlacedView.itemId`. */
+  itemId: string;
 }
 
 interface MutableUpgrade {
@@ -353,7 +355,12 @@ export class UiBridge implements HudSource {
       paused: false,
       speedMultiplier: 1,
       markers,
-      placed: Array.from({ length: MAX_PLACED_OBJECTS }, () => ({ objectId: '', worldX: 0, worldY: 0 })),
+      placed: Array.from({ length: MAX_PLACED_OBJECTS }, () => ({
+        objectId: '',
+        worldX: 0,
+        worldY: 0,
+        itemId: '',
+      })),
       placedCount: 0,
       markerCount: 0,
       incomePerMinute: 0,
@@ -824,6 +831,7 @@ export class UiBridge implements HudSource {
       row.objectId = object.objectId;
       row.worldX = object.x;
       row.worldY = object.y;
+      row.itemId = object.itemId ?? '';
     }
     model.placedCount = count;
   }

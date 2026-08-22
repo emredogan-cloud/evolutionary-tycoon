@@ -137,10 +137,20 @@ export class Sim {
   /** Reused by `readView`, aligned to `UPGRADES`. */
   private readonly upgradeLevelBuffer: number[] = new Array<number>(UPGRADES.length).fill(0);
   /** Reused rows for the placed decor the renderer draws — the correction pass. */
-  private readonly placedBuffer: { objectId: string; x: number; y: number; z: number }[] = Array.from(
-    { length: MAX_PLACED_OBJECTS },
-    () => ({ objectId: '', x: 0, y: 0, z: 0 }),
-  );
+  private readonly placedBuffer: {
+    objectId: string;
+    x: number;
+    y: number;
+    z: number;
+    /** What it was bought as, or `''` — see `PlacedObject.itemId`. */
+    itemId: string;
+  }[] = Array.from({ length: MAX_PLACED_OBJECTS }, () => ({
+    objectId: '',
+    x: 0,
+    y: 0,
+    z: 0,
+    itemId: '',
+  }));
   /** Reused rows for the construction sites, progress refreshed per read. */
   private readonly pendingBuffer: {
     upgradeId: string;
@@ -327,6 +337,7 @@ export class Sim {
       row.x = source.x;
       row.y = source.y;
       row.z = source.z;
+      row.itemId = source.itemId ?? '';
     }
     v.placedCount = placedCount;
 

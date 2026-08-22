@@ -3,7 +3,8 @@ import { MINIMUM_CASH } from '@config/economy/wages';
 import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
 import { navigationIntact } from '../nav/reachability';
-import { placeObject, removeObject } from '../systems/LayoutSystem';
+import { placeObject } from '../systems/LayoutSystem';
+import { buyPlace, movePlaced, sellPlaced } from '../systems/StoreSystem';
 import { advancePendingBuilds } from '../systems/ProgressionSystem';
 import { beginConstruction } from '../systems/ProgressionSystem';
 import { fire, hire } from '../systems/StaffSystem';
@@ -197,7 +198,36 @@ interface CollectOfflineCommand {
   readonly creditedMs: number;
 }
 
-/** Take one back. */
+/**
+ * Buy a store item and put it down, in one indivisible act — the stage-1
+ * expansion pass.
+ *
+ * Carries the catalogue id and a spot, and nothing else. No price: the cost
+ * is looked up from config at the tick this lands on, exactly as
+ * `BUY_UPGRADE` does, so a log replays correctly across a balance change. No
+ * `objectId` either — that is the catalogue's business, and a command that
+ * carried both an item and the thing to draw for it would be two sources of
+ * truth for one identity, which is the shape the reported sign-becomes-flower
+ * bug had.
+ */
+interface BuyPlaceCommand {
+  readonly t: 'BUY_PLACE';
+  readonly tick: number;
+  readonly itemId: string;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Pick a placed object up and set it down somewhere else. */
+interface MovePlacedCommand {
+  readonly t: 'MOVE_PLACED';
+  readonly tick: number;
+  readonly index: number;
+  readonly x: number;
+  readonly y: number;
+}
+
+/** Take one back. Pays `DEMOLISH_REFUND_FRACTION` on anything bought. */
 interface RemoveCommand {
   readonly t: 'REMOVE';
   readonly tick: number;
@@ -205,6 +235,8 @@ interface RemoveCommand {
 }
 
 export type Command =
+  | BuyPlaceCommand
+  | MovePlacedCommand
   | SetSpeedCommand
   | SetPausedCommand
   | ManualPrepCommand
@@ -223,6 +255,8 @@ export type Command =
 
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
+  | Omit<BuyPlaceCommand, 'tick'>
+  | Omit<MovePlacedCommand, 'tick'>
   | Omit<SetSpeedCommand, 'tick'>
   | Omit<SetPausedCommand, 'tick'>
   | Omit<ManualPrepCommand, 'tick'>
@@ -328,8 +362,22 @@ export function apply(world: World, command: Command): void {
       placeObject(world, command.objectId, command.x, command.y, navigationIntact);
       break;
     }
+    case 'BUY_PLACE': {
+      buyPlace(world, command.itemId, command.x, command.y);
+      break;
+    }
+    case 'MOVE_PLACED': {
+      movePlaced(world, command.index, command.x, command.y);
+      break;
+    }
     case 'REMOVE': {
-      removeObject(world, command.index);
+      /*
+       * Through the store, so a bought object pays its thirty percent back.
+       * `sellPlaced` falls through to a plain removal for anything with no
+       * `itemId` — a layout static, or decor placed before the store existed
+       * — which is why the free `PLACE` path can keep using this same case.
+       */
+      sellPlaced(world, command.index);
       break;
     }
     case 'COLLECT_OFFLINE': {
@@ -400,6 +448,10 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'EVOLVE', tick };
     case 'PLACE':
       return { t: 'PLACE', tick, objectId: input.objectId, x: input.x, y: input.y };
+    case 'BUY_PLACE':
+      return { t: 'BUY_PLACE', tick, itemId: input.itemId, x: input.x, y: input.y };
+    case 'MOVE_PLACED':
+      return { t: 'MOVE_PLACED', tick, index: input.index, x: input.x, y: input.y };
     case 'REMOVE':
       return { t: 'REMOVE', tick, index: input.index };
     case 'COLLECT_OFFLINE':

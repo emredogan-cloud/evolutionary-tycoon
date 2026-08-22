@@ -11,6 +11,7 @@ import { DebugOverlay, debugOverlayEnabled } from '@app/debug/DebugOverlay';
 import { installTestHooks, shouldExposeTestHooks } from '@app/testHooks';
 import type { EvoTycoonTestApi } from '@app/testHooks';
 import { Sim } from '@sim/core/Sim';
+import { DEMOLISH_REFUND_FRACTION, storeItem } from '@config/store';
 import { SaveManager } from '@persistence/SaveManager';
 import { MemoryStorageAdapter } from '@persistence/StorageAdapter';
 
@@ -174,6 +175,57 @@ describe('createContainer', () => {
 
     const running = createContainer(isolatedWindow(''), 1, new MemoryStorageAdapter());
     expect(running.sim.world.control.paused).toBe(false);
+  });
+
+  it('turns the store verbs into commands the simulation actually applies', () => {
+    /*
+     * The intent layer, end to end and without a browser: `src/ui` names what
+     * the player did, `src/app` stamps it, and the simulation validates it
+     * again. Asserted here because the container is the one place that knows
+     * how a card press becomes a command, and a verb that dispatched the wrong
+     * command would be invisible to both the sim tests and the component ones.
+     */
+    const container = createContainer(isolatedWindow(''), 11, new MemoryStorageAdapter());
+    const world = container.sim.world;
+    world.progression.stage = 4;
+    world.economy.cash = 1000;
+
+    const item = storeItem('waste-bin');
+    expect(item).toBeDefined();
+    if (item === undefined) return;
+
+    container.commands.buyPlace(item.id, 5, 16.5);
+    container.sim.tick();
+
+    expect(world.layout.placed).toHaveLength(1);
+    expect(world.layout.placed[0]?.itemId, 'the verb lost the identity').toBe(item.id);
+    expect(world.layout.placed[0]?.objectId).toBe(item.objectId);
+
+    const afterBuy = world.economy.cash;
+    container.commands.movePlaced(0, 8, 16.5);
+    container.sim.tick();
+    expect(world.layout.placed).toHaveLength(1);
+    expect(world.layout.placed[0]?.x, 'the move did not move it').toBe(8);
+    expect(world.layout.placed[0]?.itemId, 'the move re-identified it').toBe(item.id);
+    expect(world.economy.cash, 'the move touched the till').toBeCloseTo(afterBuy, 6);
+
+    container.commands.removePlaced(0);
+    container.sim.tick();
+    expect(world.layout.placed).toHaveLength(0);
+    expect(world.economy.cash - afterBuy).toBeCloseTo(item.cost * DEMOLISH_REFUND_FRACTION, 6);
+  });
+
+  it('answers the ghost with the zone rule, not only the geometry', () => {
+    const container = createContainer(isolatedWindow(''), 12, new MemoryStorageAdapter());
+
+    /*
+     * Null while the camera has not booted — there is no world to unproject a
+     * pointer into, and the overlay draws nothing rather than guessing. The
+     * verdict itself is proved in the browser (`tests/e2e/store.spec.ts`),
+     * where a camera exists.
+     */
+    expect(container.commands.previewPlacement('roadside-sign', 10, 10)).toBeNull();
+    expect(container.commands.previewPlacement('', 10, 10)).toBeNull();
   });
 
   it('refuses to wire a second simulation to the same page', () => {

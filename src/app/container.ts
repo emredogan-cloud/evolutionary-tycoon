@@ -7,7 +7,8 @@ import { NULL_PROJECTOR, NULL_UNPROJECTOR } from '@app/bridge/ScreenProjector';
 import { stageScene } from '@app/devScene';
 import type { StageNumber } from '@config/progression';
 import { navigationIntact } from '@sim/nav/reachability';
-import { previewPlacement, snapToGrid } from '@sim/systems/LayoutSystem';
+import { previewPlacement, snapToGrid, zoneAllows } from '@sim/systems/LayoutSystem';
+import { storeItem } from '@config/store';
 import { FrameMeter } from '@app/FrameMeter';
 import { browserScheduler, GameLoop } from '@app/GameLoop';
 import { parseRenderMode, prefersReducedMotion } from '@app/renderMode';
@@ -338,6 +339,12 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       place: (objectId: string, x: number, y: number) => {
         sim.dispatch({ t: 'PLACE', objectId, x, y });
       },
+      buyPlace: (itemId: string, x: number, y: number) => {
+        sim.dispatch({ t: 'BUY_PLACE', itemId, x, y });
+      },
+      movePlaced: (index: number, x: number, y: number) => {
+        sim.dispatch({ t: 'MOVE_PLACED', index, x, y });
+      },
       removePlaced: (index: number) => {
         sim.dispatch({ t: 'REMOVE', index });
       },
@@ -352,13 +359,26 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
        * the object back and restores the layout revision so no flow field is
        * invalidated by a mouse move.
        */
-      previewPlacement: (objectId: string, screenX: number, screenY: number) => {
+      previewPlacement: (itemId: string, screenX: number, screenY: number) => {
         const point = unproject(screenX, screenY);
         if (point === null) return null;
 
         const worldX = snapToGrid(point.x);
         const worldY = snapToGrid(point.y);
-        const outcome = previewPlacement(sim.world, objectId, worldX, worldY, navigationIntact);
+
+        /*
+         * The catalogue resolves the item to the object drawn for it, here and
+         * nowhere else. A ghost that took an `objectId` from the component
+         * would be a second place that knows the mapping, and two places that
+         * know it are two places that can disagree.
+         */
+        const item = storeItem(itemId);
+        const outcome =
+          item === undefined
+            ? previewPlacement(sim.world, itemId, worldX, worldY, navigationIntact)
+            : !zoneAllows(sim.world, item.zone, worldX, worldY)
+              ? ('wrong-zone' as const)
+              : previewPlacement(sim.world, item.objectId, worldX, worldY, navigationIntact);
 
         const projected = { x: 0, y: 0 };
         projector(worldX, worldY, 0, projected);

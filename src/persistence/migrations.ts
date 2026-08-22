@@ -398,6 +398,27 @@ const v11ToV12: Migration = {
   },
 };
 
+/**
+ * v12 → v13 — the store's `itemId`, added by *not* inventing one.
+ *
+ * The field is optional in the schema, so a v12 save validates as a v13 save
+ * unchanged, and the only honest value for a row written before the store
+ * existed is no value at all. Guessing one from `objectId` would be the exact
+ * mistake this field was added to prevent: two catalogue entries may draw the
+ * same object, so the mapping does not exist to be inverted, and a guess would
+ * pay a refund on something the player never bought.
+ *
+ * So the step really is only the version bump. It exists because the chain
+ * must be contiguous (`assertContiguous`), and it is written out rather than
+ * skipped so the next person reading the chain can see that v13 asked nothing
+ * of the past instead of wondering what it silently did.
+ */
+const v12ToV13: Migration = {
+  from: 12,
+  to: 13,
+  up: (save) => ({ ...save, schemaVersion: 13 }),
+};
+
 export const migrations: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -410,6 +431,7 @@ export const migrations: readonly Migration[] = [
   v9ToV10,
   v10ToV11,
   v11ToV12,
+  v12ToV13,
 ];
 
 assertContiguous(migrations);

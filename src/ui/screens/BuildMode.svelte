@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { BUILDABLES } from '@config/buildables';
-  import type { PlacedView, PlacementPreview } from '@app/bridge/hudModel';
+  import type { PlacementPreview } from '@app/bridge/hudModel';
 
   /**
    * Putting things on the lot — GAME_EXECUTION_ROADMAP Phase 11.
@@ -14,8 +13,7 @@
    * ghost under the cursor tells the player the thing they are about to do will
    * not work while they can still move the mouse; a toast afterwards tells them
    * something already went wrong. So this asks the simulation for a verdict on
-   * every pointer move and paints the ghost with it, and the button is disabled
-   * for exactly the cases the verdict says are impossible.
+   * every pointer move and paints the ghost with it.
    *
    * ## Why the ghost is a div and not a sprite
    *
@@ -24,28 +22,42 @@
    * doorway" is precisely the claim an E2E test should be able to make, and a
    * ghost drawn by Phaser makes it a pixel comparison instead of a query.
    *
+   * ## It holds no catalogue, and arms nothing — the stage-1 expansion pass
+   *
+   * It used to own a palette of three props and arm the first of them the tick
+   * build mode opened, behind a pointer surface covering the whole viewport.
+   * That is the reported bug in one sentence: the player bought a sign from a
+   * *different* surface, clicked the world, and the prop this component had
+   * been holding since it opened went down instead. Now the armed item comes
+   * in as a prop from the panel that shows it, the surface exists only while
+   * something is genuinely armed, and this component's whole opinion about
+   * what is being placed is the id it was handed.
+   *
    * ## The overlay does no geometry
    *
-   * `previewPlacement` takes screen coordinates and returns the snapped world
-   * cell already projected back. Nothing here converts between the two — a
-   * second implementation of the isometric transform living in a component is
-   * how the ghost ends up half a metre from the object.
+   * `preview` takes screen coordinates and returns the snapped world cell
+   * already projected back. Nothing here converts between the two — a second
+   * implementation of the isometric transform living in a component is how the
+   * ghost ends up half a metre from the object.
    */
 
   interface Props {
-    /** Driven by the İnşa Et tile — the panel's single door since the
-     *  consolidation pass; the strip no longer owns a toggle. */
-    active: boolean;
-    placed: readonly PlacedView[];
-    onplace: (objectId: string, worldX: number, worldY: number) => void;
-    onremove: (index: number) => void;
-    preview: (objectId: string, screenX: number, screenY: number) => PlacementPreview | null;
+    /** The catalogue id being placed, or `''` when nothing is armed. */
+    armedItemId: string;
+    /** Shown in the ghost, so the player can read what they are about to put down. */
+    armedLabel: string;
+    /** The placed row being repositioned, or -1 for a fresh purchase. */
+    movingIndex: number;
+    onplace: (itemId: string, worldX: number, worldY: number) => void;
+    onmove: (index: number, worldX: number, worldY: number) => void;
+    preview: (itemId: string, screenX: number, screenY: number) => PlacementPreview | null;
   }
 
-  const { active, placed, onplace, onremove, preview }: Props = $props();
+  const { armedItemId, armedLabel, movingIndex, onplace, onmove, preview }: Props = $props();
 
-  let selected = $state(BUILDABLES[0]?.id ?? '');
   let ghost = $state<PlacementPreview | null>(null);
+
+  const active = $derived(armedItemId !== '');
 
   const REASONS: Record<PlacementPreview['outcome'], string> = {
     ok: 'Buraya konabilir',
@@ -53,42 +65,43 @@
     'blocks-navigation': 'Müşterilerin yolunu kapatır',
     occupied: 'Burası dolu',
     full: 'Arsa doldu',
+    'wrong-zone': 'Yol kenarına konmalı',
   };
-
-  const objectIdOf = (id: string): string =>
-    BUILDABLES.find((entry) => entry.id === id)?.objectId ?? 'ph-prop-short';
 
   function track(event: PointerEvent): void {
     if (!active) return;
-    ghost = preview(objectIdOf(selected), event.clientX, event.clientY);
+    ghost = preview(armedItemId, event.clientX, event.clientY);
   }
 
   function commit(event: PointerEvent): void {
     if (!active) return;
-    const verdict = preview(objectIdOf(selected), event.clientX, event.clientY);
+    const verdict = preview(armedItemId, event.clientX, event.clientY);
     ghost = verdict;
-    // Refused here as well as disabled below. The pointer surface is the whole
-    // lot, so "the button was disabled" is not a defence against a click.
+    // Refused here as well as shown above. The pointer surface is the whole
+    // lot, so "the ghost was red" is not a defence against a click.
     if (verdict?.outcome !== 'ok') return;
-    onplace(objectIdOf(selected), verdict.worldX, verdict.worldY);
+    if (movingIndex >= 0) onmove(movingIndex, verdict.worldX, verdict.worldY);
+    else onplace(armedItemId, verdict.worldX, verdict.worldY);
   }
 
-  // Leaving build mode clears the ghost so a stale preview cannot linger.
+  // Disarming clears the ghost so a stale preview cannot linger.
   $effect(() => {
     if (!active) ghost = null;
   });
 </script>
 
 <!--
-  The pointer surface covers the world while build mode is open, and does not
-  exist at all while it is closed. A permanently-mounted transparent layer that
+  The pointer surface covers the world only while something is armed, and does
+  not exist at all otherwise. A permanently-mounted transparent layer that
   merely stops listening is the kind of thing that swallows a click six months
-  later for reasons nobody can find.
+  later for reasons nobody can find — and a layer that stays armed after a
+  purchase from somewhere else is the bug this pass was opened to fix.
 -->
 {#if active}
   <div
     class="surface"
     data-testid="build-surface"
+    data-armed={armedItemId}
     role="application"
     aria-label="Yerleştirme alanı"
     onpointermove={track}
@@ -105,50 +118,11 @@
       data-world-y={String(ghost.worldY)}
       style="left: {ghost.screenX}px; top: {ghost.screenY}px"
     >
-      <span class="reason">{REASONS[ghost.outcome]}</span>
+      <span class="reason">
+        {armedLabel === '' ? REASONS[ghost.outcome] : `${armedLabel} · ${REASONS[ghost.outcome]}`}
+      </span>
     </div>
   {/if}
-{/if}
-
-{#if active}
-  <section class="panel open" aria-label="Dekor yerleşimi" data-testid="decor-panel">
-    <ul class="palette" data-testid="build-palette">
-      {#each BUILDABLES as item (item.id)}
-        <li>
-          <button
-            type="button"
-            class:chosen={selected === item.id}
-            data-testid="build-item"
-            data-id={item.id}
-            aria-pressed={selected === item.id}
-            onclick={() => {
-              selected = item.id;
-            }}
-          >
-            {item.label}
-          </button>
-        </li>
-      {/each}
-    </ul>
-
-    <ol class="placed" data-testid="build-placed">
-      {#each placed as object, index (`${object.objectId}:${String(object.worldX)}:${String(object.worldY)}`)}
-        <li>
-          <span>{object.worldX.toFixed(1)}, {object.worldY.toFixed(1)}</span>
-          <button
-            type="button"
-            data-testid="build-remove"
-            aria-label="Kaldır"
-            onclick={() => {
-              onremove(index);
-            }}
-          >
-            ×
-          </button>
-        </li>
-      {/each}
-    </ol>
-  </section>
 {/if}
 
 <style>
@@ -187,51 +161,5 @@
   .reason {
     color: #fff;
     text-shadow: 0 1px 2px rgb(0 0 0 / 80%);
-  }
-
-  .panel {
-    display: grid;
-    gap: 0.4rem;
-    padding: var(--space-2);
-    pointer-events: auto;
-    /* The decor strip rides above the build panel's cards, bottom centre —
-       and above its own pointer surface, which covers the whole viewport. */
-    position: absolute;
-    left: 50%;
-    bottom: calc(var(--space-3) + 10.5rem);
-    transform: translateX(-50%);
-    max-width: min(48rem, calc(100vw - 20rem));
-    background: var(--surface-glass);
-    border: var(--border);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-    z-index: var(--z-panel);
-  }
-
-  .palette {
-    display: flex;
-    gap: 0.3rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .palette button.chosen {
-    outline: 2px solid currentcolor;
-  }
-
-  .placed {
-    display: grid;
-    gap: 0.15rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: 0.7rem;
-  }
-
-  .placed li {
-    display: flex;
-    gap: 0.3rem;
-    justify-content: space-between;
   }
 </style>

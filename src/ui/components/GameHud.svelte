@@ -24,6 +24,8 @@
   import OrderCards from './OrderCards.svelte';
   import PauseOverlay from './PauseOverlay.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
+  import StorePanel from '../screens/StorePanel.svelte';
+  import { STORE_ITEMS } from '@config/store';
   import ActionTiles from './ActionTiles.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
   import PricePanel from './PricePanel.svelte';
@@ -56,6 +58,26 @@
   let openUpgrade = $state<string | null>(null);
   /** One panel at a time — GDD §14.2's world-dominance rule made mechanical. */
   let openPanel = $state<'settings' | 'staff' | 'analytics' | 'diagnostics' | 'menu' | 'build' | null>(null);
+  /** Which half of the Dükkan panel is showing — plan D1's two tabs. */
+  let storeTab = $state<'prices' | 'decor'>('prices');
+  /**
+   * The one armed thing in the interface, and it starts as nothing.
+   *
+   * Held here rather than inside the placement surface because the surface and
+   * the panel that shows what is armed must never be able to disagree — that
+   * disagreement, with a prop armed by default behind a full-viewport click
+   * layer, is exactly what turned a bought sign into a flower. Closing the
+   * panel disarms; there is no state in which the world is listening for a
+   * placement the player cannot see the card for.
+   */
+  let armedItemId = $state('');
+  /** The placed row being repositioned, or -1. */
+  let movingIndex = $state(-1);
+
+  const disarm = (): void => {
+    armedItemId = '';
+    movingIndex = -1;
+  };
 
   let cash = $state(0);
   let reputation = $state(0);
@@ -185,6 +207,8 @@
   const togglePanel = (panel: NonNullable<typeof openPanel>): void => {
     openPanel = openPanel === panel ? null : panel;
     if (openPanel !== 'build') openUpgrade = null;
+    // Leaving the store — or opening anything else — puts the tool down.
+    if (openPanel !== 'menu' || storeTab !== 'decor') disarm();
   };
 </script>
 
@@ -321,16 +345,19 @@
   />
 
   <BuildMode
-    active={openPanel === 'build'}
-    {placed}
-    onplace={(objectId: string, x: number, y: number) => {
-      commands.place(objectId, x, y);
+    {armedItemId}
+    armedLabel={STORE_ITEMS.find((item) => item.id === armedItemId)?.label ?? ''}
+    {movingIndex}
+    onplace={(itemId: string, x: number, y: number) => {
+      commands.buyPlace(itemId, x, y);
+      disarm();
     }}
-    onremove={(index: number) => {
-      commands.removePlaced(index);
+    onmove={(index: number, x: number, y: number) => {
+      commands.movePlaced(index, x, y);
+      disarm();
     }}
-    preview={(objectId: string, screenX: number, screenY: number) =>
-      commands.previewPlacement(objectId, screenX, screenY)}
+    preview={(itemId: string, screenX: number, screenY: number) =>
+      commands.previewPlacement(itemId, screenX, screenY)}
   />
   {#if progression.pendingStage > 0 || progression.stage < 4}
     <EvolutionPanel
@@ -356,16 +383,129 @@
     />
   {/if}
   {#if openPanel === 'menu'}
-    <PricePanel
-      {prices}
-      onprice={(itemId: string, price: number) => {
-        commands.setPrice(itemId, price);
-      }}
-    />
+    <section class="shop" aria-label="Dükkan" data-testid="shop-panel">
+      <nav class="tabs">
+        <button
+          type="button"
+          class:on={storeTab === 'prices'}
+          data-testid="shop-tab-prices"
+          aria-pressed={storeTab === 'prices'}
+          onclick={() => {
+            storeTab = 'prices';
+            disarm();
+          }}
+        >
+          Menü & Fiyatlar
+        </button>
+        <button
+          type="button"
+          class:on={storeTab === 'decor'}
+          data-testid="shop-tab-decor"
+          aria-pressed={storeTab === 'decor'}
+          onclick={() => {
+            storeTab = 'decor';
+          }}
+        >
+          Dekor & Tabela
+        </button>
+      </nav>
+
+      {#if storeTab === 'prices'}
+        <PricePanel
+          {prices}
+          onprice={(itemId: string, price: number) => {
+            commands.setPrice(itemId, price);
+          }}
+        />
+      {:else}
+        <StorePanel
+          {cash}
+          stage={progression.stage}
+          {placed}
+          {armedItemId}
+          {movingIndex}
+          onarm={(itemId: string) => {
+            // Arming is a toggle, and arming a purchase cancels a move.
+            movingIndex = -1;
+            armedItemId = armedItemId === itemId ? '' : itemId;
+          }}
+          onmove={(index: number) => {
+            if (movingIndex === index) {
+              disarm();
+              return;
+            }
+            movingIndex = index;
+            armedItemId = placed[index]?.itemId ?? '';
+          }}
+          onsell={(index: number) => {
+            commands.removePlaced(index);
+            disarm();
+          }}
+        />
+      {/if}
+    </section>
   {/if}
 </div>
 
 <style>
+  .shop {
+    position: absolute;
+    right: var(--space-3);
+    bottom: calc(var(--space-3) + 4.5rem);
+    display: grid;
+    gap: var(--space-2);
+    width: min(34rem, calc(100vw - 2 * var(--space-3)));
+    padding: var(--space-3);
+    border: var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface-glass);
+    box-shadow: var(--shadow-panel);
+    pointer-events: auto;
+    z-index: var(--z-panel);
+  }
+
+  .tabs {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  .tabs button {
+    min-height: var(--touch-target);
+    padding: 0 var(--space-3);
+    border: var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--surface-sunken);
+    color: var(--ink-secondary);
+    cursor: pointer;
+    font-size: var(--text-sm);
+  }
+
+  .tabs button.on {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  /*
+   * The shop owns the layout of what it contains.
+   *
+   * `PricePanel` was written as a free-standing panel and positions itself at
+   * the bottom-left of whatever is positioned above it — which, before it had
+   * a home, was the whole overlay: that is why it used to sit on top of the
+   * speed buttons. Nested here it would anchor to this panel's own bottom-left
+   * and cover the tabs, so it is flattened into the flow instead. A parent
+   * placing its child is the one thing `:global` is for.
+   */
+  .shop :global([data-testid='price-panel']) {
+    position: static;
+    width: 100%;
+    max-height: 17rem;
+    padding: 0;
+    overflow-y: auto;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
   .overlay {
     position: fixed;
     inset: 0;

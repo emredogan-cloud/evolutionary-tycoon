@@ -15,8 +15,47 @@ import type { Page } from '@playwright/test';
  * ghost, not about the rule.
  */
 
+/**
+ * Since the stage-1 expansion pass the door is a store card, not a palette.
+ *
+ * The claims below did not change — the ghost still has to answer before the
+ * click, the click still has to obey it, and the surface still has to give the
+ * world back — but the surface is now armed by buying something specific, so
+ * the tests arm it that way. The palette they used to press was the armed
+ * decor strip, and that strip *was* the reported sign-becomes-flower bug: it
+ * held a prop of its own behind a full-viewport click layer.
+ */
 interface TestApi {
   advanceTicks(n: number): void;
+  dispatch(command: object): void;
+}
+
+const TICKS_PER_MINUTE = 1200;
+/** The catalogue's cheapest Stage 1 item, so the float is quick to earn. */
+const ITEM = 'shrub';
+
+async function readCash(page: Page): Promise<number> {
+  const raw = await page.locator('[data-testid="hud-cash"]').getAttribute('data-cash');
+  return Number.parseFloat(raw ?? 'NaN');
+}
+
+/** Earn a float, open the store, and arm the item — the player's real path. */
+async function arm(page: Page, fund = true): Promise<void> {
+  if (fund) {
+    for (let minute = 0; minute < 40 && (await readCash(page)) < 8; minute++) {
+      await page.evaluate((count) => {
+        const api = (window as unknown as Record<string, TestApi>)['__EVOTYCOON__'];
+        for (let i = 0; i < count; i++) {
+          api?.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+          api?.advanceTicks(1);
+        }
+      }, TICKS_PER_MINUTE);
+    }
+  }
+  await page.locator('[data-testid="dock-menu"]').click();
+  await page.locator('[data-testid="shop-tab-decor"]').click();
+  await page.locator(`[data-testid="store-card"][data-item="${ITEM}"]`).click();
+  await expect(page.locator('[data-testid="build-surface"]')).toBeVisible();
 }
 
 async function boot(page: Page): Promise<void> {
@@ -93,9 +132,9 @@ test.describe('build mode', () => {
     // Closed by default: the pointer surface must not exist until asked for.
     await expect(page.locator('[data-testid="build-surface"]')).toHaveCount(0);
 
-    await page.locator('[data-testid="dock-build"]').click();
-    await expect(page.locator('[data-testid="build-surface"]')).toBeVisible();
-    await expect(page.locator('[data-testid="build-palette"]')).toBeVisible();
+    test.setTimeout(240_000);
+    await arm(page);
+    await expect(page.locator('[data-testid="build-surface"]')).toHaveAttribute('data-armed', ITEM);
 
     // 1. Somewhere on the lot, the ghost is green and says so.
     const good = await findGhost(page, 'ok');
@@ -117,7 +156,10 @@ test.describe('build mode', () => {
     await page.evaluate(() => {
       (window as unknown as Record<string, TestApi>)['__EVOTYCOON__']?.advanceTicks(2);
     });
-    await expect(page.locator('[data-testid="build-placed"] li')).toHaveCount(1);
+    await expect(page.locator('[data-testid="store-owned"] li')).toHaveCount(1);
+
+    // Placing puts the tool down, so the next sweep has to arm again.
+    await page.locator(`[data-testid="store-card"][data-item="${ITEM}"]`).click();
 
     /*
      * 3. The filled cell is now refused, and the refusal is on screen.
@@ -140,16 +182,16 @@ test.describe('build mode', () => {
       (window as unknown as Record<string, TestApi>)['__EVOTYCOON__']?.advanceTicks(2);
     });
     await expect(
-      page.locator('[data-testid="build-placed"] li'),
+      page.locator('[data-testid="store-owned"] li'),
       'a refused placement was accepted anyway',
     ).toHaveCount(1);
 
-    // 4. Removing it puts the lot back.
-    await page.locator('[data-testid="build-remove"]').first().click();
+    // 4. Selling it back puts the lot back.
+    await page.locator('[data-testid="store-sell"]').first().click();
     await page.evaluate(() => {
       (window as unknown as Record<string, TestApi>)['__EVOTYCOON__']?.advanceTicks(2);
     });
-    await expect(page.locator('[data-testid="build-placed"] li')).toHaveCount(0);
+    await expect(page.locator('[data-testid="store-owned"] li')).toHaveCount(0);
   });
 
   test('off the lot is refused, with its own reason', async ({ page }) => {
@@ -159,8 +201,11 @@ test.describe('build mode', () => {
      * player's fault in an interesting way. The corner of the viewport is
      * reliably outside the lot at the boot camera.
      */
+    test.setTimeout(240_000);
     await boot(page);
-    await page.locator('[data-testid="dock-build"]').click();
+    // Nothing to buy it with, and none needed: the ghost answers before money
+    // is ever asked for, which is the point of answering before the click.
+    await arm(page, false);
 
     const box = await page.locator('canvas').boundingBox();
     expect(box).not.toBeNull();
@@ -172,15 +217,20 @@ test.describe('build mode', () => {
     await expect(ghost).toHaveClass(/bad/);
   });
 
-  test('closing build mode gives the world back', async ({ page }) => {
-    // The surface covers the canvas while it is open. If it survived the toggle,
-    // every later click in the session would land on an invisible sheet.
+  test('putting the tool down gives the world back', async ({ page }) => {
+    // The surface covers the canvas while something is armed. If it survived
+    // disarming, every later click in the session would land on an invisible
+    // sheet — which is exactly how a bought sign became a placed flower.
+    test.setTimeout(240_000);
     await boot(page);
-    await page.locator('[data-testid="dock-build"]').click();
-    await expect(page.locator('[data-testid="build-surface"]')).toBeVisible();
+    await arm(page, false);
 
-    await page.locator('[data-testid="dock-build"]').click();
+    await page.locator(`[data-testid="store-card"][data-item="${ITEM}"]`).click();
     await expect(page.locator('[data-testid="build-surface"]')).toHaveCount(0);
     await expect(page.locator('[data-testid="build-ghost"]')).toHaveCount(0);
+
+    // And the other door does not arm anything either.
+    await page.locator('[data-testid="dock-build"]').click();
+    await expect(page.locator('[data-testid="build-surface"]')).toHaveCount(0);
   });
 });

@@ -291,6 +291,15 @@ export class World {
         h.writeF64(object.x);
         h.writeF64(object.y);
         h.writeF64(object.z);
+        /*
+         * The store's identity, in the digest — the stage-1 expansion pass.
+         * It decides what a removal refunds, so it decides an outcome, and
+         * anything that decides an outcome is hashed. Absent reads as the
+         * empty string, so a v12 save and its v13 migration produce the same
+         * world. Both copies of this block must stay in lockstep, field for
+         * field, or `hashSections` stops naming the right neighbourhood.
+         */
+        h.writeString(object.itemId ?? '');
       }
       h.writeU32(this.layout.pendingBuilds.length);
       for (const build of this.layout.pendingBuilds) {
@@ -412,6 +421,15 @@ export class World {
       h.writeF64(object.x);
       h.writeF64(object.y);
       h.writeF64(object.z);
+      /*
+       * The store's identity, in the digest — the stage-1 expansion pass.
+       * It decides what a removal refunds, so it decides an outcome, and
+       * anything that decides an outcome is hashed. Absent reads as the
+       * empty string, so a v12 save and its v13 migration produce the same
+       * world. Both copies of this block must stay in lockstep, field for
+       * field, or `hashSections` stops naming the right neighbourhood.
+       */
+      h.writeString(object.itemId ?? '');
     }
     h.writeU32(this.layout.pendingBuilds.length);
     for (const build of this.layout.pendingBuilds) {

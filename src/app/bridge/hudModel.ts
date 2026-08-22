@@ -312,11 +312,12 @@ export interface HudModel {
  * The answer build mode paints its ghost with.
  *
  * `outcome` is the simulation's own verdict string, not a boolean, because the
- * four ways a placement fails need four different sentences — "that is off the
- * lot" and "that would trap your customers" are not the same mistake.
+ * ways a placement fails need different sentences — "that is off the lot" and
+ * "that would trap your customers" are not the same mistake, and since the
+ * store arrived neither is "that has to go by the road".
  */
 export interface PlacementPreview {
-  readonly outcome: 'ok' | 'outside-lot' | 'blocks-navigation' | 'occupied' | 'full';
+  readonly outcome: 'ok' | 'outside-lot' | 'blocks-navigation' | 'occupied' | 'full' | 'wrong-zone';
   /** The snapped world cell, in metres. */
   readonly worldX: number;
   readonly worldY: number;
@@ -330,6 +331,13 @@ export interface PlacedView {
   readonly objectId: string;
   readonly worldX: number;
   readonly worldY: number;
+  /**
+   * The catalogue entry it was bought as, or `''` for anything the player did
+   * not buy from the store — see `PlacedObject.itemId`. The store panel needs
+   * it to name what it is offering to move or sell back, and an empty string
+   * rather than an absent field keeps the reused row buffers a fixed shape.
+   */
+  readonly itemId: string;
 }
 
 export interface HudSource {
@@ -354,17 +362,34 @@ export interface UiCommands {
   /** Confirm the stage transition the player has been offered. */
   evolve(): void;
   place(objectId: string, x: number, y: number): void;
-  /** Undo a placement, by its index in `HudModel.placed`. */
+  /**
+   * Buy a store item and put it down, in one act — the stage-1 expansion pass.
+   *
+   * The catalogue id, never an object id: what the player bought is the thing
+   * that travels, and the only place that maps an item to the object drawn for
+   * it is the catalogue itself. A verb that took both would be two sources of
+   * truth for one identity, which is the shape the sign-becomes-flower bug had.
+   */
+  buyPlace(itemId: string, x: number, y: number): void;
+  /** Pick a placed object up and set it down elsewhere, identity intact. */
+  movePlaced(index: number, x: number, y: number): void;
+  /** Sell a placement back, by its index in `HudModel.placed`. */
   removePlaced(index: number): void;
   /**
-   * What a placement at this screen point *would* do — build mode's ghost.
+   * What placing this catalogue item at this screen point *would* do — the
+   * ghost.
    *
    * Screen coordinates in, because the caller is a pointer event; the snapped
    * world point comes back out so the overlay can draw the ghost where the
    * object would actually land rather than where the cursor is. Null when the
    * camera has not booted yet.
+   *
+   * Takes the item rather than the object so the verdict includes the zone
+   * rule — a roadside sign hovering over the back field has to read as refused
+   * *before* the click, exactly like one that would block a doorway. Pass an
+   * empty `itemId` to ask about bare geometry.
    */
-  previewPlacement(objectId: string, screenX: number, screenY: number): PlacementPreview | null;
+  previewPlacement(itemId: string, screenX: number, screenY: number): PlacementPreview | null;
   setPrice(itemId: string, price: number): void;
   hire(roleId: string, skill: number): void;
   /** Move one audio slider — Phase 17. */

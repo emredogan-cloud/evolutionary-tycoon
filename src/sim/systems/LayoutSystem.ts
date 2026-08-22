@@ -1,7 +1,11 @@
 import { layoutForStage } from '@config/layouts';
 import { buildDurationMs } from '@config/economy/upgrades';
+import { ROADSIDE_BAND_METRES } from '@config/store';
+import type { PlacementZone } from '@config/store';
+import { euclidean } from '../math/length';
 import { CELL_SIZE_METRES } from '../nav/NavGrid';
 import type { World } from '../core/World';
+import type { PlacedObject } from '../core/types';
 
 /**
  * Placing things in the world — GAME_EXECUTION_ROADMAP Phase 11.
@@ -30,7 +34,63 @@ import type { World } from '../core/World';
 export const PLACEMENT_GRID_METRES = CELL_SIZE_METRES;
 
 /** Why a placement was refused. `ok` means it happened. */
-export type PlacementOutcome = 'ok' | 'outside-lot' | 'blocks-navigation' | 'occupied' | 'full';
+export type PlacementOutcome =
+  'ok' | 'outside-lot' | 'blocks-navigation' | 'occupied' | 'full' | 'wrong-zone';
+
+/**
+ * Optional facts about a placement that the geometry does not carry.
+ *
+ * Both default to the pre-store behaviour, so every existing caller keeps
+ * exactly the semantics it was written against.
+ */
+export interface PlacementOptions {
+  /** The catalogue entry being placed — see `PlacedObject.itemId`. */
+  readonly itemId?: string;
+  /**
+   * Whether to raise a construction site over it. True everywhere a thing
+   * comes into existence; false for a *move*, where the object already
+   * exists and is only standing somewhere else.
+   */
+  readonly site?: boolean;
+}
+
+/**
+ * Is this spot inside the item's zone?
+ *
+ * Measured to the carriageway rather than to a painted band, because the
+ * band is art and the carriageway is where the traffic is: a roadside sign
+ * earns its name by being readable from a moving car. Distance is taken to
+ * the nearest lane centre line and compared against the band plus half the
+ * road, so the rule holds for any lane layout a later stage authors rather
+ * than for the two straight lanes Stage 1 happens to have.
+ */
+export function zoneAllows(world: World, zone: PlacementZone, x: number, y: number): boolean {
+  if (zone === 'lot') return true;
+
+  const road = layoutForStage(world.progression.stage).road;
+  const limit = ROADSIDE_BAND_METRES + road.widthMetres / 2;
+
+  for (const lane of road.lanes) {
+    for (let i = 1; i < lane.points.length; i++) {
+      const a = lane.points[i - 1];
+      const b = lane.points[i];
+      if (a === undefined || b === undefined) continue;
+      if (distanceToSegment(x, y, a.x, a.y, b.x, b.y) <= limit) return true;
+    }
+  }
+  return false;
+}
+
+/** Shortest distance from a point to a line segment, allocation-free. */
+function distanceToSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSquared = dx * dx + dy * dy;
+  // A degenerate segment is a point; the projection below would divide by zero.
+  const t =
+    lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSquared));
+  return euclidean(px - (ax + t * dx), py - (ay + t * dy));
+}
 
 /** How many objects a player may place. Beyond this the world stops accepting. */
 export const MAX_PLACED_OBJECTS = 64;
@@ -56,6 +116,7 @@ export function placeObject(
   x: number,
   y: number,
   reachable: (world: World) => boolean,
+  options: PlacementOptions = {},
 ): PlacementOutcome {
   if (world.layout.placed.length >= MAX_PLACED_OBJECTS) return 'full';
 
@@ -78,7 +139,9 @@ export function placeObject(
     if (existing.x === snappedX && existing.y === snappedY) return 'occupied';
   }
 
-  world.layout.placed.push({ objectId, x: snappedX, y: snappedY, z: 0 });
+  const row: PlacedObject = { objectId, x: snappedX, y: snappedY, z: 0 };
+  if (options.itemId !== undefined) row.itemId = options.itemId;
+  world.layout.placed.push(row);
   world.layout.revision++;
 
   if (!reachable(world)) {
@@ -94,14 +157,16 @@ export function placeObject(
    * placement reads as building rather than conjuring. Free decor takes the
    * flat minimum duration.
    */
-  world.layout.pendingBuilds.push({
-    upgradeId: '',
-    objectId,
-    x: snappedX,
-    y: snappedY,
-    remainingMs: buildDurationMs(0),
-    totalMs: buildDurationMs(0),
-  });
+  if (options.site !== false) {
+    world.layout.pendingBuilds.push({
+      upgradeId: '',
+      objectId,
+      x: snappedX,
+      y: snappedY,
+      remainingMs: buildDurationMs(0),
+      totalMs: buildDurationMs(0),
+    });
+  }
 
   world.eventQueue.emitObjectPlaced(objectId, snappedX, snappedY);
   return 'ok';
@@ -220,7 +285,18 @@ export function moveObject(
   world.layout.placed.splice(index, 1);
   world.layout.revision++;
 
-  const outcome = placeObject(world, previous.objectId, x, y, reachable);
+  /*
+   * The same object, standing somewhere else — so it carries its identity
+   * across and raises no new scaffolding. A move that re-queued a site would
+   * make relocating a bought sign look like buying a second one, and a move
+   * that dropped `itemId` would quietly turn it into an anonymous prop with
+   * nothing to refund. The directive is explicit: a move must not duplicate,
+   * re-identify, refund or reset what it moves.
+   */
+  const outcome = placeObject(world, previous.objectId, x, y, reachable, {
+    ...(previous.itemId === undefined ? {} : { itemId: previous.itemId }),
+    site: false,
+  });
   if (outcome !== 'ok') {
     // Put it back exactly where it was. A refused move must not cost the player
     // the object.

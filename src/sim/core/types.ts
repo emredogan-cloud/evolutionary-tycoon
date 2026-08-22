@@ -23,6 +23,23 @@ export interface PlacedObject {
   x: number;
   y: number;
   z: number;
+  /**
+   * The catalogue entry this object *is* — the stage-1 expansion pass.
+   *
+   * `objectId` says what to draw; two different purchases can legitimately
+   * draw the same thing. This says what was bought, and it is the only field
+   * that can answer the questions a store has to answer: what does removing
+   * this refund, and what did the player actually get for their money. It
+   * travels from the card through `BUY_PLACE` into this row and into the
+   * save, unchanged, which is what makes the identity chain a chain rather
+   * than a convention.
+   *
+   * Absent for everything the world places on the player's behalf — layout
+   * statics, upgrade anchors, and every decor object bought before this
+   * field existed (the v13 migration deliberately does not invent one; those
+   * rows render by `objectId` exactly as they always did).
+   */
+  itemId?: string | undefined;
 }
 
 export interface HiredEmployee {

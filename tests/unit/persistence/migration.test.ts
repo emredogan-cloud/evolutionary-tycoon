@@ -28,15 +28,15 @@ function readFixture(name: string): string {
 }
 
 describe('migration chain', () => {
-  it('the current version is 12, with eleven registered migrations', () => {
+  it('the current version is 13, with twelve registered migrations', () => {
     /*
      * Both halves matter. The first says the schema constant and the save layer
      * agree; the second is a deliberate speed bump — bumping the version means
      * coming here, which means noticing that a migration and a fixture are owed.
      */
     expect(CURRENT_SCHEMA_VERSION).toBe(SAVE_SCHEMA_VERSION);
-    expect(CURRENT_SCHEMA_VERSION).toBe(12);
-    expect(migrations).toHaveLength(11);
+    expect(CURRENT_SCHEMA_VERSION).toBe(13);
+    expect(migrations).toHaveLength(12);
   });
 
   it('a save already at the current version needs no steps', () => {
@@ -104,15 +104,15 @@ describe('migration chain', () => {
     });
   });
 
-  it('v1 → v12 runs every step in order', () => {
+  it('v1 → v13 runs every step in order', () => {
     const outcome = migrateToCurrent(
       { schemaVersion: 1, layout: { placed: [{ objectId: 'a', x: 0, y: 0 }] } },
       1,
     );
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(11);
-    expect(outcome.save['schemaVersion']).toBe(12);
+    expect(outcome.steps).toBe(12);
+    expect(outcome.save['schemaVersion']).toBe(13);
     expect((outcome.save['layout'] as { placed: unknown[] }).placed).toEqual([
       { objectId: 'a', x: 0, y: 0, z: 0 },
     ]);
@@ -303,7 +303,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(11);
+    expect(result.migrationSteps).toBe(12);
     expect(result.save.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
   });
 
@@ -318,7 +318,7 @@ describe('committed save fixtures', () => {
     // Was zero until Phase 5 added the traffic cursor. The fixture is a
     // historical record and is never regenerated, so this number grows by one
     // with every schema change — which is the point of keeping it.
-    expect(result.migrationSteps).toBe(10);
+    expect(result.migrationSteps).toBe(11);
   });
 
   it('save-v3.json migrates to the current version', async () => {
@@ -329,7 +329,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(9);
+    expect(result.migrationSteps).toBe(10);
   });
 
   it('save-v4.json migrates three steps to the current version', async () => {
@@ -340,7 +340,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(8);
+    expect(result.migrationSteps).toBe(9);
   });
 
   it('save-v5.json migrates three steps to the current version', async () => {
@@ -351,7 +351,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(7);
+    expect(result.migrationSteps).toBe(8);
   });
 
   it('save-v6.json migrates two steps to the current version', async () => {
@@ -362,7 +362,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(6);
+    expect(result.migrationSteps).toBe(7);
   });
 
   it('save-v7.json migrates one step to the current version', async () => {
@@ -373,7 +373,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(5);
+    expect(result.migrationSteps).toBe(6);
   });
 
   it('save-v8.json migrates two steps, arriving with a null offline envelope', async () => {
@@ -384,7 +384,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(4);
+    expect(result.migrationSteps).toBe(5);
     /*
      * `meter: null`, not a zeroed summary: a v8 save measured nothing, and the
      * distinction is what keeps a migrated player's first return from being
@@ -415,8 +415,8 @@ describe('committed save fixtures', () => {
     const outcome = migrateToCurrent({ schemaVersion: 8, economy: { cash: 12 } }, 8);
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(4);
-    expect(outcome.save['schemaVersion']).toBe(12);
+    expect(outcome.steps).toBe(5);
+    expect(outcome.save['schemaVersion']).toBe(13);
     expect(outcome.save['offline']).toEqual({ meter: null, pending: null });
     // Everything else is left exactly as it was.
     expect(outcome.save['economy']).toEqual({ cash: 12 });
@@ -426,8 +426,8 @@ describe('committed save fixtures', () => {
     const outcome = migrateToCurrent({ schemaVersion: 9, economy: { cash: 12 } }, 9);
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
-    expect(outcome.steps).toBe(3);
-    expect(outcome.save['schemaVersion']).toBe(12);
+    expect(outcome.steps).toBe(4);
+    expect(outcome.save['schemaVersion']).toBe(13);
     expect(outcome.save['environment']).toEqual({
       plannedDay: -1,
       weatherSegments: [0, 0, 0, 0],
@@ -447,7 +447,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(3);
+    expect(result.migrationSteps).toBe(4);
   });
 
   it('save-v10.json migrates one step to the current version', async () => {
@@ -458,7 +458,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(2);
+    expect(result.migrationSteps).toBe(3);
   });
 
   it('save-v10.json carries a calendar a session actually planned', () => {
@@ -632,7 +632,7 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
-    expect(result.migrationSteps).toBe(1);
+    expect(result.migrationSteps).toBe(2);
   });
 
   it('save-v11.json carries a mix a session actually set', () => {
@@ -649,7 +649,7 @@ describe('committed save fixtures', () => {
     expect(save.settings.audio.music).toBe(0.55);
   });
 
-  it('save-v12.json loads with no migration at all', async () => {
+  it('save-v12.json migrates one step to the current version', async () => {
     const storage = new MemoryStorageAdapter();
     await storage.write('save', readFixture('save-v12.json'));
 
@@ -657,7 +657,43 @@ describe('committed save fixtures', () => {
 
     expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
     if (!result.ok) return;
+    expect(result.migrationSteps).toBe(1);
+  });
+
+  it('save-v12.json keeps its placed decor anonymous across v13', async () => {
+    /*
+     * The point of the v13 step, asserted rather than described: a row written
+     * before the store existed arrives with no `itemId`, and nothing invents
+     * one for it. Guessing from `objectId` would pay a refund on something the
+     * player never bought.
+     */
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v12.json'));
+
+    const result = await new SaveManager(storage).load();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.save.layout.placed.length).toBeGreaterThan(0);
+    for (const row of result.save.layout.placed) {
+      expect(row.itemId, 'the migration invented an identity').toBeUndefined();
+    }
+  });
+
+  it('save-v13.json loads with no migration at all, carrying a bought item', async () => {
+    const storage = new MemoryStorageAdapter();
+    await storage.write('save', readFixture('save-v13.json'));
+
+    const result = await new SaveManager(storage).load();
+
+    expect(result.ok, result.ok ? '' : JSON.stringify(result.slotErrors)).toBe(true);
+    if (!result.ok) return;
     expect(result.migrationSteps).toBe(0);
+
+    // The identity chain, surviving a round trip through storage.
+    const bought = result.save.layout.placed.find((row) => row.itemId === 'roadside-sign');
+    expect(bought, 'the store purchase did not survive the save').toBeDefined();
+    expect(bought?.objectId).toBe('sign');
   });
 
   it('save-v12.json carries construction sites in flight', () => {

@@ -100,7 +100,18 @@ const saveFileV10Schema = z.object({
     bucketElapsedMs: z.number().nonnegative(),
   }),
   layout: z.object({
-    placed: z.array(z.object({ objectId: z.string(), x: z.number(), y: z.number(), z: z.number() })),
+    placed: z.array(
+      z.object({
+        objectId: z.string(),
+        x: z.number(),
+        y: z.number(),
+        z: z.number(),
+        // v13 — which catalogue entry this was bought as. Absent on every row
+        // written before the store existed, and on anything the player did not
+        // buy; those render by `objectId` and refund nothing.
+        itemId: z.string().optional(),
+      }),
+    ),
     // v12 — construction sites in flight survive a reload mid-build.
     pendingBuilds: z.array(
       z.object({

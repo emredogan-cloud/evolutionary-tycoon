@@ -25,7 +25,20 @@ interface AtlasSheet {
   }[];
 }
 
-type SheetId = 'ui' | 'ui2';
+type SheetId = 'ui' | 'ui2' | 'nature' | 'props' | 'structures';
+
+/**
+ * The atlases the world's own objects are drawn from.
+ *
+ * The store's cards show the *object* rather than a separate icon, so what the
+ * card promises and what lands on the lot are the same image by construction.
+ * Their frames are spread across three sheets, but the names carry their own
+ * prefix (`nature_`, `prop_`, `struct_`), so a frame can be resolved by asking
+ * all three rather than by a table mapping object → atlas — and a table like
+ * that is exactly the kind of second source of truth this pass exists to
+ * remove.
+ */
+const WORLD_SHEETS = ['nature', 'props', 'structures'] as const satisfies readonly SheetId[];
 
 interface SheetState {
   frames: Map<string, FrameRect> | null;
@@ -36,6 +49,9 @@ interface SheetState {
 const sheets: Record<SheetId, SheetState> = {
   ui: { frames: null, page: null, requested: false },
   ui2: { frames: null, page: null, requested: false },
+  nature: { frames: null, page: null, requested: false },
+  props: { frames: null, page: null, requested: false },
+  structures: { frames: null, page: null, requested: false },
 };
 
 const listeners = new Set<() => void>();
@@ -84,4 +100,23 @@ export function frameStyle(id: SheetId, frame: string, px: number): string | nul
     `background-size:${String(state.page.width * scale)}px ${String(state.page.height * scale)}px;` +
     'image-rendering:auto;'
   );
+}
+
+/** Start fetching the world atlases, deferred like `ui2`. */
+export function ensureWorldSheets(): void {
+  for (const id of WORLD_SHEETS) ensureSheet(id);
+}
+
+/**
+ * A world object's frame as a CSS sprite, whichever atlas holds it.
+ *
+ * Null until the sheet carrying it arrives — the caller renders its label
+ * instead, exactly like every other frame here.
+ */
+export function worldFrameStyle(frame: string, px: number): string | null {
+  for (const id of WORLD_SHEETS) {
+    const style = frameStyle(id, frame, px);
+    if (style !== null) return style;
+  }
+  return null;
 }
