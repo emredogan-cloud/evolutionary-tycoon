@@ -249,7 +249,7 @@ export function vehicleFixFrame(archetype: number, fix: VehicleFacingFix): strin
   return `${stem}_${fix.brake === true ? 'brake' : 'default'}_${fix.direction}${SUFFIX}`;
 }
 
-export const VEHICLE_FACING_FIXES: Readonly<
+const VEHICLE_FACING_FIXES: Readonly<
   Record<string, Readonly<Partial<Record<SpriteDirectionName, VehicleFacingFix>>>>
 > = {
   // The delivered n file is a front three-quarter heading sw; nw is a true

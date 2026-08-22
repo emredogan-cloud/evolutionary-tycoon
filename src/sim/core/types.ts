@@ -119,7 +119,7 @@ export interface PendingBuild {
 }
 
 /** A construction site as the renderer sees it. */
-export interface PendingBuildView {
+interface PendingBuildView {
   upgradeId: string;
   objectId: string;
   x: number;

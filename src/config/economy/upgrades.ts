@@ -782,7 +782,7 @@ const upgradesSchema = z.array(upgradeSchema).superRefine((list, ctx) => {
  * The formula is anchored on cost so the economy stays the single authority
  * on how big a purchase is. Decor has no cost and takes the flat minimum.
  */
-export const BUILD_TIME = {
+const BUILD_TIME = {
   /** Fixed groundwork per site, sim-ms. */
   baseMs: 1_000,
   /** Additional sim-ms per ₡ of the rung's actual price. */

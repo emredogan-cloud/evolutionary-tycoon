@@ -94,7 +94,18 @@ const REFERENCE = {
    * before that write landed, which is why CI caught it and not the desk:
    * the pin renewals exist for precisely this moment.
    */
-  hashAtTick0: '7af1adc1d379aa8c',
+  /*
+   * A tenth time, in the 2026-08-22 UI/world correction pass. Two deliberate
+   * world-shape changes at once: construction sites entered the digest
+   * (`layout.pendingBuilds` — a purchase is now a timed site, and its
+   * remaining time can change an outcome), and the parking geometry moved
+   * (bays into the marked layby at y 9.4, respaced 2.5/7.5/16.5/21.5, doors
+   * on the 10.5..11.0 walkway) — which shifts every manoeuvre curve and
+   * therefore every vehicle position from the first conversion on.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here.
+   */
+  hashAtTick0: '2bf994f0ebc020ac',
   /*
    * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
    * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
@@ -136,7 +147,7 @@ const REFERENCE = {
    * The balance gate's asserted rows ran green with the ten-archetype mix in
    * the same commit; tick 0 is motionless and did not move.
    */
-  hashAtTick1000: 'd264cc8d3e33a4f5',
+  hashAtTick1000: '7f3f915e3ce4e877',
 } as const;
 
 interface TestApi {

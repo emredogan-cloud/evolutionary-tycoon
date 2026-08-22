@@ -385,3 +385,19 @@ user's decision.
 | Boş-işyükü sim bench satırları | 22/22 yeşil, rig satırı eklendi (baseline'da yok → mutlak-yalnız, sonraki kayıtta katılır)                                                                                                                              | `pnpm bench:sim`                                            |
 | Görsel goldenlar               | 18/18 bayt-özdeş — rig nefes ofseti alt-piksel, donmuş karelerde klip durumu yok                                                                                                                                        | `pnpm test:visual`                                          |
 | Gerçek GPU kare süresi         | **KOŞULMADI** — bu istasyonda otomasyon Chromium'u her bayrak kombinasyonunda SwiftShader'a düşüyor (`ANGLE … SwiftShader driver` doğrulandı); yazılım rasterin 40 ms/25 fps okuması D-08 gereği FPS olarak RAPORLANMAZ | headed Playwright, 3 deneme                                 |
+
+## 2026-08-22 — UI/world correction pass
+
+| Ölçüm                    | Değer                                                                                                                                                                                              | Nasıl                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Sim bench                | **22/22 yeşil** (temiz koşu). Bir karışık-yük koşusunda "vehicle spawn+despawn" %22 sapma gösterdi, yalnız koşuda geçti — kalibrasyon hafıza notundaki bilinen harness gürültüsü.                  | `pnpm bench:sim`, iki koşu                                                     |
+| Bundle (gzip)            | **487.98 / 550 kB** JS · **7.3 / 30 kB** CSS                                                                                                                                                       | `pnpm size` (verify zinciri, exit 0)                                           |
+| Asset kritik yol         | **3.58 / 4.00 MB** (%89.5) — değişmedi; yol prosedürel kompozisyona geçti (ek bayt yok), zemin aynı tek dilimi döşüyor                                                                             | `pnpm assets:build` raporu                                                     |
+| Texture belleği (analiz) | Zemin kaplaması aynı 2048×1024 dilimin **aynı GPU dokusunun** ~56–72 kez çizimidir — ek doku belleği yok; kaldırılan yol-dilimi çizimi yerine tek Graphics geometrisi. Draw call sınıfı değişmedi. | kod analizi (tek `key` → tek doku; `add.image` örnekleri geometri, doku değil) |
+| Gerçek GPU tanımlaması   | Bu istasyonun kullanıcı-Chrome'u **gerçek GPU** açıyor: `ANGLE (NVIDIA GeForce GTX 1660 Ti/PCIe/SSE2, OpenGL 4.5.0)` — P17'deki SwiftShader düşüşü otomasyon-Chromium'a özgüymüş.                  | canlı sekmede `WEBGL_debug_renderer_info`                                      |
+| Gerçek GPU kare süresi   | **ÖLÇÜLMEDİ** — MCP sekmesi arka planda (`visibilityState: hidden`), rAF çalışmıyor; 30 sn'de 0 örnek. Sahte değer raporlanmaz (D-08/ADR-011).                                                     | `?bench=1` + `getFrameStats()`, 30 sn                                          |
+
+> Kullanıcı için tek adım: `http://127.0.0.1:4173/?seed=424242&e2e=1&bench=1`
+> adresini ÖN PLANDA 30 sn açık tutup konsolda
+> `JSON.stringify(__EVOTYCOON__.getFrameStats())` okumak — p50/p95 kare süresi
+> ve p05 FPS bu tabloya işlenmeli (GTX 1660 Ti'da bütçe: p95 ≤ 16.6 ms).

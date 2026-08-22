@@ -260,7 +260,7 @@ export function buyUpgrade(world: World, id: string): PurchaseOutcome {
 }
 
 /** Levels of `id` currently under construction. */
-export function pendingUpgradeLevels(world: World, id: string): number {
+function pendingUpgradeLevels(world: World, id: string): number {
   let count = 0;
   for (const build of world.layout.pendingBuilds) {
     if (build.upgradeId === id) count++;

@@ -245,7 +245,9 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     noParticles: renderMode.noParticles,
     subscribeEvents: (listener) => sim.events.subscribe(listener),
     sceneId: renderMode.sceneId,
-    showDevOverlays: debugOverlayEnabled() && !renderMode.visualDeterminism,
+    showDevOverlays:
+      (debugOverlayEnabled() || new URLSearchParams(search).get('worldBounds') === '1') &&
+      !renderMode.visualDeterminism,
     onFrame: () => {
       ui.sample(win.performance.now());
     },

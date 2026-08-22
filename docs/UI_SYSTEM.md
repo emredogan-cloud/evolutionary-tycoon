@@ -65,3 +65,29 @@ pause); ≤480 px height hides the corner cards (objective/evolution — their
 content returns via notices and taller viewports); ≤380 px keeps cash, time,
 speed, tiles, orders. Asserted at seven viewports with the painted-chrome
 HUD-share metric (≤22%/28%).
+
+## 7. The world-fill camera law (2026-08-22 correction pass)
+
+**Every pixel of the gameplay viewport is world, at every viewport size and
+every camera zoom.** Not by CSS and not by a backdrop: the ground bake
+mirror-tiles across the whole camera-reachable rectangle
+(`WorldScene.groundCoverRect` — the lot-plus-margin bounding box grown to at
+least a 3840×2160 viewport at minimum zoom), the road band runs the full
+width of that rectangle, and deterministic tone washes break the tiling
+symmetry. The camera still clamps to the lot plus its authored margin, so
+gameplay framing is unchanged; what changed is that everything the clamp can
+reveal is real terrain.
+
+Three renderer surfaces used to break this at zoom ≠ 1 and are now fitted to
+the camera's **visible world rect** every frame (scroll factor exempts an
+object from scroll, not from zoom): the night/weather tint, the wet-ground
+quad and the precipitation sky (`EnvironmentLayer.viewRect`), and the
+vignette bands (`WorldScene.layoutVignette`). A regression here reads as
+hard-edged dark rectangles floating over the world at 0.6× — the
+2026-08-22 capture that motivated the rule.
+
+Camera scale itself is untouched: minZoom 0.6, maxZoom 1.8, default 1.0,
+clamped by `cameraMath`. Larger viewports reveal more world; nothing scales
+the stand down to preserve a fixed framing. `?e2e=1` exposes
+`window.__EVOTYCOON_CAMERA__` (set/state through the same clamped
+`centreOn`) so acceptance can photograph exact zooms.

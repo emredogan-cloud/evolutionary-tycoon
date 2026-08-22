@@ -2,7 +2,8 @@ import type Phaser from 'phaser';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { FlowFieldCache } from '@sim/nav/FlowFieldCache';
 import { CELL_SIZE_METRES } from '@sim/nav/NavGrid';
-import { worldToScreen } from '../iso/IsoProjection';
+import { worldRectToScreenBounds, worldToScreen } from '../iso/IsoProjection';
+import { CAMERA } from '@config/world';
 import type { SceneGraph } from '../SceneGraph';
 
 /**
@@ -31,7 +32,11 @@ export class DevOverlays {
   constructor(scene: Phaser.Scene, graph: SceneGraph) {
     this.scene = scene;
 
+    const search = new URLSearchParams(scene.game.canvas.ownerDocument.location.search);
+    const fullDebug = search.get('debug') === '1';
+
     const grid = scene.add.graphics();
+    grid.setVisible(fullDebug);
     const lot = STAGE1_LAYOUT.lot;
     const point = { x: 0, y: 0 };
 
@@ -57,6 +62,7 @@ export class DevOverlays {
      * goal nothing routes to, and both are invisible without this.
      */
     const nav = scene.add.graphics();
+    nav.setVisible(fullDebug);
     const fields = new FlowFieldCache(STAGE1_LAYOUT);
     const navGrid = fields.grid;
 
@@ -100,6 +106,62 @@ export class DevOverlays {
 
     graph.layer('scatter').add(grid);
     graph.layer('scatter').add(nav);
+
+    /*
+     * `?worldBounds=1` — the correction pass's coverage proof, drawn.
+     *
+     * Three rectangles tell the whole world-fill story at a glance: the lot
+     * diamond (what is authored), the camera clamp box (what the player can
+     * reach — the bounding box of the diamond plus margin), and the ground
+     * cover rect (what is painted — grown to a 3840x2160 viewport at minimum
+     * zoom). Coverage holds exactly when the middle one is inside the outer
+     * one with room for the worst monitor; production never shows this
+     * (the overlay only exists behind the debug/worldBounds doors).
+     */
+    if (search.get('worldBounds') === '1') {
+      const bounds = scene.add.graphics();
+      const lot = STAGE1_LAYOUT.lot;
+      const margin = STAGE1_LAYOUT.cameraMarginMetres;
+
+      // The lot diamond, in world space.
+      bounds.lineStyle(2, 0x5bb169, 0.9);
+      const corners: [number, number][] = [
+        [lot.minX, lot.minY],
+        [lot.maxX, lot.minY],
+        [lot.maxX, lot.maxY],
+        [lot.minX, lot.maxY],
+      ];
+      const first = worldToScreen(corners[0]?.[0] ?? 0, corners[0]?.[1] ?? 0, 0, point);
+      bounds.beginPath();
+      bounds.moveTo(first.x, first.y);
+      for (const [x, y] of corners.slice(1)) {
+        const at = worldToScreen(x, y, 0, point);
+        bounds.lineTo(at.x, at.y);
+      }
+      bounds.closePath();
+      bounds.strokePath();
+
+      // The camera clamp box.
+      const clamp = worldRectToScreenBounds(
+        lot.minX - margin,
+        lot.minY - margin,
+        lot.maxX + margin,
+        lot.maxY + margin,
+        { left: 0, top: 0, right: 0, bottom: 0 },
+      );
+      bounds.lineStyle(2, 0xf4bc55, 0.9);
+      bounds.strokeRect(clamp.left, clamp.top, clamp.right - clamp.left, clamp.bottom - clamp.top);
+
+      // The ground cover rect — the same arithmetic WorldScene uses.
+      const centreX = (clamp.left + clamp.right) / 2;
+      const centreY = (clamp.top + clamp.bottom) / 2;
+      const halfW = Math.max((clamp.right - clamp.left) / 2, 3840 / (2 * CAMERA.minZoom)) + 64;
+      const halfH = Math.max((clamp.bottom - clamp.top) / 2, 2160 / (2 * CAMERA.minZoom)) + 64;
+      bounds.lineStyle(3, 0xe8706f, 0.9);
+      bounds.strokeRect(centreX - halfW, centreY - halfH, halfW * 2, halfH * 2);
+
+      graph.layer('worldUi').add(bounds);
+    }
 
     this.readout = scene.add.text(8, 8, '', {
       fontFamily: 'ui-monospace, monospace',

@@ -676,6 +676,36 @@ describe('the calendar pins — Phase 15 fixture instruments', () => {
 });
 
 describe('the HUD strip fields — Phase 15', () => {
+  it('shows a bought rung as building until its site completes', () => {
+    // The correction pass: the card carries the same countdown the world's
+    // scaffold runs on, and refuses a second purchase meanwhile.
+    const container = createContainer(isolatedWindow(''), 7, new MemoryStorageAdapter());
+    container.sim.world.economy.cash = 100;
+    let model: HudModel | null = null;
+    const unsubscribe = container.ui.subscribe((m) => {
+      model = m;
+    });
+
+    container.commands.buyUpgrade('hand-painted-sign');
+    container.sim.advance(4);
+    container.ui.refresh();
+    let hud = model as unknown as HudModel;
+    const midBuild = hud.upgrades.find((row) => row.id === 'hand-painted-sign');
+    expect(midBuild?.building).toBe(true);
+    expect(midBuild?.buildRemainingMs).toBeGreaterThan(0);
+    expect(midBuild?.affordable).toBe(false);
+    expect(midBuild?.level).toBe(0);
+
+    container.sim.advance(200);
+    container.ui.refresh();
+    hud = model as unknown as HudModel;
+    const built = hud.upgrades.find((row) => row.id === 'hand-painted-sign');
+    expect(built?.building).toBe(false);
+    expect(built?.buildRemainingMs).toBe(0);
+    expect(built?.level).toBe(1);
+    unsubscribe();
+  });
+
   it('samples weather and the active event into the model', () => {
     const container = createContainer(
       isolatedWindow('?forceWeather=rain&forceEvent=festival&stage=4'),
