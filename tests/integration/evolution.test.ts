@@ -243,13 +243,15 @@ describe('the world survives the transition', () => {
   });
 
   it('keeps the original stand visible at every later stage', () => {
+    // Since the stage-1 expansion pass the keepsake stands beside the west
+    // walkway at (6.5, 11.2) — the deeper stand reflow paved its old corner.
     // GAME_DESIGN_DOCUMENT §7: the player should be able to see their first
     // lemonade stand still standing in a corner. It is the single clearest
     // signal that this is the same place rather than a new level.
     for (const stage of [2, 3, 4]) {
       const layout = layoutForStage(stage);
       const roots = layout.statics.filter(
-        (object) => Math.abs(object.x - 22.2) < 0.01 && Math.abs(object.y - 15.6) < 0.01,
+        (object) => Math.abs(object.x - 6.5) < 0.01 && Math.abs(object.y - 11.2) < 0.01,
       );
       expect(roots.length, `stage ${String(stage)} demolished the original stand`).toBe(1);
     }

@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import type { Page } from '@playwright/test';
+import { STAGE3_LAYOUT } from '@config/layouts/stage3';
 
 /**
  * Scenario C of the consolidation directive — table service, visibly.
@@ -26,15 +27,18 @@ interface Hook {
   };
 }
 
-/** Stage 3's tables, from the layout's own numbers (`stage3.ts`). */
-const TABLES = [
-  { x: 15.2, y: 13.4 },
-  { x: 17.4, y: 13.4 },
-  { x: 19.6, y: 13.4 },
-  { x: 15.2, y: 15.6 },
-  { x: 17.4, y: 15.6 },
-  { x: 19.6, y: 15.6 },
-];
+/**
+ * Stage 3's tables — read from the layout, never copied out of it.
+ *
+ * They used to be six literals transcribed from `stage3.ts` under a comment
+ * saying so, and the stage-1 expansion pass moved the dining grid when the
+ * stand went deeper into the land. The literals stayed where they were, so
+ * this spec went on measuring an empty patch of floor 1.9 m from the nearest
+ * real table and reported "nobody is at a table" about a diner that was
+ * serving perfectly well. A test that duplicates the data it checks against
+ * can only ever be right until the data moves.
+ */
+const TABLES = STAGE3_LAYOUT.tables.map((table) => ({ x: table.x, y: table.y }));
 
 async function boot(page: Page): Promise<void> {
   await page.goto('/?e2e=1&seed=424242&paused=1&stage=3');

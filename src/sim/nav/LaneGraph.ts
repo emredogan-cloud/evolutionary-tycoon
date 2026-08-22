@@ -124,6 +124,13 @@ export class LaneGraph {
       (lane as { crossesOnEntry: boolean }).crossesOnEntry = lane.index !== nearest;
     }
     this.nearEntryLane = nearest;
+
+    const frames: LaneFrame[] = [];
+    for (const lane of this.lanes) {
+      lane.path.sample(0, sample);
+      frames.push({ ox: sample.x, oy: sample.y, dx: sample.tangentX, dy: sample.tangentY });
+    }
+    this.frames = frames;
   }
 
   /** Index of the lane whose entry does not cross traffic. */
@@ -143,6 +150,61 @@ export class LaneGraph {
   sample(laneIndex: number, s: number, out: LaneSample): LaneSample {
     return this.lane(laneIndex).path.sample(s, out);
   }
+
+  /**
+   * A world point in a lane's own frame: how far along it lies, and how far
+   * off to the side.
+   *
+   * The straight-line frame, taken once at construction — every lane in the
+   * game is a straight run, and a manoeuvring body's relationship to the lane
+   * it is leaving or joining is exactly this pair of numbers. Two callers
+   * need it and must agree: the motion system decides from `lateral` whether
+   * a turning body still stands in the lane, and the manoeuvre system decides
+   * from `along` which stretch of road a departing car is about to claim.
+   * Two copies of this projection would be two chances to disagree about
+   * where a car is.
+   */
+  project(laneIndex: number, x: number, y: number, out: LaneProjection): LaneProjection {
+    const frame = this.frames[laneIndex];
+    if (frame === undefined) throw new RangeError(`Unknown lane ${laneIndex}`);
+    const relX = x - frame.ox;
+    const relY = y - frame.oy;
+    out.along = relX * frame.dx + relY * frame.dy;
+    out.lateral = Math.abs(relX * -frame.dy + relY * frame.dx);
+    return out;
+  }
+
+  /**
+   * How much of a unit direction points along a lane, signed.
+   *
+   * The companion to `project`: that answers where a body is, this answers
+   * how squarely it is facing. A body crossing the lane broadside projects
+   * almost none of its length onto it, and the difference decides how much
+   * road it actually takes up.
+   */
+  projectDirection(laneIndex: number, dx: number, dy: number): number {
+    const frame = this.frames[laneIndex];
+    if (frame === undefined) throw new RangeError(`Unknown lane ${laneIndex}`);
+    return dx * frame.dx + dy * frame.dy;
+  }
+
+  /** Straight-line origin and direction per lane — see `project`. */
+  private readonly frames: readonly LaneFrame[];
+}
+
+/** A point expressed in a lane's frame — see `LaneGraph.project`. */
+export interface LaneProjection {
+  /** Metres along the lane from its start. */
+  along: number;
+  /** Metres off the lane's centre line, unsigned. */
+  lateral: number;
+}
+
+interface LaneFrame {
+  readonly ox: number;
+  readonly oy: number;
+  readonly dx: number;
+  readonly dy: number;
 }
 
 /**

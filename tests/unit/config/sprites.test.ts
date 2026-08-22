@@ -186,13 +186,25 @@ describe('what the layouts place', () => {
     );
     expect(stage1.size).toBe(landmarks.length);
 
+    /*
+     * The stage-1 expansion pass adds one documented exception: the diner's
+     * reflow (counter at y 12.6, dining grid from 14.8) paves the big
+     * broadleaf's old corner at stages 3-4, so it relocates to the west
+     * fence at (1.2, 17.2) — moved, never demolished. Everything else stays
+     * exactly where Stage 1 planted it.
+     */
+    const relocations: Record<string, Partial<Record<number, { x: number; y: number }>>> = {
+      'tree-broadleaf-01': { 3: { x: 1.2, y: 17.2 }, 4: { x: 1.2, y: 17.2 } },
+    };
+
     for (const stage of [2, 3, 4]) {
       for (const object of layoutForStage(stage).statics) {
         const original = stage1.get(object.objectId);
         if (original === undefined) continue;
+        const expected = relocations[object.objectId]?.[stage] ?? original;
         expect({ id: object.objectId, x: object.x, y: object.y }).toEqual({
           id: object.objectId,
-          ...original,
+          ...expected,
         });
       }
     }

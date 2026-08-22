@@ -181,6 +181,80 @@ export const BRAKE_LIGHT_DECEL = 0.6;
 export const MAX_SPEED_METRES_PER_SECOND = 30;
 
 /**
+ * How far off a lane's centre line a manoeuvring body still blocks that lane —
+ * the stage-1 expansion pass ("if one vehicle is parking, vehicles behind it
+ * wait, then continue").
+ *
+ * Inside this band a turning car's body is in a follower's swept path, so the
+ * motion system casts a *lane shadow* — the body bucketed into the lane order
+ * so IDM brakes the queue behind it — and the manoeuvre system holds a
+ * departing car outside the band until its merge gap exists. One constant,
+ * two consumers: a hold line judged wider than the shadow band would park
+ * cars in a blind spot the followers cannot see, and narrower would cast
+ * shadows from cars the hold has already declared clear.
+ *
+ * **1.9 m is the overlap threshold, not a comfort margin, and the difference
+ * is the whole calibration.** Two 1.9 m-wide bodies touch when their centres
+ * are 1.9 m apart laterally (0.95 + 0.95), so this is the smallest band that
+ * makes "no vehicle drives through another" true — which is what the
+ * directive forbids and what the 20:34 captures show happening. Widening it
+ * for breathing room is not free: the layby's bays sit barely one lane width
+ * off the near carriageway, so a wider band puts more of every parking sweep
+ * inside the lane and holds the queue there for longer. Measured on this
+ * suite, at 2.2 m the road falls to 8 617 arrivals where 10 000 are expected
+ * and mean lane speed to 5.4 m/s against a floor of 8; at 2.7 m, 8 498 and
+ * 6.3. At 1.9 the whole traffic suite is green with the shadow fully live.
+ * So the band is pinned to the physics: buying comfort here spends the
+ * calibrated Stage-1 economy, and that trade belongs to the open road/lot
+ * decision (STAGE_2_4_CALIBRATION_REPORT §4), not to a constant nudged up.
+ */
+export const LANE_SHADOW_BAND_METRES = 1.9;
+
+/**
+ * Whether a manoeuvring body actually holds the lane behind it.
+ *
+ * **Off, and the reason is a measurement, not a doubt about the code.** The
+ * directive asks for it in as many words — "if one vehicle is parking,
+ * vehicles behind it wait, then continue" — and the mechanism is implemented,
+ * deterministic and covered (`tests/unit/sim/traffic/laneShadow.test.ts`
+ * enables it explicitly and proves 2/5/10 followers queue behind a turning
+ * body, never touch it, and resume when it swings clear). What it cannot do
+ * is pay for itself out of Stage 1's calibrated demand.
+ *
+ * The arithmetic is the layby's, not the model's. The bays sit one lane width
+ * off the near carriageway, so the parking corridor genuinely lies inside
+ * that lane, and a manoeuvre runs at 2.6 m/s: measured over every (lane, bay)
+ * pair, a near-lane parking sweep spends 62–85% of its length — up to 5.9
+ * seconds — physically in the lane. Making followers respect that is honest,
+ * and it costs (band at its 1.9 m physical floor, everything else green):
+ *
+ * - Stage 2 arrives in **28.8 game-minutes against a calibrated ≤ 22**
+ *   (`stageTransitionPacing`) — the economy contract itself;
+ * - bay cycles fall to 957 where 1 000 are asserted (`parking`);
+ * - the day curve's evening peak compresses to exactly 3.0× the small-hours
+ *   trough where the assertion needs more than 3.0× (`spawn`).
+ *
+ * Absorbing that would mean re-calibrating Stage 1 — the one stage
+ * `CALIBRATED_STAGES` covers — to pay for a realism feature, which is the
+ * road/lot decision PROJECT_MEMORY §21 already carries as the user's (road
+ * width, lane count, layby depth and traffic density move together;
+ * STAGE_2_4_CALIBRATION_REPORT §4 holds the menu). Widening the road or
+ * deepening the layby buys the seconds back; nudging this constant does not,
+ * and re-tuning the economy under a traffic change would invalidate every
+ * balance number measured before it (WORKING_DISCIPLINE §6).
+ *
+ * So the mechanism ships built, tested and dark, exactly as
+ * STAGE1_PRODUCT_EXPANSION_PLAN §15 provides for, and flipping this to `true`
+ * is the whole of the change once that decision lands. Two attempted escapes
+ * are recorded so they are not retried blind: shortening the corridor's lead
+ * (`AHEAD`) to 3.0 m turns the suite green but is curve-fitting — 2.0 m is
+ * far *worse* (5 132 arrivals), so the constant has no physical story; and
+ * moving the layby 0.7 m south clears the corridor of the lane but starves
+ * the road by a different route (1 656 arrivals).
+ */
+export const LANE_SHADOW_ENABLED = false;
+
+/**
  * Left-turn gap acceptance — Phase 15, GDD §9.1: the far lane's pull-in
  * crosses opposing traffic and is a *designed* congestion source.
  *

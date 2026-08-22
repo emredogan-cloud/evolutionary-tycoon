@@ -233,7 +233,16 @@ export const STAGE1_LAYOUT: StageLayout = {
   },
 
   pullIn: { x: 12, y: 8.5 },
-  counter: { x: 12, y: 11 },
+  /*
+   * At y 12.6 since the stage-1 expansion pass — 1.6 m deeper into the land.
+   * With the layby's cars ending at y 10.5 and the counter at 11, a parked
+   * pickup's cab stood visually inside the canopy (the 20:34 review
+   * captures). The move opens a real walkway band (10.75..12.2) between the
+   * doors and the stand, so the scene reads road → parking → walkway →
+   * counter. The counter stays THE fixed point of every stage (the
+   * same-plot evolution law), so all four layouts carry the same 12.6.
+   */
+  counter: { x: 12, y: 12.6 },
 
   // Ten metres after the decision point, so a driver who commits has time to
   // slow down and be *seen* slowing down before the turn begins.
@@ -309,12 +318,12 @@ export const STAGE1_LAYOUT: StageLayout = {
    * have made the mechanic invisible.
    */
   queue: [
-    { x: 12.0, y: 10.2 },
-    { x: 12.0, y: 9.4 },
-    { x: 12.0, y: 8.6 },
-    { x: 12.4, y: 7.9 },
-    { x: 12.9, y: 7.3 },
-    { x: 13.4, y: 6.7 },
+    { x: 12.0, y: 11.8 },
+    { x: 12.0, y: 10.9 },
+    { x: 12.0, y: 10.0 },
+    { x: 12.3, y: 9.0 },
+    { x: 12.8, y: 7.9 },
+    { x: 13.3, y: 6.9 },
   ],
   queueCapacity: 4,
 
@@ -352,14 +361,14 @@ export const STAGE1_LAYOUT: StageLayout = {
    * their two-row + aisle shape; only the ground they stand on moved.
    */
   waitingArea: [
-    { x: 16.2, y: 11.6 },
-    { x: 17.1, y: 11.6 },
-    { x: 18.0, y: 11.6 },
-    { x: 18.9, y: 11.6 },
-    { x: 16.2, y: 13.2 },
-    { x: 17.1, y: 13.2 },
-    { x: 18.0, y: 13.2 },
-    { x: 18.9, y: 13.2 },
+    { x: 16.2, y: 13.0 },
+    { x: 17.1, y: 13.0 },
+    { x: 18.0, y: 13.0 },
+    { x: 18.9, y: 13.0 },
+    { x: 16.2, y: 14.4 },
+    { x: 17.1, y: 14.4 },
+    { x: 18.0, y: 14.4 },
+    { x: 18.9, y: 14.4 },
   ],
 
   /*
@@ -372,7 +381,7 @@ export const STAGE1_LAYOUT: StageLayout = {
    * screen (PLACEHOLDER_REGISTER).
    */
   statics: [
-    { objectId: 'counter-lv1', x: 12, y: 11, z: 0 }, // the stand itself
+    { objectId: 'counter-lv1', x: 12, y: 12.6, z: 0 }, // the stand itself
     /*
      * The canopy, mounted OVER the counter — the correction pass. It used to
      * sit at (12, 10.2, z 0): eighty centimetres in front of the counter at
@@ -382,11 +391,11 @@ export const STAGE1_LAYOUT: StageLayout = {
      * head height above the counter top, and the slight north offset lets the
      * canopy slope forward over the serving side, where the queue stands.
      */
-    { objectId: 'awning', x: 12, y: 10.85, z: 1.75 },
-    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the hand-painted sign by the road
+    { objectId: 'awning', x: 12, y: 12.45, z: 1.75 },
+    { objectId: 'sign', x: 9.5, y: 13.1, z: 0 }, // the hand-painted sign by the walkway
     // East of the waiting rows since the correction pass — its old spot at
     // (16, 13) is now a standing position.
-    { objectId: 'bin', x: 21.2, y: 12.6, z: 0 },
+    { objectId: 'bin', x: 21.2, y: 14.0, z: 0 },
     { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
     { objectId: 'tree-broadleaf-02', x: 4, y: 15, z: 0 },
     { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },

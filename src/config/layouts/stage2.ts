@@ -58,12 +58,12 @@ export const STAGE2_LAYOUT: StageLayout = {
    * otherwise buying the last barrier silently switches the loop off.
    */
   queue: [
-    { x: 12.0, y: 10.2 },
-    { x: 12.0, y: 9.4 },
-    { x: 12.0, y: 8.6 },
-    { x: 12.4, y: 7.9 },
-    { x: 12.9, y: 7.3 },
-    { x: 13.4, y: 6.7 },
+    { x: 12.0, y: 11.8 },
+    { x: 12.0, y: 10.9 },
+    { x: 12.0, y: 10.0 },
+    { x: 12.3, y: 9.0 },
+    { x: 12.8, y: 7.9 },
+    { x: 13.3, y: 6.9 },
     { x: 14.0, y: 6.2 },
     { x: 14.6, y: 5.8 },
     { x: 15.3, y: 5.5 },
@@ -77,33 +77,33 @@ export const STAGE2_LAYOUT: StageLayout = {
     ...STAGE1_LAYOUT.waitingArea,
     // East of the inherited rows, clear of the layby cars (which end at
     // y 10.5) and of bay p4's door at (20.5, 11.05).
-    { x: 19.8, y: 11.6 },
-    { x: 19.8, y: 13.2 },
-    { x: 20.7, y: 11.6 },
-    { x: 20.7, y: 13.2 },
+    { x: 19.8, y: 13.0 },
+    { x: 19.8, y: 14.4 },
+    { x: 20.7, y: 13.0 },
+    { x: 20.7, y: 14.4 },
   ],
 
   statics: [
     // The truck, where the counter used to be — the counter point itself is
     // unchanged, so every system that aims at it still works.
-    { objectId: 'counter-lv1', x: 12, y: 11, z: 0 },
+    { objectId: 'counter-lv1', x: 12, y: 12.6, z: 0 },
     /*
      * At y 12.5, not 11.6 — the correction pass. The truck's 2.4 m body used
      * to reach y 10.4, which walled off the 10.5..11.0 walkway every parking
      * door now stands in (flood-probe evidence, stages 2-4). South of the
      * counter line the body reads as the kitchen behind the window.
      */
-    { objectId: 'truck', x: 10.6, y: 12.5, z: 0 },
-    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the lit sign
-    { objectId: 'grill-lv1', x: 13.2, y: 11.9, z: 0 }, // the kitchen, now visible
-    { objectId: 'fryer', x: 14.1, y: 11.9, z: 0 },
+    { objectId: 'truck', x: 10.6, y: 14.1, z: 0 },
+    { objectId: 'sign', x: 9.5, y: 13.1, z: 0 }, // the lit sign
+    { objectId: 'grill-lv1', x: 13.2, y: 13.5, z: 0 }, // the kitchen, now visible
+    { objectId: 'fryer', x: 14.1, y: 13.5, z: 0 },
     /*
      * The original hand-painted stand, kept. GAME_DESIGN_DOCUMENT §7: "oyuncu,
      * ilk günkü limonata tezgâhının hâlâ bir köşede durduğunu görebilmelidir".
      * It is decorative from here on and it is the single clearest signal that
      * this is the same place rather than a new level.
      */
-    { objectId: 'counter-lv1', x: 22.2, y: 15.6, z: 0 },
+    { objectId: 'counter-lv1', x: 6.5, y: 11.2, z: 0 },
 
     // The roadside, unchanged from Stage 1. Same trees, same corner, same lamp:
     // this is the continuity the evolution is measured against.
@@ -114,8 +114,8 @@ export const STAGE2_LAYOUT: StageLayout = {
     { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 },
     // Both repositioned by the correction pass: the bin's old cell is now a
     // waiting spot, and the barrier's old verge is inside the marked layby.
-    { objectId: 'bin', x: 21.2, y: 12.6, z: 0 },
-    { objectId: 'barrier', x: 23.2, y: 11.6, z: 0 },
+    { objectId: 'bin', x: 21.2, y: 14.0, z: 0 },
+    { objectId: 'barrier', x: 23.2, y: 13.2, z: 0 },
   ],
 
   tables: [],

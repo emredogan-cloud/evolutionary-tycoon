@@ -806,7 +806,17 @@ export class WorldScene extends Phaser.Scene {
     const upperAtlas = upper === null ? undefined : this.assets?.atlasOf(upper);
     if (upper !== null && upperAtlas !== undefined) {
       const lowerInfo = this.assets?.info(lower);
-      const top = view.screenY - ((lowerInfo?.height ?? 0) / ART_SCALE) * (lowerInfo?.originY ?? 1);
+      /*
+       * One pixel of overlap, and rounded. The halves are cut from one
+       * painting along a scanline; edge-to-edge stacking exposed that cut as
+       * a hairline (odd source heights land the joint on a half pixel, and
+       * both cut rows carry antialiased alpha). Rounding pins the joint to a
+       * whole pixel and the overlap tucks the upper's soft edge behind the
+       * lower's, which is invisible on every split object and exactly what
+       * hides a seam that is genuinely zero data wide.
+       */
+      const top =
+        Math.round(view.screenY - ((lowerInfo?.height ?? 0) / ART_SCALE) * (lowerInfo?.originY ?? 1)) + 1;
       const upperSprite = this.quadFor(quad, upperAtlas, upper);
       // The upper half's anchor is its own bottom centre (`assets:import`), so
       // putting that on the lower half's top edge is what makes the two meet.
@@ -837,32 +847,17 @@ export class WorldScene extends Phaser.Scene {
    * arithmetic on scroll and zoom directly, so it is correct at every zoom by
    * construction.
    */
-  private vignette: Phaser.GameObjects.Rectangle[] = [];
-
   private layoutVignette(): void {
-    if (this.vignette.length === 0) {
-      for (let i = 0; i < 4; i++) {
-        const band = this.add.rectangle(0, 0, 1, 1, 0x05070b, 0.1).setOrigin(0, 0);
-        band.setDepth(1_000_000);
-        this.vignette.push(band);
-      }
-    }
-
-    const camera = this.cameras.main;
-    const viewW = camera.width / camera.zoom;
-    const viewH = camera.height / camera.zoom;
-    const left = camera.scrollX + (camera.width - viewW) / 2;
-    const top = camera.scrollY + (camera.height - viewH) / 2;
-    // One quiet 6% band per edge at 0.10 — measured against the goldens as
-    // the strongest falloff that never reads as a frame.
-    const bandH = viewH * 0.06;
-    const bandW = viewW * 0.06;
-
-    const [north, south, west, east] = this.vignette;
-    north?.setPosition(left, top).setSize(viewW, bandH);
-    south?.setPosition(left, top + viewH - bandH).setSize(viewW, bandH);
-    west?.setPosition(left, top).setSize(bandW, viewH);
-    east?.setPosition(left + viewW - bandW, top).setSize(bandW, viewH);
+    /*
+     * Deliberately empty — the stage-1 expansion pass removed the four edge
+     * bands outright. The user identified them precisely: "a very faint
+     * black 2-3 cm overlay around the four edges", and at any strength a
+     * screen-edge rectangle reads as a frame around the world rather than as
+     * light. The environmental depth treatment is the day/weather tint and
+     * the world's own falloff (`EnvironmentLayer`); nothing camera-fixed
+     * darkens the rim any more. The method stays (called on update/resize)
+     * so reinstating a treatment remains a one-place change.
+     */
   }
 
   private cameraBounds(): CameraBounds {

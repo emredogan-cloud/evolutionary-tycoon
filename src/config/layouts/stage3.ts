@@ -82,10 +82,10 @@ export const STAGE3_LAYOUT: StageLayout = {
    * between the parking rows, which stays open at every later stage too.
    */
   waitingArea: [
-    { x: 16.2, y: 11.6 },
-    { x: 17.1, y: 11.6 },
-    { x: 18.0, y: 11.6 },
-    { x: 18.9, y: 11.6 },
+    { x: 16.2, y: 13.0 },
+    { x: 17.1, y: 13.0 },
+    { x: 18.0, y: 13.0 },
+    { x: 18.9, y: 13.0 },
     { x: 4.0, y: 14.2 },
     { x: 4.9, y: 14.2 },
     { x: 5.8, y: 14.2 },
@@ -96,13 +96,19 @@ export const STAGE3_LAYOUT: StageLayout = {
     { x: 4.0, y: 15.0 },
   ],
 
+  /*
+   * Reflowed for the deeper stand (counter y 12.6, kitchen L at 13.8/15.0):
+   * the dining block keeps its 2.2 m grid but starts east of the kitchen and
+   * below the waiting row, and the big broadleaf moves to the west corner so
+   * t3/t6 have their chair clearance.
+   */
   tables: [
-    { id: 't1', x: 15.2, y: 13.4, seats: 2 },
-    { id: 't2', x: 17.4, y: 13.4, seats: 2 },
-    { id: 't3', x: 19.6, y: 13.4, seats: 4 },
-    { id: 't4', x: 15.2, y: 15.6, seats: 4 },
-    { id: 't5', x: 17.4, y: 15.6, seats: 4 },
-    { id: 't6', x: 19.6, y: 15.6, seats: 6 },
+    { id: 't1', x: 16.6, y: 14.8, seats: 2 },
+    { id: 't2', x: 18.8, y: 14.8, seats: 2 },
+    { id: 't3', x: 21.0, y: 14.8, seats: 4 },
+    { id: 't4', x: 16.6, y: 16.8, seats: 4 },
+    { id: 't5', x: 18.8, y: 16.8, seats: 4 },
+    { id: 't6', x: 21.0, y: 16.8, seats: 6 },
   ],
 
   /*
@@ -114,27 +120,28 @@ export const STAGE3_LAYOUT: StageLayout = {
    * scattered, so the dining room reads as seating rather than as furniture.
    */
   statics: [
-    { objectId: 'counter-lv2', x: 12, y: 11, z: 0 }, // the counter, now indoors
-    { objectId: 'door', x: 10.6, y: 11.6, z: 0 },
-    { objectId: 'sign', x: 9.5, y: 11.5, z: 0 },
-    { objectId: 'window', x: 13.4, y: 12.6, z: 0 }, // building frontage
-    { objectId: 'window', x: 21.4, y: 12.6, z: 0 },
+    { objectId: 'counter-lv2', x: 12, y: 12.6, z: 0 }, // the counter, now indoors
+    { objectId: 'door', x: 10.6, y: 13.2, z: 0 },
+    { objectId: 'sign', x: 9.5, y: 13.1, z: 0 },
+    { objectId: 'window', x: 13.4, y: 14.2, z: 0 }, // building frontage
+    { objectId: 'window', x: 21.4, y: 14.2, z: 0 },
 
     // The kitchen line, behind the counter.
-    { objectId: 'grill-lv2', x: 13.2, y: 10.1, z: 0 },
-    { objectId: 'fryer', x: 14.1, y: 10.1, z: 0 },
-    { objectId: 'drink', x: 15.0, y: 10.1, z: 0 },
-    { objectId: 'pass', x: 12.9, y: 11.6, z: 0 },
+    { objectId: 'grill-lv2', x: 13.2, y: 13.8, z: 0 },
+    { objectId: 'fryer', x: 14.1, y: 13.8, z: 0 },
+    { objectId: 'drink', x: 15.0, y: 13.8, z: 0 },
+    { objectId: 'pass', x: 12.9, y: 12.0, z: 0 },
 
     // The original stand, still there.
-    { objectId: 'counter-lv1', x: 22.2, y: 15.6, z: 0 },
+    // The retired first stand, beside the west walkway where it blocks nobody.
+    { objectId: 'counter-lv1', x: 6.5, y: 11.2, z: 0 },
     // Moved from (4, 15): it stood on p8's door and `navigationIntact` said so.
     { objectId: 'tree-broadleaf-02', x: 1.5, y: 9.6, z: 0 },
     // And moved from (6, 13), which was inside the respaced p6.
     { objectId: 'bin', x: 11.8, y: 17.2, z: 0 },
 
     // The roadside, carried through from Stage 1 unchanged.
-    { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
+    { objectId: 'tree-broadleaf-01', x: 1.2, y: 17.2, z: 0 },
     { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
     { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
     { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 },

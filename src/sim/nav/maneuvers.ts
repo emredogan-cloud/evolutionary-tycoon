@@ -1,4 +1,5 @@
 import { euclidean } from '../math/length';
+import { LANE_SHADOW_BAND_METRES } from '@config/traffic';
 import type { StageLayout } from '@config/layouts/stage1';
 import type { LaneGraph } from './LaneGraph';
 import { Polyline } from './spline';
@@ -57,6 +58,54 @@ export interface Maneuver {
 export interface ManeuverSet {
   readonly entry: Maneuver;
   readonly exit: Maneuver;
+  /**
+   * Where on the exit a departing car waits for its merge gap — the stage-1
+   * expansion pass.
+   *
+   * The last arc position before the body enters ANY lane's shadow band
+   * (`LANE_SHADOW_BAND_METRES`), less a short setback. The old model drove to
+   * the curve's END — physically on the lane at the rejoin point — and waited
+   * there invisibly; once manoeuvring bodies started casting lane shadows,
+   * that wait blocked the exact lane whose gap it was waiting for, and the
+   * road plugged itself solid (measured: 385 spawns where 10 000 were
+   * expected). Waiting here instead, the body sits beside the road — for
+   * these bays, in the bay itself, exactly where a parallel-parked driver
+   * waits with the indicator on — traffic flows, a real gap can form, and
+   * the committed sweep is protected by the shadow from its first metre.
+   *
+   * Judged against the exit's OWN lane — the one it is merging into — and not
+   * against the other. On this road the bays sit 2.9 m from the far lane's
+   * centre line, so its band covers the bays themselves and a hold judged
+   * against every lane lands at the bay before the car has moved: the driver
+   * would then be "committed" for the whole six-second sweep and hold the
+   * near lane for all of it, which is a 45% throughput cost (measured: 8 181
+   * arrivals where 10 000 are expected, mean lane speed 5.5 m/s against a
+   * floor of 8). Crossing the far lane on the way out is the same transient
+   * as the left-turn crossing below Stage 4, which the project has already
+   * measured and deliberately left to the open road/lot decision
+   * (STAGE_2_4_CALIBRATION_REPORT §4) rather than pay for twice.
+   */
+  readonly exitHoldS: number;
+  /**
+   * The arc position where the exit enters its own lane's band — the tick the
+   * claim appears. `exitHoldS` is one setback before it.
+   */
+  readonly exitBandS: number;
+  /**
+   * Where on the lane this exit merges, in the lane's arc length.
+   *
+   * The lane's own `rejoinS` today, and carried on the set rather than read
+   * from the lane so the merge point is asked for in one place. A per-set
+   * variant that pushed each exit's merge a run-out past its own clearance
+   * point was built and measured during this pass — it cured a real backwards
+   * slide (an eastern bay's cubic overshoots the shared merge and hooks back
+   * along the road) but pushed the far bays' curves outside the camera's
+   * world bounds, which reads as a car driving through the scenery. The slide
+   * is instead handled where it does no harm: the shadow's nose ratchets and
+   * never reverses, and the gap clamp may cancel a tick's advance but never
+   * write a car backwards.
+   */
+  readonly rejoinS: number;
 }
 
 function cubicPoint(
@@ -220,6 +269,48 @@ function bayAt(
   return { x: here.x, y: here.y, heading: { x: dx / length, y: dy / length } };
 }
 
+/** A lane's straight-line frame, for projecting manoeuvre points onto it. */
+interface LaneFrame {
+  readonly ox: number;
+  readonly oy: number;
+  readonly dx: number;
+  readonly dy: number;
+}
+
+/** Sampling pitch for the hold-point walk. Once per table build, so cheap. */
+const HOLD_STEP_METRES = 0.2;
+/**
+ * How far short of the band the car actually stops. One metre keeps the
+ * bodywork's rounding out of the band without pushing short exits' hold
+ * points back into negative arc length.
+ */
+const HOLD_SETBACK_METRES = 1.0;
+
+/**
+ * See `ManeuverSet.exitHoldS`. A curve whose very start already lies inside a
+ * band (the pass-through route begins at the pull-in point, whose southern
+ * edge overhangs the west lane) holds at zero: the wait is imperfect there —
+ * a west-lane pass-through shadows its own lane while it waits, bounded by
+ * the patience ceiling — but the alternative was measured and is strictly
+ * worse: committing without any gap check rolled an eleven-metre bus over a
+ * car legitimately passing the merge, trapped it inside the shadow's claim,
+ * and deadlocked the whole lane's exits behind the pair.
+ */
+function exitBandEntry(exit: Maneuver, frame: LaneFrame | undefined): number {
+  if (frame === undefined) return exit.length;
+  const sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  for (let s = 0; s <= exit.length; s += HOLD_STEP_METRES) {
+    exit.path.sample(s, sample);
+    const relX = sample.x - frame.ox;
+    const relY = sample.y - frame.oy;
+    const lateral = Math.abs(relX * -frame.dy + relY * frame.dx);
+    if (lateral <= LANE_SHADOW_BAND_METRES) return s;
+  }
+  // Every exit ends on its own lane, so this is unreachable geometry — but a
+  // degenerate curve holding at its own end is the old behaviour, not a crash.
+  return exit.length;
+}
+
 /** One straight path per lane slot, from it to the slot in front. */
 function buildLaneAdvances(layout: StageLayout): readonly (Polyline | null)[] {
   const driveThru = layout.driveThru;
@@ -306,6 +397,14 @@ export class ManeuverTable {
     const sets: ManeuverSet[] = [];
     const passThrough: ManeuverSet[] = [];
 
+    // Every lane's straight-line frame, once — the hold point of any exit is
+    // judged against all of them (the far lane's exit crosses the near lane).
+    const laneFrames: LaneFrame[] = [];
+    for (let laneIndex = 0; laneIndex < this.laneCount; laneIndex++) {
+      lanes.lane(laneIndex).path.sample(0, sample);
+      laneFrames.push({ ox: sample.x, oy: sample.y, dx: sample.tangentX, dy: sample.tangentY });
+    }
+
     for (let laneIndex = 0; laneIndex < this.laneCount; laneIndex++) {
       const lane = lanes.lane(laneIndex);
 
@@ -325,6 +424,18 @@ export class ManeuverTable {
        * Through the apron, keeping the lane's own heading at both ends, so the
        * car sweeps in and straight back out in one continuous line.
        */
+      const ownFrame = laneFrames[laneIndex];
+      const passThroughExit = buildManeuver(
+        layout.pullIn.x,
+        layout.pullIn.y,
+        rejoinTangentX,
+        rejoinTangentY,
+        rejoinX,
+        rejoinY,
+        rejoinTangentX,
+        rejoinTangentY,
+      );
+      const passThroughBandS = exitBandEntry(passThroughExit, ownFrame);
       passThrough.push({
         entry: buildManeuver(
           entryX,
@@ -336,16 +447,10 @@ export class ManeuverTable {
           entryTangentX,
           entryTangentY,
         ),
-        exit: buildManeuver(
-          layout.pullIn.x,
-          layout.pullIn.y,
-          rejoinTangentX,
-          rejoinTangentY,
-          rejoinX,
-          rejoinY,
-          rejoinTangentX,
-          rejoinTangentY,
-        ),
+        exit: passThroughExit,
+        exitHoldS: Math.max(0, passThroughBandS - HOLD_SETBACK_METRES),
+        exitBandS: passThroughBandS,
+        rejoinS: lane.rejoinS,
       });
 
       for (let bayIndex = 0; bayIndex < this.bayCount; bayIndex++) {
@@ -383,6 +488,43 @@ export class ManeuverTable {
         const AHEAD = 4.5;
         const isRealBay = bayIndex < this.parkingBayCount && normLen > CLEAR;
 
+        const exitViaX = bay.x + bayTangentX * AHEAD - normX * CLEAR;
+        const exitViaY = bay.y + bayTangentY * AHEAD - normY * CLEAR;
+
+        const setRejoinS = lane.rejoinS;
+        lane.path.sample(setRejoinS, sample);
+        const mergeX = sample.x;
+        const mergeY = sample.y;
+        const mergeTangentX = sample.tangentX;
+        const mergeTangentY = sample.tangentY;
+
+        const exit = isRealBay
+          ? buildCorridorManeuver(
+              bay.x,
+              bay.y,
+              bayTangentX,
+              bayTangentY,
+              exitViaX,
+              exitViaY,
+              bayTangentX,
+              bayTangentY,
+              mergeX,
+              mergeY,
+              mergeTangentX,
+              mergeTangentY,
+            )
+          : buildManeuver(
+              bay.x,
+              bay.y,
+              bayTangentX,
+              bayTangentY,
+              mergeX,
+              mergeY,
+              mergeTangentX,
+              mergeTangentY,
+            );
+
+        const bandS = exitBandEntry(exit, ownFrame);
         sets.push({
           entry: isRealBay
             ? buildCorridorManeuver(
@@ -409,31 +551,10 @@ export class ManeuverTable {
                 bayTangentX,
                 bayTangentY,
               ),
-          exit: isRealBay
-            ? buildCorridorManeuver(
-                bay.x,
-                bay.y,
-                bayTangentX,
-                bayTangentY,
-                bay.x + bayTangentX * AHEAD - normX * CLEAR,
-                bay.y + bayTangentY * AHEAD - normY * CLEAR,
-                bayTangentX,
-                bayTangentY,
-                rejoinX,
-                rejoinY,
-                rejoinTangentX,
-                rejoinTangentY,
-              )
-            : buildManeuver(
-                bay.x,
-                bay.y,
-                bayTangentX,
-                bayTangentY,
-                rejoinX,
-                rejoinY,
-                rejoinTangentX,
-                rejoinTangentY,
-              ),
+          exit,
+          exitHoldS: Math.max(0, bandS - HOLD_SETBACK_METRES),
+          exitBandS: bandS,
+          rejoinS: setRejoinS,
         });
       }
     }

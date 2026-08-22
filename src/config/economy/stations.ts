@@ -47,9 +47,9 @@ export type Station = z.infer<typeof stationSchema>;
  * can point at, and so Phase 10's cooks have somewhere to walk to.
  */
 const STAGE1_STATIONS: Station[] = [
-  { id: 'drink-1', type: 'DRINK', x: 10.4, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
-  { id: 'grill-1', type: 'GRILL', x: 12, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
-  { id: 'prep-1', type: 'PREP', x: 13.6, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'drink-1', type: 'DRINK', x: 10.4, y: 13.8, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'grill-1', type: 'GRILL', x: 12, y: 13.8, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'prep-1', type: 'PREP', x: 13.6, y: 13.8, speed: 1, quality: 1, requiresPrepStations: 0 },
   /*
    * The two benches the `second-prep-station` upgrade unlocks — Phase 9.
    *
@@ -58,8 +58,8 @@ const STAGE1_STATIONS: Station[] = [
    * time, would make an order's station index mean different things in two
    * saves of the same build, which is precisely what "append only" forbids.
    */
-  { id: 'prep-2', type: 'PREP', x: 15.2, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 1 },
-  { id: 'prep-3', type: 'PREP', x: 8.8, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 2 },
+  { id: 'prep-2', type: 'PREP', x: 15.2, y: 13.8, speed: 1, quality: 1, requiresPrepStations: 1 },
+  { id: 'prep-3', type: 'PREP', x: 12, y: 15.0, speed: 1, quality: 1, requiresPrepStations: 2 },
 
   /*
    * The three stations the later menu needs — Phase 13.
@@ -74,9 +74,9 @@ const STAGE1_STATIONS: Station[] = [
    * second time here would put the same rule in two places and let the two
    * disagree.
    */
-  { id: 'fryer-1', type: 'FRYER', x: 17.0, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
-  { id: 'coffee-1', type: 'COFFEE', x: 7.4, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
-  { id: 'dessert-1', type: 'DESSERT', x: 18.6, y: 12.2, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'fryer-1', type: 'FRYER', x: 17.0, y: 13.8, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'coffee-1', type: 'COFFEE', x: 10.4, y: 15.0, speed: 1, quality: 1, requiresPrepStations: 0 },
+  { id: 'dessert-1', type: 'DESSERT', x: 18.6, y: 13.8, speed: 1, quality: 1, requiresPrepStations: 0 },
 ];
 
 /**
@@ -99,7 +99,7 @@ export function station(index: number): Station {
  * at once competes for the same waiter, and the oldest plate is the one going
  * cold. Phase 10's waiters read this; in Phase 8 the player is the waiter.
  */
-export const PASS = { x: 12, y: 11.6 } as const;
+export const PASS = { x: 12, y: 12.0 } as const;
 
 /**
  * How many plates the pass holds.

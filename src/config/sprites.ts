@@ -450,11 +450,20 @@ export const WORLD_OBJECTS = [
     // The trunk and its planter, not the canopy — see `blockFootprintX`.
     blockFootprintX: 0.9,
     blockFootprintY: 0.9,
+    /*
+     * Lower only — the stage-1 expansion pass. Offline reconstruction of the
+     * delivered pair (both halves stacked at their own anchors) proves they
+     * were never halves of one painting: `_lower` is a complete small tree,
+     * crown and all, and `_upper` is a second, larger loose canopy. Stacked,
+     * they made the floating-crown tree of the 2026-08-22 review captures.
+     * The lower alone is an honest complete tree; the true split pair is
+     * prompted for regeneration (NEW_STAGE1_WORLD, P309/P310) and restores
+     * `upperFrame` + the 5 m height when it lands.
+     */
     frame: `nature_tree_broadleaf-01_lower${SUFFIX}`,
-    upperFrame: `nature_tree_broadleaf-01_upper${SUFFIX}`,
-    footprintX: 3.0,
-    footprintY: 3.0,
-    heightMetres: 5.0,
+    footprintX: 2.4,
+    footprintY: 2.4,
+    heightMetres: 3.6,
   },
   {
     id: 'tree-broadleaf-02',

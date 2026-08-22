@@ -28,10 +28,10 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { recordOfflineTurnaway } from './offlineMeter';
 import { at } from '../math/typedArray';
-import type { LaneGraph } from '../nav/LaneGraph';
+import type { LaneGraph, LaneProjection } from '../nav/LaneGraph';
 import { LEFT_TURN } from '@config/traffic';
 import { DECISION_YES } from '../stores/VehicleStore';
-import type { ManeuverTable } from '../nav/maneuvers';
+import type { ManeuverSet, ManeuverTable } from '../nav/maneuvers';
 import { maneuverTableFor } from '../nav/maneuverTables';
 import type { LaneSample } from '../nav/spline';
 
@@ -88,6 +88,13 @@ const HELD_TURNER_SLACK_METRES = 1.5;
 /** Below this, a holder counts as standing. Matches the motion pin's floor. */
 const HELD_TURNER_SPEED_EPSILON = 0.5;
 
+/**
+ * Separates "clamped exactly onto the hold line" from "advanced past it".
+ * The hold branch writes `exitHoldS` verbatim, so an uncommitted waiter
+ * compares equal and a committed car is at least one tick's travel beyond.
+ */
+const EXIT_COMMIT_EPSILON = 1e-6;
+
 export class VehicleManeuverSystem implements SimSystem {
   readonly name = 'VehicleManeuverSystem' as const;
 
@@ -95,6 +102,8 @@ export class VehicleManeuverSystem implements SimSystem {
   private readonly sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
   /** A second scratch, so `nearestOnExit` cannot clobber the one it is comparing against. */
   private readonly exitScratch: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  /** Scratch for lane-frame projections — see `LaneGraph.project`. */
+  private readonly projection: LaneProjection = { along: 0, lateral: 0 };
 
   constructor(
     private readonly lanes: LaneGraph,
@@ -361,14 +370,88 @@ export class VehicleManeuverSystem implements SimSystem {
     customer.y = this.sample.y;
   }
 
+  /*
+   * The exit, since the stage-1 expansion pass, is three phases with the gap
+   * decision in the middle rather than at the end:
+   *
+   *   drive to the hold line → wait there for the gap → committed sweep
+   *
+   * The old shape drove to the curve's END — physically on the lane at the
+   * rejoin point — and waited there. While manoeuvring bodies were invisible
+   * to followers that was merely the pass-through artefact the 20:34 review
+   * captures show; the moment those bodies started casting lane shadows it
+   * became a car blocking the exact lane whose gap it was waiting for, and
+   * the road plugged itself solid (measured on this suite: 385 spawns where
+   * 10 000 are expected, three exiters stacked on one rejoin point, and a
+   * merger thrown four metres backwards through the queue by the overlap
+   * clamp). The hold line (`ManeuverSet.exitHoldS`) sits one setback outside
+   * every lane's shadow band — for these bays, in the bay itself, which is
+   * where a parallel-parked driver genuinely waits with the indicator on.
+   */
   private advanceExit(world: World, slot: number, seconds: number): void {
     const vehicles = world.vehicles;
     const laneIndex = at(vehicles.lane, slot);
     const bay = at(vehicles.parkingSlot, slot);
     if (laneIndex >= this.lanes.laneCount) return;
 
-    const maneuver = this.maneuvers.setFor(laneIndex, bay).exit;
-    const advanced = at(vehicles.maneuverS, slot) + MANEUVER_SPEED_METRES_PER_SECOND * seconds;
+    const set = this.maneuvers.setFor(laneIndex, bay);
+    const maneuver = set.exit;
+    const current = at(vehicles.maneuverS, slot);
+    const advanced = current + MANEUVER_SPEED_METRES_PER_SECOND * seconds;
+
+    // Short of the hold line: drive toward it.
+    if (advanced < set.exitHoldS) {
+      vehicles.maneuverS[slot] = advanced;
+      vehicles.speed[slot] = MANEUVER_SPEED_METRES_PER_SECOND;
+      this.carryCustomer(world, slot, maneuver.path);
+      return;
+    }
+
+    /*
+     * At or past the hold line, the customer is a road-rejoiner as far as
+     * their own state machine is concerned. Idempotent, and deliberately not
+     * confined to the waiting branch: a drive-thru car can join its exit
+     * curve past the hold line and must not skip the transition.
+     */
+    const customerSlot = at(vehicles.customerSlot, slot);
+    const customer =
+      customerSlot >= 0 && world.customers.isActive(customerSlot) ? world.customers.at(customerSlot) : null;
+    if (customer !== null && customer.state === STATE_EXITING) {
+      customer.state = STATE_REJOINING_ROAD;
+    }
+
+    if (current <= set.exitHoldS + EXIT_COMMIT_EPSILON) {
+      /*
+       * On the hold line and not yet committed: the gap decision.
+       *
+       * Two gaps, not one. A driver waits for a comfortable gap, and after
+       * long enough takes whatever will physically fit. Waiting indefinitely
+       * for the comfortable one is a deadlock at peak; merging regardless put
+       * a car two metres inside the one it merged in front of. The ceiling
+       * relaxes "comfortable" to "does not overlap", never past it.
+       *
+       * Exits also serialise per lane: every bay shares one rejoin point, so
+       * a second commitment to the same gap would materialise inside the
+       * first one's shadow.
+       */
+      const waited = at(vehicles.waitMs, slot);
+      const patient = waited >= REJOIN_MAX_WAIT_SECONDS * 1000;
+      const required = patient ? 0 : REJOIN_GAP_METRES;
+
+      if (
+        this.committedExiterOn(world, laneIndex, slot) ||
+        !this.exitClaimFree(world, laneIndex, slot, set, required)
+      ) {
+        vehicles.maneuverS[slot] = set.exitHoldS;
+        vehicles.waitMs[slot] = waited + seconds * 1000;
+        vehicles.speed[slot] = 0;
+        this.carryCustomer(world, slot, maneuver.path);
+        return;
+      }
+      vehicles.waitMs[slot] = 0;
+      // Falling through past the hold line IS the commitment: from here the
+      // sweep crosses the shadow band and the lane shadow protects the merge.
+    }
 
     if (advanced < maneuver.length) {
       vehicles.maneuverS[slot] = advanced;
@@ -380,47 +463,37 @@ export class VehicleManeuverSystem implements SimSystem {
     vehicles.maneuverS[slot] = maneuver.length;
     this.carryCustomer(world, slot, maneuver.path);
 
-    const customerSlot = at(vehicles.customerSlot, slot);
-    const customer =
-      customerSlot >= 0 && world.customers.isActive(customerSlot) ? world.customers.at(customerSlot) : null;
-    if (customer !== null && customer.state === STATE_EXITING) {
-      customer.state = STATE_REJOINING_ROAD;
-    }
-
     /*
-     * Wait for a gap before merging. Without this the car reappears on the lane
-     * on top of whatever was passing, and the follower model resolves the
-     * overlap with a brake hard enough to send a shock wave back up the road —
-     * a vehicle that left the car park would look like an accident.
-     */
-    /*
-     * Two gaps, not one.
+     * The car takes over exactly the road its own shadow was already
+     * claiming, and no more.
      *
-     * A driver waits for a comfortable gap, and after long enough takes
-     * whatever will physically fit. Waiting indefinitely for the comfortable one
-     * is a deadlock at peak — cars accumulate at the mouth of the lot until
-     * nothing can convert — but merging regardless is worse: it put a car two
-     * metres inside the one it merged in front of, which the follower model then
-     * resolved with a shock wave up the road.
+     * `laneS` on a manoeuvring slot is not stale bookkeeping: the motion
+     * system writes the shadow's projected nose there every tick, so at the
+     * end of the sweep it already holds this body's honest along-lane
+     * position — usually a little downstream of the lane's nominal merge
+     * point, because the sweep runs out past it. Materialising at the nominal
+     * point instead put the car's REAR behind where the claim's rear had
+     * been, i.e. into road the follower behind had legitimately closed up
+     * into, and the two then deadlocked: the merger waited for the follower
+     * to clear a space the follower could not leave, because the merger's own
+     * shadow was what had stopped it (measured: an 11 m bus and a sedan
+     * frozen for thirty simulated minutes, taking every later exit on that
+     * lane down with them — 571 spawns where 10 000 are expected).
      *
-     * So the ceiling relaxes the requirement from "comfortable" to "does not
-     * overlap", and never past it. The bay is already free by this point, so a
-     * driver still waiting is not holding a space anyone else could use.
+     * Taking the further-downstream of the two makes the handover a no-op in
+     * road terms — the same metal, the same metres — so nothing behind has to
+     * move for it, and the check below only has to rule out rear-ending
+     * something ahead.
      */
-    const lane = this.lanes.lane(laneIndex);
-    const waited = at(vehicles.waitMs, slot);
-    const patient = waited >= REJOIN_MAX_WAIT_SECONDS * 1000;
-    const required = patient ? 0 : REJOIN_GAP_METRES;
-
-    if (!this.rejoinClear(world, laneIndex, lane.rejoinS, required)) {
-      vehicles.waitMs[slot] = waited + seconds * 1000;
+    const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
+    const mergeAt = Math.max(set.rejoinS, at(vehicles.laneS, slot));
+    if (!this.rejoinNoseFree(world, laneIndex, mergeAt, spec?.lengthMetres ?? 4.5)) {
       vehicles.speed[slot] = 0;
       return;
     }
-    vehicles.waitMs[slot] = 0;
 
     vehicles.state[slot] = VEHICLE_ON_ROAD;
-    vehicles.laneS[slot] = lane.rejoinS;
+    vehicles.laneS[slot] = mergeAt;
     vehicles.maneuverS[slot] = 0;
     vehicles.speed[slot] = MANEUVER_SPEED_METRES_PER_SECOND;
     vehicles.parkingSlot[slot] = -1;
@@ -661,25 +734,154 @@ export class VehicleManeuverSystem implements SimSystem {
       if (at(vehicles.parkingSlot, slot) !== bay) continue;
 
       /*
-       * A car sitting at the end of its exit curve waiting for a gap is at the
-       * lane edge, not in the bay — it still names the bay because that is how
-       * it remembers which curve it is on. Counting it would let one driver
-       * waiting for a gap hold a space nobody can use, which at peak is most of
-       * the car park.
+       * A departing car holds its bay until it COMMITS to the merge — the
+       * stage-1 expansion pass. The hold line sits in the bay for these
+       * bays, so a driver waiting for a gap is physically in the space; the
+       * old rule (free once the exit curve completes) dated from when the
+       * wait happened at the lane edge, and under the new hold it would
+       * assign a bay whose occupant is still sitting in it. Once committed
+       * the body is genuinely gone from the bay and the space frees while
+       * the sweep finishes.
        */
-      if (state === VEHICLE_EXITING && this.exitComplete(world, slot)) continue;
+      if (state === VEHICLE_EXITING && this.exitCommitted(world, slot)) continue;
       return true;
     }
     return false;
   }
 
   /** True when this vehicle has driven the whole of its exit curve. */
-  private exitComplete(world: World, slot: number): boolean {
+  /**
+   * True once a departing car has advanced past its hold line — the gap was
+   * taken, the sweep is under way, and the body no longer stands in the bay.
+   */
+  private exitCommitted(world: World, slot: number): boolean {
     const vehicles = world.vehicles;
     const laneIndex = at(vehicles.lane, slot);
     if (laneIndex >= this.lanes.laneCount) return true;
-    const exit = this.maneuvers.setFor(laneIndex, at(vehicles.parkingSlot, slot)).exit;
-    return at(vehicles.maneuverS, slot) >= exit.length;
+    const set = this.maneuvers.setFor(laneIndex, at(vehicles.parkingSlot, slot));
+    return at(vehicles.maneuverS, slot) > set.exitHoldS + EXIT_COMMIT_EPSILON;
+  }
+
+  /**
+   * Is the road this departure is about to stand in free?
+   *
+   * The pull-out decision. A driver leaving a layby cannot check a gap at the
+   * merge point and then drive slowly to it: the sweep takes four seconds at
+   * manoeuvring speed while through traffic covers fifty metres, which is
+   * more than the whole lane. Waiting for a gap that big is waiting forever —
+   * measured, exactly that: exits starved and the road ran at 391 spawns
+   * where 10 000 are expected. What actually happens on a road is the other
+   * way round: the car takes the lane and the traffic behind yields, which is
+   * what the directive asks for in as many words and what the lane shadow
+   * does from the moment of commitment.
+   *
+   * So the question is only whether the FIRST metres of that claim are free —
+   * the body's own footprint where it stands, plus `comfort` behind for a
+   * driver who is not yet desperate. Everything downstream takes care of
+   * itself: the claim's nose creeps forward at 2.6 m/s and everything ahead
+   * of it on the lane is doing 13.9, so a claim can never overtake a car it
+   * did not start on top of. When `comfort` decays to zero with waiting, what
+   * is left is the physical floor — no two bodies in the same metres — and
+   * that part is never negotiable, because a claim that appeared over a car
+   * would trap it: it cannot drive out of a claim, and the claim cannot
+   * materialise over it.
+   */
+  /**
+   * A car standing at the mouth of its own turn, waiting to cross.
+   *
+   * It is not traffic as far as a merging car is concerned — Phase 15. On a
+   * crossing lane the entry mouth sits a few metres upstream of the merge
+   * point, and a driver holding there is *leaving* the lane: they will never
+   * reach the merger, and the road ahead of them is exactly the space the
+   * merger is entering. Counting them starved the merge for a measured
+   * eighteen minutes the first time Stage 4's continuous converts kept a
+   * rolling holder at the mouth — and did so again the moment this pass
+   * replaced the old merge check without carrying the exemption across.
+   * Narrow on purpose: on the road, committed to the turn, at the mouth, and
+   * essentially stopped.
+   */
+  private isHeldTurner(world: World, slot: number, laneIndex: number): boolean {
+    const vehicles = world.vehicles;
+    const lane = this.lanes.lane(laneIndex);
+    return (
+      lane.crossesOnEntry &&
+      at(vehicles.decision, slot) === DECISION_YES &&
+      at(vehicles.laneS, slot) >= lane.entryS - HELD_TURNER_SLACK_METRES &&
+      at(vehicles.speed, slot) < HELD_TURNER_SPEED_EPSILON
+    );
+  }
+
+  private exitClaimFree(
+    world: World,
+    laneIndex: number,
+    slot: number,
+    set: ManeuverSet,
+    comfort: number,
+  ): boolean {
+    const vehicles = world.vehicles;
+    const own = ARCHETYPE_SPECS[at(vehicles.archetype, slot)]?.lengthMetres ?? MERGING_CAR_LENGTH_METRES;
+
+    set.exit.path.sample(set.exitBandS, this.exitScratch);
+    this.lanes.project(laneIndex, this.exitScratch.x, this.exitScratch.y, this.projection);
+
+    const from = this.projection.along - own - comfort;
+    const to = this.projection.along + MERGE_CLEARANCE_METRES;
+
+    for (let other = 0; other < vehicles.scanLimit; other++) {
+      if (other === slot) continue;
+      if (!vehicles.isActive(other)) continue;
+      if (at(vehicles.state, other) !== VEHICLE_ON_ROAD) continue;
+      if (at(vehicles.lane, other) !== laneIndex) continue;
+      if (this.isHeldTurner(world, other, laneIndex)) continue;
+
+      const nose = at(vehicles.laneS, other);
+      const rear = nose - (ARCHETYPE_SPECS[at(vehicles.archetype, other)]?.lengthMetres ?? 4.5);
+      if (rear < to && nose > from) return false;
+    }
+    return true;
+  }
+
+  /**
+   * True while any other departing car on this lane is mid-sweep. Every bay
+   * on a lane shares one rejoin point, so exits serialise: a second
+   * commitment to the same gap materialises inside the first one's shadow,
+   * and the overlap clamp resolves that by throwing the newcomer backwards
+   * through the queue (measured: exactly minus one body length).
+   */
+  private committedExiterOn(world: World, laneIndex: number, except: number): boolean {
+    const vehicles = world.vehicles;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (slot === except) continue;
+      if (!vehicles.isActive(slot)) continue;
+      if (at(vehicles.state, slot) !== VEHICLE_EXITING) continue;
+      if (at(vehicles.lane, slot) !== laneIndex) continue;
+      if (this.exitCommitted(world, slot)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * The materialisation floor: no on-road body may overlap the space the
+   * merger is about to occupy — `[rejoinS − length, rejoinS]`, plus front
+   * clearance. Behind is judged exactly, no comfort: the shadow's follower
+   * stands one jam gap short of this boundary by construction, and widening
+   * it would deadlock completion against the very queue the shadow built.
+   */
+  private rejoinNoseFree(world: World, laneIndex: number, rejoinS: number, mergerLength: number): boolean {
+    const vehicles = world.vehicles;
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (!vehicles.isActive(slot)) continue;
+      if (at(vehicles.state, slot) !== VEHICLE_ON_ROAD) continue;
+      if (at(vehicles.lane, slot) !== laneIndex) continue;
+      if (this.isHeldTurner(world, slot, laneIndex)) continue;
+      const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
+      const length = spec?.lengthMetres ?? 4.5;
+      const nose = at(vehicles.laneS, slot);
+      if (nose > rejoinS - mergerLength && nose - length < rejoinS + MERGE_CLEARANCE_METRES) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -688,7 +890,7 @@ export class VehicleManeuverSystem implements SimSystem {
    * The conflict point is the near lane's `entryS`: both pull-ins converge on
    * the same apron, so the box a crossing car sweeps sits at the near lane's
    * turn. Oncoming means "upstream of the box within the current gap" —
-   * distance-based like `rejoinClear`, because at these speeds a distance is a
+   * distance-based like the merge check, because at these speeds a distance is a
    * time and one fewer moving part is one fewer way to disagree with the IDM.
    */
   private oncomingClear(world: World, waitedMs: number): boolean {
@@ -715,53 +917,6 @@ export class VehicleManeuverSystem implements SimSystem {
       const delta = near.entryS - at(vehicles.laneS, slot);
       // Approaching within the gap, or still inside the conflict box.
       if (delta > -LEFT_TURN.conflictBoxMetres && delta < required) return false;
-    }
-    return true;
-  }
-
-  /**
-   * Room to merge at `rejoinS`, with `comfort` metres of margin behind.
-   *
-   * The margin ahead is never negotiable — it is the leader's own length, and
-   * below it the two cars are inside each other. `comfort` is what a patient
-   * driver eventually gives up on.
-   */
-  private rejoinClear(world: World, laneIndex: number, rejoinS: number, comfort: number): boolean {
-    const vehicles = world.vehicles;
-    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
-      if (!vehicles.isActive(slot)) continue;
-      if (at(vehicles.state, slot) !== VEHICLE_ON_ROAD) continue;
-      if (at(vehicles.lane, slot) !== laneIndex) continue;
-
-      const spec = ARCHETYPE_SPECS[at(vehicles.archetype, slot)];
-      const length = spec?.lengthMetres ?? 4.5;
-      const delta = at(vehicles.laneS, slot) - rejoinS;
-
-      /*
-       * A held left-turner is not oncoming — Phase 15. On a crossing lane the
-       * entry mouth sits a few metres upstream of the merge point, and a car
-       * standing there waiting for its gap is *leaving* the lane: it will
-       * never reach the merger, and the road ahead of it is exactly the space
-       * the merger is entering. Counting it produced a measured 18-minute
-       * merge starvation the first time Stage 4's continuous converts kept a
-       * rolling holder at the mouth. Narrow on purpose: on the road, committed
-       * to the turn, at the mouth, and essentially stopped.
-       */
-      const lane = this.lanes.lane(laneIndex);
-      if (
-        lane.crossesOnEntry &&
-        at(vehicles.decision, slot) === DECISION_YES &&
-        at(vehicles.laneS, slot) >= lane.entryS - HELD_TURNER_SLACK_METRES &&
-        at(vehicles.speed, slot) < HELD_TURNER_SPEED_EPSILON
-      ) {
-        continue;
-      }
-
-      // Ahead of the merge point: the merging car must clear its back bumper.
-      if (delta > 0 && delta < length + MERGE_CLEARANCE_METRES) return false;
-      // Behind it: its front bumper, plus whatever comfort is being demanded.
-      const behind = MERGING_CAR_LENGTH_METRES + MERGE_CLEARANCE_METRES + comfort;
-      if (delta <= 0 && delta > -behind) return false;
     }
     return true;
   }

@@ -111,15 +111,17 @@ describe('why free placement was rejected', () => {
     }
 
     /*
-     * The correction pass made this the layout the original comment predicted:
-     * the x = 11 column now runs down the edge of the car-park mouth, and a
-     * sub-cell nudge decides which navigation cells a free-form wall covers —
-     * so the *verdict itself* flips with aim the player cannot see. That is
-     * the strongest form of the case for snapping, asserted rather than
-     * narrated: if it ever stops being true the design argument has changed
-     * and this test asks for it to be re-made.
+     * This assertion has now flipped twice, and both flips were the layout
+     * changing under it — which is exactly what it is for. The original lot
+     * was verdict-stable under sub-cell aim (=== 1); the correction pass's
+     * layby put the x = 11 column on the car-park mouth's critical cells and
+     * made the verdict aim-sensitive (> 1); the stage-1 expansion moved the
+     * counter to y 12.6 and the column's wall now meets the mouth the same
+     * way at every offset again. The stable reading is back, and the case
+     * for snapping rests — as it originally did — on WHICH cells get
+     * blocked, not on verdict instability.
      */
-    expect(verdicts.size).toBeGreaterThan(1);
+    expect(verdicts.size).toBe(1);
   });
 
   it('gives grid placement one verdict per cell, whatever the player aimed at', () => {
