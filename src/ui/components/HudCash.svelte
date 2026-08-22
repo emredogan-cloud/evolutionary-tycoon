@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { PlayerLevelView } from '@app/bridge/hudModel';
 
   /**
@@ -53,7 +54,21 @@
       return;
     }
     cancelAnimationFrame(raf);
-    const from = shown;
+    /*
+     * `untrack`, because reading `shown` bare makes it a dependency of this
+     * effect — every animation frame's write then re-entered the effect,
+     * cancelled the animation and started a new one from a fresh timestamp.
+     * At 60 Hz that self-chase merely wasted work; across the huge frame gaps
+     * a backgrounded tab produces it compounded into the runaway figure the
+     * correction pass photographed (₡ -2.5e16 painted over a ₡65 world).
+     * The counter also snaps across absurd jumps: a fixture that fast-forwards
+     * hours should not be watched counting for four hundred milliseconds.
+     */
+    const from = untrack(() => shown);
+    if (!Number.isFinite(from) || Math.abs(target - from) > 100_000) {
+      shown = target;
+      return;
+    }
     const start = performance.now();
     const step = (now: number): void => {
       const t = Math.min(1, (now - start) / 400);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { buyBuilt } from '../helpers/build';
 import { STAGE_REQUIREMENTS, requirementFor, stageRequirementListSchema } from '@config/progression';
 import { layoutForStage } from '@config/layouts';
 import { TICK_MS } from '@config/simulation';
@@ -7,7 +8,6 @@ import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 import { constructionProgress, isConstructing } from '@sim/systems/ConstructionSystem';
 import { beginConstruction, meetsRequirement } from '@sim/systems/ProgressionSystem';
 import { hire } from '@sim/systems/StaffSystem';
-import { buyUpgrade } from '@sim/systems/UpgradeSystem';
 
 const LONG_RUN_TIMEOUT_MS = 120_000;
 
@@ -36,7 +36,7 @@ function qualify(sim: Sim, stage: number): void {
   const funds = sim.world.economy.cash;
   sim.world.economy.cash = 100_000;
   for (let i = 0; i < requirement.upgradesBought; i++) {
-    buyUpgrade(sim.world, i % 2 === 0 ? 'hand-painted-sign' : 'menu-board');
+    buyBuilt(sim.world, i % 2 === 0 ? 'hand-painted-sign' : 'menu-board');
   }
   for (let i = 0; i < requirement.employeesHired; i++) hire(sim.world, 'cook', 0.5);
   sim.world.economy.cash = funds;

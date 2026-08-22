@@ -4,6 +4,7 @@ import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
 import { navigationIntact } from '../nav/reachability';
 import { placeObject, removeObject } from '../systems/LayoutSystem';
+import { advancePendingBuilds } from '../systems/ProgressionSystem';
 import { beginConstruction } from '../systems/ProgressionSystem';
 import { fire, hire } from '../systems/StaffSystem';
 import { buyUpgrade } from '../systems/UpgradeSystem';
@@ -185,6 +186,15 @@ interface CollectOfflineCommand {
   readonly gross: number;
   readonly expenses: number;
   readonly net: number;
+  /**
+   * The away time that was credited, sim-ms — the correction pass.
+   *
+   * Construction sites keep building while the player is away (the same
+   * clock evidence the earnings were credited from), and the command is the
+   * one door offline effects enter the world through. Zero for logs written
+   * before the field existed.
+   */
+  readonly creditedMs: number;
 }
 
 /** Take one back. */
@@ -223,7 +233,10 @@ export type CommandInput =
   | Omit<EvolveCommand, 'tick'>
   | Omit<PlaceCommand, 'tick'>
   | Omit<RemoveCommand, 'tick'>
-  | Omit<CollectOfflineCommand, 'tick'>
+  // `creditedMs` is optional on the way in (older callers and logs never
+  // carried it); the stamp writes an explicit zero so the applied command is
+  // always complete.
+  | (Omit<CollectOfflineCommand, 'tick' | 'creditedMs'> & { readonly creditedMs?: number })
   | Omit<SetAudioCommand, 'tick'>
   | Omit<SetMutedCommand, 'tick'>
   | Omit<SetReducedMotionCommand, 'tick'>
@@ -327,6 +340,13 @@ export function apply(world: World, command: Command): void {
        * player toward an evolution they did not play toward.
        */
       world.economy.cash = Math.max(MINIMUM_CASH, world.economy.cash + command.net);
+      /*
+       * Construction continued while the player was away. Advanced through
+       * the exact code the live tick runs, so a site that finishes offline
+       * applies its level and emits its event on collection — the moment the
+       * player is present to see the reveal.
+       */
+      advancePendingBuilds(world, command.creditedMs);
       break;
     }
     case 'SET_PRICE': {
@@ -389,6 +409,8 @@ export function stampCommand(input: CommandInput, tick: number): Command {
         gross: input.gross,
         expenses: input.expenses,
         net: input.net,
+        // Older callers may not carry it; zero is "no time to credit".
+        creditedMs: Math.max(0, input.creditedMs ?? 0),
       };
   }
 }

@@ -273,7 +273,7 @@ describe('the flow field cache', () => {
     expect(field.reachable(cx, cy)).toBe(false);
     // And the rest of the lot still works — the rebuild did not strand anyone.
     const out = { x: 0, y: 0 };
-    expect(local.directionAt(GOAL_COUNTER, STAGE1_LAYOUT.parking[0]?.door.x ?? 0, 10.1, out)).toBe(true);
+    expect(local.directionAt(GOAL_COUNTER, STAGE1_LAYOUT.parking[0]?.door.x ?? 0, 10.75, out)).toBe(true);
   });
 
   it('produces identical fields from identical input', () => {

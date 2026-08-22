@@ -101,6 +101,17 @@ const saveFileV10Schema = z.object({
   }),
   layout: z.object({
     placed: z.array(z.object({ objectId: z.string(), x: z.number(), y: z.number(), z: z.number() })),
+    // v12 — construction sites in flight survive a reload mid-build.
+    pendingBuilds: z.array(
+      z.object({
+        upgradeId: z.string(),
+        objectId: z.string(),
+        x: z.number(),
+        y: z.number(),
+        remainingMs: z.number().nonnegative(),
+        totalMs: z.number().positive(),
+      }),
+    ),
     revision: z.number().int().nonnegative(),
     upgrades: stringNumberEntries,
   }),

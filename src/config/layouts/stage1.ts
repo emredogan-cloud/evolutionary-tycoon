@@ -275,11 +275,27 @@ export const STAGE1_LAYOUT: StageLayout = {
    * the marked layby the renderer now paints along the frontage, with a coat
    * of clearance to the through lane.
    */
+  /*
+   * Two pairs flanking the stand, with the pedestrian mouth between them
+   * centred on the counter. The x positions are navigation geometry, not
+   * taste: a parked car blocks the grid to y 10.5 and the counter blocks
+   * 10.8-11.2, so the only walkable route from the doors to the queue runs
+   * through the mouth — which therefore has to be wider than the counter's
+   * own footprint (10.5..13.5), or the flood fill dead-ends into the
+   * counter's back and every placement in the game reads "blocks-navigation".
+   */
+  /*
+   * Bay centres at y 9.4 so the parked body (8.45..10.35) leaves the whole
+   * 10.5..11.0 navigation row free: that row is the doors' walkway, and it is
+   * what keeps every stage's venue objects (truck, diner) able to sit south
+   * of it without sealing the car park off — measured with the flood-fill
+   * probe across all four stages, not assumed.
+   */
   parking: [
-    { id: 'p1', x: 3.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 11.05 } },
-    { id: 'p2', x: 8.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 11.05 } },
-    { id: 'p3', x: 15.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 15.5, y: 11.05 } },
-    { id: 'p4', x: 20.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 20.5, y: 11.05 } },
+    { id: 'p1', x: 2.5, y: 9.4, heading: { x: 1, y: 0 }, door: { x: 2.5, y: 10.75 } },
+    { id: 'p2', x: 7.5, y: 9.4, heading: { x: 1, y: 0 }, door: { x: 7.5, y: 10.75 } },
+    { id: 'p3', x: 16.5, y: 9.4, heading: { x: 1, y: 0 }, door: { x: 16.5, y: 10.75 } },
+    { id: 'p4', x: 21.5, y: 9.4, heading: { x: 1, y: 0 }, door: { x: 21.5, y: 10.75 } },
   ],
 
   /*

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { buyBuilt } from '../../../helpers/build';
 import { UPGRADES } from '@config/economy/upgrades';
 import { Sim } from '@sim/core/Sim';
-import { buyUpgrade, effectValue } from '@sim/systems/UpgradeSystem';
+import { effectValue } from '@sim/systems/UpgradeSystem';
 
 /**
  * Minimum significance, measured rather than declared — ECONOMY_DESIGN §6.3.
@@ -33,7 +34,7 @@ function readyFor(id: string): Sim {
     const entry = UPGRADES.find((candidate) => candidate.id === target);
     if (entry === undefined) return;
     for (const prereq of entry.prereqs) buyChain(prereq);
-    if (target !== id) buyUpgrade(sim.world, target);
+    if (target !== id) buyBuilt(sim.world, target);
   };
   buyChain(id);
 
@@ -54,7 +55,7 @@ describe('buying an upgrade moves the number the simulation reads', () => {
     const sim = readyFor(id);
     const before = item.effects.map((effect) => effectValue(sim.world, effect.kind));
 
-    expect(buyUpgrade(sim.world, id), `${id} could not be bought at stage ${String(item.stage)}`).toBe('ok');
+    expect(buyBuilt(sim.world, id), `${id} could not be bought at stage ${String(item.stage)}`).toBe('ok');
 
     const after = item.effects.map((effect) => effectValue(sim.world, effect.kind));
     const moved = after.some((value, index) => Math.abs(value - (before[index] ?? 0)) > 1e-9);
@@ -77,11 +78,11 @@ describe('buying an upgrade moves the number the simulation reads', () => {
 
       const sim = readyFor(id);
       for (let level = 1; level < item.maxLevel; level++) {
-        expect(buyUpgrade(sim.world, id)).toBe('ok');
+        expect(buyBuilt(sim.world, id)).toBe('ok');
       }
 
       const before = item.effects.map((effect) => effectValue(sim.world, effect.kind));
-      expect(buyUpgrade(sim.world, id)).toBe('ok');
+      expect(buyBuilt(sim.world, id)).toBe('ok');
       const after = item.effects.map((effect) => effectValue(sim.world, effect.kind));
 
       const moved = after.some((value, index) => Math.abs(value - (before[index] ?? 0)) > 1e-9);
@@ -91,8 +92,8 @@ describe('buying an upgrade moves the number the simulation reads', () => {
 
   it('refuses to sell a level past the top', () => {
     const sim = readyFor('hand-painted-sign');
-    for (let level = 0; level < 4; level++) expect(buyUpgrade(sim.world, 'hand-painted-sign')).toBe('ok');
-    expect(buyUpgrade(sim.world, 'hand-painted-sign')).toBe('maxed');
+    for (let level = 0; level < 4; level++) expect(buyBuilt(sim.world, 'hand-painted-sign')).toBe('ok');
+    expect(buyBuilt(sim.world, 'hand-painted-sign')).toBe('maxed');
   });
 });
 
@@ -109,14 +110,14 @@ describe('the effects damp each other rather than compounding without limit', ()
     sim.world.progression.stage = 4;
 
     const base = effectValue(sim.world, 'visibility');
-    expect(buyUpgrade(sim.world, 'hand-painted-sign')).toBe('ok');
+    expect(buyBuilt(sim.world, 'hand-painted-sign')).toBe('ok');
     const first = effectValue(sim.world, 'visibility') - base;
 
     // Straight to the other visibility upgrade, through its prerequisites.
-    expect(buyUpgrade(sim.world, 'illuminated-sign')).toBe('ok');
-    expect(buyUpgrade(sim.world, 'neon-facade')).toBe('ok');
+    expect(buyBuilt(sim.world, 'illuminated-sign')).toBe('ok');
+    expect(buyBuilt(sim.world, 'neon-facade')).toBe('ok');
     const before = effectValue(sim.world, 'visibility');
-    expect(buyUpgrade(sim.world, 'roadside-pylon')).toBe('ok');
+    expect(buyBuilt(sim.world, 'roadside-pylon')).toBe('ok');
     const second = effectValue(sim.world, 'visibility') - before;
 
     expect(first, 'the first purchase did nothing').toBeGreaterThan(0);

@@ -166,6 +166,10 @@
                   >
                   {lock}
                 </span>
+              {:else if item.building}
+                <!-- Game minutes; one game minute is 500 sim-ms. No emoji —
+                     the reference interface carries painted icons or text. -->
+                <span class="price">İnşa · {Math.max(1, Math.ceil(item.buildRemainingMs / 500))} dk</span>
               {:else if item.level >= item.maxLevel}
                 <span class="price">Tam</span>
               {:else}

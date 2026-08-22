@@ -43,7 +43,7 @@ export const STAGE3_LAYOUT: StageLayout = {
      * Five metres is the original row's own spacing and leaves 0.5 m between
      * bumpers.
      */
-    { id: 'p6', x: 8.5, y: 12.4, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 10.9 } },
+    { id: 'p6', x: 8.5, y: 12.9, heading: { x: 1, y: 0 }, door: { x: 8.6, y: 11.3 } }, // see p5; door west of the sign's cells
     { id: 'p7', x: 3.5, y: 16.2, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 14.7 } },
     { id: 'p8', x: 8.5, y: 16.2, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 14.7 } },
   ],

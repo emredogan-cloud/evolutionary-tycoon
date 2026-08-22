@@ -1,4 +1,5 @@
 import { layoutForStage } from '@config/layouts';
+import { buildDurationMs } from '@config/economy/upgrades';
 import { CELL_SIZE_METRES } from '../nav/NavGrid';
 import type { World } from '../core/World';
 
@@ -86,6 +87,22 @@ export function placeObject(
     return 'blocks-navigation';
   }
 
+  /*
+   * The construction site — the correction pass. The object is real from this
+   * moment (it blocks navigation and holds its cell, exactly as before), but
+   * the renderer draws scaffolding over it until the site counts down, so
+   * placement reads as building rather than conjuring. Free decor takes the
+   * flat minimum duration.
+   */
+  world.layout.pendingBuilds.push({
+    upgradeId: '',
+    objectId,
+    x: snappedX,
+    y: snappedY,
+    remainingMs: buildDurationMs(0),
+    totalMs: buildDurationMs(0),
+  });
+
   world.eventQueue.emitObjectPlaced(objectId, snappedX, snappedY);
   return 'ok';
 }
@@ -158,7 +175,27 @@ export function removeObject(world: World, index: number): boolean {
   if (index < 0 || index >= world.layout.placed.length) return false;
   const removed = world.layout.placed.splice(index, 1)[0];
   world.layout.revision++;
-  if (removed !== undefined) world.eventQueue.emitObjectRemoved(removed.objectId, removed.x, removed.y);
+  if (removed !== undefined) {
+    /*
+     * An object removed mid-build takes its site with it — otherwise the
+     * scaffold finishes over empty ground. Matched on the placement triple;
+     * two objects cannot share a cell, so the match is unique.
+     */
+    const builds = world.layout.pendingBuilds;
+    for (let i = builds.length - 1; i >= 0; i--) {
+      const build = builds[i];
+      if (
+        build?.upgradeId === '' &&
+        build.objectId === removed.objectId &&
+        build.x === removed.x &&
+        build.y === removed.y
+      ) {
+        builds.splice(i, 1);
+        break;
+      }
+    }
+    world.eventQueue.emitObjectRemoved(removed.objectId, removed.x, removed.y);
+  }
   return true;
 }
 

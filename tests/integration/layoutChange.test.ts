@@ -174,7 +174,10 @@ describe('the navigation cache notices', () => {
     sim.world.economy.reputation = 100;
     for (let i = 0; i < 12; i++) sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'hand-painted-sign' });
     sim.dispatch({ t: 'HIRE', roleId: 'cook', skill: 0.5 });
-    sim.advance(5);
+    // Through the sign rungs' construction: purchases apply when their sites
+    // complete (the correction pass), and the milestone EVOLVE checks counts
+    // applied levels, not queued ones.
+    sim.advance(200);
     sim.dispatch({ t: 'EVOLVE' });
     sim.advance(400);
 

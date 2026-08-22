@@ -93,6 +93,10 @@ const MAX_SEATS = 4;
  */
 const TABLE_ID_BASE = -10_000;
 
+/** Placed decor ids live below the furniture range; sites below those. */
+const PLACED_ID_BASE = -30_000;
+const SITE_ID_BASE = -40_000;
+
 /**
  * The rig's resting torso height, subtracted so the bob is an offset from rest
  * rather than an absolute position.
@@ -179,6 +183,17 @@ export class WorldScene extends Phaser.Scene {
   private context!: RenderContext;
   /** Last seen upgrade revision, so statics are rebuilt only on a purchase. */
   private upgradeRevision = -1;
+  /** Last seen layout revision — placed decor and construction sites. */
+  private layoutRevision = -1;
+  /**
+   * Static entity id → row in the view's pending-build list, rebuilt with the
+   * statics. `drawStatic` looks a quad up here to decide whether it is a
+   * finished thing or a construction silhouette, and the per-frame site bars
+   * read their progress through the same rows.
+   */
+  private readonly pendingSiteByEntity = new Map<number, number>();
+  /** The construction sites' progress bars, cleared and redrawn per frame. */
+  private siteBars: Phaser.GameObjects.Graphics | null = null;
 
   /**
    * The stage whose lot is currently drawn — Phase 11.
@@ -407,8 +422,9 @@ export class WorldScene extends Phaser.Scene {
       this.drawSurfaces();
       this.registerStatics(view.upgradeLevels);
     }
-    if (view.upgradeRevision !== this.upgradeRevision) {
+    if (view.upgradeRevision !== this.upgradeRevision || view.layoutRevision !== this.layoutRevision) {
       this.upgradeRevision = view.upgradeRevision;
+      this.layoutRevision = view.layoutRevision;
       this.registerStatics(view.upgradeLevels);
     }
 
@@ -444,6 +460,7 @@ export class WorldScene extends Phaser.Scene {
     // Driven by the simulation's own figure, so a paused world holds a still
     // half-built building rather than finishing it on wall-clock time.
     this.construction.update(this.context.constructionProgress?.() ?? 0);
+    this.drawSiteBars(view);
     this.context.onFrame?.();
 
     this.overlays?.update(this.bridge.visible.length);
@@ -513,6 +530,7 @@ export class WorldScene extends Phaser.Scene {
     sprite.setVisible(true);
     sprite.setRotation(0);
     sprite.clearTint();
+    sprite.setAlpha(1);
     sprite.setFlipX(false);
     sprite.setScale(1 / ART_SCALE);
     return sprite;
@@ -767,6 +785,20 @@ export class WorldScene extends Phaser.Scene {
 
     const sprite = this.quadFor(index, atlas, lower);
     this.place(sprite, lower, view.screenX, view.screenY);
+    /*
+     * A construction site draws as a dark translucent silhouette of the thing
+     * being built — the shape says what is coming, the treatment says it is
+     * not here yet, and the reveal at completion is the untinted sprite
+     * simply taking its place. Reduced-motion safe: nothing animates but the
+     * bar, which moves at the speed of the build itself.
+     */
+    const site = this.pendingSiteByEntity.get(view.entityId);
+    if (site !== undefined) {
+      sprite.setTint(0x2b323d);
+      sprite.setAlpha(0.62);
+    } else {
+      sprite.setAlpha(1);
+    }
     let quad = index + 1;
 
     const upperName = spec.upperFrame;
@@ -780,6 +812,12 @@ export class WorldScene extends Phaser.Scene {
       // putting that on the lower half's top edge is what makes the two meet.
       upperSprite.setOrigin(0.5, 1);
       upperSprite.setPosition(view.screenX, top);
+      if (site !== undefined) {
+        upperSprite.setTint(0x2b323d);
+        upperSprite.setAlpha(0.62);
+      } else {
+        upperSprite.setAlpha(1);
+      }
       quad++;
     }
 
@@ -1450,7 +1488,102 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
+    /*
+     * Placed decor — the correction pass. `world.layout.placed` never reached
+     * the renderer at all: the build panel said "built" over a world with no
+     * sprite, which is the 2026-08-22 captures' invisible-purchase bug at its
+     * root. Rows come from the same view the frame is drawing.
+     */
+    this.pendingSiteByEntity.clear();
+    const view = this.context.readView();
+    for (let i = 0; i < view.placedCount; i++) {
+      const object = view.placed[i];
+      if (object === undefined) continue;
+      const variant = worldObjectIndex(object.objectId);
+      const entityId = PLACED_ID_BASE - i;
+      statics.push({
+        entityId,
+        x: object.x,
+        y: object.y,
+        z: object.z,
+        kind: variant < 0 ? kindIndexForTexture(object.objectId) : kindForWorldObject(variant),
+        variant,
+      });
+      // Still going up? The scaffold pass will draw this quad as a site.
+      for (let p = 0; p < view.pendingBuildCount; p++) {
+        const build = view.pendingBuilds[p];
+        if (
+          build?.upgradeId === '' &&
+          build.objectId === object.objectId &&
+          Math.abs(build.x - object.x) < 1e-6 &&
+          Math.abs(build.y - object.y) < 1e-6
+        ) {
+          this.pendingSiteByEntity.set(entityId, p);
+          break;
+        }
+      }
+    }
+
+    /*
+     * Upgrade construction sites: the bought thing, drawn as its own
+     * silhouette at its anchor until the timer lands the level (at which
+     * point the ordinary owned-upgrade pass above takes over). A site with
+     * nothing to place — a process upgrade — shows only on its card.
+     */
+    for (let p = 0; p < view.pendingBuildCount; p++) {
+      const build = view.pendingBuilds[p];
+      if (build === undefined || build.upgradeId === '' || build.objectId === '') continue;
+      const variant = worldObjectIndex(build.objectId);
+      if (variant < 0) continue;
+      const entityId = SITE_ID_BASE - p;
+      statics.push({
+        entityId,
+        x: build.x,
+        y: build.y,
+        z: 0,
+        kind: kindForWorldObject(variant),
+        variant,
+      });
+      this.pendingSiteByEntity.set(entityId, p);
+    }
+
     this.bridge.setStatics(statics);
+  }
+
+  /**
+   * Progress bars over the construction sites, one Graphics for all of them.
+   *
+   * World-space UI (the `worldUi` layer), driven by the simulation's own
+   * progress — the same figure the countdown cards show, so the two can
+   * never disagree. Cleared and redrawn per frame; a handful of sites is a
+   * handful of rectangles.
+   */
+  private drawSiteBars(view: Readonly<ReturnType<RenderContext['readView']>>): void {
+    if (this.siteBars === null) {
+      this.siteBars = this.add.graphics();
+      this.graph.layer('worldUi').add(this.siteBars);
+    }
+    const bars = this.siteBars;
+    bars.clear();
+    if (view.pendingBuildCount === 0) return;
+
+    for (let i = 0; i < view.pendingBuildCount; i++) {
+      const build = view.pendingBuilds[i];
+      if (build === undefined) continue;
+      // A process upgrade has no site in the world; its bar is on its card.
+      if (build.upgradeId !== '' && build.objectId === '') continue;
+      const screen = worldToScreen(build.x, build.y, 0, this.screenScratch);
+      const width = 46;
+      const height = 7;
+      const left = screen.x - width / 2;
+      const top = screen.y - 58;
+      bars.fillStyle(0x0c1017, 0.85);
+      bars.fillRect(left - 1, top - 1, width + 2, height + 2);
+      bars.fillStyle(0x2b323d, 1);
+      bars.fillRect(left, top, width, height);
+      bars.fillStyle(0xf4bc55, 1);
+      bars.fillRect(left, top, width * Math.min(1, Math.max(0, build.progress)), height);
+    }
   }
 
   /**

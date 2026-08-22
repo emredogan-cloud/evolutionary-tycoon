@@ -79,6 +79,12 @@ export interface UpgradeView {
   readonly maxLevel: number;
   readonly cost: number;
   readonly affordable: boolean;
+  /**
+   * A bought rung still going up — the correction pass. The card shows the
+   * countdown and refuses a second purchase until the site completes.
+   */
+  readonly building: boolean;
+  readonly buildRemainingMs: number;
   readonly worldChange: string;
   readonly consequence: string;
   readonly effects: readonly UpgradeEffectView[];

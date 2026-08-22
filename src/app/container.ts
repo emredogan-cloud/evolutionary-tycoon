@@ -19,6 +19,7 @@ import { debugOverlayEnabled } from '@app/debug/DebugOverlay';
 import { buildInfo } from '@platform/buildInfo';
 import { Sim } from '@sim/core/Sim';
 import { constructionProgress } from '@sim/systems/ConstructionSystem';
+import { advancePendingBuilds } from '@sim/systems/ProgressionSystem';
 import { buyUpgrade, nextUpgradeCost } from '@sim/systems/UpgradeSystem';
 import { reserveFor } from '@sim/systems/ProgressionSystem';
 import { hire } from '@sim/systems/StaffSystem';
@@ -215,6 +216,13 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
     sim.world.economy.cash += cost;
     buyUpgrade(sim.world, id);
   }
+  /*
+   * `?buy=` means "photograph the world with these owned", so the fixture
+   * completes the construction the purchase now starts — through the same
+   * code the live tick runs. A golden that wanted the scaffold itself would
+   * ask for it with `freezeAt` instead.
+   */
+  if (renderMode.buy.length > 0) advancePendingBuilds(sim.world, Number.MAX_SAFE_INTEGER);
 
   if (renderMode.freezeAt !== null && renderMode.freezeAt > 0) {
     if (renderMode.cook) {

@@ -2,7 +2,7 @@ import type { SpeedMultiplier } from '@config/simulation';
 import { SPEED_MULTIPLIERS } from '@config/simulation';
 import type { RngStates } from './Rng';
 import type { ClockState } from './Clock';
-import type { HiredEmployee, PlacedObject, Stage } from './types';
+import type { HiredEmployee, PlacedObject, Stage, PendingBuild } from './types';
 import type { World } from './World';
 
 /**
@@ -70,6 +70,8 @@ export interface WorldSnapshot {
   };
   readonly layout: {
     readonly placed: readonly PlacedObject[];
+    /** Construction sites in flight — the correction pass. */
+    readonly pendingBuilds: readonly PendingBuild[];
     /** Navigation invalidation counter — Phase 11. */
     readonly revision: number;
     readonly upgrades: readonly (readonly [string, number])[];
@@ -266,6 +268,7 @@ export function snapshotWorld(world: World): WorldSnapshot {
     },
     layout: {
       placed: world.layout.placed.map((object) => ({ ...object })),
+      pendingBuilds: world.layout.pendingBuilds.map((build) => ({ ...build })),
       revision: world.layout.revision,
       upgrades: sortedEntries(world.layout.upgrades),
     },
@@ -350,6 +353,7 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.economy.bucketElapsedMs = snapshot.economy.bucketElapsedMs;
 
   for (const object of snapshot.layout.placed) world.layout.placed.push({ ...object });
+  for (const build of snapshot.layout.pendingBuilds) world.layout.pendingBuilds.push({ ...build });
   world.layout.revision = snapshot.layout.revision;
   for (const [key, value] of snapshot.layout.upgrades) world.layout.upgrades.set(key, value);
 

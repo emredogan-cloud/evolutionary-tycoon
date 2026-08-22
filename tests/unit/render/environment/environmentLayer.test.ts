@@ -50,6 +50,7 @@ function fakeRect(): { rect: Phaser.GameObjects.Rectangle; log: RectLog } {
       return rect;
     },
     setSize: () => rect,
+    setPosition: () => rect,
   } as unknown as Phaser.GameObjects.Rectangle;
   return { rect, log };
 }
@@ -128,6 +129,8 @@ function rig(options: { reducedMotion?: boolean; noParticles?: boolean } = {}): 
       },
     },
     scale: { width: 1280, height: 720, on: () => undefined },
+    // The cover quads fit themselves to the camera's visible world rect now.
+    cameras: { main: { width: 1280, height: 720, zoom: 1, scrollX: 0, scrollY: 0 } },
   } as unknown as Phaser.Scene;
 
   const graph = { layer: () => ({ add: () => undefined }) } as unknown as SceneGraph;
