@@ -48,7 +48,20 @@ const ATLAS_DIR = join(import.meta.dirname, '..', '..', '..', 'public', 'atlas')
 function builtFrames(): Set<string> | null {
   if (!existsSync(ATLAS_DIR)) return null;
   const frames = new Set<string>();
-  for (const atlas of ['boot', 'ui', 'chars', 'vehicles', 'structures', 'props', 'nature', 'fx', 'bg']) {
+  // vehicles2/ui2 are the deferred tier — still real frames, still catalogued.
+  for (const atlas of [
+    'boot',
+    'ui',
+    'ui2',
+    'chars',
+    'vehicles',
+    'vehicles2',
+    'structures',
+    'props',
+    'nature',
+    'fx',
+    'bg',
+  ]) {
     const path = join(ATLAS_DIR, `${atlas}.json`);
     if (!existsSync(path)) continue;
     const sheet = JSON.parse(readFileSync(path, 'utf8')) as {
@@ -88,11 +101,23 @@ describe('the sprite catalogue', () => {
      * their art lands and a share flips, this loop starts covering them
      * automatically.
      */
+    /*
+     * West sides may resolve through the draw-time mirror (WorldScene flips
+     * the east partner, as the doll rig does) — the shipped-frame contract is
+     * "the frame or its mirror partner exists". The audited four still ship
+     * real west files and pass directly.
+     */
+    const MIRROR: Readonly<Record<string, string>> = { w: 'e', nw: 'ne', sw: 'se' };
     for (let archetype = 0; archetype < ARCHETYPE_SPECS.length; archetype++) {
       if ((ARCHETYPE_SPECS[archetype]?.baseShare ?? 0) <= 0) continue;
       for (const direction of SPRITE_DIRECTIONS) {
         const frame = vehicleFrame(archetype, direction);
-        expect(FRAMES?.has(frame), frame).toBe(true);
+        const partner = MIRROR[direction];
+        const mirrored =
+          partner === undefined
+            ? false
+            : FRAMES?.has(vehicleFrame(archetype, partner as (typeof SPRITE_DIRECTIONS)[number])) === true;
+        expect(FRAMES?.has(frame) === true || mirrored, frame).toBe(true);
       }
     }
   });

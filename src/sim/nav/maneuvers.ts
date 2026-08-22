@@ -128,6 +128,58 @@ export function buildManeuver(
 }
 
 /**
+ * A bay approach that cannot clip the neighbours — consolidation pass, §15.
+ *
+ * The single-curve entry ran from the lane's mouth straight at the bay, and a
+ * car bound for bay 3 swept through the airspace of parked bays 1–2 on the
+ * way. This one travels a corridor: the same cubic language, but *via* a
+ * clearance point 1.6 m off the bay line and a car-length before (entry) or
+ * after (exit) the bay, so the sweep happens beside empty apron and the final
+ * swing happens beside the car's own bay only. Two flattened cubics share one
+ * polyline, so arc-length integration and `positionOf` see a single path —
+ * nothing downstream knows the shape changed.
+ */
+function buildCorridorManeuver(
+  startX: number,
+  startY: number,
+  startTangentX: number,
+  startTangentY: number,
+  viaX: number,
+  viaY: number,
+  viaTangentX: number,
+  viaTangentY: number,
+  endX: number,
+  endY: number,
+  endTangentX: number,
+  endTangentY: number,
+): Maneuver {
+  const first = buildManeuver(
+    startX,
+    startY,
+    startTangentX,
+    startTangentY,
+    viaX,
+    viaY,
+    viaTangentX,
+    viaTangentY,
+  );
+  const second = buildManeuver(viaX, viaY, viaTangentX, viaTangentY, endX, endY, endTangentX, endTangentY);
+  const points: { x: number; y: number }[] = [];
+  const sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  for (const part of [first, second]) {
+    const steps = FLATTEN_SEGMENTS;
+    for (let i = 0; i <= steps; i++) {
+      part.path.sample((i / steps) * part.length, sample);
+      const previous = points[points.length - 1];
+      if (previous !== undefined && euclidean(sample.x - previous.x, sample.y - previous.y) < 1e-6) continue;
+      points.push({ x: sample.x, y: sample.y });
+    }
+  }
+  const path = new Polyline(points);
+  return { path, length: path.length };
+}
+
+/**
  * Every (lane, bay) manoeuvre pair for a stage.
  *
  * Indexed `laneIndex * bayCount + bayIndex`, which is the flat layout the
@@ -311,27 +363,77 @@ export class ManeuverTable {
         const bayTangentX = bay.heading.x * sign;
         const bayTangentY = bay.heading.y * sign;
 
+        /*
+         * The clearance normal: from the road toward the bay row, perpendicular
+         * to the bay axis. The corridor rides 1.6 m short of the bay line —
+         * beyond a car's half-width plus the door margin — so a parked
+         * neighbour is never inside the sweep.
+         */
+        const dX = bay.x - entryX;
+        const dY = bay.y - entryY;
+        const along = dX * bayTangentX + dY * bayTangentY;
+        let normX = dX - along * bayTangentX;
+        let normY = dY - along * bayTangentY;
+        const normLen = euclidean(normX, normY);
+        if (normLen > 1e-6) {
+          normX /= normLen;
+          normY /= normLen;
+        }
+        const CLEAR = 1.6;
+        const AHEAD = 4.5;
+        const isRealBay = bayIndex < this.parkingBayCount && normLen > CLEAR;
+
         sets.push({
-          entry: buildManeuver(
-            entryX,
-            entryY,
-            entryTangentX,
-            entryTangentY,
-            bay.x,
-            bay.y,
-            bayTangentX,
-            bayTangentY,
-          ),
-          exit: buildManeuver(
-            bay.x,
-            bay.y,
-            bayTangentX,
-            bayTangentY,
-            rejoinX,
-            rejoinY,
-            rejoinTangentX,
-            rejoinTangentY,
-          ),
+          entry: isRealBay
+            ? buildCorridorManeuver(
+                entryX,
+                entryY,
+                entryTangentX,
+                entryTangentY,
+                bay.x - bayTangentX * AHEAD - normX * CLEAR,
+                bay.y - bayTangentY * AHEAD - normY * CLEAR,
+                bayTangentX,
+                bayTangentY,
+                bay.x,
+                bay.y,
+                bayTangentX,
+                bayTangentY,
+              )
+            : buildManeuver(
+                entryX,
+                entryY,
+                entryTangentX,
+                entryTangentY,
+                bay.x,
+                bay.y,
+                bayTangentX,
+                bayTangentY,
+              ),
+          exit: isRealBay
+            ? buildCorridorManeuver(
+                bay.x,
+                bay.y,
+                bayTangentX,
+                bayTangentY,
+                bay.x + bayTangentX * AHEAD - normX * CLEAR,
+                bay.y + bayTangentY * AHEAD - normY * CLEAR,
+                bayTangentX,
+                bayTangentY,
+                rejoinX,
+                rejoinY,
+                rejoinTangentX,
+                rejoinTangentY,
+              )
+            : buildManeuver(
+                bay.x,
+                bay.y,
+                bayTangentX,
+                bayTangentY,
+                rejoinX,
+                rejoinY,
+                rejoinTangentX,
+                rejoinTangentY,
+              ),
         });
       }
     }

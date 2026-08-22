@@ -78,6 +78,17 @@ Yüksekliği **160 px'i (2× ölçek)** aşan hiçbir nesne tek sprite olarak va
 
 Doğrulama scripti bu kuralı zorlar: 160 px'i aşan ve adında `_lower`/`_upper` olmayan sprite **build'i kırar**.
 
+> **Kapsam düzeltmesi (2026-08-21, konsolidasyon pasosu — değişiklik kaydı
+> PROJECT_MEMORY §22 AO/AP):** kural, yürünebilir alanın İÇİNDEN geçilen statik
+> nesneler için vardır — bir kişi ağacın gövdesinin arkasında ve tepesinin
+> önünde aynı anda olabilir; bölme bu derinlik döngüsünü çözer. **Araçlar (`veh`)
+> kapsam dışıdır:** araç yol düzleminde tek kinematik birimdir, yayalar iki
+> yarısının arasından geçmez ve motor her arketipi yön başına tek kare çizer —
+> `bus_lower/upper` diye bir çift hiçbir tüketicisi olmayan dosya olurdu. Eşik
+> (160 px gövde) değişmedi; yalnız kuralın uygulandığı küme, kuralın var olma
+> nedenine daraltıldı. 2.5 m'yi aşan otobüs/kamyon gövdeleri bu yüzden tek
+> sprite'tır.
+
 ---
 
 ## 2. Asset kategorileri

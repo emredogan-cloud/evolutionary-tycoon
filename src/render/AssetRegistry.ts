@@ -54,6 +54,7 @@ export interface FrameInfo {
 
 export class AssetRegistry {
   private readonly frames = new Map<string, FrameInfo>();
+  private readonly loadedAtlases = new Set<string>();
 
   /** Atlas ids that were asked for and did not arrive. */
   private readonly missing = new Set<string>();
@@ -66,6 +67,7 @@ export class AssetRegistry {
    * packer, and `src/config/sprites.ts` writes them the same way.
    */
   register(atlasId: string, sheet: AtlasSheetData): void {
+    this.loadedAtlases.add(atlasId);
     const texture = sheet.textures[0];
     if (texture === undefined) return;
 
@@ -118,6 +120,11 @@ export class AssetRegistry {
    * that inline at each call site is how a missing frame becomes a blank sprite
    * nobody notices.
    */
+  /** Whether an atlas registered any frames — deferred tiers arrive late. */
+  hasAtlas(id: string): boolean {
+    return this.loadedAtlases.has(id);
+  }
+
   resolve(...candidates: readonly (string | undefined)[]): string | undefined {
     for (const candidate of candidates) {
       if (candidate !== undefined && this.frames.has(candidate)) return candidate;

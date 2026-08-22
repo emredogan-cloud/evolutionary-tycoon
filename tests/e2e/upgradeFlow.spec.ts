@@ -79,8 +79,18 @@ async function earnFor(page: Page, credits: number): Promise<void> {
   throw new Error(`never reached ₡${String(credits)} in thirty simulated minutes`);
 }
 
+/** The consolidation walk: the build tile opens the panel, the card opens the detail. */
+async function openCard(page: Page, id: string): Promise<void> {
+  const panel = page.locator('[data-testid="build-panel"]');
+  if (!(await panel.isVisible().catch(() => false))) {
+    await page.locator('[data-testid="dock-build"]').click();
+    await expect(panel).toBeVisible();
+  }
+  await page.locator(`[data-testid="build-card"][data-upgrade="${id}"]`).click();
+}
+
 test.describe('buying an upgrade', () => {
-  test('opens a card beside the object, without covering the game', async ({ page }) => {
+  test('opens a card over the panel, without covering the game', async ({ page }) => {
     /*
      * The anti-modal assertion. A modal would pass every other test in this
      * file — the purchase would work, the cash would fall — while destroying the
@@ -89,9 +99,10 @@ test.describe('buying an upgrade', () => {
      */
     await boot(page);
 
-    const hotspot = page.locator('[data-testid="upgrade-hotspot"]').first();
-    await expect(hotspot).toBeVisible();
-    await hotspot.click();
+    await page.locator('[data-testid="dock-build"]').click();
+    const card0 = page.locator('[data-testid="build-card"]').first();
+    await expect(card0).toBeVisible();
+    await card0.click();
 
     const card = page.locator('[data-testid="upgrade-card"]');
     await expect(card).toBeVisible();
@@ -112,11 +123,11 @@ test.describe('buying an upgrade', () => {
   test('shows the exact before and after numbers', async ({ page }) => {
     // §14.3: "current level, the exact before/after numbers, and the cost".
     await boot(page);
-    await page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]').click();
+    await openCard(page, 'hand-painted-sign');
 
     const card = page.locator('[data-testid="upgrade-card"]');
     await expect(card).toBeVisible();
-    await expect(page.locator('[data-testid="upgrade-level"]')).toHaveText(/Seviye 0 \/ 4/);
+    await expect(page.locator('[data-testid="upgrade-level"]')).toHaveText(/Kademe 0 \/ 4/);
     await expect(card).toContainText('1.00×');
     await expect(card).toContainText('1.50×');
     // ₡6 since Phase 12 rescaled the Stage 1 ladder so the next rung is always
@@ -126,7 +137,7 @@ test.describe('buying an upgrade', () => {
 
   test('refuses the purchase while the player cannot afford it', async ({ page }) => {
     await boot(page);
-    await page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]').click();
+    await openCard(page, 'hand-painted-sign');
 
     await expect(page.locator('[data-testid="upgrade-buy"]')).toBeDisabled();
     await expect(page.locator('[data-testid="upgrade-short"]')).toBeVisible();
@@ -137,7 +148,7 @@ test.describe('buying an upgrade', () => {
     await earnFor(page, 12);
 
     const before = await readCash(page);
-    await page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]').click();
+    await openCard(page, 'hand-painted-sign');
     await expect(page.locator('[data-testid="upgrade-buy"]')).toBeEnabled();
     await page.locator('[data-testid="upgrade-buy"]').click();
 
@@ -154,7 +165,7 @@ test.describe('buying an upgrade', () => {
     // ₡6 since Phase 12's ladder rescale — see the note on the buy button above.
     expect(before - (await readCash(page))).toBeCloseTo(6, 1);
     await expect(
-      page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]'),
+      page.locator('[data-testid="build-card"][data-upgrade="hand-painted-sign"]'),
     ).toHaveAttribute('data-level', '1');
   });
 
@@ -175,7 +186,7 @@ test.describe('buying an upgrade', () => {
     const canvas = page.locator('#game-canvas canvas');
     const before = await canvas.screenshot();
 
-    await page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]').click();
+    await openCard(page, 'hand-painted-sign');
     await page.locator('[data-testid="upgrade-buy"]').click();
     await advance(page, 1);
     // One rendered frame is enough — the scene rebuilds its statics on the
@@ -201,7 +212,7 @@ test.describe('buying an upgrade', () => {
 
     await boot(page);
     await earnFor(page, 12);
-    await page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]').click();
+    await openCard(page, 'hand-painted-sign');
     await page.locator('[data-testid="upgrade-buy"]').click();
     await advance(page, 1);
 

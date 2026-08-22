@@ -94,6 +94,19 @@
   --space-6: 32px;
 
   /* ---- shape ---- */
+  /* Consolidation pass (2026-08-21): the reference vocabulary — glass pills,
+     parchment-adjacent cards, tile buttons. Aliases over the same palette. */
+  --surface-glass: var(--surface-raised);
+  --surface-sunken: #0d0f14e6;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --ink-muted: var(--ink-secondary);
+  --ink-dim: var(--neutral-500);
+  --ok: var(--positive);
+  --danger: var(--negative);
+  --radius-pill: 24px;
+  --radius-card: 14px;
+  --radius-tile: 16px;
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;

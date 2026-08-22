@@ -103,7 +103,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 13.9,
     speedVariance: 0.12,
     accelFactor: 1.0,
-    baseShare: 0.5,
+    baseShare: 0.46,
     // The default vehicle: present at every hour, so no bias.
     hourBias: FLAT,
     minReputation: 0,
@@ -120,7 +120,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 12.5,
     speedVariance: 0.1,
     accelFactor: 0.85,
-    baseShare: 0.22,
+    baseShare: 0.2024,
     // Trades start early; by evening they are already home.
     hourBias: biasAround(7, 6, 1.8, 0.45),
     minReputation: 0,
@@ -137,7 +137,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 12.0,
     speedVariance: 0.09,
     accelFactor: 0.8,
-    baseShare: 0.2,
+    baseShare: 0.184,
     // Errands and school runs cluster around the middle of the day.
     hourBias: biasAround(13, 7, 1.6, 0.5),
     minReputation: 0,
@@ -154,7 +154,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 15.6,
     speedVariance: 0.18,
     accelFactor: 1.35,
-    baseShare: 0.08,
+    baseShare: 0.0736,
     // Almost nobody rides at 04:00.
     hourBias: biasAround(15, 9, 1.4, 0.25),
     minReputation: 0,
@@ -164,14 +164,15 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
   },
 
   /*
-   * ── The Phase 15 six ────────────────────────────────────────────────────
+   * ── The Phase 15 six — LIVE since 2026-08-22 ────────────────────────────
    *
-   * Behaviour complete, **spawn share zero**: no production art exists for any
-   * of them (the delivered vehicle set covers exactly the four above —
-   * ASSET_INTEGRATION_REPORT §3), and this project does not put a van on the
-   * road and call it a bus. The shares flip on when their art lands (P16's
-   * regeneration list owns it); every behavioural hook below is unit-tested
-   * headlessly regardless, because none of it waits on a sprite.
+   * Their art landed with the 2026-08-21 delivery (all five views plus brake
+   * frames per archetype, validated 0-failing), which was the recorded
+   * condition for flipping these shares on. The weights are deliberately
+   * small — the four originals keep ~84% of the road — matching GDD §9.4's
+   * frequency words (bus "nadir", limo reputation-gated, emergency an
+   * interruption). The balance suite's asserted rows ran green with this mix
+   * (same commit), which is the proof the calibrated windows survived it.
    */
   {
     id: 'SPORTS_CAR',
@@ -182,7 +183,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 16.7,
     speedVariance: 0.2,
     accelFactor: 1.6,
-    baseShare: 0,
+    baseShare: 0.02,
     hourBias: biasAround(19, 6, 1.5, 0.4),
     minReputation: 0,
     tipFactor: 2.2,
@@ -198,7 +199,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 11.1,
     speedVariance: 0.06,
     accelFactor: 0.55,
-    baseShare: 0,
+    baseShare: 0.025,
     hourBias: biasAround(2, 5, 2.2, 0.6),
     minReputation: 0,
     tipFactor: 1,
@@ -215,7 +216,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 10.5,
     speedVariance: 0.05,
     accelFactor: 0.45,
-    baseShare: 0,
+    baseShare: 0.008,
     hourBias: biasAround(12, 5, 1.8, 0.3),
     minReputation: 0,
     tipFactor: 1,
@@ -231,7 +232,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 13.9,
     speedVariance: 0.1,
     accelFactor: 1.25,
-    baseShare: 0,
+    baseShare: 0.019,
     hourBias: FLAT,
     minReputation: 0,
     tipFactor: 1.2,
@@ -248,7 +249,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 12.5,
     speedVariance: 0.05,
     accelFactor: 0.7,
-    baseShare: 0,
+    baseShare: 0.005,
     hourBias: biasAround(20, 4, 1.6, 0.2),
     minReputation: 75,
     tipFactor: 3.5,
@@ -264,7 +265,7 @@ export const ARCHETYPE_SPECS: readonly ArchetypeSpec[] = [
     desiredSpeed: 19.4,
     speedVariance: 0.04,
     accelFactor: 1.8,
-    baseShare: 0,
+    baseShare: 0.003,
     hourBias: FLAT,
     minReputation: 0,
     tipFactor: 1,

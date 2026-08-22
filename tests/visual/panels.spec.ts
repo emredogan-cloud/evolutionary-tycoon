@@ -91,8 +91,10 @@ test.describe('panel goldens — Phase 18', () => {
     await expect(strip).toBeAttached();
   });
 
-  test('dock', async ({ page }) => {
+  test('action tiles', async ({ page }) => {
+    // The consolidation layout: the bottom-left Build/Shop/Staff tiles are
+    // the old dock's successor and carry its golden duty.
     await boot(page);
-    await expect(page.locator('.action-dock')).toHaveScreenshot('panel-dock.png', CAPTURE);
+    await expect(page.getByTestId('dock-build').locator('..')).toHaveScreenshot('panel-tiles.png', CAPTURE);
   });
 });

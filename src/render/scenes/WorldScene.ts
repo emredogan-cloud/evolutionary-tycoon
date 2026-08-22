@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { SpriteDirectionName } from '@config/sprites';
 import type { SimEvent } from '@sim/core/events';
 import {
   ACTOR_KIND_CUSTOMER,
@@ -40,6 +41,7 @@ import {
   RIG_PIVOTS,
   rigFrame,
   unpackAppearance,
+  vehicleBrakeFrame,
   vehicleFrame,
   worldObjectAt,
   worldObjectIndexOf,
@@ -316,7 +318,9 @@ export class WorldScene extends Phaser.Scene {
 
     this.scale.on('resize', () => {
       this.camera.handleResize();
+      this.layoutVignette();
     });
+    this.layoutVignette();
 
     /*
      * The construction reveal. Its bounds are the southern half of the lot,
@@ -486,9 +490,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** Position a sprite by its footprint anchor, which is where it meets the ground. */
-  private place(sprite: Phaser.GameObjects.Image, frame: string, x: number, y: number): void {
+  private place(
+    sprite: Phaser.GameObjects.Image,
+    frame: string,
+    x: number,
+    y: number,
+    mirrored = false,
+  ): void {
     const info = this.assets?.info(frame);
-    sprite.setOrigin(info?.originX ?? 0.5, info?.originY ?? 1);
+    // A mirrored draw mirrors the anchor too: feet at 30% from the left are
+    // at 30% from the right once the pixels flip.
+    const originX = info?.originX ?? 0.5;
+    sprite.setOrigin(mirrored ? 1 - originX : originX, info?.originY ?? 1);
     sprite.setPosition(x, y);
   }
 
@@ -502,35 +515,54 @@ export class WorldScene extends Phaser.Scene {
    */
   private drawVehicle(view: ActorView, index: number): number {
     const direction = directionFor(view.headingX, view.headingY);
-    const frame = this.frameOf(vehicleFrame(view.variant, direction));
-    if (frame === null) return this.drawPlaceholder(view, index);
+    /*
+     * Brake lights are frames now, not tints: the 2026-08-21 delivery has a
+     * `_brake` view wherever the lights are visible (rear-facing headings);
+     * everywhere else the default frame is already the truth.
+     */
+    /*
+     * West-side facings mirror at draw time, exactly as the doll rig does
+     * (P17): a vehicle is laterally symmetric, so `sw` is `se` flipped —
+     * zero shipped bytes instead of a second copy of every archetype. The
+     * audited four still carry real west files (their v1 import materialised
+     * them) and those win; the 2026-08-21 six resolve through the mirror.
+     */
+    const MIRROR: Readonly<Record<string, string>> = { w: 'e', nw: 'ne', sw: 'se' };
+    const partner = MIRROR[direction];
+    const brake = view.braking ? vehicleBrakeFrame(view.variant, direction) : null;
+    let flip = false;
+    let frame =
+      (brake !== null ? this.frameOf(brake) : null) ?? this.frameOf(vehicleFrame(view.variant, direction));
+    if (frame === null && partner !== undefined) {
+      const brakePartner = view.braking
+        ? vehicleBrakeFrame(view.variant, partner as SpriteDirectionName)
+        : null;
+      frame =
+        (brakePartner !== null ? this.frameOf(brakePartner) : null) ??
+        this.frameOf(vehicleFrame(view.variant, partner as SpriteDirectionName));
+      flip = frame !== null;
+    }
+    if (frame === null) {
+      /*
+       * The reserve fleet's atlas (`vehicles2`) is a deferred tier: a live
+       * session streams it in behind the first frame. A bus whose texture has
+       * not arrived is *skipped*, never placeholdered — an unmistakably-wrong
+       * box on the road would violate the production-placeholder zero, and
+       * the vehicle simply becomes visible at the road edge a moment later,
+       * which reads as a spawn.
+       */
+      if (this.assets?.hasAtlas('vehicles2') !== true) return index;
+      return this.drawPlaceholder(view, index);
+    }
 
     const atlas = this.assets?.atlasOf(frame);
     if (atlas === undefined) return this.drawPlaceholder(view, index);
 
     const sprite = this.quadFor(index, atlas, frame);
+    if (flip) sprite.setFlipX(true);
     vehicleBodyMotion(view.travelled, view.braking ? -4 : 0, this.bodyMotion);
     sprite.setRotation(this.bodyMotion.pitch);
-    /*
-     * Braking is still a tint, because the art has no `_brake` frame: the batch
-     * list asks for one per side-on direction and the delivered set contains
-     * none. A red wash over a white car reads as brake lights at this size, and
-     * it is registered as an art gap rather than left to look intentional.
-     */
-    /*
-     * No tint at all — and that is a recorded gap, not an oversight.
-     *
-     * The placeholder era showed braking as a loud `0xffb0b0` wash, deliberately
-     * obvious against a grey quad. On the delivered near-white bodies every
-     * strength of that wash reads as *paint*: the first golden with real art
-     * froze what looks like a rose-pink sedan, which misleads harder than a
-     * missing indicator does. Deceleration still reads through the nose-dip
-     * `vehicleBodyMotion` applies; the honest fix is the `_brake` frames the
-     * batch list asked for and the drop did not contain — listed with the other
-     * regeneration work in docs/ASSET_INTEGRATION_REPORT.md.
-     */
-
-    this.place(sprite, frame, view.screenX, view.screenY + this.bodyMotion.bobY);
+    this.place(sprite, frame, view.screenX, view.screenY + this.bodyMotion.bobY, flip);
     return index + 1;
   }
 
@@ -677,6 +709,43 @@ export class WorldScene extends Phaser.Scene {
     return quad;
   }
 
+  /**
+   * The screen-space vignette — the premium falloff of the reference scenes,
+   * and the finish over the environment skirt. Camera-fixed (scroll factor
+   * zero), three stepped bands per edge instead of a gradient texture:
+   * CanvasTexture never drew on this Phaser 4 (P15's probe), and stepped
+   * translucency at these alphas is indistinguishable in place.
+   */
+  private vignette: Phaser.GameObjects.Rectangle[] = [];
+
+  private layoutVignette(): void {
+    for (const band of this.vignette) band.destroy();
+    this.vignette = [];
+    const { width, height } = this.scale.gameSize;
+    // One quiet band per edge. Three stepped bands were tried first and the
+    // camera-bounds golden showed them as stacked brown frames at full
+    // zoom-out — a single 6% band at 0.10 reads as light falloff at every
+    // zoom the camera allows.
+    const steps: readonly { size: number; alpha: number }[] = [{ size: 0.06, alpha: 0.1 }];
+    let inset = 0;
+    for (const step of steps) {
+      const h = Math.round(height * step.size);
+      const w = Math.round(width * step.size);
+      const bands = [
+        this.add.rectangle(0, inset, width, h, 0x05070b, step.alpha).setOrigin(0, 0),
+        this.add.rectangle(0, height - inset - h, width, h, 0x05070b, step.alpha).setOrigin(0, 0),
+        this.add.rectangle(inset, 0, w, height, 0x05070b, step.alpha).setOrigin(0, 0),
+        this.add.rectangle(width - inset - w, 0, w, height, 0x05070b, step.alpha).setOrigin(0, 0),
+      ];
+      for (const band of bands) {
+        band.setScrollFactor(0);
+        band.setDepth(1_000_000);
+        this.vignette.push(band);
+      }
+      inset += Math.round(Math.min(w, h) * 0.4);
+    }
+  }
+
   private cameraBounds(): CameraBounds {
     const margin = this.layout.cameraMarginMetres;
     const lot = this.layout.lot;
@@ -707,6 +776,26 @@ export class WorldScene extends Phaser.Scene {
   private drawGround(): void {
     const lot = this.layout.lot;
     const layer = this.graph.layer('ground');
+
+    /*
+     * The environment skirt — consolidation pass (§4: no black app space).
+     * The camera clamps to the lot plus a margin, and everything the lot does
+     * not cover used to be the page background. The skirt paints the same
+     * base dirt far past any reachable camera rect, so every edge of every
+     * viewport is world. It is deliberately plain: the vignette above it
+     * (drawVignette) carries the falloff, and the reference scenes read the
+     * same way — detailed centre, quiet dark rim.
+     */
+    const skirt = this.add.graphics();
+    const reach = 220; // metres past the lot — beyond any zoom's reach
+    // The bake's own border dirt, sampled — NOT the lot-fallback green: the
+    // skirt must read as more of the same earth running out of frame.
+    skirt.fillStyle(0x8f6f49, 1);
+    skirt.fillPoints(
+      this.worldQuad(lot.minX - reach, lot.minY - reach, lot.maxX + reach, lot.maxY + reach),
+      true,
+    );
+    layer.add(skirt);
 
     const ground = this.add.graphics();
     ground.fillStyle(SURFACE_COLORS.ground, 1);

@@ -41,6 +41,8 @@ export interface ManifestFile {
   readonly url: string;
   readonly bytes: number;
   readonly sha256: string;
+  /** Singles only: `deferred` skips the boot fetch. Absent means boot-time. */
+  readonly priority?: LoadPriority;
 }
 
 export interface ManifestAtlas {
@@ -61,6 +63,7 @@ export interface AssetManifest {
     readonly bytes: number;
     readonly bootBytes: number;
     readonly criticalBytes: number;
+    readonly deferredBytes: number;
   };
 }
 
@@ -136,9 +139,17 @@ export function buildManifest(options: BuildManifestOptions = {}): AssetManifest
     atlases.push({ id: spec.id, priority: spec.priority, frames, files: files.sort(byUrl) });
   }
 
+  /*
+   * A stage 2–4 ground bake is provably not drawn before its stage begins, so
+   * it ships marked `deferred` and the boot fetch skips it; the stage
+   * transition (or an explicit prefetch) pulls it in.
+   */
+  const singlePriority = (file: string): LoadPriority => {
+    return /ground_stage[234]_/.test(basename(file)) ? 'deferred' : 'lazy';
+  };
   const singles = [...(options.singles ?? [])]
     .sort()
-    .map((file) => describe(file, servedUrl(file, publicDir)));
+    .map((file) => ({ ...describe(file, servedUrl(file, publicDir)), priority: singlePriority(file) }));
 
   const atlasBytes = (priority: LoadPriority | 'any'): number =>
     atlases
@@ -146,6 +157,9 @@ export function buildManifest(options: BuildManifestOptions = {}): AssetManifest
       .reduce((sum, atlas) => sum + atlas.files.reduce((n, file) => n + file.bytes, 0), 0);
 
   const singleBytes = singles.reduce((sum, file) => sum + file.bytes, 0);
+  const deferredBytes =
+    atlasBytes('deferred') +
+    singles.filter((file) => file.priority === 'deferred').reduce((sum, file) => sum + file.bytes, 0);
 
   return {
     schemaVersion: MANIFEST_SCHEMA_VERSION,
@@ -158,6 +172,9 @@ export function buildManifest(options: BuildManifestOptions = {}): AssetManifest
       bootBytes: atlasBytes('boot'),
       // The first playable frame needs the boot atlas *and* everything critical.
       criticalBytes: atlasBytes('boot') + atlasBytes('critical'),
+      // Not fetched before the world starts; the honest progress denominator
+      // excludes it (AssetLoader.totalBytes).
+      deferredBytes,
     },
   };
 }

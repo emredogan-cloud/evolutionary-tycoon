@@ -127,8 +127,8 @@
 <style>
   .panel {
     position: absolute;
-    top: var(--sp-4);
-    right: 13.5rem;
+    bottom: var(--space-3);
+    right: var(--space-3);
     width: 11rem;
     padding: var(--sp-3);
     background: color-mix(in srgb, var(--c-surface) 88%, transparent);
@@ -227,5 +227,23 @@
     outline: none;
     box-shadow: var(--focus-ring);
     border-radius: var(--radius-sm);
+  }
+  @media (max-width: 700px) {
+    .panel {
+      width: 9rem;
+      padding: var(--sp-2);
+    }
+  }
+  /* Phone landscape: evolution yields the corner; the offer still arrives as
+     a notice and the panel returns on any taller viewport. */
+  @media (max-height: 480px) {
+    .panel {
+      display: none;
+    }
+  }
+  @media (max-width: 380px) {
+    .panel {
+      width: 8rem;
+    }
   }
 </style>

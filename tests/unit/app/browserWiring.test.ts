@@ -224,20 +224,20 @@ describe('browserScheduler', () => {
 });
 
 describe('debugOverlayEnabled', () => {
-  it('is on in a dev build', () => {
-    vi.stubEnv('DEV', true);
-    expect(debugOverlayEnabled()).toBe(true);
+  /*
+   * The consolidation pass (§28) narrowed the gate to a single door in every
+   * build: `?debug=1`. Dev builds stopped being an exception — the overlay
+   * was drowning the product view — and VITE_DEBUG_PANEL retired with it.
+   */
+  it('is on only when the URL asks', () => {
+    expect(debugOverlayEnabled('?debug=1')).toBe(true);
+    expect(debugOverlayEnabled('?e2e=1&debug=1')).toBe(true);
   });
 
-  it('is off in a production build unless VITE_DEBUG_PANEL is set', () => {
-    // Both operands are statically replaced by Vite, so an unset flag lets the
-    // whole overlay module drop out of the production bundle.
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DEBUG_PANEL', '');
-    expect(debugOverlayEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_DEBUG_PANEL', '1');
-    expect(debugOverlayEnabled()).toBe(true);
+  it('is off otherwise, dev build or not', () => {
+    expect(debugOverlayEnabled('')).toBe(false);
+    expect(debugOverlayEnabled('?e2e=1')).toBe(false);
+    expect(debugOverlayEnabled('?debug=0')).toBe(false);
   });
 });
 
@@ -712,5 +712,12 @@ describe('the HUD strip fields — Phase 15', () => {
     expect(hud.weatherId).toBe('CLEAR');
     expect(hud.eventId).toBe('');
     expect(hud.eventRemainingMs).toBe(0);
+  });
+});
+
+describe('debugOverlayEnabled, default argument', () => {
+  it('reads the window search string when none is passed', () => {
+    // jsdom's location carries no query, so the default read is the off path.
+    expect(debugOverlayEnabled()).toBe(false);
   });
 });

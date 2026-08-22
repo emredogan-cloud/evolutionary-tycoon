@@ -5,7 +5,7 @@
 **Commit:** working tree
 **Policies:** greedy-cheapest, roi-optimal, throughput-first, margin-first, idle-player
 **Simulated:** 720 minutes per policy
-**Wall clock:** 84.2 s for all policies
+**Wall clock:** 55.1 s for all policies
 
 **Result: ✅ every evaluable assertion passed**, with 2 not evaluable.
 
@@ -13,17 +13,17 @@
 
 | | Assertion | Measured |
 | --- | --- | --- |
-| ✅ | Stage 2 reached between 10 and 22 minutes | greedy-cheapest: 17.9 min · roi-optimal: 17.9 min · throughput-first: 17.9 min · margin-first: 16.5 min |
-| ⊘ | Stage 3 reached between 28 and 70 minutes | stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 55.3 min · roi-optimal: 55.3 min · throughput-first: 59.8 min · margin-first: 52.6 min |
-| ⊘ | Stage 4 reached between 140 and 320 minutes | stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 343.8 min · roi-optimal: 343.8 min · throughput-first: 349.7 min · margin-first: 336.8 min |
-| ✅ | Net income per minute within ±25% of the designed envelope | stage 1: best peak ₡15.6/min vs corridor ₡6–₡15 — inside · stage 2: best peak ₡36.4/min vs corridor ₡20–₡55 — inside (measured, awaiting stage calibration) · stage 3: best peak ₡70.3/min vs corridor ₡62–₡179 — inside (measured, awaiting stage calibration) · stage 4: best peak ₡69.5/min vs corridor ₡190–₡483 — OUTSIDE (measured, awaiting stage calibration) |
-| ✅ | The cheapest upgrade never costs more than 90 s of income **(merge-blocking)** | worst: greedy-cheapest at 17.5 min — cheapest ₡13.0 = 68.9 s of income · uncalibrated stage 4's worst, reported not asserted: greedy-cheapest ₡1155.0 = 21780.4 s · idle-player's worst, reported not asserted: 7099.8 s |
-| ✅ | No upgrade purchase reduces revenue | worst: shift-supervisor L2 — ₡272.9 with vs ₡272.9 without (Δ +0.0) |
-| ✅ | Best and worst policy differ by no more than 2.5× | greedy-cheapest 1894 · roi-optimal 1894 · throughput-first 1891 · margin-first 1916 → 1.0× |
-| ✅ | Income per minute stays under ₡600 after 12 hours | throughput-first peaked at ₡208.1/min |
+| ✅ | Stage 2 reached between 10 and 22 minutes | greedy-cheapest: 17.1 min · roi-optimal: 17.1 min · throughput-first: 17.1 min · margin-first: 17.2 min |
+| ⊘ | Stage 3 reached between 28 and 70 minutes | stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 63.1 min · roi-optimal: 63.1 min · throughput-first: 63.1 min · margin-first: 59.7 min |
+| ⊘ | Stage 4 reached between 140 and 320 minutes | stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 492.0 min · roi-optimal: 492.0 min · throughput-first: 391.0 min · margin-first: 385.0 min |
+| ✅ | Net income per minute within ±25% of the designed envelope | stage 1: best peak ₡14.6/min vs corridor ₡6–₡15 — inside · stage 2: best peak ₡34.3/min vs corridor ₡20–₡55 — inside (measured, awaiting stage calibration) · stage 3: best peak ₡65.8/min vs corridor ₡62–₡179 — inside (measured, awaiting stage calibration) · stage 4: best peak ₡58.4/min vs corridor ₡190–₡483 — OUTSIDE (measured, awaiting stage calibration) |
+| ✅ | The cheapest upgrade never costs more than 90 s of income **(merge-blocking)** | worst: greedy-cheapest at 11.5 min — cheapest ₡10.0 = 54.9 s of income · uncalibrated stage 4's worst, reported not asserted: greedy-cheapest ₡963.0 = 40059.2 s · idle-player's worst, reported not asserted: 3503.0 s |
+| ✅ | No upgrade purchase reduces revenue | worst: shift-supervisor L2 — ₡256.4 with vs ₡256.4 without (Δ +0.0) |
+| ✅ | Best and worst policy differ by no more than 2.5× | greedy-cheapest 1431 · roi-optimal 1431 · throughput-first 1335 · margin-first 1406 → 1.1× |
+| ✅ | Income per minute stays under ₡600 after 12 hours | margin-first peaked at ₡157.4/min |
 | ✅ | Cash never goes below zero | lowest: idle-player at ₡0.0 |
-| ✅ | Stage 4 still has unbought upgrades after 6 hours | greedy-cheapest: 7 left · roi-optimal: 7 left · throughput-first: 7 left · margin-first: 7 left · idle-player: 13 left |
-| ✅ | At least two distinct investment paths leave each stage | stage 1: 5 policies left it, 2 distinct purchase sets · stage 2: 5 policies left it, 4 distinct purchase sets · stage 3: 5 policies left it, 4 distinct purchase sets |
+| ✅ | Stage 4 still has unbought upgrades after 6 hours | greedy-cheapest: 9 left · roi-optimal: 9 left · throughput-first: 11 left · margin-first: 10 left |
+| ✅ | At least two distinct investment paths leave each stage | stage 1: 5 policies left it, 2 distinct purchase sets · stage 2: 5 policies left it, 3 distinct purchase sets · stage 3: 4 policies left it, 2 distinct purchase sets |
 
 `⊘` means **not evaluable**, which is not the same as passing: the run had
 nothing to look at. Every one of them is explained in §"Blocked" below.
@@ -32,25 +32,25 @@ nothing to look at. Every one of them is explained in §"Blocked" below.
 
 | Policy | Served | Stage 2 | Stage 3 | Stage 4 | Upgrades | Peak sustained ₡/min | Final cash |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `greedy-cheapest` | 1894 | 17.9 min | 55.3 min | 343.8 min | 55 | ₡70.3 | ₡761 |
-| `roi-optimal` | 1894 | 17.9 min | 55.3 min | 343.8 min | 55 | ₡70.3 | ₡761 |
-| `throughput-first` | 1891 | 17.9 min | 59.8 min | 349.7 min | 55 | ₡69.5 | ₡626 |
-| `margin-first` | 1916 | 16.5 min | 52.6 min | 336.8 min | 55 | ₡68.1 | ₡1037 |
-| `idle-player` | 1641 | 80.2 min | 115.3 min | 390.5 min | 42 | ₡63.0 | ₡945 |
+| `greedy-cheapest` | 1431 | 17.1 min | 63.1 min | 492.0 min | 47 | ₡62.7 | ₡0 |
+| `roi-optimal` | 1431 | 17.1 min | 63.1 min | 492.0 min | 47 | ₡62.7 | ₡0 |
+| `throughput-first` | 1335 | 17.1 min | 63.1 min | 391.0 min | 42 | ₡65.8 | ₡0 |
+| `margin-first` | 1406 | 17.2 min | 59.7 min | 385.0 min | 46 | ₡62.6 | ₡0 |
+| `idle-player` | 300 | 70.2 min | 115.3 min | — | 22 | ₡37.4 | ₡0 |
 
 ### Attention, measured but not asserted
 
-attentive best 1916 vs idle 1641 = 1.2×. An idle player *should* be slower; how much slower is a
+attentive best 1431 vs idle 300 = 4.8×. An idle player *should* be slower; how much slower is a
 design decision nobody has taken, so this is reported rather than gated.
 
 ## The designed envelope — ECONOMY_DESIGN §3
 
 | Stage | Designed entry ₡/min | Designed ceiling ₡/min | Best observed (day average) |
 | ---: | ---: | ---: | ---: |
-| 1 | ₡6 | ₡15 | ₡15.6 |
-| 2 | ₡20 | ₡55 | ₡36.4 |
-| 3 | ₡62 | ₡179 | ₡70.3 |
-| 4 | ₡190 | ₡483 | ₡69.5 |
+| 1 | ₡6 | ₡15 | ₡14.6 |
+| 2 | ₡20 | ₡55 | ₡34.3 |
+| 3 | ₡62 | ₡179 | ₡65.8 |
+| 4 | ₡190 | ₡483 | ₡58.4 |
 
 ## Does each upgrade earn its price?
 
@@ -60,68 +60,68 @@ arrival noise cancel because both runs saw the same ones.
 
 | Upgrade | Level | Revenue without | Revenue with | Δ |
 | --- | ---: | ---: | ---: | ---: |
-| `hand-painted-sign` | 1 | ₡273 | ₡349 | +76.0 |
-| `hand-painted-sign` | 2 | ₡273 | ₡375 | +101.7 |
-| `hand-painted-sign` | 3 | ₡273 | ₡391 | +118.1 |
-| `hand-painted-sign` | 4 | ₡273 | ₡399 | +126.2 |
-| `menu-board` | 1 | ₡273 | ₡322 | +49.2 |
-| `menu-board` | 2 | ₡273 | ₡332 | +58.8 |
-| `menu-board` | 3 | ₡273 | ₡356 | +83.6 |
-| `planter-boxes` | 1 | ₡273 | ₡273 | +0.0 |
-| `planter-boxes` | 2 | ₡273 | ₡273 | +0.0 |
-| `illuminated-sign` | 1 | ₡273 | ₡273 | +0.0 |
-| `illuminated-sign` | 2 | ₡273 | ₡273 | +0.0 |
-| `neon-facade` | 1 | ₡273 | ₡273 | +0.0 |
-| `neon-facade` | 2 | ₡273 | ₡273 | +0.0 |
-| `roadside-pylon` | 1 | ₡273 | ₡273 | +0.0 |
-| `roadside-pylon` | 2 | ₡273 | ₡273 | +0.0 |
-| `second-prep-station` | 1 | ₡273 | ₡273 | +0.0 |
-| `second-prep-station` | 2 | ₡273 | ₡273 | +0.0 |
-| `cooler` | 1 | ₡273 | ₡273 | +0.0 |
-| `cooler` | 2 | ₡273 | ₡273 | +0.0 |
-| `cooler` | 3 | ₡273 | ₡273 | +0.0 |
-| `sharper-knives` | 1 | ₡273 | ₡273 | +0.0 |
-| `sharper-knives` | 2 | ₡273 | ₡273 | +0.0 |
-| `pass-heat-lamp` | 1 | ₡273 | ₡273 | +0.0 |
-| `pass-heat-lamp` | 2 | ₡273 | ₡273 | +0.0 |
-| `better-ingredients` | 1 | ₡273 | ₡273 | +0.0 |
-| `better-ingredients` | 2 | ₡273 | ₡273 | +0.0 |
-| `better-ingredients` | 3 | ₡273 | ₡273 | +0.0 |
-| `drink-dispenser` | 1 | ₡273 | ₡273 | +0.0 |
-| `drink-dispenser` | 2 | ₡273 | ₡273 | +0.0 |
-| `prep-automation` | 1 | ₡273 | ₡273 | +0.0 |
-| `prep-automation` | 2 | ₡273 | ₡273 | +0.0 |
-| `pastry-oven` | 1 | ₡273 | ₡273 | +0.0 |
-| `pastry-oven` | 2 | ₡273 | ₡273 | +0.0 |
-| `bigger-counter` | 1 | ₡273 | ₡273 | +0.0 |
-| `queue-barriers` | 1 | ₡273 | ₡273 | +0.0 |
-| `queue-barriers` | 2 | ₡273 | ₡273 | +0.0 |
-| `shade-canopy` | 1 | ₡273 | ₡273 | +0.0 |
-| `shade-canopy` | 2 | ₡273 | ₡273 | +0.0 |
-| `padded-benches` | 1 | ₡273 | ₡273 | +0.0 |
-| `padded-benches` | 2 | ₡273 | ₡273 | +0.0 |
-| `widened-forecourt` | 1 | ₡273 | ₡273 | +0.0 |
-| `covered-terrace` | 1 | ₡273 | ₡273 | +0.0 |
-| `covered-terrace` | 2 | ₡273 | ₡273 | +0.0 |
-| `second-register` | 1 | ₡273 | ₡273 | +0.0 |
-| `lane-extension` | 1 | ₡273 | ₡273 | +0.0 |
-| `lane-extension` | 2 | ₡273 | ₡273 | +0.0 |
-| `second-order-post` | 1 | ₡273 | ₡273 | +0.0 |
-| `express-window` | 1 | ₡273 | ₡273 | +0.0 |
-| `express-window` | 2 | ₡273 | ₡273 | +0.0 |
-| `express-window` | 3 | ₡273 | ₡273 | +0.0 |
-| `tap-to-pay` | 1 | ₡273 | ₡273 | +0.0 |
-| `tap-to-pay` | 2 | ₡273 | ₡273 | +0.0 |
-| `non-slip-shoes` | 1 | ₡273 | ₡273 | +0.0 |
-| `non-slip-shoes` | 2 | ₡273 | ₡273 | +0.0 |
-| `training-programme` | 1 | ₡273 | ₡273 | +0.0 |
-| `training-programme` | 2 | ₡273 | ₡273 | +0.0 |
-| `headsets` | 1 | ₡273 | ₡273 | +0.0 |
-| `headsets` | 2 | ₡273 | ₡273 | +0.0 |
-| `staff-room` | 1 | ₡273 | ₡273 | +0.0 |
-| `staff-room` | 2 | ₡273 | ₡273 | +0.0 |
-| `shift-supervisor` | 1 | ₡273 | ₡273 | +0.0 |
-| `shift-supervisor` | 2 | ₡273 | ₡273 | +0.0 |
+| `hand-painted-sign` | 1 | ₡256 | ₡331 | +74.9 |
+| `hand-painted-sign` | 2 | ₡256 | ₡383 | +127.0 |
+| `hand-painted-sign` | 3 | ₡256 | ₡386 | +129.9 |
+| `hand-painted-sign` | 4 | ₡256 | ₡392 | +136.0 |
+| `menu-board` | 1 | ₡256 | ₡323 | +66.5 |
+| `menu-board` | 2 | ₡256 | ₡328 | +71.8 |
+| `menu-board` | 3 | ₡256 | ₡341 | +84.2 |
+| `planter-boxes` | 1 | ₡256 | ₡256 | +0.0 |
+| `planter-boxes` | 2 | ₡256 | ₡256 | +0.0 |
+| `illuminated-sign` | 1 | ₡256 | ₡256 | +0.0 |
+| `illuminated-sign` | 2 | ₡256 | ₡256 | +0.0 |
+| `neon-facade` | 1 | ₡256 | ₡256 | +0.0 |
+| `neon-facade` | 2 | ₡256 | ₡256 | +0.0 |
+| `roadside-pylon` | 1 | ₡256 | ₡256 | +0.0 |
+| `roadside-pylon` | 2 | ₡256 | ₡256 | +0.0 |
+| `second-prep-station` | 1 | ₡256 | ₡256 | +0.0 |
+| `second-prep-station` | 2 | ₡256 | ₡256 | +0.0 |
+| `cooler` | 1 | ₡256 | ₡256 | +0.0 |
+| `cooler` | 2 | ₡256 | ₡256 | +0.0 |
+| `cooler` | 3 | ₡256 | ₡256 | +0.0 |
+| `sharper-knives` | 1 | ₡256 | ₡256 | +0.0 |
+| `sharper-knives` | 2 | ₡256 | ₡256 | +0.0 |
+| `pass-heat-lamp` | 1 | ₡256 | ₡256 | +0.0 |
+| `pass-heat-lamp` | 2 | ₡256 | ₡256 | +0.0 |
+| `better-ingredients` | 1 | ₡256 | ₡256 | +0.0 |
+| `better-ingredients` | 2 | ₡256 | ₡256 | +0.0 |
+| `better-ingredients` | 3 | ₡256 | ₡256 | +0.0 |
+| `drink-dispenser` | 1 | ₡256 | ₡256 | +0.0 |
+| `drink-dispenser` | 2 | ₡256 | ₡256 | +0.0 |
+| `prep-automation` | 1 | ₡256 | ₡256 | +0.0 |
+| `prep-automation` | 2 | ₡256 | ₡256 | +0.0 |
+| `pastry-oven` | 1 | ₡256 | ₡256 | +0.0 |
+| `pastry-oven` | 2 | ₡256 | ₡256 | +0.0 |
+| `bigger-counter` | 1 | ₡256 | ₡256 | +0.0 |
+| `queue-barriers` | 1 | ₡256 | ₡256 | +0.0 |
+| `queue-barriers` | 2 | ₡256 | ₡256 | +0.0 |
+| `shade-canopy` | 1 | ₡256 | ₡256 | +0.0 |
+| `shade-canopy` | 2 | ₡256 | ₡256 | +0.0 |
+| `padded-benches` | 1 | ₡256 | ₡256 | +0.0 |
+| `padded-benches` | 2 | ₡256 | ₡256 | +0.0 |
+| `widened-forecourt` | 1 | ₡256 | ₡256 | +0.0 |
+| `covered-terrace` | 1 | ₡256 | ₡256 | +0.0 |
+| `covered-terrace` | 2 | ₡256 | ₡256 | +0.0 |
+| `second-register` | 1 | ₡256 | ₡256 | +0.0 |
+| `lane-extension` | 1 | ₡256 | ₡256 | +0.0 |
+| `lane-extension` | 2 | ₡256 | ₡256 | +0.0 |
+| `second-order-post` | 1 | ₡256 | ₡256 | +0.0 |
+| `express-window` | 1 | ₡256 | ₡256 | +0.0 |
+| `express-window` | 2 | ₡256 | ₡256 | +0.0 |
+| `express-window` | 3 | ₡256 | ₡256 | +0.0 |
+| `tap-to-pay` | 1 | ₡256 | ₡256 | +0.0 |
+| `tap-to-pay` | 2 | ₡256 | ₡256 | +0.0 |
+| `non-slip-shoes` | 1 | ₡256 | ₡256 | +0.0 |
+| `non-slip-shoes` | 2 | ₡256 | ₡256 | +0.0 |
+| `training-programme` | 1 | ₡256 | ₡256 | +0.0 |
+| `training-programme` | 2 | ₡256 | ₡256 | +0.0 |
+| `headsets` | 1 | ₡256 | ₡256 | +0.0 |
+| `headsets` | 2 | ₡256 | ₡256 | +0.0 |
+| `staff-room` | 1 | ₡256 | ₡256 | +0.0 |
+| `staff-room` | 2 | ₡256 | ₡256 | +0.0 |
+| `shift-supervisor` | 1 | ₡256 | ₡256 | +0.0 |
+| `shift-supervisor` | 2 | ₡256 | ₡256 | +0.0 |
 
 ## Change requests this run raises
 
@@ -149,6 +149,6 @@ numbers and WORKING_DISCIPLINE §6 makes that a decision rather than an edit.
 
 ## Blocked — assertions with nothing to evaluate
 
-- **Stage 3 reached between 28 and 70 minutes** — stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 55.3 min · roi-optimal: 55.3 min · throughput-first: 59.8 min · margin-first: 52.6 min
-- **Stage 4 reached between 140 and 320 minutes** — stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 343.8 min · roi-optimal: 343.8 min · throughput-first: 349.7 min · margin-first: 336.8 min
+- **Stage 3 reached between 28 and 70 minutes** — stage 2's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 63.1 min · roi-optimal: 63.1 min · throughput-first: 63.1 min · margin-first: 59.7 min
+- **Stage 4 reached between 140 and 320 minutes** — stage 3's income is not yet calibrated (ADR-016) — measured, not asserted: greedy-cheapest: 492.0 min · roi-optimal: 492.0 min · throughput-first: 391.0 min · margin-first: 385.0 min
 

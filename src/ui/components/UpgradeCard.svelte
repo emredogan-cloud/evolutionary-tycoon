@@ -21,11 +21,14 @@
    */
   interface Props {
     upgrade: UpgradeView;
+    /** Centred above the build panel (the card came from a panel card, not a
+     *  world anchor — the "+" model is gone). */
+    centered?: boolean;
     onbuy: (id: string) => void;
     onclose: () => void;
   }
 
-  const { upgrade, onbuy, onclose }: Props = $props();
+  const { upgrade, centered = false, onbuy, onclose }: Props = $props();
 
   /**
    * Names for all thirty — Phase 13.
@@ -131,7 +134,10 @@
   class="card"
   data-testid="upgrade-card"
   data-upgrade={upgrade.id}
-  style="transform: translate3d({upgrade.screenX}px, {upgrade.screenY}px, 0) translate(12px, -50%)"
+  class:centered
+  style={centered
+    ? ''
+    : `transform: translate3d(${upgrade.screenX}px, ${upgrade.screenY}px, 0) translate(12px, -50%)`}
 >
   <header>
     <h2>{name}</h2>
@@ -141,7 +147,7 @@
   <p class="family" data-testid="upgrade-family" data-family={upgrade.family}>{family}</p>
 
   <p class="level" data-testid="upgrade-level">
-    Seviye {upgrade.level} / {upgrade.maxLevel}
+    Kademe {upgrade.level} / {upgrade.maxLevel}
   </p>
 
   {#if maxed}
@@ -202,6 +208,14 @@
 </div>
 
 <style>
+  .card.centered {
+    left: 50%;
+    /* Above both the build panel and the decor strip that rides over it. */
+    bottom: calc(var(--space-3) + 14.5rem);
+    top: auto;
+    transform: translateX(-50%);
+    z-index: calc(var(--z-panel) + 1);
+  }
   .card {
     position: absolute;
     top: 0;

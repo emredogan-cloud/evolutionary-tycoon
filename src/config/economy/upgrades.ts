@@ -256,7 +256,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A painted sign appears on the stand, and grows with every level',
     consequence: 'More of the traffic notices you at all',
     anchor: { x: 16.4, y: 12.6 },
-    iconKey: 'struct_sign_painted@2x',
+    iconKey: 'ui_upgrade_sign-painted@2x',
     placeholder: 'sign',
   },
   {
@@ -272,7 +272,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A menu board appears beside the counter',
     consequence: 'People know what they want before they reach the front',
     anchor: { x: 14.2, y: 12.4 },
-    iconKey: 'struct_menuboard@2x',
+    iconKey: 'ui_upgrade_menuboard@2x',
     placeholder: '',
   },
   {
@@ -285,7 +285,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Planters and a painted frontage replace bare tarmac',
     consequence: 'The place looks cared for, and people linger instead of leaving',
     anchor: { x: 11.5, y: 13.2 },
-    iconKey: 'struct_planter@2x',
+    iconKey: 'ui_upgrade_planter@2x',
     placeholder: 'bush-flowering-01',
   },
   {
@@ -299,7 +299,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The sign lights up, and the night scene changes completely',
     consequence: 'The empty hours after dark start earning',
     anchor: { x: 16.4, y: 13.4 },
-    iconKey: 'struct_sign_lit@2x',
+    iconKey: 'ui_upgrade_sign-lit@2x',
     placeholder: 'sign',
   },
   {
@@ -316,7 +316,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Neon runs the length of the building',
     consequence: 'The restaurant is a landmark after dark rather than a silhouette',
     anchor: { x: 18.6, y: 12.6 },
-    iconKey: 'struct_neon@2x',
+    iconKey: 'ui_upgrade_neon@2x',
     placeholder: '',
   },
   {
@@ -330,7 +330,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A tall pylon sign rises above the roofline',
     consequence: 'Drivers see you from the next junction, not the next car length',
     anchor: { x: 21.4, y: 11.0 },
-    iconKey: 'struct_pylon@2x',
+    iconKey: 'ui_upgrade_pylon@2x',
     placeholder: 'sign',
   },
   {
@@ -343,7 +343,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A second prep bench appears in the kitchen',
     consequence: 'Two orders can be made at once instead of one',
     anchor: { x: 13.0, y: 13.6 },
-    iconKey: 'struct_prep_station@2x',
+    iconKey: 'ui_upgrade_prep-station@2x',
     placeholder: 'pass',
   },
   {
@@ -356,7 +356,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A cooler appears behind the counter',
     consequence: 'Food waits longer on the pass without going cold',
     anchor: { x: 12.2, y: 14.2 },
-    iconKey: 'struct_cooler@2x',
+    iconKey: 'ui_upgrade_cooler@2x',
     placeholder: 'drink',
   },
   {
@@ -369,7 +369,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The prep bench gains proper boards and a knife rack',
     consequence: 'Every order leaves the kitchen sooner',
     anchor: { x: 13.6, y: 14.2 },
-    iconKey: 'struct_knives@2x',
+    iconKey: 'ui_upgrade_knives@2x',
     placeholder: '',
   },
   {
@@ -383,7 +383,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A heat lamp glows over the pass',
     consequence: 'A busy pass stops being a race against the food going cold',
     anchor: { x: 12.6, y: 13.8 },
-    iconKey: 'struct_heatlamp@2x',
+    iconKey: 'ui_upgrade_heatlamp@2x',
     placeholder: 'pass',
   },
   {
@@ -397,7 +397,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Crates of fresh produce stack up in the back',
     consequence: 'People rate the food higher, tip more, and come back',
     anchor: { x: 11.0, y: 14.6 },
-    iconKey: 'struct_crates@2x',
+    iconKey: 'ui_upgrade_crates@2x',
     placeholder: '',
   },
   {
@@ -414,7 +414,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A drinks dispenser appears at the end of the counter',
     consequence: 'Drinks stop queueing behind hot food',
     anchor: { x: 14.8, y: 13.0 },
-    iconKey: 'struct_dispenser@2x',
+    iconKey: 'ui_upgrade_dispenser@2x',
     placeholder: 'drink',
   },
   {
@@ -428,7 +428,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Timers and automatic baskets appear on the fryers',
     consequence: 'The kitchen keeps pace without anyone watching the clock',
     anchor: { x: 13.2, y: 15.0 },
-    iconKey: 'struct_automation@2x',
+    iconKey: 'ui_upgrade_automation@2x',
     placeholder: '',
   },
   {
@@ -445,7 +445,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A pastry oven appears along the back wall',
     consequence: 'A whole extra line of food, made to a higher standard',
     anchor: { x: 10.2, y: 15.0 },
-    iconKey: 'struct_oven@2x',
+    iconKey: 'ui_upgrade_oven@2x',
     placeholder: '',
   },
   {
@@ -464,7 +464,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The counter widens and a second till position appears',
     consequence: 'The queue holds more people before it spills toward the road',
     anchor: { x: 15.6, y: 12.0 },
-    iconKey: 'struct_counter_wide@2x',
+    iconKey: 'ui_upgrade_counter-wide@2x',
     placeholder: 'counter-lv2',
   },
   {
@@ -478,7 +478,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Rope barriers mark out the queue',
     consequence: 'A long queue folds instead of reaching the carriageway',
     anchor: { x: 15.0, y: 11.4 },
-    iconKey: 'struct_barrier@2x',
+    iconKey: 'ui_upgrade_barrier@2x',
     placeholder: 'barrier',
   },
   {
@@ -491,7 +491,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A canopy stretches over the queue',
     consequence: 'People stay in the queue in weather that would have moved them on',
     anchor: { x: 15.4, y: 11.8 },
-    iconKey: 'struct_canopy@2x',
+    iconKey: 'ui_upgrade_canopy@2x',
     placeholder: 'awning',
   },
   {
@@ -505,7 +505,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Benches and padded seating fill the waiting area',
     consequence: 'Waiting stops being the worst part of the visit',
     anchor: { x: 16.8, y: 14.4 },
-    iconKey: 'struct_bench@2x',
+    iconKey: 'ui_upgrade_bench@2x',
     placeholder: 'chair-wooden',
   },
   {
@@ -519,7 +519,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The forecourt is resurfaced and marked out wider',
     consequence: 'The queue and the car park stop fighting each other for room',
     anchor: { x: 9.0, y: 11.6 },
-    iconKey: 'struct_forecourt@2x',
+    iconKey: 'ui_upgrade_forecourt@2x',
     placeholder: '',
   },
   {
@@ -536,7 +536,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A covered terrace extends the dining room outdoors',
     consequence: 'The restaurant holds a lunch rush without anyone standing outside',
     anchor: { x: 19.0, y: 15.4 },
-    iconKey: 'struct_terrace@2x',
+    iconKey: 'ui_upgrade_terrace@2x',
     placeholder: 'awning',
   },
   {
@@ -553,7 +553,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A second till opens at the far end of the counter',
     consequence: 'Two people are served at once, and the queue halves',
     anchor: { x: 17.2, y: 12.0 },
-    iconKey: 'struct_register@2x',
+    iconKey: 'ui_upgrade_register@2x',
     placeholder: 'counter-lv1',
   },
   {
@@ -566,7 +566,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The drive-thru lane is repainted further back up the lot',
     consequence: 'More cars can wait in the lane instead of driving past',
     anchor: { x: 22.6, y: 7.0 },
-    iconKey: 'struct_lane@2x',
+    iconKey: 'ui_upgrade_lane@2x',
     placeholder: '',
   },
   {
@@ -580,7 +580,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A second order post appears halfway down the lane',
     consequence: 'Two cars order at once, so the lane keeps moving',
     anchor: { x: 22.8, y: 8.6 },
-    iconKey: 'struct_orderpost@2x',
+    iconKey: 'ui_upgrade_orderpost@2x',
     placeholder: 'sign',
   },
   {
@@ -593,7 +593,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The service window is rebuilt with a wider sill and a chute',
     consequence: 'A car is handed its order and gone before the next one stops',
     anchor: { x: 23.0, y: 11.4 },
-    iconKey: 'struct_window@2x',
+    iconKey: 'ui_upgrade_window@2x',
     placeholder: 'window',
   },
   {
@@ -607,7 +607,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A card reader appears on the window frame',
     consequence: 'Nobody counts out change with three cars waiting',
     anchor: { x: 23.2, y: 11.0 },
-    iconKey: 'struct_reader@2x',
+    iconKey: 'ui_upgrade_reader@2x',
     placeholder: '',
   },
   {
@@ -620,7 +620,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'The staff get proper footwear, visible on every uniform',
     consequence: 'Everyone crosses the floor faster, all shift',
     anchor: { x: 12.8, y: 12.2 },
-    iconKey: 'struct_shoes@2x',
+    iconKey: 'ui_upgrade_shoes@2x',
     placeholder: '',
   },
   {
@@ -633,7 +633,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Training badges appear on the uniforms',
     consequence: 'The same staff do the same jobs better and drop fewer orders',
     anchor: { x: 11.8, y: 12.6 },
-    iconKey: 'struct_badge@2x',
+    iconKey: 'ui_upgrade_badge@2x',
     placeholder: '',
   },
   {
@@ -647,7 +647,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'Headsets appear on the kitchen and counter staff',
     consequence: 'Nobody walks the length of the room to ask a question',
     anchor: { x: 12.4, y: 13.0 },
-    iconKey: 'struct_headset@2x',
+    iconKey: 'ui_upgrade_headset@2x',
     placeholder: '',
   },
   {
@@ -661,7 +661,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A staff room appears behind the kitchen',
     consequence: 'People come back from a break working like they did at open',
     anchor: { x: 9.6, y: 15.4 },
-    iconKey: 'struct_staffroom@2x',
+    iconKey: 'ui_upgrade_staffroom@2x',
     placeholder: '',
   },
   {
@@ -678,7 +678,7 @@ const UPGRADE_TREE: UpgradeInput[] = [
     worldChange: 'A supervisor walks the floor in a different uniform',
     consequence: 'The room organises itself instead of waiting to be told',
     anchor: { x: 14.6, y: 12.8 },
-    iconKey: 'struct_supervisor@2x',
+    iconKey: 'ui_upgrade_supervisor@2x',
     placeholder: '',
   },
 ];

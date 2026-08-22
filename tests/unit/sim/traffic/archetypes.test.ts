@@ -27,19 +27,21 @@ describe('archetypes', () => {
     ]);
   });
 
-  it('keeps the artless six off the road until their sprites exist', () => {
+  it('puts the whole fleet on the road, now that its art exists', () => {
     /*
-     * The delivered vehicle set covers exactly the first four
-     * (ASSET_INTEGRATION_REPORT §3), and this project does not draw a bus as a
-     * van. When the art lands, flipping a share makes this fail — which is the
-     * moment to delete it, deliberately.
+     * The predecessor of this test held the six at zero share until their
+     * sprites landed, and named its own deletion moment: "when the art lands,
+     * flipping a share makes this fail". The 2026-08-21 delivery landed all
+     * six (validated, 0 failing), the shares flipped 2026-08-22, and this is
+     * the deliberate replacement: every archetype carries weight, and the
+     * original four keep over ninety percent of the mix — the fleet is
+     * variety, not a re-balance (the balance gate ran green in this commit).
      */
-    for (const spec of ARCHETYPE_SPECS.slice(4)) {
-      expect(spec.baseShare, `${spec.id} has no production art`).toBe(0);
+    for (const spec of ARCHETYPE_SPECS) {
+      expect(spec.baseShare, spec.id + ' share').toBeGreaterThan(0);
     }
-    // And the four that are on the road still split the whole share.
-    const liveShare = ARCHETYPE_SPECS.slice(0, 4).reduce((sum, spec) => sum + spec.baseShare, 0);
-    expect(liveShare).toBeCloseTo(1, 5);
+    const originals = ARCHETYPE_SPECS.slice(0, 4).reduce((sum, spec) => sum + spec.baseShare, 0);
+    expect(originals).toBeGreaterThan(0.9);
   });
 
   it('uses real dimensions, matching the render catalogue', () => {

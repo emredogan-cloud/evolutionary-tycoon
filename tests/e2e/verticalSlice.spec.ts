@@ -166,8 +166,9 @@ test.describe('vertical slice — criterion 7, save and restore', () => {
       await (window as unknown as { __EVOTYCOON__: Api }).__EVOTYCOON__.load();
     });
 
+    await page.locator('[data-testid="dock-build"]').click();
     await expect(
-      page.locator('[data-testid="upgrade-hotspot"][data-upgrade="hand-painted-sign"]'),
+      page.locator('[data-testid="build-card"][data-upgrade="hand-painted-sign"]'),
     ).toHaveAttribute('data-level', '1');
 
     await page.evaluate(async () => {

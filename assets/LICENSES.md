@@ -191,3 +191,15 @@ teslim biçimi 172'lik setle aynı üretim kanalını işaret ediyor ve §1.5'te
 yönetici kararının kapsamı içinde kabul edildi; **araç/lisans teyidi kullanıcıya
 açık soru olarak PHASE_16_REPORT'ta kayıtlıdır.** Doğrulama: 9/9 kontrol,
 palet-affinity aile içinde (`pnpm assets:validate`, 173 asset 0 failing).
+
+## Ek — Konsolidasyon teslimatı (2026-08-21)
+
+131 denetim promptunun (P173–P303) tamamı kullanıcı tarafından dışarıda üretilip
+`docs/assets/sources`'a bırakıldı: 10 arka görünüş + fren kareleri + 6 yedek
+arketipin tam setleri + 8 gerçek bacak + 5 yemek ikonu + 30 yükseltme kartı
+ikonu (`ui_upgrade_*` kanonik adlarıyla) + 3 aşama zemini + 2 FX dokusu +
+20 UI ikonu + 3 durum illüstrasyonu. Üretici: §1.5'teki yönetici kararının
+kapsamındaki God Mode AI hesabı — aynı karar, aynı MVP sınırı, madde 5 ve 8
+aynı bilinçli kabulle. Bu ek yalnız teslimatı kayda geçirir; kapının "açıldı,
+geçilmedi" durumu değişmemiştir ve monetizasyon öncesi yeniden açılma şartı
+(P16/P23) aynen durur.

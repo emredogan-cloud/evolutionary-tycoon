@@ -102,6 +102,10 @@ export interface UpgradeView {
   readonly unlocked: boolean;
   /** Prerequisites still missing, by id. Empty when `unlocked`. */
   readonly missingPrereqs: readonly string[];
+  /** The player level this rung asks for (1 = never asked). */
+  readonly requiredLevel: number;
+  /** True when only the player level still blocks it. */
+  readonly levelLocked: boolean;
   /**
    * How much more money is needed, or 0.
    *
@@ -169,6 +173,36 @@ export interface ProgressionView {
 }
 
 /** The HUD, once every hundred milliseconds. */
+/**
+ * One live order, for the order cards — the manual loop's whole surface.
+ *
+ * `state` is the simulation's own five-state machine verbatim; the card never
+ * invents a sixth. `startable` is the kitchen's current answer ("a station of
+ * the right type is free"), so the button and the command agree by
+ * construction.
+ */
+export interface OrderCardView {
+  slot: number;
+  itemId: string;
+  state: 'PLACED' | 'COOKING' | 'ON_PASS' | 'DELIVERED' | 'PAID';
+  /** Sim ms since it was placed. */
+  ageMs: number;
+  /** Remaining patience of its customer, 0..1 — or -1 once they are seated/gone. */
+  patience01: number;
+  startable: boolean;
+  price: number;
+  /** 0..1 cook progress while COOKING, else 0. */
+  cook01: number;
+}
+
+/** The player level — derived in the sim from hashed counters, read here. */
+export interface PlayerLevelView {
+  level: number;
+  xp: number;
+  levelFloor: number;
+  nextLevelXp: number;
+}
+
 export interface HudModel {
   readonly cash: number;
   readonly reputation: number;
@@ -218,6 +252,14 @@ export interface HudModel {
 
   /** Takings less costs over the last sixty seconds, per minute — Phase 9. */
   readonly incomePerMinute: number;
+  /**
+   * Live orders, oldest first — reused array, `orderCount` says how much is
+   * live. PAID orders leave the list the sample after they resolve.
+   */
+  readonly orders: readonly OrderCardView[];
+  readonly orderCount: number;
+  /** Player level and XP — distinct from the restaurant stage on purpose. */
+  readonly level: PlayerLevelView;
   /** Every upgrade, in config order. Reused, like `markers`. */
   readonly upgrades: readonly UpgradeView[];
   readonly prices: readonly PriceView[];
@@ -299,6 +341,10 @@ export interface HudSource {
  */
 export interface UiCommands {
   buyUpgrade(id: string): void;
+  /** Start preparing an order — the manual loop. -1 means "the next startable". */
+  prep(orderSlot: number): void;
+  /** Simulation speed, through the same command door as everything else. */
+  setSpeed(mult: 1 | 2 | 4): void;
   /** Confirm the stage transition the player has been offered. */
   evolve(): void;
   place(objectId: string, x: number, y: number): void;

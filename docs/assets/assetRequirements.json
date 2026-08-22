@@ -8,7 +8,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P059",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -21,7 +21,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P062",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -34,7 +34,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P060",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -47,7 +47,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P061",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -60,7 +60,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P063",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -73,7 +73,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P066",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -86,7 +86,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P064",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -99,7 +99,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P065",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -112,7 +112,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P015",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -125,7 +125,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P018",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -138,7 +138,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P016",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -151,7 +151,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P017",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -164,7 +164,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P019",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -177,7 +177,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P022",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -190,7 +190,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P020",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -203,7 +203,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P021",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -216,7 +216,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P008",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -229,7 +229,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P010",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -242,7 +242,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P001",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -255,7 +255,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P009",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -268,7 +268,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P011",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -281,7 +281,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P014",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -294,7 +294,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P012",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -307,7 +307,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P013",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -320,7 +320,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P051",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -333,7 +333,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P054",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -346,7 +346,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P052",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -359,7 +359,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P053",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -372,7 +372,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P043",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -385,7 +385,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P046",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -398,7 +398,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P044",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -411,7 +411,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P045",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -424,7 +424,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P047",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -437,7 +437,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P050",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -450,7 +450,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P048",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -463,7 +463,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P049",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -476,7 +476,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P055",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -489,7 +489,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P058",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -502,7 +502,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P056",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -515,7 +515,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P057",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -528,7 +528,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P031",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -541,7 +541,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P034",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -554,7 +554,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P032",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -567,7 +567,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P033",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -580,7 +580,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P035",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -593,7 +593,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P038",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -606,7 +606,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P036",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -619,7 +619,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P037",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -632,7 +632,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P023",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -645,7 +645,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P026",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -658,7 +658,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P024",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -671,7 +671,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P025",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -684,7 +684,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P027",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -697,7 +697,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P030",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -710,7 +710,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P028",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -723,7 +723,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P029",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -736,7 +736,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P039",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -749,7 +749,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P042",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -762,7 +762,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P040",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -775,113 +775,113 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P041",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
   {
     "id": "char_leg-l_default_ne",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P233",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P233), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-l_default_nw",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P234",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P234), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-l_default_se",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P235",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P235), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-l_default_sw",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P236",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P236), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-r_default_ne",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P237",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P237), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-r_default_nw",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P238",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P238), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-r_default_se",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P239",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P239), imported+validated (0 failing)"
   },
   {
     "id": "char_leg-r_default_sw",
     "category": "CHARACTER_PARTS",
-    "subject": "rig leg part \u2014 painted-into-body art, unusable for stride articulation",
+    "subject": "rig leg part — painted-into-body art, unusable for stride articulation",
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P240",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS \u2014 legs are baked into the delivered bodies; stride cannot articulate"
+    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P240), imported+validated (0 failing)"
   },
   {
     "id": "food_burger_default",
@@ -892,7 +892,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P133",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -905,7 +905,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P138",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -918,7 +918,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P134",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -931,7 +931,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P135",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -944,7 +944,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P137",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -957,7 +957,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P136",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -970,7 +970,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P141",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -983,7 +983,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P140",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -996,7 +996,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P142",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1009,7 +1009,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P139",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1022,7 +1022,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P005",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1035,7 +1035,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P130",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1048,7 +1048,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P128",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1061,7 +1061,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P129",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1074,7 +1074,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P131",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1087,7 +1087,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P132",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1100,7 +1100,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P006",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1113,7 +1113,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P007",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1126,7 +1126,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P124",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1139,7 +1139,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P125",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1152,7 +1152,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P126",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1165,7 +1165,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P127",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1178,7 +1178,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P123",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1191,7 +1191,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P122",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1204,7 +1204,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P120",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1217,7 +1217,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P121",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1230,7 +1230,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P003",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1243,7 +1243,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P119",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1256,7 +1256,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": null,
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": "user-delivered outside the catalog (road slice)"
   },
@@ -1269,7 +1269,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P108",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1282,7 +1282,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P106",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1295,7 +1295,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P107",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1308,7 +1308,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P114",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1321,7 +1321,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P117",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1334,7 +1334,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P116",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1347,7 +1347,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P004",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1360,7 +1360,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P115",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1373,7 +1373,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P118",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1386,7 +1386,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P112",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1399,7 +1399,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P113",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1412,7 +1412,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P109",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1425,7 +1425,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P110",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1438,7 +1438,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P111",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1449,11 +1449,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P281",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P281), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_build",
@@ -1464,7 +1464,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P152",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1477,7 +1477,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P143",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1490,7 +1490,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P146",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1503,7 +1503,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P168",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1516,7 +1516,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P144",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1529,7 +1529,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P145",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1542,7 +1542,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P155",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1555,7 +1555,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P158",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1568,7 +1568,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P154",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1581,7 +1581,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P153",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1594,7 +1594,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P160",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1605,11 +1605,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P288",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P288), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_info",
@@ -1620,7 +1620,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P167",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1633,7 +1633,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P164",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1644,11 +1644,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P289",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P289), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_patience",
@@ -1659,7 +1659,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P159",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1670,11 +1670,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P290",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P290), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_save",
@@ -1685,7 +1685,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P172",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1698,7 +1698,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P169",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1711,7 +1711,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P171",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1724,7 +1724,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P170",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1737,7 +1737,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P147",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1748,11 +1748,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P294",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P294), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_speed-4",
@@ -1761,11 +1761,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P295",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P295), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_staff",
@@ -1776,7 +1776,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P156",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1787,11 +1787,11 @@
     "stage": "all",
     "role": "HUD/panels",
     "consumer": "src/ui",
-    "status": "PRESENT + NEEDS REGEN",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P296",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver \u2014 regen restores family"
+    "note": "ACCEPTED_EXCEPTIONS palette-affinity waiver — regen restores family; delivered 2026-08-21 (P296), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_unlock",
@@ -1802,7 +1802,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P165",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1815,7 +1815,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P151",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1828,7 +1828,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P166",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1841,7 +1841,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P100",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1854,7 +1854,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P098",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1867,7 +1867,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P099",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1880,7 +1880,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P105",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1893,7 +1893,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P102",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1906,7 +1906,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P101",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1919,7 +1919,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P103",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1932,7 +1932,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P104",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1945,7 +1945,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P084",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1958,7 +1958,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P082",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1971,7 +1971,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P083",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1984,7 +1984,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P089",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -1997,7 +1997,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P086",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2010,7 +2010,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P085",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2023,7 +2023,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P087",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2036,7 +2036,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P088",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2049,7 +2049,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P077",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2062,7 +2062,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P075",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2075,7 +2075,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P076",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2088,7 +2088,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P081",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2101,7 +2101,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P078",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2114,7 +2114,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P002",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2127,7 +2127,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P079",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2140,7 +2140,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P080",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2153,7 +2153,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P092",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2166,7 +2166,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P090",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2179,7 +2179,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P091",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2192,7 +2192,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P097",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2205,7 +2205,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P094",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2218,7 +2218,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P093",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2231,7 +2231,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P095",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2244,7 +2244,7 @@
     "consumer": "atlas via AssetRegistry",
     "status": "PRESENT + VERIFIED",
     "prompt": "P096",
-    "priority": "\u2014",
+    "priority": "—",
     "requiredBefore": null,
     "note": ""
   },
@@ -2255,11 +2255,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P213",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P213), imported+validated (0 failing)"
   },
   {
     "id": "veh_pickup_default_n",
@@ -2268,11 +2268,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P208",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P208), imported+validated (0 failing)"
   },
   {
     "id": "veh_pickup_default_ne",
@@ -2281,11 +2281,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P209",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P209), imported+validated (0 failing)"
   },
   {
     "id": "veh_pickup_default_nw",
@@ -2294,11 +2294,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P210",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P210), imported+validated (0 failing)"
   },
   {
     "id": "veh_van_default_n",
@@ -2307,11 +2307,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P230",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P230), imported+validated (0 failing)"
   },
   {
     "id": "veh_van_default_ne",
@@ -2320,11 +2320,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P231",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P231), imported+validated (0 failing)"
   },
   {
     "id": "veh_van_default_nw",
@@ -2333,11 +2333,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P232",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P232), imported+validated (0 failing)"
   },
   {
     "id": "veh_motorcycle_default_n",
@@ -2346,11 +2346,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P203",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P203), imported+validated (0 failing)"
   },
   {
     "id": "veh_motorcycle_default_ne",
@@ -2359,11 +2359,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P204",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P204), imported+validated (0 failing)"
   },
   {
     "id": "veh_motorcycle_default_nw",
@@ -2372,11 +2372,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P205",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps"
+    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P205), imported+validated (0 failing)"
   },
   {
     "id": "veh_sedan_brake_n",
@@ -2385,11 +2385,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P211",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P211), imported+validated (0 failing)"
   },
   {
     "id": "veh_sedan_brake_ne",
@@ -2398,11 +2398,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P212",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P212), imported+validated (0 failing)"
   },
   {
     "id": "veh_pickup_brake_n",
@@ -2411,11 +2411,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P206",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P206), imported+validated (0 failing)"
   },
   {
     "id": "veh_pickup_brake_ne",
@@ -2424,11 +2424,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P207",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P207), imported+validated (0 failing)"
   },
   {
     "id": "veh_van_brake_n",
@@ -2437,11 +2437,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P228",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P228), imported+validated (0 failing)"
   },
   {
     "id": "veh_van_brake_ne",
@@ -2450,11 +2450,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P229",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P229), imported+validated (0 failing)"
   },
   {
     "id": "veh_motorcycle_brake_n",
@@ -2463,11 +2463,11 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P201",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P201), imported+validated (0 failing)"
   },
   {
     "id": "veh_motorcycle_brake_ne",
@@ -2476,557 +2476,557 @@
     "stage": "all",
     "role": "deceleration read (nose-dip today)",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P202",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "ASSET_INTEGRATION \u00a74.6 \u2014 tint read as paint and was removed"
+    "note": "ASSET_INTEGRATION §4.6 — tint read as paint and was removed; delivered 2026-08-21 (P202), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_default_s",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 s view",
+    "subject": "low two-seat sports car — s view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P219",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P219), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_default_se",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 se view",
+    "subject": "low two-seat sports car — se view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P220",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P220), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_default_e",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 e view",
+    "subject": "low two-seat sports car — e view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P216",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P216), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_default_ne",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 ne view",
+    "subject": "low two-seat sports car — ne view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P218",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P218), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_default_n",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 n view",
+    "subject": "low two-seat sports car — n view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P217",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P217), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_brake_n",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 brake-lit n",
+    "subject": "low two-seat sports car — brake-lit n",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P214",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P214), imported+validated (0 failing)"
   },
   {
     "id": "veh_sports_brake_ne",
     "category": "VEHICLES",
-    "subject": "low two-seat sports car \u2014 brake-lit ne",
+    "subject": "low two-seat sports car — brake-lit ne",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P215",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P215), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_default_s",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 s view",
+    "subject": "box-body long-haul truck — s view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P226",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P226), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_default_se",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 se view",
+    "subject": "box-body long-haul truck — se view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P227",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P227), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_default_e",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 e view",
+    "subject": "box-body long-haul truck — e view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P223",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P223), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_default_ne",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 ne view",
+    "subject": "box-body long-haul truck — ne view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P225",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P225), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_default_n",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 n view",
+    "subject": "box-body long-haul truck — n view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P224",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P224), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_brake_n",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 brake-lit n",
+    "subject": "box-body long-haul truck — brake-lit n",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P221",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P221), imported+validated (0 failing)"
   },
   {
     "id": "veh_truck_brake_ne",
     "category": "VEHICLES",
-    "subject": "box-body long-haul truck \u2014 brake-lit ne",
+    "subject": "box-body long-haul truck — brake-lit ne",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P222",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P222), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_default_s",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 s view",
+    "subject": "tour bus — s view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P178",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P178), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_default_se",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 se view",
+    "subject": "tour bus — se view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P179",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P179), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_default_e",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 e view",
+    "subject": "tour bus — e view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P175",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P175), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_default_ne",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 ne view",
+    "subject": "tour bus — ne view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P177",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P177), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_default_n",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 n view",
+    "subject": "tour bus — n view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P176",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P176), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_brake_n",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 brake-lit n",
+    "subject": "tour bus — brake-lit n",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P173",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P173), imported+validated (0 failing)"
   },
   {
     "id": "veh_bus_brake_ne",
     "category": "VEHICLES",
-    "subject": "tour bus \u2014 brake-lit ne",
+    "subject": "tour bus — brake-lit ne",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P174",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P174), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_default_s",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 s view",
+    "subject": "modern compact EV — s view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P192",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P192), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_default_se",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 se view",
+    "subject": "modern compact EV — se view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P193",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P193), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_default_e",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 e view",
+    "subject": "modern compact EV — e view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P189",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P189), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_default_ne",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 ne view",
+    "subject": "modern compact EV — ne view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P191",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P191), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_default_n",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 n view",
+    "subject": "modern compact EV — n view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P190",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P190), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_brake_n",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 brake-lit n",
+    "subject": "modern compact EV — brake-lit n",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P187",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P187), imported+validated (0 failing)"
   },
   {
     "id": "veh_ev_brake_ne",
     "category": "VEHICLES",
-    "subject": "modern compact EV \u2014 brake-lit ne",
+    "subject": "modern compact EV — brake-lit ne",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P188",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P188), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_default_s",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 s view",
+    "subject": "black VIP limousine — s view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P199",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P199), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_default_se",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 se view",
+    "subject": "black VIP limousine — se view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P200",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P200), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_default_e",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 e view",
+    "subject": "black VIP limousine — e view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P196",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P196), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_default_ne",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 ne view",
+    "subject": "black VIP limousine — ne view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P198",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P198), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_default_n",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 n view",
+    "subject": "black VIP limousine — n view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P197",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P197), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_brake_n",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 brake-lit n",
+    "subject": "black VIP limousine — brake-lit n",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P194",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P194), imported+validated (0 failing)"
   },
   {
     "id": "veh_limo_brake_ne",
     "category": "VEHICLES",
-    "subject": "black VIP limousine \u2014 brake-lit ne",
+    "subject": "black VIP limousine — brake-lit ne",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P195",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P195), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_default_s",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 s view",
+    "subject": "ambulance with light bar — s view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P185",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P185), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_default_se",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 se view",
+    "subject": "ambulance with light bar — se view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P186",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P186), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_default_e",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 e view",
+    "subject": "ambulance with light bar — e view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P182",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P182), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_default_ne",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 ne view",
+    "subject": "ambulance with light bar — ne view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P184",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P184), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_default_n",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 n view",
+    "subject": "ambulance with light bar — n view",
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P183",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule"
+    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P183), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_brake_n",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 brake-lit n",
+    "subject": "ambulance with light bar — brake-lit n",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P180",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P180), imported+validated (0 failing)"
   },
   {
     "id": "veh_emergency_brake_ne",
     "category": "VEHICLES",
-    "subject": "ambulance with light bar \u2014 brake-lit ne",
+    "subject": "ambulance with light bar — brake-lit ne",
     "stage": "2-4",
     "role": "deceleration read",
     "consumer": "VehicleView brake state",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P181",
     "priority": "P3",
     "requiredBefore": null,
-    "note": "ships with the archetype set"
+    "note": "ships with the archetype set; delivered 2026-08-21 (P181), imported+validated (0 failing)"
   },
   {
     "id": "food_breakfast_default",
@@ -3035,11 +3035,11 @@
     "stage": "3-4",
     "role": "order bubble truthfulness (labelled text bubble today)",
     "consumer": "FOOD_ICONS map + OrderBubble",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P241",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "sprites.ts FOOD_ICONS note"
+    "note": "sprites.ts FOOD_ICONS note; delivered 2026-08-21 (P241), imported+validated (0 failing)"
   },
   {
     "id": "food_chicken_default",
@@ -3048,11 +3048,11 @@
     "stage": "3-4",
     "role": "order bubble truthfulness (labelled text bubble today)",
     "consumer": "FOOD_ICONS map + OrderBubble",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P242",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "sprites.ts FOOD_ICONS note"
+    "note": "sprites.ts FOOD_ICONS note; delivered 2026-08-21 (P242), imported+validated (0 failing)"
   },
   {
     "id": "food_dessert_default",
@@ -3061,11 +3061,11 @@
     "stage": "3-4",
     "role": "order bubble truthfulness (labelled text bubble today)",
     "consumer": "FOOD_ICONS map + OrderBubble",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P243",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "sprites.ts FOOD_ICONS note"
+    "note": "sprites.ts FOOD_ICONS note; delivered 2026-08-21 (P243), imported+validated (0 failing)"
   },
   {
     "id": "food_salad_default",
@@ -3074,11 +3074,11 @@
     "stage": "3-4",
     "role": "order bubble truthfulness (labelled text bubble today)",
     "consumer": "FOOD_ICONS map + OrderBubble",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P245",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "sprites.ts FOOD_ICONS note"
+    "note": "sprites.ts FOOD_ICONS note; delivered 2026-08-21 (P245), imported+validated (0 failing)"
   },
   {
     "id": "food_family_default",
@@ -3087,11 +3087,11 @@
     "stage": "3-4",
     "role": "order bubble truthfulness (labelled text bubble today)",
     "consumer": "FOOD_ICONS map + OrderBubble",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P244",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "sprites.ts FOOD_ICONS note"
+    "note": "sprites.ts FOOD_ICONS note; delivered 2026-08-21 (P244), imported+validated (0 failing)"
   },
   {
     "id": "food_seasonal",
@@ -3104,397 +3104,397 @@
     "prompt": null,
     "priority": "P2",
     "requiredBefore": null,
-    "note": "GDD \u00a74: variable item, post-MVP campaign art"
+    "note": "GDD §4: variable item, post-MVP campaign art"
   },
   {
     "id": "struct_automation",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 automation",
+    "subject": "upgrade card icon — automation",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P246",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P246), imported+validated (0 failing) — canonical file ui_upgrade_automation@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_badge",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 badge",
+    "subject": "upgrade card icon — badge",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P247",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P247), imported+validated (0 failing) — canonical file ui_upgrade_badge@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_barrier",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 barrier",
+    "subject": "upgrade card icon — barrier",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P248",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P248), imported+validated (0 failing) — canonical file ui_upgrade_barrier@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_bench",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 bench",
+    "subject": "upgrade card icon — bench",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P249",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P249), imported+validated (0 failing) — canonical file ui_upgrade_bench@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_canopy",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 canopy",
+    "subject": "upgrade card icon — canopy",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P250",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P250), imported+validated (0 failing) — canonical file ui_upgrade_canopy@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_cooler",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 cooler",
+    "subject": "upgrade card icon — cooler",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P251",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P251), imported+validated (0 failing) — canonical file ui_upgrade_cooler@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_counter_wide",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 counter wide",
+    "subject": "upgrade card icon — counter wide",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P252",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P252), imported+validated (0 failing) — canonical file ui_upgrade_counter-wide@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_crates",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 crates",
+    "subject": "upgrade card icon — crates",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P253",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P253), imported+validated (0 failing) — canonical file ui_upgrade_crates@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_dispenser",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 dispenser",
+    "subject": "upgrade card icon — dispenser",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P254",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P254), imported+validated (0 failing) — canonical file ui_upgrade_dispenser@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_forecourt",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 forecourt",
+    "subject": "upgrade card icon — forecourt",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P255",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P255), imported+validated (0 failing) — canonical file ui_upgrade_forecourt@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_headset",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 headset",
+    "subject": "upgrade card icon — headset",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P256",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P256), imported+validated (0 failing) — canonical file ui_upgrade_headset@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_heatlamp",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 heatlamp",
+    "subject": "upgrade card icon — heatlamp",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P257",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P257), imported+validated (0 failing) — canonical file ui_upgrade_heatlamp@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_knives",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 knives",
+    "subject": "upgrade card icon — knives",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P258",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P258), imported+validated (0 failing) — canonical file ui_upgrade_knives@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_lane",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 lane",
+    "subject": "upgrade card icon — lane",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P259",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P259), imported+validated (0 failing) — canonical file ui_upgrade_lane@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_menuboard",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 menuboard",
+    "subject": "upgrade card icon — menuboard",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P260",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P260), imported+validated (0 failing) — canonical file ui_upgrade_menuboard@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_neon",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 neon",
+    "subject": "upgrade card icon — neon",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P261",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P261), imported+validated (0 failing) — canonical file ui_upgrade_neon@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_orderpost",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 orderpost",
+    "subject": "upgrade card icon — orderpost",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P262",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P262), imported+validated (0 failing) — canonical file ui_upgrade_orderpost@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_oven",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 oven",
+    "subject": "upgrade card icon — oven",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P263",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P263), imported+validated (0 failing) — canonical file ui_upgrade_oven@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_planter",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 planter",
+    "subject": "upgrade card icon — planter",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P264",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P264), imported+validated (0 failing) — canonical file ui_upgrade_planter@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_prep_station",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 prep station",
+    "subject": "upgrade card icon — prep station",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P265",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P265), imported+validated (0 failing) — canonical file ui_upgrade_prep-station@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_pylon",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 pylon",
+    "subject": "upgrade card icon — pylon",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P266",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P266), imported+validated (0 failing) — canonical file ui_upgrade_pylon@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_reader",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 reader",
+    "subject": "upgrade card icon — reader",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P267",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P267), imported+validated (0 failing) — canonical file ui_upgrade_reader@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_register",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 register",
+    "subject": "upgrade card icon — register",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P268",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P268), imported+validated (0 failing) — canonical file ui_upgrade_register@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_shoes",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 shoes",
+    "subject": "upgrade card icon — shoes",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P269",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P269), imported+validated (0 failing) — canonical file ui_upgrade_shoes@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_sign_lit",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 sign lit",
+    "subject": "upgrade card icon — sign lit",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P270",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P270), imported+validated (0 failing) — canonical file ui_upgrade_sign-lit@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_sign_painted",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 sign painted",
+    "subject": "upgrade card icon — sign painted",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P271",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P271), imported+validated (0 failing) — canonical file ui_upgrade_sign-painted@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_staffroom",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 staffroom",
+    "subject": "upgrade card icon — staffroom",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P272",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P272), imported+validated (0 failing) — canonical file ui_upgrade_staffroom@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_supervisor",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 supervisor",
+    "subject": "upgrade card icon — supervisor",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P273",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P273), imported+validated (0 failing) — canonical file ui_upgrade_supervisor@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_terrace",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 terrace",
+    "subject": "upgrade card icon — terrace",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P274",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P274), imported+validated (0 failing) — canonical file ui_upgrade_terrace@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "struct_window",
     "category": "UPGRADE_VISUALS",
-    "subject": "upgrade card icon \u2014 window",
+    "subject": "upgrade card icon — window",
     "stage": "per-rung",
     "role": "premium upgrade cards (P18 consumes iconKey, unconsumed today)",
     "consumer": "UPGRADE_TREE.iconKey",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P275",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "iconKey declared, no file"
+    "note": "iconKey declared, no file; delivered 2026-08-21 (P275), imported+validated (0 failing) — canonical file ui_upgrade_window@2x (ASSET_PIPELINE §3; iconKey updated with it)"
   },
   {
     "id": "ground_stage2_tile-a",
@@ -3503,11 +3503,11 @@
     "stage": "2",
     "role": "stage identity underfoot",
     "consumer": "GROUND_FRAMES (reuses stage 1 today)",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P276",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "deliberate reuse recorded in PLACEHOLDER_REGISTER"
+    "note": "deliberate reuse recorded in PLACEHOLDER_REGISTER; delivered 2026-08-21 (P276), imported+validated (0 failing)"
   },
   {
     "id": "ground_stage3_tile-a",
@@ -3516,11 +3516,11 @@
     "stage": "3",
     "role": "stage identity underfoot",
     "consumer": "GROUND_FRAMES (reuses stage 1 today)",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P277",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "deliberate reuse recorded in PLACEHOLDER_REGISTER"
+    "note": "deliberate reuse recorded in PLACEHOLDER_REGISTER; delivered 2026-08-21 (P277), imported+validated (0 failing)"
   },
   {
     "id": "ground_stage4_tile-a",
@@ -3529,11 +3529,11 @@
     "stage": "4",
     "role": "stage identity underfoot",
     "consumer": "GROUND_FRAMES (reuses stage 1 today)",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P278",
     "priority": "P2",
     "requiredBefore": "P20",
-    "note": "deliberate reuse recorded in PLACEHOLDER_REGISTER"
+    "note": "deliberate reuse recorded in PLACEHOLDER_REGISTER; delivered 2026-08-21 (P278), imported+validated (0 failing)"
   },
   {
     "id": "fx_fire_soft",
@@ -3542,11 +3542,11 @@
     "stage": "all",
     "role": "grill flare bursts (P17)",
     "consumer": "ParticleLibrary",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P280",
     "priority": "P1",
     "requiredBefore": "P17",
-    "note": "roadmap P17 effect list"
+    "note": "roadmap P17 effect list; delivered 2026-08-21 (P280), imported+validated (0 failing)"
   },
   {
     "id": "fx_coin_soft",
@@ -3555,11 +3555,11 @@
     "stage": "all",
     "role": "payment burst (P17)",
     "consumer": "ParticleLibrary",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P279",
     "priority": "P2",
     "requiredBefore": "P18",
-    "note": "ui_icon_coin is UI-family, not a particle"
+    "note": "ui_icon_coin is UI-family, not a particle; delivered 2026-08-21 (P279), imported+validated (0 failing)"
   },
   {
     "id": "procedural:rain",
@@ -3681,171 +3681,171 @@
   {
     "id": "ui_icon_weather-clear",
     "category": "UI_ICONS",
-    "subject": "weather strip icon \u2014 clear",
+    "subject": "weather strip icon — clear",
     "stage": "all",
     "role": "HUD weather indicator (P18)",
     "consumer": "src/ui HUD",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P297",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P297), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_weather-overcast",
     "category": "UI_ICONS",
-    "subject": "weather strip icon \u2014 overcast",
+    "subject": "weather strip icon — overcast",
     "stage": "all",
     "role": "HUD weather indicator (P18)",
     "consumer": "src/ui HUD",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P298",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P298), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_weather-rain",
     "category": "UI_ICONS",
-    "subject": "weather strip icon \u2014 rain",
+    "subject": "weather strip icon — rain",
     "stage": "all",
     "role": "HUD weather indicator (P18)",
     "consumer": "src/ui HUD",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P299",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P299), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_weather-snow",
     "category": "UI_ICONS",
-    "subject": "weather strip icon \u2014 snow",
+    "subject": "weather strip icon — snow",
     "stage": "all",
     "role": "HUD weather indicator (P18)",
     "consumer": "src/ui HUD",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P300",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P300), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_event-road-work",
     "category": "UI_ICONS",
-    "subject": "event strip icon \u2014 road-work",
+    "subject": "event strip icon — road-work",
     "stage": "all",
     "role": "notification strip (P18)",
     "consumer": "src/ui strip",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P286",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P286), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_event-accident",
     "category": "UI_ICONS",
-    "subject": "event strip icon \u2014 accident",
+    "subject": "event strip icon — accident",
     "stage": "all",
     "role": "notification strip (P18)",
     "consumer": "src/ui strip",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P282",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P282), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_event-festival",
     "category": "UI_ICONS",
-    "subject": "event strip icon \u2014 festival",
+    "subject": "event strip icon — festival",
     "stage": "all",
     "role": "notification strip (P18)",
     "consumer": "src/ui strip",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P283",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P283), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_event-night-rush",
     "category": "UI_ICONS",
-    "subject": "event strip icon \u2014 night-rush",
+    "subject": "event strip icon — night-rush",
     "stage": "all",
     "role": "notification strip (P18)",
     "consumer": "src/ui strip",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P285",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P285), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_event-weather-front",
     "category": "UI_ICONS",
-    "subject": "event strip icon \u2014 weather-front",
+    "subject": "event strip icon — weather-front",
     "stage": "all",
     "role": "notification strip (P18)",
     "consumer": "src/ui strip",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P287",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P287), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_event-fuel-spike",
     "category": "UI_ICONS",
-    "subject": "event strip icon \u2014 fuel-spike",
+    "subject": "event strip icon — fuel-spike",
     "stage": "all",
     "role": "notification strip (P18)",
     "consumer": "src/ui strip",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P284",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P284), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_role-cook",
     "category": "UI_ICONS",
-    "subject": "staff role icon \u2014 cook",
+    "subject": "staff role icon — cook",
     "stage": "2-4",
     "role": "staff screen (P18)",
     "consumer": "src/ui Staff",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P292",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P292), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_role-waiter",
     "category": "UI_ICONS",
-    "subject": "staff role icon \u2014 waiter",
+    "subject": "staff role icon — waiter",
     "stage": "2-4",
     "role": "staff screen (P18)",
     "consumer": "src/ui Staff",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P293",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P293), imported+validated (0 failing)"
   },
   {
     "id": "ui_icon_role-cleaner",
     "category": "UI_ICONS",
-    "subject": "staff role icon \u2014 cleaner",
+    "subject": "staff role icon — cleaner",
     "stage": "2-4",
     "role": "staff screen (P18)",
     "consumer": "src/ui Staff",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P291",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P291), imported+validated (0 failing)"
   },
   {
     "id": "ui_illust_offline",
@@ -3854,11 +3854,11 @@
     "stage": "all",
     "role": "P18 screens",
     "consumer": "src/ui screens",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P303",
     "priority": "P2",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P303), imported+validated (0 failing)"
   },
   {
     "id": "ui_illust_empty",
@@ -3867,11 +3867,11 @@
     "stage": "all",
     "role": "P18 screens",
     "consumer": "src/ui screens",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P301",
     "priority": "P2",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P301), imported+validated (0 failing)"
   },
   {
     "id": "ui_illust_error",
@@ -3880,11 +3880,11 @@
     "stage": "all",
     "role": "P18 screens",
     "consumer": "src/ui screens",
-    "status": "MISSING + PROMPT ADDED",
+    "status": "PRESENT + VERIFIED",
     "prompt": "P302",
     "priority": "P2",
     "requiredBefore": "P18",
-    "note": ""
+    "note": "delivered 2026-08-21 (P302), imported+validated (0 failing)"
   },
   {
     "id": "ph-scale-reference__PLACEHOLDER__",

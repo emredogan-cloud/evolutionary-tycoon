@@ -41,26 +41,26 @@ async function readCash(page: Page): Promise<number> {
   return Number.parseFloat(raw ?? 'NaN');
 }
 
-/** Open the discovery list. */
+/** Open the discovery surface — the consolidation pass's build panel. */
 async function openMenu(page: Page): Promise<void> {
-  await page.locator('[data-testid="build-menu-toggle"]').click();
-  await expect(page.locator('[data-testid="build-menu-list"]')).toBeVisible();
+  await page.locator('[data-testid="dock-build"]').click();
+  await expect(page.locator('[data-testid="build-panel"]')).toBeVisible();
 }
 
-test.describe('the build menu is the map of the tree', () => {
+test.describe('the build panel is the map of the tree', () => {
   test('lists all five families and every upgrade in them', async ({ page }) => {
     await boot(page);
     await openMenu(page);
 
-    const families = page.locator('[data-testid="build-menu-family"]');
+    const families = page.locator('[data-testid="build-family"]');
     await expect(families).toHaveCount(5);
 
     // The full tree, including what is still locked — seeing what is coming is
     // the point of a discovery list.
-    await expect(page.locator('[data-testid="build-menu-item"]')).toHaveCount(30);
+    await expect(page.locator('[data-testid="build-card"]')).toHaveCount(30);
 
     for (const family of ['VISIBILITY_APPEAL', 'KITCHEN', 'CAPACITY', 'DRIVE_THRU', 'STAFF']) {
-      await expect(page.locator(`[data-testid="build-menu-family"][data-family="${family}"]`)).toHaveCount(1);
+      await expect(page.locator(`[data-testid="build-family"][data-family="${family}"]`)).toHaveCount(1);
     }
   });
 
@@ -73,7 +73,7 @@ test.describe('the build menu is the map of the tree', () => {
     await boot(page);
     await openMenu(page);
 
-    const laneRow = page.locator('[data-testid="build-menu-item"][data-id="lane-extension"]');
+    const laneRow = page.locator('[data-testid="build-card"][data-upgrade="lane-extension"]');
     await expect(laneRow).toBeVisible();
     await expect(laneRow).toHaveAttribute('data-stage', '4');
     await expect(laneRow).toHaveClass(/locked/);
@@ -90,13 +90,13 @@ test.describe('the build menu is the map of the tree', () => {
     await openMenu(page);
 
     await expect(page.locator('[data-testid="upgrade-card"]')).toHaveCount(0);
-    await page.locator('[data-testid="build-menu-item"][data-id="hand-painted-sign"]').click();
+    await page.locator('[data-testid="build-card"][data-upgrade="hand-painted-sign"]').click();
 
     const card = page.locator('[data-testid="upgrade-card"]');
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute('data-upgrade', 'hand-painted-sign');
     // And nothing was bought by looking at it.
-    await expect(page.locator('[data-testid="upgrade-level"]')).toContainText('Seviye 0');
+    await expect(page.locator('[data-testid="upgrade-level"]')).toContainText('Kademe 0');
   });
 });
 
@@ -104,7 +104,7 @@ test.describe('the card explains both kinds of no', () => {
   test('says how much money is missing', async ({ page }) => {
     await boot(page);
     await openMenu(page);
-    await page.locator('[data-testid="build-menu-item"][data-id="hand-painted-sign"]').click();
+    await page.locator('[data-testid="build-card"][data-upgrade="hand-painted-sign"]').click();
 
     // A fresh stand cannot afford anything, and the card says by how much
     // rather than only that it cannot.
@@ -130,7 +130,7 @@ test.describe('the card explains both kinds of no', () => {
       });
     });
     await openMenu(page);
-    await page.locator('[data-testid="build-menu-item"][data-id="illuminated-sign"]').click();
+    await page.locator('[data-testid="build-card"][data-upgrade="illuminated-sign"]').click();
 
     const locked = page.locator('[data-testid="upgrade-locked"]');
     await expect(locked).toBeVisible();
@@ -155,7 +155,7 @@ async function buyRoot(page: Page, family: string, id: string, ticks: number): P
     .poll(async () => readCash(page), { message: `the till never rose before buying ${id}` })
     .toBeGreaterThan(before);
 
-  await page.locator(`[data-testid="build-menu-item"][data-id="${id}"]`).click();
+  await page.locator(`[data-testid="build-card"][data-upgrade="${id}"]`).click();
 
   /*
    * Park the pointer in the middle of the viewport before touching the card.
@@ -183,9 +183,9 @@ async function buyRoot(page: Page, family: string, id: string, ticks: number): P
 
   // The level the card reports is the level the simulation holds; the bridge is
   // the only path between them.
-  await expect(page.locator('[data-testid="upgrade-level"]')).toContainText('Seviye 1');
+  await expect(page.locator('[data-testid="upgrade-level"]')).toContainText('Kademe 1');
   await expect(
-    page.locator(`[data-testid="build-menu-item"][data-id="${id}"]`),
+    page.locator(`[data-testid="build-card"][data-upgrade="${id}"]`),
     `${id} did not show as owned in the list`,
   ).toHaveAttribute('data-owned', '1');
 }

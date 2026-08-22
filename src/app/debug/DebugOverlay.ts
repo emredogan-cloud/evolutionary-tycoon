@@ -24,8 +24,14 @@ import { VEHICLE_ON_ROAD } from '@sim/systems/VehicleManeuverSystem';
  * `VITE_DEBUG_PANEL` unset evaluates this to `false` at compile time and the
  * whole module is dropped from the bundle.
  */
-export function debugOverlayEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_DEBUG_PANEL === '1';
+export function debugOverlayEnabled(search: string = globalThis.location.search): boolean {
+  /*
+   * Consolidation pass (§28): production mode never shows raw telemetry, and
+   * dev mode stopped being an exception — the overlay was drowning the
+   * product view in every screenshot. `?debug=1` is the one door, in every
+   * build; the infrastructure itself is untouched.
+   */
+  return new URLSearchParams(search).get('debug') === '1';
 }
 
 const REFRESH_INTERVAL_MS = 250;

@@ -35,7 +35,16 @@ export const ATLAS_MIN_FILL = 0.7;
  * tiny. `critical` is everything the first playable frame needs. `lazy` arrives
  * when the stage that needs it is entered. ASSET_PIPELINE §14.
  */
-export type LoadPriority = 'boot' | 'critical' | 'lazy';
+/**
+ * `deferred` (2026-08-21, consolidation pass): not fetched before the world
+ * starts at all — the reserve vehicle fleet, the panel icon set and the stage
+ * 2–4 ground bakes are content the first playable frame provably never draws
+ * (reserve spawn shares are zero until enabled, panels open on player input,
+ * a save boots into exactly one stage). LoadScene skips them; they arrive by
+ * explicit request (`installDeferredAtlas`) or when their stage begins.
+ * This is the "go back to being staged" door LoadScene's header reserved.
+ */
+export type LoadPriority = 'boot' | 'critical' | 'lazy' | 'deferred';
 
 export interface AtlasSpec {
   readonly id: string;
@@ -58,7 +67,27 @@ export const ATLASES = [
   { id: 'nature', maxWidth: 2048, maxHeight: 2048, priority: 'lazy', pngFallback: false },
   { id: 'fx', maxWidth: 1024, maxHeight: 1024, priority: 'critical', pngFallback: false },
   { id: 'bg', maxWidth: 4096, maxHeight: 1024, priority: 'critical', pngFallback: false },
+  // The six reserve archetypes (P15 behaviour, art delivered 2026-08-21).
+  { id: 'vehicles2', maxWidth: 4096, maxHeight: 4096, priority: 'deferred', pngFallback: false },
+  // Panel-only interface art: upgrade-card icons and the state illustrations.
+  { id: 'ui2', maxWidth: 2048, maxHeight: 2048, priority: 'deferred', pngFallback: false },
 ] as const satisfies readonly AtlasSpec[];
+
+/**
+ * Subject-level atlas routing — the exception table to "one category, one
+ * atlas". A row moves the named subjects of a category into another atlas so
+ * their bytes can carry a different load priority. Recorded here, consumed by
+ * `tools/asset-pipeline/atlas.ts` (packing) and `report.ts` (budget
+ * attribution).
+ */
+export const ATLAS_SUBJECT_ROUTES = [
+  {
+    category: 'veh',
+    subjects: ['bus', 'emergency', 'ev', 'limo', 'sports', 'truck'],
+    atlas: 'vehicles2',
+  },
+  { category: 'ui', subjects: ['upgrade', 'illust'], atlas: 'ui2' },
+] as const;
 
 type AtlasId = (typeof ATLASES)[number]['id'];
 
@@ -119,8 +148,12 @@ export const ASSET_CATEGORIES = [
   {
     id: 'veh',
     atlas: 'vehicles',
-    budgetBytes: 2.4 * MB,
-    expectedFiles: 90,
+    // 2.4 MB was sized for four archetypes' forward views. The 2026-08-21
+    // delivery completed the audit plan — true rears, brake frames, and the
+    // six reserve archetypes — so the row now covers the whole ten-archetype
+    // fleet (change record: PROJECT_MEMORY §22, consolidation checkpoint).
+    budgetBytes: 6.5 * MB,
+    expectedFiles: 100,
     priority: 'critical',
     kind: 'image',
   },
@@ -141,10 +174,14 @@ export const ASSET_CATEGORIES = [
     priority: 'lazy',
     kind: 'image',
   },
-  { id: 'ground', atlas: null, budgetBytes: 7.0 * MB, expectedFiles: 10, priority: 'lazy', kind: 'image' },
+  // 7 MB predates the stage 2–4 ground bakes the audit required; four baked
+  // stages now share the row (change record: PROJECT_MEMORY §22).
+  { id: 'ground', atlas: null, budgetBytes: 11.5 * MB, expectedFiles: 10, priority: 'lazy', kind: 'image' },
   { id: 'road', atlas: null, budgetBytes: 0, expectedFiles: 6, priority: 'lazy', kind: 'image' },
   { id: 'bg', atlas: 'bg', budgetBytes: 1.8 * MB, expectedFiles: 8, priority: 'critical', kind: 'image' },
-  { id: 'ui', atlas: 'ui', budgetBytes: 0.8 * MB, expectedFiles: 60, priority: 'critical', kind: 'image' },
+  // 0.8 MB predates the 30 upgrade-card icons, the role/event/weather icon
+  // set and the three state illustrations (change record: PROJECT_MEMORY §22).
+  { id: 'ui', atlas: 'ui', budgetBytes: 1.9 * MB, expectedFiles: 115, priority: 'critical', kind: 'image' },
   { id: 'food', atlas: 'ui', budgetBytes: 0, expectedFiles: 30, priority: 'critical', kind: 'image' },
   { id: 'fx', atlas: 'fx', budgetBytes: 0.4 * MB, expectedFiles: 25, priority: 'critical', kind: 'image' },
   { id: 'sfx', atlas: null, budgetBytes: 5.0 * MB, expectedFiles: 55, priority: 'lazy', kind: 'audio' },
@@ -168,7 +205,9 @@ export const SHARED_BUDGETS: Readonly<Record<string, CategoryId>> = {
 };
 
 /** ASSET_PIPELINE §13. Both are enforced by `pnpm assets:report`. */
-export const TOTAL_BUDGET_BYTES = 27.3 * MB;
+// Rows above sum to 37 MB since the 2026-08-21 delivery (was 27.3 before the
+// fleet, the stage grounds and the panel art landed).
+export const TOTAL_BUDGET_BYTES = 37 * MB;
 export const CRITICAL_PATH_BUDGET_BYTES = 4 * MB;
 
 /** ASSET_PIPELINE §14: the loading screen must be on screen inside 300 ms. */

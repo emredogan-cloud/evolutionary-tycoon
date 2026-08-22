@@ -19,6 +19,8 @@ export interface ManifestFile {
   readonly url: string;
   readonly bytes: number;
   readonly sha256: string;
+  /** Singles only: `deferred` skips the boot fetch. Absent means boot-time. */
+  readonly priority?: LoadPriority;
 }
 
 export interface ManifestAtlas {
@@ -34,7 +36,13 @@ export interface AssetManifest {
   readonly paletteVersion: number;
   readonly atlases: readonly ManifestAtlas[];
   readonly singles: readonly ManifestFile[];
-  readonly totals: { readonly bytes: number; readonly bootBytes: number; readonly criticalBytes: number };
+  readonly totals: {
+    readonly bytes: number;
+    readonly bootBytes: number;
+    readonly criticalBytes: number;
+    /** Optional: older manifests predate the deferred tier. */
+    readonly deferredBytes?: number;
+  };
 }
 
 export interface LoadProgress {
@@ -160,7 +168,12 @@ export class AssetLoader {
    * from the other direction.
    */
   get totalBytes(): number {
-    return this.manifest?.totals.bytes ?? 0;
+    const totals = this.manifest?.totals;
+    if (totals === undefined) return 0;
+    // Deferred content is not part of the boot fetch, so counting it would
+    // hold the bar under 100% for bytes nobody is downloading — the mirror
+    // image of the criticalBytes lie this comment block used to describe.
+    return totals.bytes - (totals.deferredBytes ?? 0);
   }
 
   get progress(): LoadProgress {

@@ -3,7 +3,6 @@
   "scale": 2,
   "note": "What each subject IS, in metres — not how tall its sprite is. The sprite size is derived by tools/shared/spriteMetrics.ts, so it cannot drift from the projection. Replaces the pixel-height table of referenceHeights.json v1, which compared drawn sprites against ASSET_PIPELINE §1.2's WORLD heights: for a 4.5x1.9 m car those are 301 px and 90 px, so every correctly drawn vehicle would have been rejected. See PHASE_4_REPORT §12.",
   "why_metres": "Declaring a bin as 0.6 x 0.6 x 1.1 m is a fact about bins, not an art decision — the same standard src/config/actors.ts already applies ('A person is 0.5 m across and 1.75 m tall … real dimensions, not art-driven guesses'). Declaring it as '96 px tall' would have been an art decision, which is why the first version of this file refused to guess and listed subjects as pending instead. Metres are checkable against the world; pixels are not.",
-
   "worldObjects": {
     "note": "Sprite width, height and anchor are derived from these, and so is the split rule. ASSET_PIPELINE §1.4's 160 px limit measures the object's BODY, not its sprite: src/config/actors.ts states the project's own reading — 'At TILE_Z = 32 and 2x art, 160 px is 2.5 metres' — which is only true of heightMetres x TILE_Z x ART_SCALE. Read as sprite height it would split every car (301 px of which only 96 is body), which is not what a depth-cycle rule is for. Nothing here declares split by hand; it follows from heightMetres > 2.5 m.",
     "subjects": {
@@ -31,7 +30,6 @@
         "heightMetres": 1.3,
         "source": "typical motorcycle with rider allowance"
       },
-
       "struct/counter": {
         "footprintX": 3.0,
         "footprintY": 0.8,
@@ -44,7 +42,12 @@
         "heightMetres": 0.9,
         "source": "shop awning: 0.9 m from the mounting bar to the valance, which is what the delivered art draws. The 0.35 m this said before described a flat fabric panel with no drop, and the sprite overflowed its box by 30% because of it. Posts remain struct/pole."
       },
-      "struct/truck": { "footprintX": 6.5, "footprintY": 2.4, "heightMetres": 2.9, "source": "food truck" },
+      "struct/truck": {
+        "footprintX": 6.5,
+        "footprintY": 2.4,
+        "heightMetres": 2.9,
+        "source": "food truck"
+      },
       "struct/window": {
         "footprintX": 1.2,
         "footprintY": 0.2,
@@ -87,7 +90,6 @@
         "heightMetres": 1.2,
         "source": "pass-through shelf"
       },
-
       "prop/table": {
         "footprintX": 1.2,
         "footprintY": 1.2,
@@ -100,30 +102,74 @@
         "heightMetres": 0.9,
         "source": "ASSET_PIPELINE §1.2 (60 px ≈ 0.94 m)"
       },
-      "prop/bin": { "footprintX": 0.6, "footprintY": 0.6, "heightMetres": 1.1, "source": "wheelie bin" },
+      "prop/bin": {
+        "footprintX": 0.6,
+        "footprintY": 0.6,
+        "heightMetres": 1.1,
+        "source": "wheelie bin"
+      },
       "prop/barrier": {
         "footprintX": 2.0,
         "footprintY": 0.4,
         "heightMetres": 1.0,
         "source": "roadside barrier section"
       },
-
       "nature/tree": {
         "footprintX": 3.0,
         "footprintY": 3.0,
         "heightMetres": 5.0,
         "source": "mid-size roadside tree"
       },
-      "nature/bush": { "footprintX": 1.2, "footprintY": 1.2, "heightMetres": 0.9, "source": "shrub" },
+      "nature/bush": {
+        "footprintX": 1.2,
+        "footprintY": 1.2,
+        "heightMetres": 0.9,
+        "source": "shrub"
+      },
       "nature/pole": {
         "footprintX": 0.3,
         "footprintY": 0.3,
         "heightMetres": 4.5,
         "source": "lamp / utility pole"
+      },
+      "veh/sports": {
+        "footprintX": 4.4,
+        "footprintY": 1.85,
+        "heightMetres": 1.25,
+        "source": "GAME_DESIGN_DOCUMENT §9.4 length (src/config/archetypes.ts lengthMetres); width/height are facts about the vehicle class, same standard as the first four"
+      },
+      "veh/truck": {
+        "footprintX": 8.5,
+        "footprintY": 2.5,
+        "heightMetres": 3.4,
+        "source": "GAME_DESIGN_DOCUMENT §9.4 length (src/config/archetypes.ts lengthMetres); width/height are facts about the vehicle class, same standard as the first four"
+      },
+      "veh/bus": {
+        "footprintX": 11,
+        "footprintY": 2.55,
+        "heightMetres": 3.3,
+        "source": "GAME_DESIGN_DOCUMENT §9.4 length (src/config/archetypes.ts lengthMetres); width/height are facts about the vehicle class, same standard as the first four"
+      },
+      "veh/ev": {
+        "footprintX": 4.7,
+        "footprintY": 1.85,
+        "heightMetres": 1.55,
+        "source": "GAME_DESIGN_DOCUMENT §9.4 length (src/config/archetypes.ts lengthMetres); width/height are facts about the vehicle class, same standard as the first four"
+      },
+      "veh/limo": {
+        "footprintX": 6.5,
+        "footprintY": 1.9,
+        "heightMetres": 1.45,
+        "source": "GAME_DESIGN_DOCUMENT §9.4 length (src/config/archetypes.ts lengthMetres); width/height are facts about the vehicle class, same standard as the first four"
+      },
+      "veh/emergency": {
+        "footprintX": 5.8,
+        "footprintY": 2.0,
+        "heightMetres": 2.5,
+        "source": "GAME_DESIGN_DOCUMENT §9.4 length (src/config/archetypes.ts lengthMetres); width/height are facts about the vehicle class, same standard as the first four"
       }
     }
   },
-
   "characterEnvelope": {
     "note": "Doll-rig parts have no world box of their own — §1.2 gives the assembled adult and nothing about a forearm. The only height fact available is that no part exceeds the whole, so char/* is checked against the ASSEMBLED adult's derived sprite height rather than against a per-part number. That is 144 px, not §1.2's 128: 128 is the adult's world height (1.75 m would in fact be 112), while a drawn sprite also carries the ground diamond.",
     "footprintX": 0.5,
@@ -131,13 +177,24 @@
     "heightMetres": 1.75,
     "source": "src/config/actors.ts"
   },
-
   "fixedCanvas": {
     "note": "Icons, effects and ground slices are not world objects — they have no footprint to project, and ASSET_PIPELINE §2 gives their canvas size directly. Checked against that size rather than against a derivation.",
     "subjects": {
-      "food/*": { "width": 128, "height": 128, "source": "ASSET_PIPELINE §2 — Yemek / ikon, PNG-32, 128²" },
-      "ui/*": { "width": 128, "height": 128, "source": "ASSET_PIPELINE §2 — UI ikon, SVG → PNG 64/128" },
-      "fx/*": { "width": 64, "height": 64, "source": "ASSET_PIPELINE §2 — Partikül, PNG-32 64²" },
+      "food/*": {
+        "width": 128,
+        "height": 128,
+        "source": "ASSET_PIPELINE §2 — Yemek / ikon, PNG-32, 128²"
+      },
+      "ui/*": {
+        "width": 128,
+        "height": 128,
+        "source": "ASSET_PIPELINE §2 — UI ikon, SVG → PNG 64/128"
+      },
+      "fx/*": {
+        "width": 64,
+        "height": 64,
+        "source": "ASSET_PIPELINE §2 — Partikül, PNG-32 64²"
+      },
       "ground/*": {
         "width": 2048,
         "height": 1024,
@@ -148,9 +205,12 @@
         "height": 1024,
         "source": "ASSET_PIPELINE §2 — shares the ground bake format"
       },
-      "bg/*": { "width": 4096, "height": 1024, "source": "ASSET_PIPELINE §7 — bg atlas is 4096×1024" }
+      "bg/*": {
+        "width": 4096,
+        "height": 1024,
+        "source": "ASSET_PIPELINE §7 — bg atlas is 4096×1024"
+      }
     }
   },
-
   "tolerance": 0.15
 }

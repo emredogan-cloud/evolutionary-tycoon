@@ -26,6 +26,7 @@ function readyFor(id: string): Sim {
 
   const sim = new Sim({ seed: 1 });
   sim.world.economy.cash = 10_000_000;
+  sim.world.stats.customersServed = 5_000;
   sim.world.progression.stage = item.stage;
 
   const buyChain = (target: string): void => {
@@ -104,6 +105,7 @@ describe('the effects damp each other rather than compounding without limit', ()
      */
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 10_000_000;
+    sim.world.stats.customersServed = 5_000;
     sim.world.progression.stage = 4;
 
     const base = effectValue(sim.world, 'visibility');
