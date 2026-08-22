@@ -786,11 +786,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P233",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P233), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_01 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-l_default_nw",
@@ -799,11 +799,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P234",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P234), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_02 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-l_default_se",
@@ -812,11 +812,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P235",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P235), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_03 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-l_default_sw",
@@ -825,11 +825,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P236",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P236), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_04 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-r_default_ne",
@@ -838,11 +838,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P237",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P237), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_05 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-r_default_nw",
@@ -851,11 +851,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P238",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P238), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_06 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-r_default_se",
@@ -864,11 +864,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P239",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P239), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_07 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "char_leg-r_default_sw",
@@ -877,11 +877,11 @@
     "stage": "all",
     "role": "DollRig leg channel (P17 consumes when art lands)",
     "consumer": "src/render/rig",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P240",
     "priority": "P2",
     "requiredBefore": null,
-    "note": "UNUSED_RIG_SUBJECTS — legs are baked into the delivered bodies; stride cannot articulate; delivered 2026-08-21 (P240), imported+validated (0 failing)"
+    "note": "NEW_CHARACTER_08 — 2026-08-22 correction pass: the delivered file is still an arm (skin-toned, hand at the tip; verified on green at full size), not a leg. UNUSED_RIG_SUBJECTS keeps it undrawn; a stride cannot articulate until true legs land WITH a leg-free body regen."
   },
   {
     "id": "food_burger_default",
@@ -2255,11 +2255,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P213",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P213), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_01 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front three-quarter heading sw, not the promised rear elevation. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_pickup_default_n",
@@ -2268,11 +2268,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P208",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P208), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_02 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front elevation, not the promised rear. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_pickup_default_ne",
@@ -2281,11 +2281,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P209",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P209), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_03 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front three-quarter heading se, not the promised rear three-quarter ne. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_pickup_default_nw",
@@ -2294,11 +2294,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P210",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P210), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_04 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front three-quarter heading sw, not the promised rear three-quarter nw. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_van_default_n",
@@ -2307,11 +2307,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P230",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P230), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_05 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front elevation, not the promised rear. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_van_default_ne",
@@ -2320,11 +2320,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P231",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P231), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_06 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front three-quarter heading se, not the promised rear three-quarter ne. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_van_default_nw",
@@ -2333,11 +2333,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P232",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P232), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_07 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front three-quarter heading se, not the promised rear three-quarter nw. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_motorcycle_default_n",
@@ -2346,11 +2346,11 @@
     "stage": "all",
     "role": "road traffic receding from camera",
     "consumer": "VehicleView via DIRECTION_AUDIT assign",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P203",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "DIRECTION_AUDIT.gaps; delivered 2026-08-21 (P203), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_08 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a front elevation, not the promised rear. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_motorcycle_default_ne",
@@ -2502,11 +2502,11 @@
     "stage": "2-4",
     "role": "live traffic once art exists (baseShare currently 0)",
     "consumer": "archetypes.ts zero-share block",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P220",
     "priority": "P1",
     "requiredBefore": "P20",
-    "note": "sw/w/nw by pipeline mirror, DIRECTION_AUDIT rule; delivered 2026-08-21 (P220), imported+validated (0 failing)"
+    "note": "NEW_VEHICLE_09 — 2026-08-22 UI/world correction pass: full-size frame-by-frame read (every atlas frame composited on green) disproves the 2026-08-21 acceptance; the delivered file shows a baked white-and-grey checkerboard background behind the car — the ghost rectangle of the 2026-08-22 captures. Runtime substitutes truthful art via VEHICLE_FACING_FIXES until the regeneration lands."
   },
   {
     "id": "veh_sports_default_e",
@@ -3898,5 +3898,70 @@
     "priority": "P2",
     "requiredBefore": null,
     "note": "no layout places it"
+  },
+  {
+    "id": "road_strip_seamless-a",
+    "category": "ROAD",
+    "subject": "seamless straight two-lane carriageway strip for end-to-end tiling",
+    "stage": "all",
+    "role": "the continuous road surface (replaces the procedural band when it lands)",
+    "consumer": "WorldScene.drawRoad",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P304",
+    "priority": "P1",
+    "requiredBefore": "P20",
+    "note": "NEW_UI_WORLD_FIX_01 — the delivered road_segment_tile-a is a self-contained diorama tile (verge wraps its ends, painted dirt cliffs); butting copies produced the 2026-08-22 seam staircase. The road is composed procedurally until this strip exists."
+  },
+  {
+    "id": "ground_stage1_tile-b",
+    "category": "GROUND",
+    "subject": "stage-1 dirt variation slice, seamlessly interchangeable with tile-a",
+    "stage": "all",
+    "role": "breaks the mirror-tiling symmetry of the full-viewport ground",
+    "consumer": "WorldScene.drawGround",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P305",
+    "priority": "P2",
+    "requiredBefore": null,
+    "note": "NEW_UI_WORLD_FIX_02 — the ground now tiles across everything the camera can reach; one slice mirror-tiled shows kaleidoscope motifs at minimum zoom. Deterministic tone washes soften it meanwhile."
+  },
+  {
+    "id": "ground_stage1_tile-c",
+    "category": "GROUND",
+    "subject": "second stage-1 dirt variation slice, seamlessly interchangeable with tile-a",
+    "stage": "all",
+    "role": "breaks the mirror-tiling symmetry of the full-viewport ground",
+    "consumer": "WorldScene.drawGround",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P306",
+    "priority": "P2",
+    "requiredBefore": null,
+    "note": "NEW_UI_WORLD_FIX_03 — see ground_stage1_tile-b."
+  },
+  {
+    "id": "struct_sign_large_painted_upper",
+    "category": "STRUCTURES",
+    "subject": "the hand-painted signboard, painted",
+    "stage": "all",
+    "role": "upper half of the roadside sign once the hand-painted-sign rung is owned",
+    "consumer": "WORLD_OBJECTS sign variant",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P307",
+    "priority": "P2",
+    "requiredBefore": null,
+    "note": "NEW_UI_WORLD_FIX_04 — the delivered struct_sign_large_upper is a deliberately blank board; the visibility upgrade the player buys should visibly paint it."
+  },
+  {
+    "id": "struct_scaffold_site",
+    "category": "STRUCTURES",
+    "subject": "small construction scaffold overlay",
+    "stage": "all",
+    "role": "dressing over an in-progress build site (silhouette + bar carry it today)",
+    "consumer": "WorldScene construction sites",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P308",
+    "priority": "P3",
+    "requiredBefore": null,
+    "note": "NEW_CONSTRUCTION_01 — the timed-construction flow shipped 2026-08-22 with a tinted-silhouette site; a painted scaffold makes the site read at a glance."
   }
 ]

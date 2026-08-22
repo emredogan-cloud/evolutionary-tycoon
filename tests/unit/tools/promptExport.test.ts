@@ -16,8 +16,9 @@ import { allPrompts, renderPromptHtml } from '../../../tools/asset-pipeline/prom
  */
 
 const DELIVERED_PROMPTS = 172;
-/** The delivered 172 plus the 2026-08-21 audit's 131 (P173–P303). */
-const EXPECTED_PROMPTS = 303;
+/** The delivered 172, the 2026-08-21 audit's 131 (P173–P303), and the
+ * 2026-08-22 UI/world correction pass's 5 (P304–P308). */
+const EXPECTED_PROMPTS = 308;
 const HTML_PATH = resolve(import.meta.dirname, '../../../docs/ASSET_GENERATION_PROMPTS.html');
 
 describe('prompt numbering', () => {
@@ -35,6 +36,8 @@ describe('prompt numbering', () => {
     expect(numbered[172]?.id).toBe('P173');
     expect(numbered[172]?.audit).toBeDefined();
     expect(numbered[302]?.id).toBe('P303');
+    // The correction pass appends; nothing renumbers.
+    expect(numbered[307]?.id).toBe('P308');
     // The delivered core is still exactly 172 — the audit appends, never edits.
     expect(emitPrompts()).toHaveLength(DELIVERED_PROMPTS);
     numbered.forEach((asset, index) => {
@@ -113,7 +116,7 @@ describe('the exported page', () => {
 
   it('lists every batch as its own section', () => {
     const batches = [...new Set(numbered.map((asset) => asset.batch))];
-    expect(batches).toHaveLength(22);
+    expect(batches).toHaveLength(23);
     for (const batch of batches) {
       expect(html).toContain(`id="batch-${batch}"`);
     }
@@ -127,7 +130,7 @@ describe('the exported page', () => {
 
   it('shows the counts a reader would check first', () => {
     expect(html).toContain(`<b>${EXPECTED_PROMPTS}</b><span>prompts</span>`);
-    expect(html).toContain('<b>22</b><span>batches</span>');
+    expect(html).toContain('<b>23</b><span>batches</span>');
   });
 
   it('is self-contained and offline', () => {
@@ -148,7 +151,7 @@ describe('the exported page', () => {
 
   it('offers per-prompt and per-batch copying', () => {
     expect(html.split('data-copy="one"').length - 1).toBe(EXPECTED_PROMPTS);
-    expect(html.split('data-copy="batch"').length - 1).toBe(22);
+    expect(html.split('data-copy="batch"').length - 1).toBe(23);
   });
 
   it('renders identically on a second run', () => {

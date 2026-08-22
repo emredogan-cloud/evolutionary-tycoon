@@ -11,15 +11,28 @@ P17/P18 roadmap scope). Machine-readable twin:
 
 ## Totals
 
+> **Revised 2026-08-22 (UI/world correction pass).** A full-size
+> frame-by-frame read of the built atlases — every frame composited on green
+> — disproved seventeen of the 2026-08-21 acceptances: eight receding
+> vehicle views are forward views (the "cars drive backwards" capture), the
+> sports car's `se` frame ships a baked checkerboard background (the ghost
+> rectangle capture), and the eight re-delivered rig "legs" are still arms.
+> Those rows flipped back to **PRESENT + NEEDS REGEN** under markers
+> `NEW_VEHICLE_01–09` and `NEW_CHARACTER_01–08`; the runtime substitutes
+> truthful frames meanwhile (`VEHICLE_FACING_FIXES`, `UNUSED_RIG_SUBJECTS`).
+> Five genuinely new assets joined under `NEW_UI_WORLD_FIX_01–04` and
+> `NEW_CONSTRUCTION_01` (P304–P308): the seamless road strip, two ground
+> variation slices, the painted signboard, and the site scaffold.
+
 | Status                   |   Count |
 | ------------------------ | ------: |
-| PRESENT + VERIFIED       |     289 |
-| MISSING + PROMPT ADDED   |       0 |
-| PRESENT + NEEDS REGEN    |       0 |
+| PRESENT + VERIFIED       |     272 |
+| MISSING + PROMPT ADDED   |       5 |
+| PRESENT + NEEDS REGEN    |      17 |
 | PROCEDURAL BY DESIGN     |       9 |
 | NOT REQUIRED (justified) |       1 |
 | DEBUG ONLY               |       1 |
-| **Rows**                 | **300** |
+| **Rows**                 | **305** |
 
 > **Delivery, 2026-08-21.** The user generated all 131 prompted assets
 > externally and dropped them into `docs/assets/sources`. Every MISSING and

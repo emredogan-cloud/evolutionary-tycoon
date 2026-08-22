@@ -193,6 +193,63 @@ function renderRow(row: RequirementRow): Rendered {
       subjectKey: 'ui/upgrade-icon',
     };
   }
+  if (id.startsWith('road_strip')) {
+    return {
+      subject:
+        'straight two-lane rural carriageway STRIP for seamless end-to-end tiling: dark asphalt with subtle tone variation, solid amber edge lines both sides, dashed white centre line, light-grey kerbstones and a grass verge along BOTH long edges — and the two SHORT ends cut clean through the asphalt mid-surface so copies butt together invisibly',
+      sizeHint: '2048 x 1024 px, the road/ground slice format, carriageway along the isometric diagonal',
+      notes: [
+        'Unlike road_segment_tile-a this is NOT a diorama: no end caps, no wrapped verge at the short ends, no dirt cliff sides — the left and right edges must be exact continuations of each other.',
+        'The painted carriageway spans 7 m of the 16 m diamond, centred, matching the procedural band it replaces (WorldScene.drawRoad).',
+      ],
+      doNots: [
+        'DO NOT wrap grass, kerb or dirt around the short ends — that is the seam staircase this asset exists to remove',
+        'DO NOT draw vehicles, drains at the edges, or a painted junction',
+      ],
+      batch: 'ui-world-correction',
+      subjectKey: 'ground/bake',
+    };
+  }
+  if (id.startsWith('ground_stage1_tile-') && !id.endsWith('tile-a')) {
+    return {
+      subject:
+        'sun-dried dirt lot VARIATION slice — same earth ramps, pebble scatter, sparse dry tufts and tyre-track language as ground_stage1_tile-a, different composition, so the two interleave without a visible repeat',
+      sizeHint: '2048 x 1024 px, the road/ground slice format',
+      notes: [
+        'Must tile seamlessly against ground_stage1_tile-a on every edge (the runtime mixes slices per cell); keep edge pixels statistically identical to tile-a edges.',
+        'No landmark features — a distinctive rock cluster becomes a repeat the eye finds instantly.',
+      ],
+      doNots: ['DO NOT change the palette ramps or overall value versus tile-a'],
+      batch: 'ui-world-correction',
+      subjectKey: 'ground/bake',
+    };
+  }
+  if (id === 'struct_sign_large_painted_upper') {
+    return {
+      subject:
+        'the delivered struct_sign_large_upper signboard, now HAND-PAINTED: same board, posts and twin lamps, with a warm painted menu illustration (lemonade cup and a price squiggle) filling the board — visibly amateur brushwork, charming not polished',
+      sizeHint: 'same canvas as struct_sign_large_upper at 2x',
+      notes: [
+        'Anchor, proportions and palette identical to struct_sign_large_upper — the runtime swaps the frame when the hand-painted-sign rung is owned.',
+      ],
+      doNots: ['DO NOT render legible text — squiggles that read as writing, never actual letters'],
+      batch: 'ui-world-correction',
+      subjectKey: 'struct/sign',
+    };
+  }
+  if (id === 'struct_scaffold_site') {
+    return {
+      subject:
+        'small building-site dressing: two timber scaffold frames with a plank across, a paper plan pinned to one post, a small cement sack — one coherent cluster on a transparent ground, open in the middle so the growing object reads through it',
+      sizeHint: '256 x 200 px at 2x, footprint 2 x 2 m',
+      notes: [
+        'Drawn over the construction silhouette the renderer already shows; must not hide the centre of the site.',
+      ],
+      doNots: ['DO NOT include characters or vehicles; DO NOT bake a ground shadow'],
+      batch: 'ui-world-correction',
+      subjectKey: 'struct/scaffold',
+    };
+  }
   if (row.category === 'GROUND') {
     const stage = id.replace('ground_stage', '').split('_')[0] ?? '';
     return {

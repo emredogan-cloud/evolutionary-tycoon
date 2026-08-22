@@ -1084,6 +1084,7 @@ export class WorldScene extends Phaser.Scene {
     const lanes = this.layout.road.lanes;
     const roadCentreY = ((lanes[0]?.points[0]?.y ?? 0) + (lanes[1]?.points[0]?.y ?? 0)) / 2;
     const carriagewayEdge = roadCentreY + this.layout.road.widthMetres / 2;
+    const laybyMaxY = this.laybyRect().maxY;
     for (const bay of this.layout.parking) {
       const x0 = bay.x - BAY_HALF_LENGTH;
       const x1 = bay.x + BAY_HALF_LENGTH;
@@ -1091,6 +1092,14 @@ export class WorldScene extends Phaser.Scene {
       // authored centre: the outline is road marking, not car geometry.
       const y0 = Math.max(bay.y - BAY_HALF_WIDTH, carriagewayEdge + 0.08);
       const y1 = bay.y + BAY_HALF_WIDTH;
+      // A deep-row bay stands on the dirt lot; give it its own asphalt pad
+      // with a soft margin, so the markings sit on pavement there too.
+      if (bay.y + BAY_HALF_WIDTH > laybyMaxY + 0.1) {
+        bays.fillStyle(SURFACE_COLORS.road, 1);
+        bays.fillPoints(this.worldQuad(x0 - 0.35, y0 - 0.35, x1 + 0.35, y1 + 0.35), true);
+        bays.fillStyle(SURFACE_COLORS.asphaltShadow, 0.22);
+        bays.fillPoints(this.worldQuad(x0 - 0.35, y0 - 0.35, x1 + 0.35, y1 + 0.35), true);
+      }
       // A faint concrete wash inside, so an empty bay reads as a place.
       bays.fillStyle(SURFACE_COLORS.asphaltWorn, 0.14);
       bays.fillPoints(this.worldQuad(x0 + LINE, y0 + LINE, x1 - LINE, y1 - LINE), true);
@@ -1338,22 +1347,38 @@ export class WorldScene extends Phaser.Scene {
     this.graph.layer('road').add(road);
   }
 
-  /** The parking layby's world rectangle, from the authored bays. */
+  /**
+   * The parking layby's world rectangle — the **roadside row only**.
+   *
+   * Stages 2+ author deeper bay rows down the lot's west side; folding those
+   * into this rectangle paved most of the lot in road asphalt (photographed
+   * at Stage 3 with the dining terrace sitting on carriageway surface). The
+   * layby is the strip cut into the verge; the deeper rows get their own
+   * apron pads in `drawSurfaces`.
+   */
   private laybyRect(): { minX: number; maxX: number; maxY: number } {
-    const bays = this.layout.parking;
-    if (bays.length === 0) {
+    const roadside = this.roadsideBays();
+    if (roadside.length === 0) {
       const lot = this.layout.lot;
       return { minX: lot.minX, maxX: lot.maxX, maxY: this.layout.road.widthMetres };
     }
     let minX = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let maxY = Number.NEGATIVE_INFINITY;
-    for (const bay of bays) {
+    for (const bay of roadside) {
       minX = Math.min(minX, bay.x - BAY_HALF_LENGTH - 0.5);
       maxX = Math.max(maxX, bay.x + BAY_HALF_LENGTH + 0.5);
       maxY = Math.max(maxY, bay.y + BAY_HALF_WIDTH + 0.25);
     }
     return { minX, maxX, maxY };
+  }
+
+  /** Bays in the row nearest the carriageway — the layby row. */
+  private roadsideBays(): { x: number; y: number }[] {
+    const lanes = this.layout.road.lanes;
+    const centreY = ((lanes[0]?.points[0]?.y ?? 0) + (lanes[1]?.points[0]?.y ?? 0)) / 2;
+    const edge = centreY + this.layout.road.widthMetres / 2;
+    return this.layout.parking.filter((bay) => bay.y - edge < 3);
   }
 
   /**

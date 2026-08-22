@@ -181,7 +181,7 @@ export class VehicleManeuverSystem implements SimSystem {
      * the jam GDD §9.1 wants both forms and clears. `waitMs` is reused from
      * the exit-merge: a car is never waiting for both at once.
      */
-    if (lane.crossesOnEntry && world.progression.stage >= LEFT_TURN.minStage) {
+    if (lane.crossesOnEntry && world.progression.stage >= LEFT_TURN.earlyMinStage) {
       if (!this.oncomingClear(world, at(vehicles.waitMs, slot))) {
         vehicles.waitMs[slot] = at(vehicles.waitMs, slot) + deltaMs;
         return;
@@ -218,7 +218,7 @@ export class VehicleManeuverSystem implements SimSystem {
       customer.channel = CHANNEL_COUNTER;
     }
 
-    const bay = this.nearestFreeBay(world, at(vehicles.laneS, slot), laneIndex);
+    const bay = this.nearestFreeBay(world, at(vehicles.laneS, slot), laneIndex, slot);
 
     vehicles.state[slot] = VEHICLE_ENTERING;
     vehicles.maneuverS[slot] = 0;
@@ -584,7 +584,7 @@ export class VehicleManeuverSystem implements SimSystem {
     return false;
   }
 
-  private nearestFreeBay(world: World, _laneS: number, laneIndex: number): number {
+  private nearestFreeBay(world: World, _laneS: number, laneIndex: number, vehicleSlot: number): number {
     const lane = this.lanes.lane(laneIndex);
     lane.path.sample(lane.entryS, this.sample);
     const fromX = this.sample.x;
@@ -595,6 +595,7 @@ export class VehicleManeuverSystem implements SimSystem {
 
     for (let bay = 0; bay < this.layout.parking.length; bay++) {
       if (this.bayOccupied(world, bay)) continue;
+      if (!this.baySpanFits(world, bay, vehicleSlot)) continue;
       const slot = this.layout.parking[bay];
       if (slot === undefined) continue;
       const distance = (slot.x - fromX) ** 2 + (slot.y - fromY) ** 2;
@@ -605,6 +606,42 @@ export class VehicleManeuverSystem implements SimSystem {
       }
     }
     return best;
+  }
+
+  /**
+   * Would this vehicle's body fit at `bay` beside everything already parked?
+   *
+   * Bays are 5 m apart and vehicles are their real lengths — an 11 m tour bus
+   * in a 5 m bay physically occupies its neighbours' tarmac, and the
+   * 2026-08-22 captures show exactly what assigning those neighbours anyway
+   * produced: parked bodies through one another. So a bay is only offered
+   * when the candidate's half-length plus each same-row neighbour's
+   * half-length fits inside their centre spacing. A bus therefore takes the
+   * middle of a pair and its neighbours read as blocked — which is what a
+   * bus parked across two spaces is. Capacity cost is real and intended;
+   * the balance gate measures it.
+   */
+  private baySpanFits(world: World, bay: number, vehicleSlot: number): boolean {
+    const candidate = this.layout.parking[bay];
+    if (candidate === undefined) return false;
+    const vehicles = world.vehicles;
+    const ownLength = ARCHETYPE_SPECS[at(vehicles.archetype, vehicleSlot)]?.lengthMetres ?? 4.5;
+
+    for (let slot = 0; slot < vehicles.scanLimit; slot++) {
+      if (slot === vehicleSlot || !vehicles.isActive(slot)) continue;
+      if (at(vehicles.state, slot) === VEHICLE_ON_ROAD) continue;
+      const otherBay = at(vehicles.parkingSlot, slot);
+      if (otherBay < 0 || otherBay === bay) continue;
+      // Drive-thru lane slots space themselves; only real bays share a row.
+      if (this.maneuvers.laneSlotOf(otherBay) >= 0) continue;
+      const other = this.layout.parking[otherBay];
+      if (other === undefined) continue;
+      // Different rows cannot touch bumpers.
+      if (Math.abs(other.y - candidate.y) > 2) continue;
+      const otherLength = ARCHETYPE_SPECS[at(vehicles.archetype, slot)]?.lengthMetres ?? 4.5;
+      if (Math.abs(other.x - candidate.x) < (ownLength + otherLength) / 2) return false;
+    }
+    return true;
   }
 
   /**
@@ -657,8 +694,18 @@ export class VehicleManeuverSystem implements SimSystem {
   private oncomingClear(world: World, waitedMs: number): boolean {
     const nearIndex = this.lanes.nearEntryLane;
     const near = this.lanes.lane(nearIndex);
-    const t = Math.min(1, Math.max(0, waitedMs / LEFT_TURN.patienceMs));
-    const required = LEFT_TURN.comfortGapMetres + (LEFT_TURN.minGapMetres - LEFT_TURN.comfortGapMetres) * t;
+    /*
+     * Two tunes of one mechanism. Stage 4 runs the designed congestion source
+     * (16 m comfort, 8 s patience); the early stages run the correction
+     * pass's short fuse — just enough discipline that a crossing car never
+     * drives through an oncoming body, decayed fast enough that the
+     * calibrated Stage 1 throughput survives (balance-gate-measured).
+     */
+    const mature = world.progression.stage >= LEFT_TURN.minStage;
+    const comfort = mature ? LEFT_TURN.comfortGapMetres : LEFT_TURN.earlyComfortGapMetres;
+    const patience = mature ? LEFT_TURN.patienceMs : LEFT_TURN.earlyPatienceMs;
+    const t = Math.min(1, Math.max(0, waitedMs / patience));
+    const required = comfort + (LEFT_TURN.minGapMetres - comfort) * t;
 
     const vehicles = world.vehicles;
     for (let slot = 0; slot < vehicles.scanLimit; slot++) {

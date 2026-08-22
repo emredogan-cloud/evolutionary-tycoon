@@ -202,6 +202,31 @@ export const LEFT_TURN = {
    * the design put this cost.
    */
   minStage: 4,
+
+  /*
+   * ── Early stages, measured and rejected — UI/world correction pass ──────
+   *
+   * The 2026-08-22 directive forbids vehicles visually passing through each
+   * other, and before Stage 4 a far-lane pull-in crosses the near lane with
+   * no gap check. A short-fused early variant (9 m comfort decaying to the
+   * floor in 2.5 s) was implemented and measured on this exact suite: mean
+   * lane speed collapsed 13.9 → 3.1 m/s, ten-thousand-spawn throughput fell
+   * 5.6%, and the resulting jams surfaced genuine overlap at the rejoin
+   * merge — strictly worse than the transient it set out to remove. The
+   * mechanism (a holder pins its whole lane at the mouth) is the Stage 4
+   * *designed* congestion source, and no tune of it is free. So the early
+   * stages keep Phase 5's crossing behaviour; the sub-second crossing
+   * transient is recorded in UI_WORLD_CORRECTION_REPORT §11 and belongs to
+   * the open road/lot user decision (STAGE_2_4_CALIBRATION_REPORT §4),
+   * which is where lane-count and crossing geometry get decided together.
+   * These constants stay equal to the mature ones so the experiment is
+   * reproducible by flipping `earlyMinStage` alone.
+   */
+  /** First stage ANY crossing discipline applies. Equal to `minStage`. */
+  earlyMinStage: 4,
+  /** The rejected early tune, kept for reproducibility. */
+  earlyComfortGapMetres: 9,
+  earlyPatienceMs: 2_500,
   /** Oncoming clearance a fresh waiter wants, metres upstream of the box. */
   comfortGapMetres: 16,
   /** The floor the gap shrinks to. */
