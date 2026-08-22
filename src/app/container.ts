@@ -242,6 +242,8 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       ui.sample(win.performance.now());
     },
     constructionProgress: () => constructionProgress(sim.world),
+    // The camera E2E hook rides the same gate as the simulation hook.
+    exposeCameraHook: shouldExposeTestHooks(win.location.search),
     ...(renderMode.lockedCamera !== null ? { lockedCamera: renderMode.lockedCamera } : {}),
   };
 

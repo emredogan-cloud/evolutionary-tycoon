@@ -81,4 +81,15 @@ export interface RenderContext {
    * pixel-exact against a camera the player — or a stray pointer event — can move.
    */
   readonly lockedCamera?: CameraState;
+  /**
+   * Publish `window.__EVOTYCOON_CAMERA__` — the camera's own E2E door.
+   *
+   * `?e2e=1` only, like the simulation hook. The viewport acceptance matrix
+   * has to photograph the world at exact zoom levels, and a synthetic wheel
+   * event is a statement about input plumbing, not about the camera; this is
+   * the camera stated directly. Zoom and centre clamp through the same
+   * `cameraMath` the player's inputs go through — the hook cannot put the
+   * camera anywhere the player could not.
+   */
+  readonly exposeCameraHook?: boolean;
 }

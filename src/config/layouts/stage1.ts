@@ -264,11 +264,22 @@ export const STAGE1_LAYOUT: StageLayout = {
    * next cell out, which is the number that has to be true rather than the one
    * that looks tidy.
    */
+  /*
+   * At y = 9.55, not the 8.6 first authored — the UI/world correction pass.
+   *
+   * The carriageway runs to y = 8.5, and a 1.9 m car centred at 8.6 spans
+   * y 7.65..9.55: most of a metre of every parked car sat **on the road**,
+   * which is exactly what the 2026-08-22 captures show — cars that read as
+   * abandoned in the slow lane, because no painted bay existed and the metal
+   * was genuinely on the asphalt. 9.55 puts the whole body (8.6..10.5) inside
+   * the marked layby the renderer now paints along the frontage, with a coat
+   * of clearance to the through lane.
+   */
   parking: [
-    { id: 'p1', x: 3.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 10.1 } },
-    { id: 'p2', x: 8.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 10.1 } },
-    { id: 'p3', x: 15.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 15.5, y: 10.1 } },
-    { id: 'p4', x: 20.5, y: 8.6, heading: { x: 1, y: 0 }, door: { x: 20.5, y: 10.1 } },
+    { id: 'p1', x: 3.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 11.05 } },
+    { id: 'p2', x: 8.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 11.05 } },
+    { id: 'p3', x: 15.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 15.5, y: 11.05 } },
+    { id: 'p4', x: 20.5, y: 9.55, heading: { x: 1, y: 0 }, door: { x: 20.5, y: 11.05 } },
   ],
 
   /*
@@ -317,15 +328,22 @@ export const STAGE1_LAYOUT: StageLayout = {
    * records fixing the first time. Shifting the rows 0.9 m east restores the
    * corridor the rows were designed around.
    */
+  /*
+   * Shifted south of the parking line by the UI/world correction pass. The
+   * rows used to start at y = 10.0, which was fine while parked cars ended at
+   * y 9.55 — and became the inside of a parked car when the bays moved into
+   * the layby (cars now end at y 10.5). The rows keep their 0.9 m spacing and
+   * their two-row + aisle shape; only the ground they stand on moved.
+   */
   waitingArea: [
-    { x: 15.5, y: 10.0 },
-    { x: 16.4, y: 10.0 },
-    { x: 17.3, y: 10.0 },
-    { x: 18.2, y: 10.0 },
-    { x: 15.5, y: 11.8 },
-    { x: 16.4, y: 11.8 },
-    { x: 17.3, y: 11.8 },
-    { x: 18.2, y: 11.8 },
+    { x: 16.2, y: 11.6 },
+    { x: 17.1, y: 11.6 },
+    { x: 18.0, y: 11.6 },
+    { x: 18.9, y: 11.6 },
+    { x: 16.2, y: 13.2 },
+    { x: 17.1, y: 13.2 },
+    { x: 18.0, y: 13.2 },
+    { x: 18.9, y: 13.2 },
   ],
 
   /*
@@ -339,9 +357,20 @@ export const STAGE1_LAYOUT: StageLayout = {
    */
   statics: [
     { objectId: 'counter-lv1', x: 12, y: 11, z: 0 }, // the stand itself
-    { objectId: 'awning', x: 12, y: 10.2, z: 0 }, // over the counter, behind it in depth
+    /*
+     * The canopy, mounted OVER the counter — the correction pass. It used to
+     * sit at (12, 10.2, z 0): eighty centimetres in front of the counter at
+     * ground level, which drew the whole striped canopy lying on the road
+     * apron like a fallen tarp (the 2026-08-22 captures). The art is a
+     * wall-mount awning whose bar is its high edge; z lifts the bar to
+     * head height above the counter top, and the slight north offset lets the
+     * canopy slope forward over the serving side, where the queue stands.
+     */
+    { objectId: 'awning', x: 12, y: 10.85, z: 1.75 },
     { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the hand-painted sign by the road
-    { objectId: 'bin', x: 16, y: 13, z: 0 },
+    // East of the waiting rows since the correction pass — its old spot at
+    // (16, 13) is now a standing position.
+    { objectId: 'bin', x: 21.2, y: 12.6, z: 0 },
     { objectId: 'tree-broadleaf-01', x: 20, y: 14, z: 0 },
     { objectId: 'tree-broadleaf-02', x: 4, y: 15, z: 0 },
     { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },

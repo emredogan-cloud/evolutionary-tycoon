@@ -70,10 +70,12 @@ export const STAGE2_LAYOUT: StageLayout = {
 
   waitingArea: [
     ...STAGE1_LAYOUT.waitingArea,
-    { x: 18.2, y: 10.0 },
-    { x: 18.2, y: 11.8 },
-    { x: 19.1, y: 10.0 },
-    { x: 19.1, y: 11.8 },
+    // East of the inherited rows, clear of the layby cars (which end at
+    // y 10.5) and of bay p4's door at (20.5, 11.05).
+    { x: 19.8, y: 11.6 },
+    { x: 19.8, y: 13.2 },
+    { x: 20.7, y: 11.6 },
+    { x: 20.7, y: 13.2 },
   ],
 
   statics: [

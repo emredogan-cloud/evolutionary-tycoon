@@ -402,7 +402,14 @@ export class Sim {
       target.activity = 0;
       target.headingX = this.laneSample.tangentX;
       target.headingY = this.laneSample.tangentY;
-      target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
+      /*
+       * `accel` is only recomputed for vehicles the follower model owns, so a
+       * parked car still holds whatever deceleration stopped it. Reading it
+       * raw kept the brake lights lit and the nose dipped for the whole stay
+       * — every parked car in the layby sat pitched forward. A car that is
+       * not moving is not braking; the light is a statement about slowing.
+       */
+      target.braking = (vehicles.speed[slot] ?? 0) > 0 && (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
       target.patience = 0;
       target.moving = (vehicles.speed[slot] ?? 0) > 0;
       index++;
