@@ -199,6 +199,15 @@ export interface OrderCardView {
   price: number;
   /** 0..1 cook progress while COOKING, else 0. */
   cook01: number;
+  /**
+   * Simulation milliseconds left on the preparation, or 0.
+   *
+   * The directive asks the card to say "18 sn", and a countdown is only worth
+   * showing if it is the *simulation's* countdown: at 4x it has to run four
+   * times faster and a paused world has to hold it, which a wall-clock timer
+   * in the overlay could not do.
+   */
+  cookRemainingMs: number;
 }
 
 /** The player level — derived in the sim from hashed counters, read here. */

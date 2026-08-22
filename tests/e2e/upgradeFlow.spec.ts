@@ -243,29 +243,44 @@ test.describe('the price panel', () => {
     const slider = page.locator('[data-testid="price-slider"][data-item="hotdog"]');
     await expect(slider).toBeVisible();
 
-    // The band itself, ±50% of ₡5, drawn as the slider's own range so the limit
-    // is visible rather than discovered by being refused.
     /*
      * The ±50% band around the hot dog's base price, which Phase 12 moved from
      * ₡5 to ₡6.75 — the three Stage 1 prices and their ingredient costs were
      * scaled together so the uniform three-item average is the ₡4.50 ticket
      * ECONOMY_DESIGN §3 builds the envelope on, with every published margin
      * unchanged. `PRICE_BAND` itself is untouched.
+     *
+     * Read off the card rather than off the slider's own range since the
+     * stage-1 expansion pass. The slider is a hundred integer notches now, and
+     * that is not cosmetic: a slider whose range *is* the band lays a step
+     * lattice from `min` that `max` is not on — this test used to carry a
+     * comment explaining that ₡10 was "not a value it can hold", which was the
+     * player's problem too, and neither end of the band was reachable once the
+     * bounds stopped being exact binary fractions. The band is still shown; it
+     * is shown as the band.
      */
-    await expect(slider).toHaveAttribute('min', '3.375');
-    await expect(slider).toHaveAttribute('max', '10.125');
+    const card = page.locator('[data-testid="product-card"][data-item="hotdog"]');
+    await expect(card).toContainText('₡3,38');
+    await expect(card).toContainText('₡10,13');
 
-    /*
-     * The band's own maximum, not a round number. The slider steps in ₡0.05 and
-     * its minimum is ₡3.375, so ₡10 is not a value it can hold — Playwright
-     * rejects it as malformed. The maximum always is, by construction.
-     */
-    await slider.fill('10.125');
+    // All the way up: the top notch is the top of the band, exactly.
+    await slider.fill('100');
     /*
      * One tick, because a command lands at the *start* of a tick and never on
      * dispatch — a deliberate property (wall-clock arrival time must not change
      * an outcome), and one that makes a paused world look like a broken slider.
      */
+    await advance(page, 1);
+    await expect(page.locator('[data-testid="price-value"][data-item="hotdog"]')).toHaveText(/10,1/);
+
+    // And no further: the simulation clamps, whatever arrives (exploit E2).
+    await page.evaluate(() => {
+      (window as unknown as { __EVOTYCOON__: { dispatch(command: object): void } }).__EVOTYCOON__.dispatch({
+        t: 'SET_PRICE',
+        itemId: 'hotdog',
+        price: 9999,
+      });
+    });
     await advance(page, 1);
     await expect(page.locator('[data-testid="price-value"][data-item="hotdog"]')).toHaveText(/10,1/);
   });

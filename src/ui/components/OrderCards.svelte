@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MENU } from '@config/economy/menu';
   import type { OrderCardView } from '@app/bridge/hudModel';
   import { ensureLoaded, onIconsReady, styleFor } from '../lib/foodIcons';
 
@@ -22,28 +23,28 @@
 
   const { orders, onprep }: Props = $props();
 
-  const LABELS: Record<string, string> = {
-    lemonade: 'Limonata',
-    hotdog: 'Sosisli',
-    chips: 'Cips',
-    hamburger: 'Burger',
-    fries: 'Patates',
-    cola: 'Kola',
-    'breakfast-set': 'Kahvaltı',
-    'chicken-meal': 'Tavuk',
-    coffee: 'Kahve',
-    dessert: 'Tatlı',
-    salad: 'Salata',
-    'premium-burger': 'Burger+',
-    'family-meal': 'Aile Menüsü',
-  };
+  /*
+   * Names from the menu, not from a map kept here. This component and the
+   * price panel each had their own; they drifted, and the price panel's had
+   * three of thirteen items in it.
+   */
+  const labelOf = (itemId: string): string => MENU.find((item) => item.id === itemId)?.label ?? itemId;
+
   const STATE_LABELS: Record<string, string> = {
     PLACED: 'Bekliyor',
     COOKING: 'Hazırlanıyor',
-    ON_PASS: 'Tezgâhta',
-    DELIVERED: 'Yiyor',
+    ON_PASS: 'Hazır',
+    DELIVERED: 'Teslim edildi',
     PAID: 'Ödendi',
   };
+
+  const money = new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  /** Whole seconds, rounded up: a countdown that shows 0 while still cooking reads as stuck. */
+  const countdown = (ms: number): string => `${String(Math.ceil(ms / 1000))} sn`;
 
   ensureLoaded();
   let revision = $state(0);
@@ -63,7 +64,7 @@
             <span class="icon" style={iconFor(order.itemId)} aria-hidden="true"></span>
           {/if}
           <div class="meta">
-            <strong>{LABELS[order.itemId] ?? order.itemId}</strong>
+            <strong>{labelOf(order.itemId)}</strong>
             <span class="state">{STATE_LABELS[order.state] ?? order.state}</span>
           </div>
           {#if order.patience01 >= 0}
@@ -93,16 +94,29 @@
             {order.startable ? 'Hazırla' : 'Mutfak dolu'}
           </button>
         {:else if order.state === 'COOKING'}
-          <div
-            class="bar"
-            role="progressbar"
-            aria-label="Pişirme"
-            aria-valuenow={Math.round(order.cook01 * 100)}
-            aria-valuemin="0"
-            aria-valuemax="100"
-          >
-            <span style="width: {order.cook01 * 100}%"></span>
+          <div class="cooking">
+            <div
+              class="bar"
+              role="progressbar"
+              aria-label="Pişirme"
+              aria-valuenow={Math.round(order.cook01 * 100)}
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <span style="width: {order.cook01 * 100}%"></span>
+            </div>
+            <span class="remaining" data-testid="order-remaining">
+              {countdown(order.cookRemainingMs)}
+            </span>
           </div>
+        {:else if order.state === 'ON_PASS' || order.state === 'DELIVERED'}
+          <!--
+            What the order is worth, on the card, from the moment the food is
+            actually ready. The directive asks for payment to stop being a
+            silent background event; the world's coin popup shows it at the
+            till, and this shows the player which order it came from.
+          -->
+          <span class="takings" data-testid="order-takings">+₡{money.format(order.price)}</span>
         {/if}
       </article>
     {/each}
@@ -121,6 +135,32 @@
     pointer-events: auto;
     z-index: var(--z-hud);
   }
+  .cooking {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .cooking .bar {
+    flex: 1;
+  }
+
+  .remaining {
+    color: var(--ink-secondary);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .takings {
+    display: inline-block;
+    margin-top: 0.15rem;
+    color: var(--positive, #7dd87d);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
   .card {
     padding: var(--space-2) var(--space-3);
     background: var(--surface-glass);

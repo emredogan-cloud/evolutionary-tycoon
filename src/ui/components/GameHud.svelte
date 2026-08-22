@@ -413,6 +413,7 @@
       {#if storeTab === 'prices'}
         <PricePanel
           {prices}
+          stage={progression.stage}
           onprice={(itemId: string, price: number) => {
             commands.setPrice(itemId, price);
           }}

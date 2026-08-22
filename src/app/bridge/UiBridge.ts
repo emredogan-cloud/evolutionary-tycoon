@@ -219,6 +219,7 @@ interface MutableOrderCard {
   startable: boolean;
   price: number;
   cook01: number;
+  cookRemainingMs: number;
 }
 
 /** Order cards shown at once; deeper queues summarise as a count. */
@@ -373,6 +374,7 @@ export class UiBridge implements HudSource {
         startable: false,
         price: 0,
         cook01: 0,
+        cookRemainingMs: 0,
       })),
       orderCount: 0,
       level: { level: 1, xp: 0, levelFloor: 0, nextLevelXp: 60 },
@@ -907,11 +909,19 @@ export class UiBridge implements HudSource {
       view.price = order.price;
       view.startable = slot === startableSlot;
       view.cook01 = 0;
+      view.cookRemainingMs = 0;
       if (order.state === ORDER_COOKING && order.station >= 0) {
         // The kitchen's own finish-time derivation, mirrored exactly.
         const durationMs =
           (menuItem(order.item).prepTimeMs * effectValue(world, 'prepSpeed')) / station(order.station).speed;
         view.cook01 = durationMs > 0 ? Math.min(1, Math.max(0, (nowMs - order.startedAtMs) / durationMs)) : 0;
+        /*
+         * Simulation milliseconds, not wall-clock — so at 4x the countdown
+         * genuinely runs four times faster and a paused world holds it still.
+         * Derived from the same duration the bar is, so the number and the bar
+         * can never disagree about the same order.
+         */
+        view.cookRemainingMs = Math.max(0, durationMs - (nowMs - order.startedAtMs));
       }
       view.patience01 = -1;
       if (order.customerSlot >= 0 && world.customers.isActive(order.customerSlot)) {

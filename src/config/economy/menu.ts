@@ -28,6 +28,16 @@ const APPEAL_TAGS = ['FAST', 'HEARTY', 'PREMIUM', 'BREAKFAST', 'SWEET', 'VEGGIE'
 
 const menuItemSchema = z.object({
   id: z.string().min(1),
+  /**
+   * What the player reads on a card — Turkish, like the rest of the interface.
+   *
+   * Here rather than in the components that show it. Two of them kept their own
+   * maps, they drifted, and the price panel's had three of the thirteen items
+   * in it: everything else rendered as a raw id, so the shop offered the player
+   * "breakfast-set" at a price. A display name is a property of the menu item,
+   * not of whichever panel happens to be drawing it.
+   */
+  label: z.string().min(1),
   stage: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   station: z.enum(STATION_TYPES),
   /** Ingredient cost in credits. */
@@ -90,6 +100,7 @@ export const PRICE_BAND = { min: 0.5, max: 1.5 } as const;
 const STAGE1_ITEMS: MenuItem[] = [
   {
     id: 'lemonade',
+    label: 'Limonata',
     stage: 1,
     station: 'DRINK',
     baseCost: 1.08,
@@ -102,6 +113,7 @@ const STAGE1_ITEMS: MenuItem[] = [
   },
   {
     id: 'hotdog',
+    label: 'Sosisli',
     stage: 1,
     station: 'GRILL',
     baseCost: 2.43,
@@ -114,6 +126,7 @@ const STAGE1_ITEMS: MenuItem[] = [
   },
   {
     id: 'chips',
+    label: 'Cips',
     stage: 1,
     station: 'PREP',
     baseCost: 0.68,
@@ -144,6 +157,7 @@ const STAGE1_ITEMS: MenuItem[] = [
 const LATER_ITEMS: MenuItem[] = [
   {
     id: 'hamburger',
+    label: 'Hamburger',
     stage: 2,
     station: 'GRILL',
     baseCost: 4.32,
@@ -156,6 +170,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'fries',
+    label: 'Patates Kızartması',
     stage: 2,
     station: 'FRYER',
     baseCost: 1.49,
@@ -168,6 +183,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'cola',
+    label: 'Kola',
     stage: 2,
     station: 'DRINK',
     baseCost: 0.81,
@@ -180,6 +196,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'breakfast-set',
+    label: 'Kahvaltı Tabağı',
     stage: 3,
     station: 'GRILL',
     baseCost: 7.43,
@@ -192,6 +209,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'chicken-meal',
+    label: 'Tavuk Menü',
     stage: 3,
     station: 'FRYER',
     baseCost: 8.1,
@@ -204,6 +222,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'coffee',
+    label: 'Kahve',
     stage: 3,
     station: 'COFFEE',
     baseCost: 1.22,
@@ -216,6 +235,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'dessert',
+    label: 'Tatlı',
     stage: 3,
     station: 'DESSERT',
     baseCost: 3.24,
@@ -228,6 +248,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'salad',
+    label: 'Salata',
     stage: 3,
     station: 'PREP',
     baseCost: 4.05,
@@ -240,6 +261,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'premium-burger',
+    label: 'Özel Burger',
     stage: 4,
     station: 'GRILL',
     baseCost: 11.48,
@@ -252,6 +274,7 @@ const LATER_ITEMS: MenuItem[] = [
   },
   {
     id: 'family-meal',
+    label: 'Aile Menüsü',
     stage: 4,
     station: 'GRILL',
     baseCost: 24.3,
