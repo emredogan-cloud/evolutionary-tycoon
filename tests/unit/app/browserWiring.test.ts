@@ -714,3 +714,10 @@ describe('the HUD strip fields — Phase 15', () => {
     expect(hud.eventRemainingMs).toBe(0);
   });
 });
+
+describe('debugOverlayEnabled, default argument', () => {
+  it('reads the window search string when none is passed', () => {
+    // jsdom's location carries no query, so the default read is the off path.
+    expect(debugOverlayEnabled()).toBe(false);
+  });
+});

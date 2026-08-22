@@ -54,3 +54,22 @@ describe('the player level, derived', () => {
     }
   });
 });
+
+describe('the level curve edges', () => {
+  it('caps at the last threshold, where the next level stops existing', () => {
+    const sim = new Sim({ seed: 1 });
+    sim.world.economy.lifetimeRevenue = 50_000; // far past the 12 620 cap
+    const level = playerLevel(sim.world);
+    expect(level.level).toBe(LEVEL_XP.length);
+    expect(level.nextLevelXp).toBe(level.levelFloor);
+  });
+
+  it('sits exactly on a boundary without rounding across it', () => {
+    const sim = new Sim({ seed: 1 });
+    sim.world.stats.customersServed = 15; // 60 XP — the level-2 line exactly
+    const level = playerLevel(sim.world);
+    expect(level.level).toBe(2);
+    expect(level.xp).toBe(60);
+    expect(level.levelFloor).toBe(60);
+  });
+});

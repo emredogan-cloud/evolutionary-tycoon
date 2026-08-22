@@ -722,11 +722,11 @@ export class WorldScene extends Phaser.Scene {
     for (const band of this.vignette) band.destroy();
     this.vignette = [];
     const { width, height } = this.scale.gameSize;
-    const steps: readonly { size: number; alpha: number }[] = [
-      { size: 0.1, alpha: 0.16 },
-      { size: 0.05, alpha: 0.1 },
-      { size: 0.025, alpha: 0.06 },
-    ];
+    // One quiet band per edge. Three stepped bands were tried first and the
+    // camera-bounds golden showed them as stacked brown frames at full
+    // zoom-out — a single 6% band at 0.10 reads as light falloff at every
+    // zoom the camera allows.
+    const steps: readonly { size: number; alpha: number }[] = [{ size: 0.06, alpha: 0.1 }];
     let inset = 0;
     for (const step of steps) {
       const h = Math.round(height * step.size);

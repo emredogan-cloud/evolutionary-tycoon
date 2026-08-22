@@ -44,12 +44,14 @@ test.describe('production art', () => {
 
     const frames = Number(await root.getAttribute('data-asset-frames'));
     /*
-     * Every boot-fetched atlas frame. 171 was the original batch list; the
-     * 2026-08-21 delivery added the true rears, brake frames, real legs, food
-     * and interface icons that load before the world starts — the deferred
-     * atlases (vehicles2, ui2) are deliberately not part of this number.
+     * Every frame a deterministic boot registers. 171 was the original batch
+     * list; the 2026-08-21 delivery added the rears, brake frames, real legs,
+     * food and interface icons (199), and an `e2e=1` session also awaits the
+     * reserve fleet's deferred atlas outright — "which vehicles can draw"
+     * must not depend on network timing in a fixture — which adds its 42.
+     * ui2 stays out: it is DOM-consumed and no world pixel waits on it.
      */
-    expect(frames).toBe(199);
+    expect(frames).toBe(241);
   });
 
   for (const stage of STAGES) {
