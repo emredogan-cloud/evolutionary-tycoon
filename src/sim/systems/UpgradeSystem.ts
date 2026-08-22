@@ -1,4 +1,11 @@
-import { CATEGORY_WEIGHT, EFFECT_MODE_OF, UPGRADES, upgrade, upgradeCost } from '@config/economy/upgrades';
+import {
+  CATEGORY_WEIGHT,
+  EFFECT_MODE_OF,
+  UPGRADES,
+  buildDurationMs,
+  upgrade,
+  upgradeCost,
+} from '@config/economy/upgrades';
 import type { EffectKind, Upgrade } from '@config/economy/upgrades';
 import { combineDiminishing } from '../math/combineDiminishing';
 import type { World } from '../core/World';
@@ -219,12 +226,60 @@ export function buyUpgrade(world: World, id: string): PurchaseOutcome {
    */
   if (playerLevel(world).level < upgradeLevelRequirement(id)) return 'locked';
 
-  const cost = upgradeCost(item, level + 1, world.progression.stage);
+  /*
+   * Levels already on the construction queue count toward `maxed` and price
+   * the next rung, or a player could queue five copies of a two-level ladder
+   * at the first rung's price while the scaffolding was still up.
+   */
+  const queued = pendingUpgradeLevels(world, id);
+  if (level + queued >= item.maxLevel) return 'maxed';
+
+  const cost = upgradeCost(item, level + queued + 1, world.progression.stage);
   if (world.economy.cash < cost) return 'unaffordable';
 
+  /*
+   * The correction pass: money moves now, the level applies when the build
+   * finishes. `ProgressionSystem` counts the site down in simulation time and
+   * calls `applyUpgradeLevel` at zero — so the effect, the world object and
+   * the completion burst all arrive together, and none of them arrive on the
+   * click. The revision bump tells the renderer a site appeared.
+   */
   world.economy.cash -= cost;
   world.economy.lifetimeSpend += cost;
-  world.layout.upgrades.set(id, level + 1);
-  world.eventQueue.emitUpgradeApplied(id, level + 1, cost);
+  const totalMs = buildDurationMs(cost);
+  world.layout.pendingBuilds.push({
+    upgradeId: id,
+    objectId: item.placeholder,
+    x: item.anchor.x,
+    y: item.anchor.y,
+    remainingMs: totalMs,
+    totalMs,
+  });
+  world.layout.revision++;
   return 'ok';
+}
+
+/** Levels of `id` currently under construction. */
+function pendingUpgradeLevels(world: World, id: string): number {
+  let count = 0;
+  for (const build of world.layout.pendingBuilds) {
+    if (build.upgradeId === id) count++;
+  }
+  return count;
+}
+
+/**
+ * A finished site's level lands — called by `ProgressionSystem` at zero.
+ *
+ * This is the old instant-purchase tail: the level, the event the bursts and
+ * notices listen for, and the revision bump that makes the renderer rebuild
+ * its statics so the object is standing when the scaffold clears.
+ */
+export function applyUpgradeLevel(world: World, id: string): void {
+  const item = UPGRADES.find((candidate) => candidate.id === id);
+  if (item === undefined) return;
+  const level = upgradeLevel(world, id) + 1;
+  world.layout.upgrades.set(id, level);
+  world.layout.revision++;
+  world.eventQueue.emitUpgradeApplied(id, level, upgradeCost(item, level, world.progression.stage));
 }

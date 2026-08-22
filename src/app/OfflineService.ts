@@ -134,6 +134,9 @@ export class OfflineService {
       gross: pending.gross,
       expenses: pending.expenses,
       net: pending.net,
+      // Construction sites advance by the same credited window the earnings
+      // were priced over — one clock decision, applied to everything at once.
+      creditedMs: pending.creditedMs,
     });
     /*
      * The command lands at the start of a tick — that is the command contract.

@@ -43,7 +43,7 @@ export const STAGE3_LAYOUT: StageLayout = {
      * Five metres is the original row's own spacing and leaves 0.5 m between
      * bumpers.
      */
-    { id: 'p6', x: 8.5, y: 12.4, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 10.9 } },
+    { id: 'p6', x: 8.5, y: 12.9, heading: { x: 1, y: 0 }, door: { x: 8.6, y: 11.3 } }, // see p5; door west of the sign's cells
     { id: 'p7', x: 3.5, y: 16.2, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 14.7 } },
     { id: 'p8', x: 8.5, y: 16.2, heading: { x: 1, y: 0 }, door: { x: 8.5, y: 14.7 } },
   ],
@@ -74,6 +74,28 @@ export const STAGE3_LAYOUT: StageLayout = {
    * Mixed sizes because vans arrive with groups (ARCHETYPE_SPECS), and a room of
    * identical two-tops would either waste seats or turn groups away.
    */
+  /*
+   * Twelve standing spots, same count Stage 2 carries — the count is queue
+   * capacity and stays put — but repositioned by the correction pass: the
+   * inherited rows sit at y 13.2, which is where this stage's own dining
+   * tables go. Four keep the counter-side row; the rest line the west apron
+   * between the parking rows, which stays open at every later stage too.
+   */
+  waitingArea: [
+    { x: 16.2, y: 11.6 },
+    { x: 17.1, y: 11.6 },
+    { x: 18.0, y: 11.6 },
+    { x: 18.9, y: 11.6 },
+    { x: 4.0, y: 14.2 },
+    { x: 4.9, y: 14.2 },
+    { x: 5.8, y: 14.2 },
+    { x: 6.7, y: 14.2 },
+    { x: 7.6, y: 14.2 },
+    { x: 8.5, y: 14.2 },
+    { x: 9.4, y: 14.2 },
+    { x: 4.0, y: 15.0 },
+  ],
+
   tables: [
     { id: 't1', x: 15.2, y: 13.4, seats: 2 },
     { id: 't2', x: 17.4, y: 13.4, seats: 2 },

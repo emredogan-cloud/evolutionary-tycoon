@@ -4,7 +4,7 @@ import type { StageRequirement } from '@config/progression';
 import type { Stage } from '../core/types';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
-import { totalUpgradeLevels } from './UpgradeSystem';
+import { applyUpgradeLevel, totalUpgradeLevels } from './UpgradeSystem';
 
 /**
  * Evolution — GAME_EXECUTION_ROADMAP Phase 11, GAME_DESIGN_DOCUMENT §7.
@@ -37,6 +37,7 @@ export class ProgressionSystem implements SimSystem {
     if (deltaMs <= 0) return;
 
     this.advanceConstruction(world, deltaMs);
+    advancePendingBuilds(world, deltaMs);
     this.checkRequirements(world);
   }
 
@@ -178,4 +179,39 @@ export function beginConstruction(world: World): 'ok' | 'not-ready' | 'already-b
 
   world.eventQueue.emitConstructionStarted(requirement.stage, requirement.constructionMs);
   return 'ok';
+}
+
+/**
+ * Count every construction site down, and finish the ones that reach zero —
+ * the UI/world correction pass.
+ *
+ * Lives in this system's slot because it is the same job the stage build
+ * already does here: simulation time turning scaffolding into things. There
+ * is no nineteenth system slot and none is being added (WORKING_DISCIPLINE
+ * §6); a purchase site is progression, not a new kind of tick work.
+ *
+ * Exported so the offline path and the tests can advance sites by an
+ * arbitrary span through the exact code the live tick runs.
+ */
+export function advancePendingBuilds(world: World, deltaMs: number): void {
+  const builds = world.layout.pendingBuilds;
+  if (builds.length === 0) return;
+
+  let write = 0;
+  for (const build of builds) {
+    build.remainingMs -= deltaMs;
+    if (build.remainingMs > 0) {
+      builds[write] = build;
+      write++;
+      continue;
+    }
+    // Finished. Decor already stands in `placed` (the scaffold was purely
+    // visual); an upgrade's level lands now, with its event and its object.
+    if (build.upgradeId !== '') applyUpgradeLevel(world, build.upgradeId);
+  }
+  if (write !== builds.length) {
+    builds.length = write;
+    // Membership changed; the renderer rebuilds statics off this.
+    world.layout.revision++;
+  }
 }

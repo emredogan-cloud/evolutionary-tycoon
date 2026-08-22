@@ -762,6 +762,43 @@ const upgradesSchema = z.array(upgradeSchema).superRefine((list, ctx) => {
   for (const upgrade of list) walk(upgrade.id, []);
 });
 
+/**
+ * How long a purchase takes to build, in simulation milliseconds — the
+ * UI/world correction pass ("Clash of Clans style construction").
+ *
+ * ## The time model, derived rather than invented
+ *
+ * The game clock runs a full day in 720 real seconds (`MS_PER_GAME_DAY`), so
+ * one game minute is 500 sim-ms. The directive's band — "small object: 5-10
+ * minutes, larger upgrade longer" — is read in **game minutes**, because the
+ * calibrated economy leaves no other honest reading: stage-1 completion is a
+ * measured ~one-day window and a literal 5 real minutes per ₡6 sign would
+ * re-pace the entire calibrated curve (CALIBRATED_STAGES=[1], balance gate).
+ * Under this model the cheapest rung builds in ~7 game minutes and the most
+ * expensive stage-4 rung caps at 24 — always shorter than the stage
+ * evolutions themselves (24-60 game minutes, `progression.ts`), which keeps
+ * the hierarchy a player feels: decor < upgrade < a whole new building.
+ *
+ * The formula is anchored on cost so the economy stays the single authority
+ * on how big a purchase is. Decor has no cost and takes the flat minimum.
+ */
+const BUILD_TIME = {
+  /** Fixed groundwork per site, sim-ms. */
+  baseMs: 1_000,
+  /** Additional sim-ms per ₡ of the rung's actual price. */
+  perCostMs: 400,
+  /** Floor — even free decor visibly goes up. 3 s = 6 game minutes. */
+  minMs: 3_000,
+  /** Ceiling — 12 s = 24 game minutes, under every stage evolution. */
+  maxMs: 12_000,
+} as const;
+
+/** The construction duration a purchase of `cost` takes, in sim-ms. */
+export function buildDurationMs(cost: number): number {
+  const raw = BUILD_TIME.baseMs + cost * BUILD_TIME.perCostMs;
+  return Math.min(BUILD_TIME.maxMs, Math.max(BUILD_TIME.minMs, raw));
+}
+
 export const UPGRADES: readonly Upgrade[] = upgradesSchema.parse(UPGRADE_TREE);
 
 export function upgrade(id: string): Upgrade {

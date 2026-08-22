@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ACTOR_KIND_SPECS } from '@config/actors';
 import { BUILDABLES } from '@config/buildables';
+import { worldObjectIndexOf } from '@config/sprites';
 import { Sim } from '@sim/core/Sim';
 import { navigationIntact } from '@sim/nav/reachability';
 import { placeObject, previewPlacement } from '@sim/systems/LayoutSystem';
@@ -15,15 +15,20 @@ import { placeObject, previewPlacement } from '@sim/systems/LayoutSystem';
  */
 
 describe('everything in the palette can actually be built', () => {
-  it('names a texture the render catalogue knows', () => {
-    // `kindIndexForTexture` throws for an unknown key, and it is called while
-    // registering statics — so a bad entry here surfaces as a crash on the
-    // first frame after a placement rather than as a missing sprite.
+  it('names a production world object', () => {
+    /*
+     * The correction pass moved these off the placeholder stems: a buildable
+     * now names an entry of `WORLD_OBJECTS`, so a placement draws real art
+     * and blocks the navigation grid with that object's real footprint. An
+     * id neither catalogue knows would draw the counted placeholder box and
+     * fail the production-placeholder-zero assertion — this catches it at
+     * unit speed instead.
+     */
     for (const item of BUILDABLES) {
       expect(
-        ACTOR_KIND_SPECS.some((spec) => spec.textureKey === item.objectId),
-        `${item.id} names a texture nothing loads`,
-      ).toBe(true);
+        worldObjectIndexOf(item.objectId),
+        `${item.id} names no production world object`,
+      ).toBeGreaterThanOrEqual(0);
     }
   });
 

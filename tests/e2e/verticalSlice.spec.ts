@@ -156,7 +156,9 @@ test.describe('vertical slice — criterion 7, save and restore', () => {
     await page.evaluate(async () => {
       const api = (window as unknown as { __EVOTYCOON__: Api }).__EVOTYCOON__;
       api.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'hand-painted-sign' });
-      api.advanceTicks(1);
+      // Through the sign's construction (3.4 s = 68 ticks) — the claim under
+      // test is "bought survives a reload", and bought means built.
+      api.advanceTicks(80);
       await api.save();
     });
 

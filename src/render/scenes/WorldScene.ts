@@ -35,19 +35,20 @@ import type { AssetRegistry } from '../AssetRegistry';
 import {
   EMPLOYEE_TINT,
   GROUND_FRAMES,
-  ROAD_FRAME,
   RIG_DIRECTION_FOR,
   RIG_DRAW_ORDER,
   RIG_PIVOTS,
   rigFrame,
   unpackAppearance,
   vehicleBrakeFrame,
+  vehicleFacingFix,
+  vehicleFixFrame,
   vehicleFrame,
   worldObjectAt,
   worldObjectIndexOf,
 } from '@config/sprites';
 import type { ActorView } from '../ActorView';
-import { ART_SCALE, TILE_Z } from '@config/world';
+import { ART_SCALE, CAMERA, TILE_H, TILE_W, TILE_Z } from '@config/world';
 import { directionFor } from '../views/VehicleView';
 import { WALK_SPEED_METRES_PER_SECOND } from '@config/customer';
 import { RenderBridge } from '../RenderBridge';
@@ -92,11 +93,43 @@ const MAX_SEATS = 4;
  */
 const TABLE_ID_BASE = -10_000;
 
+/** Placed decor ids live below the furniture range; sites below those. */
+const PLACED_ID_BASE = -30_000;
+const SITE_ID_BASE = -40_000;
+
 /**
  * The rig's resting torso height, subtracted so the bob is an offset from rest
  * rather than an absolute position.
  */
 const REST_TORSO_HEIGHT_METRES = 0.95;
+
+/**
+ * Painted bay geometry, in metres. Half-dimensions because everything that
+ * consumes them measures from the authored bay centre. 5.0 x 2.6 m per bay —
+ * the approved 5 m spacing, with the width a parked 1.9 m car plus door room.
+ */
+const BAY_HALF_LENGTH = 2.5;
+const BAY_HALF_WIDTH = 1.3;
+
+/**
+ * Deterministic scatter for painted ground detail — grass dabs, asphalt tone.
+ *
+ * The same integer-hash family the environment layer uses for precipitation:
+ * a pure function of the index, so the composition is identical on every
+ * machine and every reload (the goldens depend on it), and no RNG stream is
+ * consumed outside the simulation.
+ */
+/** West-side facings resolve through their eastern mirror — see drawVehicle. */
+const VEHICLE_MIRROR: Readonly<Partial<Record<SpriteDirectionName, SpriteDirectionName>>> = {
+  w: 'e',
+  nw: 'ne',
+  sw: 'se',
+};
+
+function hash01(index: number, salt: number): number {
+  const n = Math.imul(index + 1, 2654435761) ^ Math.imul(salt, 40503);
+  return ((n >>> 8) & 0xffff) / 0x10000;
+}
 
 /** Statics are declared by texture key; the render catalogue is indexed by number. */
 function kindIndexForTexture(textureKey: string): number {
@@ -150,6 +183,17 @@ export class WorldScene extends Phaser.Scene {
   private context!: RenderContext;
   /** Last seen upgrade revision, so statics are rebuilt only on a purchase. */
   private upgradeRevision = -1;
+  /** Last seen layout revision — placed decor and construction sites. */
+  private layoutRevision = -1;
+  /**
+   * Static entity id → row in the view's pending-build list, rebuilt with the
+   * statics. `drawStatic` looks a quad up here to decide whether it is a
+   * finished thing or a construction silhouette, and the per-frame site bars
+   * read their progress through the same rows.
+   */
+  private readonly pendingSiteByEntity = new Map<number, number>();
+  /** The construction sites' progress bars, cleared and redrawn per frame. */
+  private siteBars: Phaser.GameObjects.Graphics | null = null;
 
   /**
    * The stage whose lot is currently drawn — Phase 11.
@@ -163,12 +207,17 @@ export class WorldScene extends Phaser.Scene {
   private stage = 1;
   private layout: StageLayout = layoutForStage(1);
 
-  /** Bay lines, table pads and the drive-thru lane. Cleared and redrawn per stage. */
+  /** Table pads and the drive-thru lane. Cleared and redrawn per stage. */
   private surfaces: Phaser.GameObjects.Graphics | null = null;
-  /** The stretched ground bake, replaced whenever the stage changes. */
-  private groundTile: Phaser.GameObjects.Image | null = null;
-  /** The baked road tiles, replaced whenever the stage redraws the band. */
-  private readonly roadTiles: Phaser.GameObjects.Image[] = [];
+  /**
+   * Parking bay markings. Their own graphics on the **road** layer: the bays
+   * are painted on the asphalt, and drawing them on the ground layer put them
+   * underneath the road surface — which is why the first consolidation's bay
+   * outlines were invisible in every capture.
+   */
+  private baySurfaces: Phaser.GameObjects.Graphics | null = null;
+  /** Everything drawGround created, so a stage change can rebuild it. */
+  private readonly groundObjects: Phaser.GameObjects.GameObject[] = [];
   private construction!: ConstructionMask;
   private graph!: SceneGraph;
   private bridge!: RenderBridge;
@@ -338,12 +387,30 @@ export class WorldScene extends Phaser.Scene {
       this.context.reducedMotion,
     );
 
+    /*
+     * The camera's own E2E door — see `RenderContext.exposeCameraHook`. It
+     * speaks world metres, and everything routes through the controller's own
+     * clamped `centreOn`, so the hook can request nothing a player could not.
+     */
+    if (this.context.exposeCameraHook === true) {
+      const scratch: Point2 = { x: 0, y: 0 };
+      (window as unknown as Record<string, unknown>)['__EVOTYCOON_CAMERA__'] = {
+        set: (worldX: number, worldY: number, zoom: number) => {
+          const focus = worldToScreen(worldX, worldY, 0, scratch);
+          this.camera.centreOn(focus.x, focus.y, zoom);
+        },
+        state: () => ({ ...this.camera.current }),
+      };
+    }
+
     // Announced so E2E can wait on a state rather than a timeout.
     document.documentElement.dataset['renderState'] = 'ready';
   }
 
   override update(_time: number, delta: number): void {
     this.camera.update(delta);
+    // Tracks pan and zoom, not just resize — see the field's comment.
+    this.layoutVignette();
 
     const view = this.context.readView();
     if (view.stage !== this.stage) {
@@ -355,8 +422,9 @@ export class WorldScene extends Phaser.Scene {
       this.drawSurfaces();
       this.registerStatics(view.upgradeLevels);
     }
-    if (view.upgradeRevision !== this.upgradeRevision) {
+    if (view.upgradeRevision !== this.upgradeRevision || view.layoutRevision !== this.layoutRevision) {
       this.upgradeRevision = view.upgradeRevision;
+      this.layoutRevision = view.layoutRevision;
       this.registerStatics(view.upgradeLevels);
     }
 
@@ -392,6 +460,7 @@ export class WorldScene extends Phaser.Scene {
     // Driven by the simulation's own figure, so a paused world holds a still
     // half-built building rather than finishing it on wall-clock time.
     this.construction.update(this.context.constructionProgress?.() ?? 0);
+    this.drawSiteBars(view);
     this.context.onFrame?.();
 
     this.overlays?.update(this.bridge.visible.length);
@@ -461,6 +530,7 @@ export class WorldScene extends Phaser.Scene {
     sprite.setVisible(true);
     sprite.setRotation(0);
     sprite.clearTint();
+    sprite.setAlpha(1);
     sprite.setFlipX(false);
     sprite.setScale(1 / ART_SCALE);
     return sprite;
@@ -516,31 +586,56 @@ export class WorldScene extends Phaser.Scene {
   private drawVehicle(view: ActorView, index: number): number {
     const direction = directionFor(view.headingX, view.headingY);
     /*
-     * Brake lights are frames now, not tints: the 2026-08-21 delivery has a
-     * `_brake` view wherever the lights are visible (rear-facing headings);
-     * everywhere else the default frame is already the truth.
+     * Frame resolution, in trust order:
+     *
+     *  1. The brake-lit frame while braking — the 2026-08-21 delivery has a
+     *     `_brake` view wherever the lights are visible, mirrored for `nw`.
+     *  2. The facing-fix table (`VEHICLE_FACING_FIXES`): where the delivered
+     *     default does not show the facing its filename promises, the
+     *     truthful substitute — a receding car must never wear a forward
+     *     view, which is the "vehicles drive sideways" capture in one line.
+     *  3. The default frame as named — unless the fix table declares it
+     *     untruthful, in which case an absent substitute falls through to
+     *     the mirror rather than resurrecting the bad art.
+     *  4. The lateral mirror of the opposite side, exactly as the doll rig
+     *     mirrors (P17): a vehicle is laterally symmetric, so `sw` is `se`
+     *     flipped — zero shipped bytes instead of a second copy.
      */
-    /*
-     * West-side facings mirror at draw time, exactly as the doll rig does
-     * (P17): a vehicle is laterally symmetric, so `sw` is `se` flipped —
-     * zero shipped bytes instead of a second copy of every archetype. The
-     * audited four still carry real west files (their v1 import materialised
-     * them) and those win; the 2026-08-21 six resolve through the mirror.
-     */
-    const MIRROR: Readonly<Record<string, string>> = { w: 'e', nw: 'ne', sw: 'se' };
-    const partner = MIRROR[direction];
-    const brake = view.braking ? vehicleBrakeFrame(view.variant, direction) : null;
+    const partner = VEHICLE_MIRROR[direction];
     let flip = false;
-    let frame =
-      (brake !== null ? this.frameOf(brake) : null) ?? this.frameOf(vehicleFrame(view.variant, direction));
+    let frame: string | null = null;
+
+    if (view.braking) {
+      const brake = vehicleBrakeFrame(view.variant, direction);
+      frame = brake !== null ? this.frameOf(brake) : null;
+      if (frame === null && partner !== undefined) {
+        const brakePartner = vehicleBrakeFrame(view.variant, partner);
+        frame = brakePartner !== null ? this.frameOf(brakePartner) : null;
+        flip = frame !== null;
+      }
+    }
+
+    const fix = vehicleFacingFix(view.variant, direction);
+    if (frame === null && fix !== undefined) {
+      frame = this.frameOf(vehicleFixFrame(view.variant, fix));
+      flip = frame !== null && fix.flip === true;
+    }
+    if (frame === null && fix === undefined) {
+      frame = this.frameOf(vehicleFrame(view.variant, direction));
+    }
     if (frame === null && partner !== undefined) {
-      const brakePartner = view.braking
-        ? vehicleBrakeFrame(view.variant, partner as SpriteDirectionName)
-        : null;
-      frame =
-        (brakePartner !== null ? this.frameOf(brakePartner) : null) ??
-        this.frameOf(vehicleFrame(view.variant, partner as SpriteDirectionName));
-      flip = frame !== null;
+      const partnerFix = vehicleFacingFix(view.variant, partner);
+      const name =
+        partnerFix !== undefined
+          ? vehicleFixFrame(view.variant, partnerFix)
+          : vehicleFrame(view.variant, partner);
+      const resolved = this.frameOf(name);
+      if (resolved !== null) {
+        frame = resolved;
+        // Mirroring a substitute that was itself mirrored lands back on the
+        // original side, so the two flips cancel.
+        flip = partnerFix?.flip !== true;
+      }
     }
     if (frame === null) {
       /*
@@ -690,6 +785,20 @@ export class WorldScene extends Phaser.Scene {
 
     const sprite = this.quadFor(index, atlas, lower);
     this.place(sprite, lower, view.screenX, view.screenY);
+    /*
+     * A construction site draws as a dark translucent silhouette of the thing
+     * being built — the shape says what is coming, the treatment says it is
+     * not here yet, and the reveal at completion is the untinted sprite
+     * simply taking its place. Reduced-motion safe: nothing animates but the
+     * bar, which moves at the speed of the build itself.
+     */
+    const site = this.pendingSiteByEntity.get(view.entityId);
+    if (site !== undefined) {
+      sprite.setTint(0x2b323d);
+      sprite.setAlpha(0.62);
+    } else {
+      sprite.setAlpha(1);
+    }
     let quad = index + 1;
 
     const upperName = spec.upperFrame;
@@ -703,6 +812,12 @@ export class WorldScene extends Phaser.Scene {
       // putting that on the lower half's top edge is what makes the two meet.
       upperSprite.setOrigin(0.5, 1);
       upperSprite.setPosition(view.screenX, top);
+      if (site !== undefined) {
+        upperSprite.setTint(0x2b323d);
+        upperSprite.setAlpha(0.62);
+      } else {
+        upperSprite.setAlpha(1);
+      }
       quad++;
     }
 
@@ -710,40 +825,44 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * The screen-space vignette — the premium falloff of the reference scenes,
-   * and the finish over the environment skirt. Camera-fixed (scroll factor
-   * zero), three stepped bands per edge instead of a gradient texture:
-   * CanvasTexture never drew on this Phaser 4 (P15's probe), and stepped
-   * translucency at these alphas is indistinguishable in place.
+   * The screen-space vignette — the premium falloff of the reference scenes.
+   *
+   * Four bands, one per edge, repositioned to the camera's visible world rect
+   * every frame. They used to be viewport-sized rectangles at scroll factor
+   * zero — which is the classic Phaser trap this correction pass closes in
+   * three places at once: scroll factor exempts an object from *scroll*, not
+   * from *zoom*, so at 0.6x the "full-screen" bands shrank to 60% and drew as
+   * a dark picture-frame floating in the middle of the world (the hard-edged
+   * rectangles in the user's zoomed-out capture). The visible world rect is
+   * arithmetic on scroll and zoom directly, so it is correct at every zoom by
+   * construction.
    */
   private vignette: Phaser.GameObjects.Rectangle[] = [];
 
   private layoutVignette(): void {
-    for (const band of this.vignette) band.destroy();
-    this.vignette = [];
-    const { width, height } = this.scale.gameSize;
-    // One quiet band per edge. Three stepped bands were tried first and the
-    // camera-bounds golden showed them as stacked brown frames at full
-    // zoom-out — a single 6% band at 0.10 reads as light falloff at every
-    // zoom the camera allows.
-    const steps: readonly { size: number; alpha: number }[] = [{ size: 0.06, alpha: 0.1 }];
-    let inset = 0;
-    for (const step of steps) {
-      const h = Math.round(height * step.size);
-      const w = Math.round(width * step.size);
-      const bands = [
-        this.add.rectangle(0, inset, width, h, 0x05070b, step.alpha).setOrigin(0, 0),
-        this.add.rectangle(0, height - inset - h, width, h, 0x05070b, step.alpha).setOrigin(0, 0),
-        this.add.rectangle(inset, 0, w, height, 0x05070b, step.alpha).setOrigin(0, 0),
-        this.add.rectangle(width - inset - w, 0, w, height, 0x05070b, step.alpha).setOrigin(0, 0),
-      ];
-      for (const band of bands) {
-        band.setScrollFactor(0);
+    if (this.vignette.length === 0) {
+      for (let i = 0; i < 4; i++) {
+        const band = this.add.rectangle(0, 0, 1, 1, 0x05070b, 0.1).setOrigin(0, 0);
         band.setDepth(1_000_000);
         this.vignette.push(band);
       }
-      inset += Math.round(Math.min(w, h) * 0.4);
     }
+
+    const camera = this.cameras.main;
+    const viewW = camera.width / camera.zoom;
+    const viewH = camera.height / camera.zoom;
+    const left = camera.scrollX + (camera.width - viewW) / 2;
+    const top = camera.scrollY + (camera.height - viewH) / 2;
+    // One quiet 6% band per edge at 0.10 — measured against the goldens as
+    // the strongest falloff that never reads as a frame.
+    const bandH = viewH * 0.06;
+    const bandW = viewW * 0.06;
+
+    const [north, south, west, east] = this.vignette;
+    north?.setPosition(left, top).setSize(viewW, bandH);
+    south?.setPosition(left, top + viewH - bandH).setSize(viewW, bandH);
+    west?.setPosition(left, top).setSize(bandW, viewH);
+    east?.setPosition(left + viewW - bandW, top).setSize(bandW, viewH);
   }
 
   private cameraBounds(): CameraBounds {
@@ -760,99 +879,146 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * The lot: the baked surface art, tiled across it.
+   * The screen-space rectangle the camera can ever show, at any zoom, on any
+   * monitor this game supports.
+   *
+   * Two constraints add up. The camera clamps to the lot-plus-margin bounding
+   * box, so that box is reachable edge to edge; and when the viewport at
+   * minimum zoom is *larger* than the box, `clampToBounds` centres the view
+   * and the visible area overhangs the bounds on every side. The overhang is
+   * `viewport / minZoom` against a worst-case monitor — 3840x2160 is the
+   * ceiling the responsive matrix supports — so the cover rect is the bounds
+   * grown to at least that half-extent. Everything inside this rect must be
+   * painted world; this is the geometric statement of "the player never sees
+   * the outside of the world".
+   */
+  private groundCoverRect(): { left: number; top: number; right: number; bottom: number } {
+    const bounds = this.cameraBounds();
+    const centreX = (bounds.left + bounds.right) / 2;
+    const centreY = (bounds.top + bounds.bottom) / 2;
+    const MAX_VIEWPORT_W = 3840;
+    const MAX_VIEWPORT_H = 2160;
+    const halfW = Math.max((bounds.right - bounds.left) / 2, MAX_VIEWPORT_W / (2 * CAMERA.minZoom)) + 64;
+    const halfH = Math.max((bounds.bottom - bounds.top) / 2, MAX_VIEWPORT_H / (2 * CAMERA.minZoom)) + 64;
+    return {
+      left: centreX - halfW,
+      top: centreY - halfH,
+      right: centreX + halfW,
+      bottom: centreY + halfH,
+    };
+  }
+
+  /**
+   * The ground: the baked dirt, tiled across everything the camera can reach.
    *
    * `RESEARCH_NOTES` §4 rules out an isometric tilemap in Phaser 4, so the
-   * ground is a bake (ASSET_PIPELINE §5) laid down as a handful of large
-   * statics. The bake is a seamless 2048x1024 slice; the lot is bigger than one
-   * slice, so it repeats — and it is drawn in **screen space**, axis-aligned,
-   * because a projected quad of a pre-projected texture would apply the
-   * isometric skew twice.
+   * ground is a bake (ASSET_PIPELINE §5) — and it is drawn in **screen
+   * space**, axis-aligned, because a projected quad of a pre-projected texture
+   * would apply the isometric skew twice.
    *
-   * The flat quad underneath stays. It is not decoration: it covers the corners
-   * a rectangular tiling leaves outside the lot's diamond, and it is what draws
-   * at all if the ground bake is the one file that failed to load.
+   * ## Why it tiles over the whole cover rect, not the lot
+   *
+   * The first consolidation stretched one slice over the lot rectangle and
+   * left a flat-colour skirt around it. Two things were wrong with that in
+   * every capture: the geometry mask that was meant to trim the slice to the
+   * lot's diamond is silently inert on this Phaser 4 build (the same probe
+   * that moved the road off `setMask`), so the bake ended on four hard
+   * screen-space edges; and the skirt read as void — the directive's exact
+   * complaint — because flat paint is not ground. Now the same earth runs
+   * from one edge of the reachable world to the other, so there is no lot
+   * boundary to see and no skirt to read as the outside.
+   *
+   * ## Why mirror-tiling
+   *
+   * The slice is seamless in intent and not in fact — plainly repeating it
+   * showed its joints in the first Phase 4 capture. Mirroring every other
+   * column and every other row makes each edge meet a reflection of itself,
+   * which is continuous by construction; on organic dirt the local symmetry
+   * is invisible at gameplay zoom.
+   *
+   * The flat fill underneath stays: it is what draws at all if the bake is
+   * the one file that failed to fetch, and it backstops sub-pixel cracks
+   * between tiles at fractional zooms.
    */
   private drawGround(): void {
     const lot = this.layout.lot;
     const layer = this.graph.layer('ground');
 
-    /*
-     * The environment skirt — consolidation pass (§4: no black app space).
-     * The camera clamps to the lot plus a margin, and everything the lot does
-     * not cover used to be the page background. The skirt paints the same
-     * base dirt far past any reachable camera rect, so every edge of every
-     * viewport is world. It is deliberately plain: the vignette above it
-     * (drawVignette) carries the falloff, and the reference scenes read the
-     * same way — detailed centre, quiet dark rim.
-     */
-    const skirt = this.add.graphics();
-    const reach = 220; // metres past the lot — beyond any zoom's reach
-    // The bake's own border dirt, sampled — NOT the lot-fallback green: the
-    // skirt must read as more of the same earth running out of frame.
-    skirt.fillStyle(0x8f6f49, 1);
-    skirt.fillPoints(
-      this.worldQuad(lot.minX - reach, lot.minY - reach, lot.maxX + reach, lot.maxY + reach),
-      true,
-    );
-    layer.add(skirt);
+    for (const object of this.groundObjects) object.destroy();
+    this.groundObjects.length = 0;
 
-    const ground = this.add.graphics();
-    ground.fillStyle(SURFACE_COLORS.ground, 1);
-    ground.fillPoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
-    layer.add(ground);
+    const cover = this.groundCoverRect();
+
+    const skirt = this.add.graphics();
+    // The bake's own border dirt, sampled — the backstop must read as more of
+    // the same earth, not as a different material.
+    skirt.fillStyle(0x8f6f49, 1);
+    skirt.fillRect(cover.left, cover.top, cover.right - cover.left, cover.bottom - cover.top);
+    layer.add(skirt);
+    this.groundObjects.push(skirt);
 
     const key = GROUND_FRAMES[this.stage];
     if (key === undefined || !this.textures.exists(key)) {
-      // Said in the same place the geometry is: an unbaked lot keeps the grid so
-      // the extent is still readable, rather than becoming a flat colour field.
+      // An unbaked lot keeps its outline so the extent stays readable in dev
+      // bootstraps with no asset manifest, rather than becoming flat colour.
+      const ground = this.add.graphics();
+      ground.fillStyle(SURFACE_COLORS.ground, 1);
+      ground.fillPoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
       ground.lineStyle(2, SURFACE_COLORS.groundGrid, 1);
       ground.strokePoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
-      this.groundTile?.destroy();
-      this.groundTile = null;
+      layer.add(ground);
+      this.groundObjects.push(ground);
       return;
     }
 
-    const bounds = worldRectToScreenBounds(lot.minX, lot.minY, lot.maxX, lot.maxY, {
-      left: 0,
-      top: 0,
-      right: 0,
-      bottom: 0,
-    });
+    const source = this.textures.get(key).getSourceImage();
+    const tileW = source.width / ART_SCALE;
+    const tileH = source.height / ART_SCALE;
+    const firstColumn = Math.floor(cover.left / tileW);
+    const lastColumn = Math.ceil(cover.right / tileW);
+    const firstRow = Math.floor(cover.top / tileH);
+    const lastRow = Math.ceil(cover.bottom / tileH);
+
+    for (let row = firstRow; row < lastRow; row++) {
+      for (let column = firstColumn; column < lastColumn; column++) {
+        const tile = this.add
+          .image(column * tileW, row * tileH, key)
+          .setOrigin(0, 0)
+          .setDisplaySize(tileW, tileH)
+          // The mirror alternation. `& 1` on a possibly negative index — the
+          // parity, not the sign, is what decides the flip.
+          .setFlipX((column & 1) === 1 || (column & 1) === -1)
+          .setFlipY((row & 1) === 1 || (row & 1) === -1);
+        layer.add(tile);
+        this.groundObjects.push(tile);
+      }
+    }
 
     /*
-     * One stretched slice, not a tiled one.
+     * Large, faint tone patches over the tiling.
      *
-     * §5 calls these "bake"s and §2 sizes them as 2048x1024 *slices* — one image
-     * covering the lot, not a repeating texture. Tiling it was the first thing
-     * tried and the seams were visible in the first screenshot: the slice is
-     * seamless in intent and not in fact, and no tile scale hides that. Stretched
-     * to the lot's screen extent there is exactly one of it and no seam to see.
+     * Mirror-tiling guarantees seamless joints and pays for it with
+     * kaleidoscope symmetry — at minimum zoom the bake's tyre tracks read as
+     * repeating chevrons. These low-alpha washes sit above the tiles and
+     * below the road, big enough to span several tiles, hash-scattered so
+     * they are identical on every machine. They break the wallpaper without
+     * introducing a single new edge. The proper long-term fix is variation
+     * slices (prompt NEW_UI_WORLD_FIX-002); this is what makes the tiling
+     * honest until that art exists.
      */
-    this.groundTile?.destroy();
-    const bake = this.add
-      .image(bounds.left, bounds.top, key)
-      .setOrigin(0, 0)
-      .setDisplaySize(bounds.right - bounds.left, bounds.bottom - bounds.top);
-
-    /*
-     * Masked to the lot's own diamond.
-     *
-     * The bake is a rectangle and the lot is a diamond, so without this the
-     * ground ends on a hard horizontal line that belongs to no isometric object
-     * — visible in the first capture as a straight edge cutting across the verge.
-     * The mask is the same quad the flat fill uses, so the two cannot disagree.
-     */
-    const shape = this.add.graphics();
-    shape.fillStyle(0xffffff, 1);
-    shape.fillPoints(this.worldQuad(lot.minX, lot.minY, lot.maxX, lot.maxY), true);
-    bake.setMask(shape.createGeometryMask());
-    // The graphics object is the mask, not something drawn: leaving it visible
-    // would paint a white diamond over the lot.
-    shape.setVisible(false);
-
-    layer.add(bake);
-    this.groundTile = bake;
+    const wash = this.add.graphics();
+    const coverW = cover.right - cover.left;
+    const coverH = cover.bottom - cover.top;
+    const patches = Math.min(160, Math.floor((coverW * coverH) / 350_000));
+    for (let i = 0; i < patches; i++) {
+      const x = cover.left + hash01(i, 101) * coverW;
+      const y = cover.top + hash01(i, 103) * coverH;
+      const tone = hash01(i, 107);
+      wash.fillStyle(tone < 0.45 ? 0x6a3e1c : tone < 0.8 ? 0xc99a5f : 0x35441a, 0.05 + hash01(i, 109) * 0.06);
+      wash.fillEllipse(x, y, 320 + hash01(i, 113) * 640, 160 + hash01(i, 127) * 320);
+    }
+    layer.add(wash);
+    this.groundObjects.push(wash);
   }
 
   /**
@@ -897,10 +1063,55 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
-    // Parking bays: an outline each, because a filled bay reads as occupied.
-    surfaces.lineStyle(2, SURFACE_COLORS.roadMarking, 0.55);
+    /*
+     * Parking bays — painted on the layby asphalt, on the **road** layer.
+     *
+     * Two mistakes are being corrected at once here. The old outline lived on
+     * the ground layer, underneath the road surface, so it never appeared in
+     * a single capture; and it was drawn 2.4 x 4.4 m *across* the road — the
+     * long axis perpendicular to the authored heading — so even had it been
+     * visible it would not have matched the car parked in it. These bays are
+     * the car's own geometry: 5 m along the road, marked the way a real layby
+     * is — an outline, dividers, and a wheel-stop strip.
+     */
+    const bays = this.baySurfaces ?? this.add.graphics();
+    if (this.baySurfaces === null) {
+      this.baySurfaces = bays;
+      this.graph.layer('road').add(bays);
+    }
+    bays.clear();
+    const LINE = 0.09;
+    const lanes = this.layout.road.lanes;
+    const roadCentreY = ((lanes[0]?.points[0]?.y ?? 0) + (lanes[1]?.points[0]?.y ?? 0)) / 2;
+    const carriagewayEdge = roadCentreY + this.layout.road.widthMetres / 2;
+    const laybyMaxY = this.laybyRect().maxY;
     for (const bay of this.layout.parking) {
-      surfaces.strokePoints(this.worldQuad(bay.x - 1.2, bay.y - 2.2, bay.x + 1.2, bay.y + 2.2), true);
+      const x0 = bay.x - BAY_HALF_LENGTH;
+      const x1 = bay.x + BAY_HALF_LENGTH;
+      // The painted box never crosses onto the carriageway, whatever the
+      // authored centre: the outline is road marking, not car geometry.
+      const y0 = Math.max(bay.y - BAY_HALF_WIDTH, carriagewayEdge + 0.08);
+      const y1 = bay.y + BAY_HALF_WIDTH;
+      // A deep-row bay stands on the dirt lot; give it its own asphalt pad
+      // with a soft margin, so the markings sit on pavement there too.
+      if (bay.y + BAY_HALF_WIDTH > laybyMaxY + 0.1) {
+        bays.fillStyle(SURFACE_COLORS.road, 1);
+        bays.fillPoints(this.worldQuad(x0 - 0.35, y0 - 0.35, x1 + 0.35, y1 + 0.35), true);
+        bays.fillStyle(SURFACE_COLORS.asphaltShadow, 0.22);
+        bays.fillPoints(this.worldQuad(x0 - 0.35, y0 - 0.35, x1 + 0.35, y1 + 0.35), true);
+      }
+      // A faint concrete wash inside, so an empty bay reads as a place.
+      bays.fillStyle(SURFACE_COLORS.asphaltWorn, 0.14);
+      bays.fillPoints(this.worldQuad(x0 + LINE, y0 + LINE, x1 - LINE, y1 - LINE), true);
+      // The outline. White, as the reference scenes paint them.
+      bays.fillStyle(SURFACE_COLORS.roadMarking, 0.85);
+      bays.fillPoints(this.worldQuad(x0, y0, x1, y0 + LINE), true);
+      bays.fillPoints(this.worldQuad(x0, y1 - LINE, x1, y1), true);
+      bays.fillPoints(this.worldQuad(x0, y0, x0 + LINE, y1), true);
+      bays.fillPoints(this.worldQuad(x1 - LINE, y0, x1, y1), true);
+      // The wheel-stop, against the kerb side.
+      bays.fillStyle(SURFACE_COLORS.asphaltShadow, 0.9);
+      bays.fillPoints(this.worldQuad(bay.x - 0.8, y1 - 0.34, bay.x + 0.8, y1 - 0.16), true);
     }
 
     /*
@@ -917,90 +1128,295 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The road: one continuous band, composed in world space.
+   *
+   * ## Why it is drawn rather than tiled from the delivered slice
+   *
+   * `road_segment_tile-a` is a self-contained diorama tile: its grass verge
+   * wraps around its own ends and its sides carry a painted dirt cliff. Butting
+   * copies of it produces exactly what every capture showed — a verge strip
+   * crossing the carriageway at each joint and a staircase of floating slabs.
+   * No placement can fix that; it is a property of the art. So the band is
+   * composed from the locked palette in world space (the same technique the
+   * drive-thru lane and the bay markings already use), which is continuous by
+   * construction, follows the projection exactly, and has no seam to see. The
+   * slice remains the reference for the seamless-strip regeneration prompt in
+   * the catalogue (NEW_UI_WORLD_FIX-001); when that art lands this composition
+   * is its fallback.
+   *
+   * ## The layby
+   *
+   * The stand's parking is a marked layby cut into the south verge along the
+   * lot frontage: the apron asphalt continues from the carriageway edge to
+   * `LAYBY_DEPTH`, and the bays are painted on it (`drawSurfaces`). That is
+   * what puts parked cars visually *off* the through lanes — the first
+   * consolidation parked them against the carriageway edge with no painted
+   * bay, which read as cars abandoned on the road.
+   */
   private drawRoad(): void {
-    const road = this.add.graphics();
     const lanes = this.layout.road.lanes;
     const first = lanes[0];
     const second = lanes[1];
     if (first === undefined || second === undefined) return;
 
-    const startX = first.points[0]?.x ?? 0;
-    const endX = first.points[first.points.length - 1]?.x ?? 0;
     const halfWidth = this.layout.road.widthMetres / 2;
     const centreY = ((first.points[0]?.y ?? 0) + (second.points[0]?.y ?? 0)) / 2;
-
-    road.fillStyle(SURFACE_COLORS.road, 1);
-    road.fillPoints(this.worldQuad(startX, centreY - halfWidth, endX, centreY + halfWidth), true);
+    const roadNorth = centreY - halfWidth;
+    const roadSouth = centreY + halfWidth;
 
     /*
-     * The baked surface — Phase 16, the first regeneration item to get real
-     * art. The delivered slice is an isometric tile with the carriageway
-     * through its middle, laid along the band at the scale that puts the
-     * painted asphalt on `widthMetres`. The flat fill stays underneath for
-     * the same reason the ground keeps its quad: it is what draws at all if
-     * this one file fails to fetch — and the dashes below are the fallback's
-     * markings, skipped when the bake paints its own.
+     * The band spans everything the ground cover can show. World X at a screen
+     * point is screenX/64 + screenY/32 (the projection inverted along z = 0),
+     * so the extremes over the cover rectangle are its two opposite corners.
      */
-    let baked = false;
-    if (this.textures.exists(ROAD_FRAME)) {
-      baked = true;
-      for (const tile of this.roadTiles) tile.destroy();
-      this.roadTiles.length = 0;
+    const cover = this.groundCoverRect();
+    const startX = Math.floor(cover.left / (TILE_W / 2) / 2 + cover.top / TILE_H / 2) - 2;
+    const endX = Math.ceil(cover.right / (TILE_W / 2) / 2 + cover.bottom / TILE_H / 2) + 2;
 
-      /*
-       * 12 m, not the slice's native 16: the art's carriageway spans ~60% of
-       * its diamond, and at native scale that is a 9.5 m road on a 7 m
-       * right-of-way — kerbs across the stand's own apron. Scaled so the
-       * painted asphalt lands on `widthMetres`, the kerb and verge finish on
-       * their own edges and the lanes sit centred in each half.
-       */
-      const TILE_METRES = 12;
-      /*
-       * No mask — measured, not assumed. `setMask` warns "not supported in
-       * WebGL" on this Phaser 4 build and silently does nothing (the ground
-       * bake's diamond mask has been inert for the same reason; its diamond
-       * comes from the art's own alpha). What bounds the road visually is the
-       * slice's transparent edges, which at this scale land the kerb and
-       * verge where they belong. The one blemish that a working mask would
-       * have trimmed — near-side verge under the drive-thru's on-road spill —
-       * is recorded as polish debt in PHASE_16_REPORT.
-       */
-      for (let x = startX; x < endX + TILE_METRES; x += TILE_METRES) {
-        const bounds = worldRectToScreenBounds(
-          x - TILE_METRES / 2,
-          centreY - TILE_METRES / 2,
-          x + TILE_METRES / 2,
-          centreY + TILE_METRES / 2,
-          { left: 0, top: 0, right: 0, bottom: 0 },
+    const road = this.add.graphics();
+
+    // ── Verges: grass shoulders either side, with the layby cut out ────────
+    const VERGE_DEPTH = 1.1;
+    const CURB_DEPTH = 0.42;
+    const layby = this.laybyRect();
+    road.fillStyle(SURFACE_COLORS.vergeShadow, 1);
+    road.fillPoints(
+      this.worldQuad(startX, roadNorth - CURB_DEPTH - VERGE_DEPTH, endX, roadNorth - CURB_DEPTH),
+      true,
+    );
+    // South verge runs the whole way except across the layby mouth.
+    road.fillPoints(
+      this.worldQuad(startX, roadSouth + CURB_DEPTH, layby.minX, roadSouth + CURB_DEPTH + VERGE_DEPTH),
+      true,
+    );
+    road.fillPoints(
+      this.worldQuad(layby.maxX, roadSouth + CURB_DEPTH, endX, roadSouth + CURB_DEPTH + VERGE_DEPTH),
+      true,
+    );
+    road.fillStyle(SURFACE_COLORS.verge, 0.8);
+    road.fillPoints(
+      this.worldQuad(startX, roadNorth - CURB_DEPTH - VERGE_DEPTH + 0.1, endX, roadNorth - CURB_DEPTH - 0.06),
+      true,
+    );
+    road.fillPoints(
+      this.worldQuad(
+        startX,
+        roadSouth + CURB_DEPTH + 0.06,
+        layby.minX,
+        roadSouth + CURB_DEPTH + VERGE_DEPTH - 0.1,
+      ),
+      true,
+    );
+    road.fillPoints(
+      this.worldQuad(
+        layby.maxX,
+        roadSouth + CURB_DEPTH + 0.06,
+        endX,
+        roadSouth + CURB_DEPTH + VERGE_DEPTH - 0.1,
+      ),
+      true,
+    );
+
+    /*
+     * Grass texture: layered deterministic dabs — the base green almost fully
+     * covered by lit, dry and shadow tones, with sparse flower dots on top,
+     * the way the delivered slice paints its verge. Hash-scattered so goldens
+     * are stable and no RNG stream is touched. Two passes per side: broad
+     * tone dabs, then small bright blades and flowers.
+     */
+    const span = endX - startX;
+    const drawVergeTexture = (seed: number, y0: number, y1: number, skipLayby: boolean): void => {
+      const tones = Math.min(4200, Math.floor(span * 9));
+      for (let i = 0; i < tones; i++) {
+        const index = seed + i;
+        const x = startX + hash01(index, 11) * span;
+        if (skipLayby && x > layby.minX && x < layby.maxX) continue;
+        const y = y0 + 0.08 + hash01(index, 23) * (y1 - y0 - 0.16);
+        const tone = hash01(index, 37);
+        road.fillStyle(
+          tone < 0.3
+            ? SURFACE_COLORS.vergeLit
+            : tone < 0.52
+              ? SURFACE_COLORS.vergeDry
+              : tone < 0.62
+                ? SURFACE_COLORS.groundGrid
+                : SURFACE_COLORS.vergeShadow,
+          0.42 + hash01(index, 29) * 0.3,
         );
-        /*
-         * Mirrored: the slice was authored with its carriageway along the
-         * other isometric axis, and flipping X is the projection-level swap
-         * of the two diagonals. A laterally symmetric surface mirrors
-         * truthfully — the same rule DIRECTION_AUDIT applies to cars.
-         */
-        const tile = this.add
-          .image(bounds.left, bounds.top, ROAD_FRAME)
-          .setOrigin(0, 0)
-          .setFlipX(true)
-          .setDisplaySize(bounds.right - bounds.left, bounds.bottom - bounds.top);
-        this.graph.layer('road').add(tile);
-        this.roadTiles.push(tile);
+        const screen = worldToScreen(x, y, 0, this.screenScratch);
+        road.fillEllipse(screen.x, screen.y, 6 + hash01(index, 41) * 13, 3 + hash01(index, 43) * 5);
+      }
+      const sparks = Math.min(900, Math.floor(span * 1.8));
+      for (let i = 0; i < sparks; i++) {
+        const index = seed + 500_000 + i;
+        const x = startX + hash01(index, 13) * span;
+        if (skipLayby && x > layby.minX && x < layby.maxX) continue;
+        const y = y0 + 0.1 + hash01(index, 17) * (y1 - y0 - 0.2);
+        const kind = hash01(index, 19);
+        road.fillStyle(
+          kind < 0.42
+            ? SURFACE_COLORS.vergeLit
+            : kind < 0.8
+              ? SURFACE_COLORS.roadMarking
+              : SURFACE_COLORS.laneYellow,
+          kind < 0.42 ? 0.85 : 0.75,
+        );
+        const screen = worldToScreen(x, y, 0, this.screenScratch);
+        const size = kind < 0.42 ? 2.6 : 1.7;
+        road.fillEllipse(screen.x, screen.y, size, size * 0.7);
+      }
+    };
+    drawVergeTexture(0, roadNorth - CURB_DEPTH - VERGE_DEPTH, roadNorth - CURB_DEPTH, false);
+    drawVergeTexture(1_000_000, roadSouth + CURB_DEPTH, roadSouth + CURB_DEPTH + VERGE_DEPTH, true);
+
+    // ── Curbs: lit top, shadowed face, stone joints ────────────────────────
+    road.fillStyle(SURFACE_COLORS.curbTop, 1);
+    road.fillPoints(this.worldQuad(startX, roadNorth - CURB_DEPTH, endX, roadNorth), true);
+    road.fillPoints(this.worldQuad(startX, roadSouth, layby.minX, roadSouth + CURB_DEPTH), true);
+    road.fillPoints(this.worldQuad(layby.maxX, roadSouth, endX, roadSouth + CURB_DEPTH), true);
+    // The layby's own back curb, where apron meets the lot dirt — dropped
+    // across the pedestrian corridor between the middle bays, the way a real
+    // layby drops its kerb at a walkway.
+    const corridor = this.bayCorridor();
+    road.fillPoints(this.worldQuad(layby.minX, layby.maxY, corridor.minX, layby.maxY + CURB_DEPTH), true);
+    road.fillPoints(this.worldQuad(corridor.maxX, layby.maxY, layby.maxX, layby.maxY + CURB_DEPTH), true);
+    road.fillStyle(SURFACE_COLORS.curbLit, 1);
+    road.fillPoints(
+      this.worldQuad(startX, roadNorth - CURB_DEPTH, endX, roadNorth - CURB_DEPTH + 0.12),
+      true,
+    );
+    // Stone joints every 1.6 m, so the curb reads as kerbstones, not a stripe.
+    road.fillStyle(SURFACE_COLORS.asphaltWorn, 0.9);
+    for (let x = Math.ceil(startX / 1.6) * 1.6; x < endX; x += 1.6) {
+      road.fillPoints(this.worldQuad(x, roadNorth - CURB_DEPTH, x + 0.07, roadNorth), true);
+      if (x <= layby.minX - 0.1 || x >= layby.maxX + 0.1) {
+        road.fillPoints(this.worldQuad(x, roadSouth, x + 0.07, roadSouth + CURB_DEPTH), true);
+      } else if (x > layby.minX && x < layby.maxX && (x < corridor.minX || x > corridor.maxX)) {
+        road.fillPoints(this.worldQuad(x, layby.maxY, x + 0.07, layby.maxY + CURB_DEPTH), true);
       }
     }
 
-    if (!baked) {
-      // Dashed centre line: a solid one would read as a barrier, and Stage 4
-      // adds a left turn across it.
-      road.fillStyle(SURFACE_COLORS.roadMarking, 1);
-      for (let x = startX; x < endX; x += 4) {
-        road.fillPoints(this.worldQuad(x, centreY - 0.08, x + 2, centreY + 0.08), true);
-      }
+    // ── The carriageway ────────────────────────────────────────────────────
+    road.fillStyle(SURFACE_COLORS.road, 1);
+    road.fillPoints(this.worldQuad(startX, roadNorth, endX, roadSouth), true);
+
+    // The layby apron: same asphalt, then a wash one step darker so the
+    // parking reads as its own surface without a seam.
+    road.fillPoints(this.worldQuad(layby.minX, roadSouth, layby.maxX, layby.maxY), true);
+    road.fillStyle(SURFACE_COLORS.asphaltShadow, 0.22);
+    road.fillPoints(this.worldQuad(layby.minX, roadSouth + 0.15, layby.maxX, layby.maxY), true);
+
+    // Asphalt texture: sparse tone patches, then the wheel-wear bands each
+    // lane carries. All deterministic, all low-alpha.
+    for (let i = 0; i < Math.min(700, span); i++) {
+      const u = hash01(i, 53);
+      const v = hash01(i, 59);
+      const x = startX + u * span;
+      const y = roadNorth + 0.4 + v * (halfWidth * 2 - 0.8);
+      const light = hash01(i, 61) < 0.5;
+      road.fillStyle(light ? SURFACE_COLORS.asphaltWorn : SURFACE_COLORS.asphaltShadow, 0.1);
+      const screen = worldToScreen(x, y, 0, this.screenScratch);
+      road.fillEllipse(screen.x, screen.y, 26 + hash01(i, 67) * 60, 9 + hash01(i, 71) * 14);
+    }
+    road.fillStyle(SURFACE_COLORS.asphaltShadow, 0.13);
+    for (const lane of [first, second]) {
+      const laneY = lane.points[0]?.y ?? centreY;
+      road.fillPoints(this.worldQuad(startX, laneY - 0.95, endX, laneY - 0.55), true);
+      road.fillPoints(this.worldQuad(startX, laneY + 0.55, endX, laneY + 0.95), true);
+    }
+
+    // ── Markings ───────────────────────────────────────────────────────────
+    // Solid yellow edge lines, as the delivered slice paints them.
+    road.fillStyle(SURFACE_COLORS.laneYellow, 0.95);
+    road.fillPoints(this.worldQuad(startX, roadNorth + 0.18, endX, roadNorth + 0.32), true);
+    road.fillPoints(this.worldQuad(startX, roadSouth - 0.32, endX, roadSouth - 0.18), true);
+    // Dashed white centre line: 2 m dash, 2 m gap.
+    road.fillStyle(SURFACE_COLORS.roadMarking, 0.92);
+    for (let x = Math.ceil(startX / 4) * 4; x < endX; x += 4) {
+      road.fillPoints(this.worldQuad(x, centreY - 0.09, x + 2, centreY + 0.09), true);
+    }
+
+    // ── Storm drains against each curb, as in the slice ────────────────────
+    for (let x = Math.ceil(startX / 22) * 22; x < endX; x += 22) {
+      const north = (Math.round(x / 22) & 1) === 0;
+      const y = north ? roadNorth + 0.42 : roadSouth - 0.42;
+      this.drawDrain(road, x, y);
     }
 
     this.graph.layer('road').add(road);
-    // The fill goes beneath the tiles it backstops.
-    this.graph.layer('road').sendToBack(road);
+  }
+
+  /**
+   * The parking layby's world rectangle — the **roadside row only**.
+   *
+   * Stages 2+ author deeper bay rows down the lot's west side; folding those
+   * into this rectangle paved most of the lot in road asphalt (photographed
+   * at Stage 3 with the dining terrace sitting on carriageway surface). The
+   * layby is the strip cut into the verge; the deeper rows get their own
+   * apron pads in `drawSurfaces`.
+   */
+  private laybyRect(): { minX: number; maxX: number; maxY: number } {
+    const roadside = this.roadsideBays();
+    if (roadside.length === 0) {
+      const lot = this.layout.lot;
+      return { minX: lot.minX, maxX: lot.maxX, maxY: this.layout.road.widthMetres };
+    }
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    for (const bay of roadside) {
+      minX = Math.min(minX, bay.x - BAY_HALF_LENGTH - 0.5);
+      maxX = Math.max(maxX, bay.x + BAY_HALF_LENGTH + 0.5);
+      maxY = Math.max(maxY, bay.y + BAY_HALF_WIDTH + 0.25);
+    }
+    return { minX, maxX, maxY };
+  }
+
+  /** Bays in the row nearest the carriageway — the layby row. */
+  private roadsideBays(): { x: number; y: number }[] {
+    const lanes = this.layout.road.lanes;
+    const centreY = ((lanes[0]?.points[0]?.y ?? 0) + (lanes[1]?.points[0]?.y ?? 0)) / 2;
+    const edge = centreY + this.layout.road.widthMetres / 2;
+    return this.layout.parking.filter((bay) => bay.y - edge < 3);
+  }
+
+  /**
+   * The widest gap between adjacent bays — the pedestrian mouth of the layby.
+   * Falls back to the layby centre when a stage authors fewer than two bays.
+   */
+  private bayCorridor(): { minX: number; maxX: number } {
+    const bays = [...this.layout.parking].sort((a, b) => a.x - b.x);
+    let best: { minX: number; maxX: number } | null = null;
+    for (let i = 1; i < bays.length; i++) {
+      const previous = bays[i - 1];
+      const next = bays[i];
+      if (previous === undefined || next === undefined) continue;
+      // Only roadside-row neighbours form the corridor; deeper rows differ in y.
+      if (Math.abs(previous.y - next.y) > 0.5) continue;
+      const gapStart = previous.x + BAY_HALF_LENGTH;
+      const gapEnd = next.x - BAY_HALF_LENGTH;
+      if (gapEnd - gapStart > (best === null ? 0.6 : best.maxX - best.minX)) {
+        best = { minX: gapStart, maxX: gapEnd };
+      }
+    }
+    if (best !== null) return best;
+    const layby = this.laybyRect();
+    const centre = (layby.minX + layby.maxX) / 2;
+    return { minX: centre - 1, maxX: centre + 1 };
+  }
+
+  /** One storm-drain grate, flush against a curb. */
+  private drawDrain(road: Phaser.GameObjects.Graphics, x: number, y: number): void {
+    road.fillStyle(SURFACE_COLORS.asphaltShadow, 1);
+    road.fillPoints(this.worldQuad(x - 0.75, y - 0.28, x + 0.75, y + 0.28), true);
+    road.fillStyle(SURFACE_COLORS.asphaltWorn, 1);
+    road.fillPoints(this.worldQuad(x - 0.68, y - 0.2, x + 0.68, y + 0.2), true);
+    road.fillStyle(SURFACE_COLORS.asphaltShadow, 1);
+    for (let i = 0; i < 5; i++) {
+      const gx = x - 0.52 + i * 0.26;
+      road.fillPoints(this.worldQuad(gx, y - 0.16, gx + 0.1, y + 0.16), true);
+    }
   }
 
   /**
@@ -1097,7 +1513,102 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
+    /*
+     * Placed decor — the correction pass. `world.layout.placed` never reached
+     * the renderer at all: the build panel said "built" over a world with no
+     * sprite, which is the 2026-08-22 captures' invisible-purchase bug at its
+     * root. Rows come from the same view the frame is drawing.
+     */
+    this.pendingSiteByEntity.clear();
+    const view = this.context.readView();
+    for (let i = 0; i < view.placedCount; i++) {
+      const object = view.placed[i];
+      if (object === undefined) continue;
+      const variant = worldObjectIndex(object.objectId);
+      const entityId = PLACED_ID_BASE - i;
+      statics.push({
+        entityId,
+        x: object.x,
+        y: object.y,
+        z: object.z,
+        kind: variant < 0 ? kindIndexForTexture(object.objectId) : kindForWorldObject(variant),
+        variant,
+      });
+      // Still going up? The scaffold pass will draw this quad as a site.
+      for (let p = 0; p < view.pendingBuildCount; p++) {
+        const build = view.pendingBuilds[p];
+        if (
+          build?.upgradeId === '' &&
+          build.objectId === object.objectId &&
+          Math.abs(build.x - object.x) < 1e-6 &&
+          Math.abs(build.y - object.y) < 1e-6
+        ) {
+          this.pendingSiteByEntity.set(entityId, p);
+          break;
+        }
+      }
+    }
+
+    /*
+     * Upgrade construction sites: the bought thing, drawn as its own
+     * silhouette at its anchor until the timer lands the level (at which
+     * point the ordinary owned-upgrade pass above takes over). A site with
+     * nothing to place — a process upgrade — shows only on its card.
+     */
+    for (let p = 0; p < view.pendingBuildCount; p++) {
+      const build = view.pendingBuilds[p];
+      if (build === undefined || build.upgradeId === '' || build.objectId === '') continue;
+      const variant = worldObjectIndex(build.objectId);
+      if (variant < 0) continue;
+      const entityId = SITE_ID_BASE - p;
+      statics.push({
+        entityId,
+        x: build.x,
+        y: build.y,
+        z: 0,
+        kind: kindForWorldObject(variant),
+        variant,
+      });
+      this.pendingSiteByEntity.set(entityId, p);
+    }
+
     this.bridge.setStatics(statics);
+  }
+
+  /**
+   * Progress bars over the construction sites, one Graphics for all of them.
+   *
+   * World-space UI (the `worldUi` layer), driven by the simulation's own
+   * progress — the same figure the countdown cards show, so the two can
+   * never disagree. Cleared and redrawn per frame; a handful of sites is a
+   * handful of rectangles.
+   */
+  private drawSiteBars(view: Readonly<ReturnType<RenderContext['readView']>>): void {
+    if (this.siteBars === null) {
+      this.siteBars = this.add.graphics();
+      this.graph.layer('worldUi').add(this.siteBars);
+    }
+    const bars = this.siteBars;
+    bars.clear();
+    if (view.pendingBuildCount === 0) return;
+
+    for (let i = 0; i < view.pendingBuildCount; i++) {
+      const build = view.pendingBuilds[i];
+      if (build === undefined) continue;
+      // A process upgrade has no site in the world; its bar is on its card.
+      if (build.upgradeId !== '' && build.objectId === '') continue;
+      const screen = worldToScreen(build.x, build.y, 0, this.screenScratch);
+      const width = 46;
+      const height = 7;
+      const left = screen.x - width / 2;
+      const top = screen.y - 58;
+      bars.fillStyle(0x0c1017, 0.85);
+      bars.fillRect(left - 1, top - 1, width + 2, height + 2);
+      bars.fillStyle(0x2b323d, 1);
+      bars.fillRect(left, top, width, height);
+      bars.fillStyle(0xf4bc55, 1);
+      bars.fillRect(left, top, width * Math.min(1, Math.max(0, build.progress)), height);
+    }
   }
 
   /**

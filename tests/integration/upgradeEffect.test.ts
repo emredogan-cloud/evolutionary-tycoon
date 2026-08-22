@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { buyBuilt } from '../helpers/build';
 import { UPGRADES } from '@config/economy/upgrades';
 import { ORDERING_MS } from '@config/satisfaction';
 import { TICK_MS } from '@config/simulation';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
 import { menuIndexOf, menuItem } from '@config/economy/menu';
 import { Sim } from '@sim/core/Sim';
-import { buyUpgrade, effectValue } from '@sim/systems/UpgradeSystem';
+import { effectValue } from '@sim/systems/UpgradeSystem';
 import { hire } from '@sim/systems/StaffSystem';
 import { currentQuality, startPrep } from '@sim/systems/KitchenSystem';
 import { queueCapacityOf } from '@sim/systems/QueueSystem';
@@ -57,7 +58,7 @@ function unlock(sim: Sim, id: string): void {
   for (const prereq of item.prereqs) {
     unlock(sim, prereq);
     sim.world.progression.stage = item.stage;
-    buyUpgrade(sim.world, prereq);
+    buyBuilt(sim.world, prereq);
   }
 }
 
@@ -84,7 +85,7 @@ describe('every upgrade changes a number the simulation reads', () => {
 
       for (let level = 1; level <= item.maxLevel; level++) {
         const before = item.effects.map((effect) => effectValue(sim.world, effect.kind));
-        expect(buyUpgrade(sim.world, item.id), `${item.id} level ${String(level)}`).toBe('ok');
+        expect(buyBuilt(sim.world, item.id), `${item.id} level ${String(level)}`).toBe('ok');
         const after = item.effects.map((effect) => effectValue(sim.world, effect.kind));
 
         for (let i = 0; i < before.length; i++) {
@@ -119,7 +120,7 @@ describe('the sign — visibility', () => {
     const expected = [1.5, 1.78, 1.94, 2.06];
 
     for (let level = 0; level < expected.length; level++) {
-      buyUpgrade(sim.world, 'hand-painted-sign');
+      buyBuilt(sim.world, 'hand-painted-sign');
       expect(effectValue(sim.world, 'visibility'), `level ${String(level + 1)}`).toBeCloseTo(
         expected[level] ?? 0,
         9,
@@ -139,7 +140,7 @@ describe('the sign — visibility', () => {
       const plain = new Sim({ seed: 20260816 });
       const signed = new Sim({ seed: 20260816 });
       fund(signed, 12);
-      expect(buyUpgrade(signed.world, 'hand-painted-sign')).toBe('ok');
+      expect(buyBuilt(signed.world, 'hand-painted-sign')).toBe('ok');
 
       playFor(plain, TICKS_PER_MINUTE * 20);
       playFor(signed, TICKS_PER_MINUTE * 20);
@@ -157,10 +158,10 @@ describe('the menu board — appeal and ordering speed', () => {
     const sim = new Sim({ seed: 1 });
     fund(sim);
 
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     expect(ORDERING_MS * effectValue(sim.world, 'orderSpeed')).toBeCloseTo(ORDERING_MS * 0.8, 6);
 
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     expect(ORDERING_MS * effectValue(sim.world, 'orderSpeed')).toBeCloseTo(ORDERING_MS * 0.64, 6);
   });
 
@@ -168,11 +169,11 @@ describe('the menu board — appeal and ordering speed', () => {
     const sim = new Sim({ seed: 1 });
     fund(sim);
 
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     const first = effectValue(sim.world, 'menuAppeal');
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     const second = effectValue(sim.world, 'menuAppeal');
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     const third = effectValue(sim.world, 'menuAppeal');
 
     expect(first).toBeCloseTo(1.25, 9);
@@ -216,14 +217,14 @@ describe('the second prep station — parallel preparation', () => {
 
     const two = new Sim({ seed: 1 });
     fund(two);
-    buyUpgrade(two.world, 'second-prep-station');
+    buyBuilt(two.world, 'second-prep-station');
     fill(two);
     expect(cooking(two)).toBe(2);
 
     const three = new Sim({ seed: 1 });
     fund(three);
-    buyUpgrade(three.world, 'second-prep-station');
-    buyUpgrade(three.world, 'second-prep-station');
+    buyBuilt(three.world, 'second-prep-station');
+    buyBuilt(three.world, 'second-prep-station');
     fill(three);
     expect(cooking(three)).toBe(3);
   });
@@ -235,7 +236,7 @@ describe('the bigger counter — queue capacity', () => {
     fund(sim);
     const before = queueCapacityOf(sim.world, STAGE1_LAYOUT);
 
-    buyUpgrade(sim.world, 'bigger-counter');
+    buyBuilt(sim.world, 'bigger-counter');
     const after = queueCapacityOf(sim.world, STAGE1_LAYOUT);
 
     expect(after - before).toBe(2);
@@ -249,7 +250,7 @@ describe('the bigger counter — queue capacity', () => {
     // directly because the cap lives in `queueCapacityOf`, not in the table.
     const sim = new Sim({ seed: 1 });
     fund(sim);
-    for (let i = 0; i < 10; i++) buyUpgrade(sim.world, 'bigger-counter');
+    for (let i = 0; i < 10; i++) buyBuilt(sim.world, 'bigger-counter');
     expect(queueCapacityOf(sim.world, STAGE1_LAYOUT)).toBeLessThanOrEqual(STAGE1_LAYOUT.queue.length);
   });
 });
@@ -284,7 +285,7 @@ describe('the sign — visibility', () => {
     const expected = [1.5, 1.78, 1.94, 2.06];
 
     for (let level = 0; level < expected.length; level++) {
-      buyUpgrade(sim.world, 'hand-painted-sign');
+      buyBuilt(sim.world, 'hand-painted-sign');
       expect(effectValue(sim.world, 'visibility'), `level ${String(level + 1)}`).toBeCloseTo(
         expected[level] ?? 0,
         9,
@@ -304,7 +305,7 @@ describe('the sign — visibility', () => {
       const plain = new Sim({ seed: 20260816 });
       const signed = new Sim({ seed: 20260816 });
       fund(signed, 12);
-      expect(buyUpgrade(signed.world, 'hand-painted-sign')).toBe('ok');
+      expect(buyBuilt(signed.world, 'hand-painted-sign')).toBe('ok');
 
       playFor(plain, TICKS_PER_MINUTE * 20);
       playFor(signed, TICKS_PER_MINUTE * 20);
@@ -322,10 +323,10 @@ describe('the menu board — appeal and ordering speed', () => {
     const sim = new Sim({ seed: 1 });
     fund(sim);
 
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     expect(ORDERING_MS * effectValue(sim.world, 'orderSpeed')).toBeCloseTo(ORDERING_MS * 0.8, 6);
 
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     expect(ORDERING_MS * effectValue(sim.world, 'orderSpeed')).toBeCloseTo(ORDERING_MS * 0.64, 6);
   });
 
@@ -333,11 +334,11 @@ describe('the menu board — appeal and ordering speed', () => {
     const sim = new Sim({ seed: 1 });
     fund(sim);
 
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     const first = effectValue(sim.world, 'menuAppeal');
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     const second = effectValue(sim.world, 'menuAppeal');
-    buyUpgrade(sim.world, 'menu-board');
+    buyBuilt(sim.world, 'menu-board');
     const third = effectValue(sim.world, 'menuAppeal');
 
     expect(first).toBeCloseTo(1.25, 9);
@@ -381,14 +382,14 @@ describe('the second prep station — parallel preparation', () => {
 
     const two = new Sim({ seed: 1 });
     fund(two);
-    buyUpgrade(two.world, 'second-prep-station');
+    buyBuilt(two.world, 'second-prep-station');
     fill(two);
     expect(cooking(two)).toBe(2);
 
     const three = new Sim({ seed: 1 });
     fund(three);
-    buyUpgrade(three.world, 'second-prep-station');
-    buyUpgrade(three.world, 'second-prep-station');
+    buyBuilt(three.world, 'second-prep-station');
+    buyBuilt(three.world, 'second-prep-station');
     fill(three);
     expect(cooking(three)).toBe(3);
   });
@@ -400,7 +401,7 @@ describe('the bigger counter — queue capacity', () => {
     fund(sim);
     const before = queueCapacityOf(sim.world, STAGE1_LAYOUT);
 
-    buyUpgrade(sim.world, 'bigger-counter');
+    buyBuilt(sim.world, 'bigger-counter');
     const after = queueCapacityOf(sim.world, STAGE1_LAYOUT);
 
     expect(after - before).toBe(2);
@@ -414,7 +415,7 @@ describe('the bigger counter — queue capacity', () => {
     // directly because the cap lives in `queueCapacityOf`, not in the table.
     const sim = new Sim({ seed: 1 });
     fund(sim);
-    for (let i = 0; i < 10; i++) buyUpgrade(sim.world, 'bigger-counter');
+    for (let i = 0; i < 10; i++) buyBuilt(sim.world, 'bigger-counter');
     expect(queueCapacityOf(sim.world, STAGE1_LAYOUT)).toBeLessThanOrEqual(STAGE1_LAYOUT.queue.length);
   });
 });
@@ -434,7 +435,7 @@ describe('the roadside marker — the decision point', () => {
       const plain = new Sim({ seed: 4242 });
       const marked = new Sim({ seed: 4242 });
       fund(marked, 60);
-      buyUpgrade(marked.world, 'roadside-marker');
+      buyBuilt(marked.world, 'roadside-marker');
 
       playFor(plain, TICKS_PER_MINUTE * 10);
       playFor(marked, TICKS_PER_MINUTE * 10);
@@ -458,7 +459,7 @@ describe('the cooler — hold tolerance', () => {
     const plain = new Sim({ seed: 1 });
     const chilled = new Sim({ seed: 1 });
     fund(chilled);
-    buyUpgrade(chilled.world, 'cooler');
+    buyBuilt(chilled.world, 'cooler');
 
     const makeOrder = (sim: Sim): number => {
       const slot = sim.world.orders.acquire();
@@ -558,7 +559,7 @@ describe('an upgrade is worth what it cost', () => {
       const spender = new Sim({ seed: 909 });
       saver.world.economy.cash = 12;
       spender.world.economy.cash = 12;
-      expect(buyUpgrade(spender.world, 'hand-painted-sign')).toBe('ok');
+      expect(buyBuilt(spender.world, 'hand-painted-sign')).toBe('ok');
 
       playFor(saver, TICKS_PER_MINUTE * 20);
       playFor(spender, TICKS_PER_MINUTE * 20);

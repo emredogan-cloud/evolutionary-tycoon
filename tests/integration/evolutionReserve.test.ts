@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { buyBuilt } from '../helpers/build';
 import { requirementFor } from '@config/progression';
 import { TICK_MS } from '@config/simulation';
 import { Sim } from '@sim/core/Sim';
 import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 import { beginConstruction, meetsRequirement, reserveFor } from '@sim/systems/ProgressionSystem';
 import { hire } from '@sim/systems/StaffSystem';
-import { buyUpgrade, totalUpgradeLevels } from '@sim/systems/UpgradeSystem';
+import { totalUpgradeLevels } from '@sim/systems/UpgradeSystem';
 import { UPGRADES } from '@config/economy/upgrades';
 
 /**
@@ -45,7 +46,7 @@ function qualifyExceptCash(sim: Sim, stage: 1 | 2 | 3): void {
     let bought = false;
     for (const upgrade of UPGRADES) {
       if (totalUpgradeLevels(sim.world) >= requirement.upgradesBought) break;
-      if (buyUpgrade(sim.world, upgrade.id) === 'ok') bought = true;
+      if (buyBuilt(sim.world, upgrade.id) === 'ok') bought = true;
     }
     if (!bought) throw new Error('no purchasable upgrade left below the milestone');
   }

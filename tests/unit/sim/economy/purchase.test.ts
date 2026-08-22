@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { buyBuilt } from '../../../helpers/build';
 import { UPGRADES, upgrade, upgradeCost } from '@config/economy/upgrades';
 import { PRICE_BAND, menuIndexOf, menuItem } from '@config/economy/menu';
 import { Sim } from '@sim/core/Sim';
-import { buyUpgrade, nextUpgradeCost, upgradeLevel } from '@sim/systems/UpgradeSystem';
+import { nextUpgradeCost, upgradeLevel } from '@sim/systems/UpgradeSystem';
 
 /**
  * `BUY_UPGRADE`, validated where it counts.
@@ -24,7 +25,7 @@ describe('buying an upgrade', () => {
     const cost = upgradeCost(sign, 1, 1);
     sim.world.economy.cash = cost;
 
-    expect(buyUpgrade(sim.world, sign.id)).toBe('ok');
+    expect(buyBuilt(sim.world, sign.id)).toBe('ok');
     expect(sim.world.economy.cash).toBeCloseTo(0, 9);
     expect(upgradeLevel(sim.world, sign.id)).toBe(1);
     expect(sim.world.economy.lifetimeSpend).toBe(cost);
@@ -70,7 +71,7 @@ describe('buying an upgrade', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 10_000;
 
-    expect(buyUpgrade(sim.world, 'jetpack')).toBe('unknown');
+    expect(buyBuilt(sim.world, 'jetpack')).toBe('unknown');
     expect(() => {
       sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'jetpack' });
       sim.tick();
@@ -84,9 +85,9 @@ describe('buying an upgrade', () => {
     const counter = upgrade('bigger-counter');
 
     for (let level = 0; level < counter.maxLevel; level++) {
-      expect(buyUpgrade(sim.world, counter.id)).toBe('ok');
+      expect(buyBuilt(sim.world, counter.id)).toBe('ok');
     }
-    expect(buyUpgrade(sim.world, counter.id)).toBe('maxed');
+    expect(buyBuilt(sim.world, counter.id)).toBe('maxed');
     expect(upgradeLevel(sim.world, counter.id)).toBe(counter.maxLevel);
     expect(nextUpgradeCost(sim.world, counter.id), 'a maxed upgrade has no price').toBe(-1);
   });
@@ -101,7 +102,7 @@ describe('buying an upgrade', () => {
       const quoted = nextUpgradeCost(sim.world, sign.id);
       expect(quoted, `level ${String(level)}`).toBe(upgradeCost(sign, level, 1));
       const before = sim.world.economy.cash;
-      expect(buyUpgrade(sim.world, sign.id)).toBe('ok');
+      expect(buyBuilt(sim.world, sign.id)).toBe('ok');
       expect(before - sim.world.economy.cash).toBeCloseTo(quoted, 9);
       spent += quoted;
     }
@@ -118,7 +119,13 @@ describe('buying an upgrade', () => {
     });
 
     sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'hand-painted-sign' });
-    sim.tick();
+    /*
+     * Through the whole construction, not one tick: the correction pass moved
+     * the application — and therefore the announcement — to the moment the
+     * site completes (`buildDurationMs(6)` = 3.4 s, 68 ticks). The event
+     * firing exactly once at that moment is now part of what this asserts.
+     */
+    for (let i = 0; i < 80; i++) sim.tick();
     unsubscribe();
 
     // ₡6 since Phase 12 rescaled the Stage 1 ladder to satisfy the dead-end
@@ -140,7 +147,7 @@ describe('buying an upgrade', () => {
     untouched.world.economy.cash = 100;
 
     expect(bought.world.hash()).toBe(untouched.world.hash());
-    buyUpgrade(bought.world, 'hand-painted-sign');
+    buyBuilt(bought.world, 'hand-painted-sign');
     expect(bought.world.hash()).not.toBe(untouched.world.hash());
   });
 });

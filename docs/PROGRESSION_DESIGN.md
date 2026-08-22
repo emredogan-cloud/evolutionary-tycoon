@@ -143,3 +143,15 @@ measured curve above it is hours deep.
 
 Levels 10–20 exist with no gate attached: they are the runway for post-MVP
 content (P19+) to hook into without moving anyone's current level.
+
+## 8. Construction time (2026-08-22 correction pass)
+
+Purchases stopped being instantaneous: every upgrade rung and every placed
+decor object goes up over `buildDurationMs(cost)` of **simulation** time —
+6 game minutes at the floor, 24 at the cap, always inside the stage
+evolutions' own 24–60. The derivation, the semantics (speed/pause/reload/
+offline), the queue rules and the balance-gate evidence live in
+[BUILD_CONSTRUCTION_DESIGN.md](BUILD_CONSTRUCTION_DESIGN.md). Pacing impact
+on the measured curves: none the gate can detect (5/5 green on the exact
+shipped model) — the delay defers an effect by seconds inside windows
+measured in minutes.

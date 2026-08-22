@@ -354,6 +354,50 @@ const v10ToV11: Migration = {
   },
 };
 
+/**
+ * v12 — the UI/world correction pass: construction sites, and real ids for
+ * placed decor.
+ *
+ * Two things at once, because they are one change seen from two sides. The
+ * build panel's decor used to store the placeholder stems (`ph-prop-short`,
+ * `ph-prop-tall`) — ids that name programmatic textures no production build
+ * draws, which is half of why a purchase was invisible. Old records map onto
+ * the closest production object: the short stem served both the planter and
+ * the bin and the two cannot be told apart in an old save, so both become
+ * the planter bush — a neutral piece of decor either intent reads as. The
+ * tall stem was only ever the lamp.
+ *
+ * `pendingBuilds` starts empty: a v11 purchase was applied the instant it was
+ * paid for, so there is nothing mid-construction to carry over.
+ */
+const v11ToV12: Migration = {
+  from: 11,
+  to: 12,
+  up: (save) => {
+    const layout = (save as { layout?: { placed?: { objectId?: unknown }[] } }).layout;
+    const LEGACY_IDS: Record<string, string> = {
+      'ph-prop-short': 'bush-flowering-01',
+      'ph-prop-tall': 'lamp',
+    };
+    // Defensive against the minimal hand-built chain fixtures, like every
+    // migration before it: a v1 object may carry no layout at all.
+    const rows: unknown[] = Array.isArray(layout?.placed) ? layout.placed : [];
+    const placed = rows.map((row) => {
+      // Non-object rows survive as they are; the schema validation after the
+      // chain is the authority on rejecting them, not the migration.
+      if (row === null || typeof row !== 'object') return row;
+      const object = row as { objectId?: unknown };
+      const key = typeof object.objectId === 'string' ? object.objectId : '';
+      return { ...object, objectId: LEGACY_IDS[key] ?? object.objectId };
+    });
+    return {
+      ...save,
+      schemaVersion: 12,
+      layout: { ...(layout ?? {}), placed, pendingBuilds: [] },
+    };
+  },
+};
+
 export const migrations: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -365,6 +409,7 @@ export const migrations: readonly Migration[] = [
   v8ToV9,
   v9ToV10,
   v10ToV11,
+  v11ToV12,
 ];
 
 assertContiguous(migrations);

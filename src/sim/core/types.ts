@@ -99,8 +99,40 @@ export interface EconomyState {
   bucketElapsedMs: number;
 }
 
+/**
+ * One purchase growing into the world — the UI/world correction pass.
+ *
+ * A bought upgrade or a placed decor object no longer materialises on the
+ * click: the money moves, this record appears, `ProgressionSystem` counts it
+ * down in simulation time (so 4x builds four times faster and a paused world
+ * holds a frozen site), and only at zero does the level apply or the art
+ * reveal. `upgradeId` is empty for decor; `objectId` is empty for an upgrade
+ * that is a process with nothing to place.
+ */
+export interface PendingBuild {
+  upgradeId: string;
+  objectId: string;
+  x: number;
+  y: number;
+  remainingMs: number;
+  totalMs: number;
+}
+
+/** A construction site as the renderer sees it. */
+interface PendingBuildView {
+  upgradeId: string;
+  objectId: string;
+  x: number;
+  y: number;
+  /** 0..1, from the simulation's own clock. */
+  progress: number;
+  remainingMs: number;
+}
+
 export interface LayoutState {
   placed: PlacedObject[];
+  /** Construction sites, oldest first. Hashed, saved, replay-identical. */
+  pendingBuilds: PendingBuild[];
   /**
    * Bumped on every change to `placed`, and on every stage change.
    *
@@ -437,6 +469,25 @@ export interface SimView {
    * reused array, like `actors`.
    */
   readonly upgradeLevels: readonly number[];
+  /**
+   * The placed decor objects, for the renderer — the correction pass.
+   *
+   * The build panel said "built" while the renderer had no way to see
+   * `world.layout.placed` at all: the 2026-08-22 captures' invisible
+   * purchases were exactly this missing row. A reused buffer like `actors`;
+   * `placedCount` says how much is live.
+   */
+  readonly placed: readonly PlacedObject[];
+  readonly placedCount: number;
+  /** Construction sites, progress 0..1 refreshed in place every view read. */
+  readonly pendingBuilds: readonly PendingBuildView[];
+  readonly pendingBuildCount: number;
+  /**
+   * Bumps whenever `placed` or the pending list changes membership, so the
+   * renderer rebuilds statics a handful of times a session instead of
+   * diffing two lists per frame — the same contract `upgradeRevision` keeps.
+   */
+  readonly layoutRevision: number;
   /**
    * Changes whenever any level does. The renderer rebuilds its statics on a
    * change rather than diffing the array every frame — a purchase happens a

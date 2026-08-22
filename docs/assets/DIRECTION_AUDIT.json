@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "audited": "2026-08-18",
   "method": "Every vehicle sprite in the delivered drop was rendered at 460px with its filename and the heading that filename promises, and read by eye (docs/ASSET_INTEGRATION_REPORT.md §4). The reading is 'where does the nose point on screen' — grille and headlights forward, tail lights back. A supporting measurement (centroid of saturated-red pixels against the subject centroid) agreed on every case it could resolve and is recorded in the report; it is not the evidence, because it cannot separate a front view from a rear view when the sprite is near-axial.",
   "finding": "The drop contains only FORWARD-facing views. A vehicle heading away from the camera shows its rear, and the generator produced no rear or rear-three-quarter view for three of the four archetypes — the three 'receding' slots (n, ne, nw) were filled with duplicates of forward views instead. The sedan is the single exception: its `sw` file is a genuine rear-three-quarter heading north-west.",
@@ -246,5 +246,11 @@
       "method": "same reading as v1 — nose direction by eye. Full reads: sedan_n, pickup_n, van_n, motorcycle_n (all true rears); spot reads: pickup_ne, bus_ne (true rear three-quarters heading north-east). All sampled labels honest, so no reassignment is recorded for the new subjects (bus, emergency, ev, limo, sports, truck rears/brakes); absence of an assign entry means the file is used as named.",
       "finding": "the v1 gap rows for sedan/pickup/van/motorcycle rear views are closed by true rear art; brake files exist only for n and ne by design (nw derives by the standard mirror), so the old n→e stand-ins would have demanded brake_e files that rightly do not exist."
     }
-  ]
+  ],
+  "v3Correction": {
+    "date": "2026-08-22",
+    "method": "UI/world correction pass: every vehicle frame of the BUILT atlases (vehicles, vehicles2) cropped and composited on flat green at full size, read individually — the same eye-read as v2 but at final scale, where near-axial front/rear confusion is resolvable.",
+    "finding": "Nine 2026-08-21 deliveries do not show the facing their filename promises: veh_sedan_default_n (sw front), veh_pickup_default_n/ne/nw (s/se/sw fronts), veh_van_default_n/ne/nw (s/se/se fronts), veh_motorcycle_default_n (s front), and veh_sports_default_se ships a baked checkerboard background. All other frames, including every _brake_ frame, verified truthful.",
+    "resolution": "Runtime substitution table VEHICLE_FACING_FIXES (src/config/sprites.ts) serves truthful rear art — the brake-lit rears where an archetype has no unlit rear at all — until regenerations P203/P208-P210/P213/P220/P230-P232 land (assetRequirements.json, NEW_VEHICLE_01-09)."
+  }
 }

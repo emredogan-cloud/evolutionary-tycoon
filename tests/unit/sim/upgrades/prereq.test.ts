@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { buyBuilt } from '../../../helpers/build';
 import { UPGRADES, parseUpgrades, upgrade } from '@config/economy/upgrades';
 import { Sim } from '@sim/core/Sim';
-import { buyUpgrade, upgradeLevel } from '@sim/systems/UpgradeSystem';
+import { upgradeLevel } from '@sim/systems/UpgradeSystem';
 
 /**
  * Prerequisites — GAME_EXECUTION_ROADMAP Phase 13.
@@ -125,7 +126,7 @@ describe('the simulation enforces them', () => {
     sim.world.stats.customersServed = 5_000;
     sim.world.progression.stage = 2;
 
-    expect(buyUpgrade(sim.world, 'illuminated-sign')).toBe('locked');
+    expect(buyBuilt(sim.world, 'illuminated-sign')).toBe('locked');
     expect(upgradeLevel(sim.world, 'illuminated-sign')).toBe(0);
     expect(sim.world.economy.cash, 'a refused purchase still took the money').toBe(100_000);
   });
@@ -136,8 +137,8 @@ describe('the simulation enforces them', () => {
     sim.world.stats.customersServed = 5_000;
     sim.world.progression.stage = 2;
 
-    expect(buyUpgrade(sim.world, 'hand-painted-sign')).toBe('ok');
-    expect(buyUpgrade(sim.world, 'illuminated-sign')).toBe('ok');
+    expect(buyBuilt(sim.world, 'hand-painted-sign')).toBe('ok');
+    expect(buyBuilt(sim.world, 'illuminated-sign')).toBe('ok');
     expect(upgradeLevel(sim.world, 'illuminated-sign')).toBe(1);
   });
 
@@ -151,9 +152,9 @@ describe('the simulation enforces them', () => {
     sim.world.economy.cash = 100_000;
     sim.world.stats.customersServed = 5_000;
 
-    expect(buyUpgrade(sim.world, 'express-window')).toBe('locked');
+    expect(buyBuilt(sim.world, 'express-window')).toBe('locked');
     sim.world.progression.stage = 4;
-    expect(buyUpgrade(sim.world, 'express-window')).toBe('ok');
+    expect(buyBuilt(sim.world, 'express-window')).toBe('ok');
   });
 
   it('keeps refusing after a purchase that could not pay', () => {
@@ -162,7 +163,7 @@ describe('the simulation enforces them', () => {
     const sim = new Sim({ seed: 1 });
     sim.world.economy.cash = 0;
     sim.world.stats.customersServed = 5_000;
-    expect(buyUpgrade(sim.world, 'illuminated-sign')).toBe('locked');
+    expect(buyBuilt(sim.world, 'illuminated-sign')).toBe('locked');
     expect(upgrade('illuminated-sign').prereqs).toContain('hand-painted-sign');
   });
 });

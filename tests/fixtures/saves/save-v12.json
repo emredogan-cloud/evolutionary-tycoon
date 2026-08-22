@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 12,
+  "buildSha": "fixture-v12",
+  "createdAt": 1756000000000,
+  "lastSeenAt": 1756000000000,
+  "lastSeenServerAt": null,
+  "playtimeMs": 3000,
+  "offline": { "meter": null, "pending": null },
+  "tick": 60,
+  "nextEntityId": 5,
+  "clock": { "simTimeMs": 243000 },
+  "rng": {
+    "traffic": { "a": 393044864, "b": -27069604, "c": -864402743, "d": -1078041136 },
+    "conversion": { "a": -1644995722, "b": -1577416270, "c": 173276076, "d": -1774840421 },
+    "customer": { "a": 943073670, "b": -861591493, "c": 1164871077, "d": 396367538 },
+    "tips": { "a": -2048330897, "b": -1620255985, "c": 2021161755, "d": -1345280936 },
+    "events": { "a": -560777425, "b": 873691877, "c": -1379985638, "d": -130262853 },
+    "cosmetic": { "a": 1289948761, "b": 2041160955, "c": -1728245038, "d": 1800911822 }
+  },
+  "control": { "speedMultiplier": 1, "paused": false },
+  "progression": { "stage": 1, "unlocks": [], "milestones": [], "pendingStage": 0 },
+  "construction": { "targetStage": 0, "elapsedMs": 0, "totalMs": 0 },
+  "economy": {
+    "cash": 54,
+    "reputation": 50,
+    "lifetimeRevenue": 0,
+    "lifetimeSpend": 6,
+    "prices": [],
+    "revenueWindow": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "expenseWindow": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "bucketIndex": 0,
+    "bucketElapsedMs": 3000
+  },
+  "layout": {
+    "placed": [{ "objectId": "bin", "x": 5, "y": 13, "z": 0 }],
+    "pendingBuilds": [
+      {
+        "upgradeId": "hand-painted-sign",
+        "objectId": "sign",
+        "x": 16.4,
+        "y": 12.6,
+        "remainingMs": 2400,
+        "totalMs": 3400
+      },
+      { "upgradeId": "", "objectId": "bin", "x": 5, "y": 13, "remainingMs": 2000, "totalMs": 3000 }
+    ],
+    "revision": 2,
+    "upgrades": []
+  },
+  "staff": { "hired": [], "settleElapsedMs": 0, "employees": [] },
+  "traffic": { "nextCandidateMs": 243315.06101863767, "nextDecorativeMs": 243798.55313179042 },
+  "environment": {
+    "plannedDay": 0,
+    "weatherSegments": [0, 1, 0, 0],
+    "eventTypes": [-1, -1, -1, -1, -1, -1],
+    "eventStartMs": [0, 0, 0, 0, 0, 0],
+    "eventEndMs": [0, 0, 0, 0, 0, 0],
+    "lastWeather": 1,
+    "lastActiveEvent": -1
+  },
+  "stats": {
+    "customersServed": 0,
+    "conversionsSucceeded": 0,
+    "conversionsFailed": 3,
+    "turnedAwayNoParking": 0,
+    "customersAbandoned": 0,
+    "vehiclesSpawned": 4,
+    "convertibleSpawned": 3,
+    "commandsApplied": 0
+  },
+  "settings": {
+    "audio": { "master": 1, "music": 1, "sfx": 1, "muted": false, "ambience": 1 },
+    "a11y": { "reducedMotion": false, "highContrast": false }
+  },
+  "checksum": "69dd3257"
+}

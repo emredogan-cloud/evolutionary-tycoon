@@ -143,6 +143,10 @@ interface MutableUpgrade {
   requiredLevel: number;
   levelLocked: boolean;
   shortBy: number;
+  /** True while a bought rung is still scaffolding — the correction pass. */
+  building: boolean;
+  /** Sim-ms until the site completes; 0 when nothing is building. */
+  buildRemainingMs: number;
 }
 type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
 type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
@@ -305,6 +309,8 @@ export class UiBridge implements HudSource {
       // here, so a sample never allocates.
       missingPrereqs: [],
       shortBy: 0,
+      building: false,
+      buildRemainingMs: 0,
     }));
     const prices: MutablePrice[] = MENU.map((item) => ({
       itemId: item.id,
@@ -921,6 +927,20 @@ export class UiBridge implements HudSource {
       view.level = upgradeLevel(world, item.id);
       view.cost = nextUpgradeCost(world, item.id);
       view.affordable = view.cost >= 0 && world.economy.cash >= view.cost;
+
+      /*
+       * The construction state — the correction pass. A rung on the queue
+       * shows its countdown and cannot be bought again meanwhile; the card is
+       * how the player watches the same clock the world's scaffold runs on.
+       */
+      view.building = false;
+      view.buildRemainingMs = 0;
+      for (const build of world.layout.pendingBuilds) {
+        if (build.upgradeId !== item.id) continue;
+        view.building = true;
+        view.buildRemainingMs = Math.max(view.buildRemainingMs, Math.max(0, build.remainingMs));
+      }
+      if (view.building) view.affordable = false;
 
       /*
        * Locked and unaffordable are different problems with different answers —

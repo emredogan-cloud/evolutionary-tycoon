@@ -325,7 +325,8 @@ export class VehicleMotionSystem implements SimSystem {
            * driver only slows to the approach speed and turns straight in, as
            * before. Same kinematics, different target speed.
            */
-          const crossingHold = laneRecord.crossesOnEntry && world.progression.stage >= LEFT_TURN.minStage;
+          const crossingHold =
+            laneRecord.crossesOnEntry && world.progression.stage >= LEFT_TURN.earlyMinStage;
           const targetSpeed = crossingHold ? 0 : ENTRY_APPROACH_SPEED;
           const toEntry = laneRecord.entryS - at(vehicles.laneS, slot);
           if (toEntry > 0 && speed > targetSpeed) {

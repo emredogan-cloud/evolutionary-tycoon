@@ -178,7 +178,9 @@ async function buyRoot(page: Page, family: string, id: string, ticks: number): P
   await expect(buy, `${id} was not buyable`).toBeEnabled();
   await buy.click();
   await page.evaluate(() => {
-    (window as unknown as Record<string, TestApi>)['__EVOTYCOON__']?.advanceTicks(2);
+    // Through the whole construction, not two ticks: the correction pass
+    // lands the level when the site completes (ceiling 12 s = 240 ticks).
+    (window as unknown as Record<string, TestApi>)['__EVOTYCOON__']?.advanceTicks(260);
   });
 
   // The level the card reports is the level the simulation holds; the bridge is

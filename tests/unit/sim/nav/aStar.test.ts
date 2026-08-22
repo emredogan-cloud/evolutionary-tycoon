@@ -102,9 +102,9 @@ describe('the path itself', () => {
     const path = findPath(
       grid,
       grid.cellXAt(3.5),
-      grid.cellYAt(10.1),
+      grid.cellYAt(10.75),
       grid.cellXAt(20.5),
-      grid.cellYAt(10.1),
+      grid.cellYAt(10.75),
     );
     expect(path.cells.length).toBeGreaterThan(1);
 
@@ -124,9 +124,9 @@ describe('the path itself', () => {
     const path = findPath(
       grid,
       grid.cellXAt(3.5),
-      grid.cellYAt(10.1),
+      grid.cellYAt(10.75),
       grid.cellXAt(20.5),
-      grid.cellYAt(10.1),
+      grid.cellYAt(10.75),
     );
     for (const cell of path.cells) {
       const cx = cell % grid.width;

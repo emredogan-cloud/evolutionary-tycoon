@@ -172,13 +172,21 @@
       class="buy"
       type="button"
       data-testid="upgrade-buy"
-      disabled={!upgrade.affordable || !upgrade.unlocked}
+      disabled={!upgrade.affordable || !upgrade.unlocked || upgrade.building}
       onclick={() => {
         onbuy(upgrade.id);
       }}
     >
-      <span>Satın al</span>
-      <span class="cost">₡{money.format(upgrade.cost)}</span>
+      {#if upgrade.building}
+        <span>İnşa ediliyor</span>
+        <!-- Game minutes: one game minute is 500 sim-ms (MS_PER_GAME_DAY / 1440). -->
+        <span class="cost" data-testid="upgrade-build-countdown"
+          >{Math.max(1, Math.ceil(upgrade.buildRemainingMs / 500))} dk</span
+        >
+      {:else}
+        <span>Satın al</span>
+        <span class="cost">₡{money.format(upgrade.cost)}</span>
+      {/if}
     </button>
 
     <!--
@@ -199,6 +207,8 @@
           Aşama {upgrade.stage} gerekiyor
         {/if}
       </p>
+    {:else if upgrade.building}
+      <p class="locked" data-testid="upgrade-building">Usta çalışıyor — bitince etkisi başlar</p>
     {:else if !upgrade.affordable}
       <p class="short" data-testid="upgrade-short" data-short-by={String(Math.ceil(upgrade.shortBy))}>
         ₡{money.format(Math.ceil(upgrade.shortBy))} eksik

@@ -110,7 +110,12 @@ export class World {
     bucketIndex: 0,
     bucketElapsedMs: 0,
   };
-  readonly layout: LayoutState = { placed: [], revision: 0, upgrades: new Map<string, number>() };
+  readonly layout: LayoutState = {
+    placed: [],
+    pendingBuilds: [],
+    revision: 0,
+    upgrades: new Map<string, number>(),
+  };
   readonly construction: ConstructionState = { targetStage: 0, elapsedMs: 0, totalMs: 0 };
   /**
    * Traffic process state — Phase 5.
@@ -287,6 +292,15 @@ export class World {
         h.writeF64(object.y);
         h.writeF64(object.z);
       }
+      h.writeU32(this.layout.pendingBuilds.length);
+      for (const build of this.layout.pendingBuilds) {
+        h.writeString(build.upgradeId);
+        h.writeString(build.objectId);
+        h.writeF64(build.x);
+        h.writeF64(build.y);
+        h.writeF64(build.remainingMs);
+        h.writeF64(build.totalMs);
+      }
       h.writeU32(this.layout.revision);
       hashStringNumberMap(h, this.layout.upgrades);
     });
@@ -399,6 +413,15 @@ export class World {
       h.writeF64(object.y);
       h.writeF64(object.z);
     }
+    h.writeU32(this.layout.pendingBuilds.length);
+    for (const build of this.layout.pendingBuilds) {
+      h.writeString(build.upgradeId);
+      h.writeString(build.objectId);
+      h.writeF64(build.x);
+      h.writeF64(build.y);
+      h.writeF64(build.remainingMs);
+      h.writeF64(build.totalMs);
+    }
     h.writeU32(this.layout.revision);
     hashStringNumberMap(h, this.layout.upgrades);
 
@@ -483,6 +506,7 @@ export class World {
     this.offline.bucketElapsedMs = 0;
 
     this.layout.placed.length = 0;
+    this.layout.pendingBuilds.length = 0;
     this.layout.revision = 0;
     this.layout.upgrades.clear();
     this.progression.pendingStage = 0;

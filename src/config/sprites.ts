@@ -208,6 +208,76 @@ export function vehicleBrakeFrame(archetype: number, direction: SpriteDirectionN
 }
 
 /**
+ * Where a delivered default frame does not show the facing its filename
+ * promises, the truthful substitute — the UI/world correction pass.
+ *
+ * DIRECTION_AUDIT v2 already recorded that the generator filled receding
+ * slots with forward views; its own method note warns that near-axial front
+ * and rear views are easy to confuse at audit size, and the 2026-08-22
+ * frame-by-frame re-read (every atlas frame composited on green at full
+ * size) found exactly that: several "rear" files are fronts. On screen that
+ * is the user-reported bug in as many words — a car receding up the road
+ * drawn nose-first reads as driving backwards or sliding sideways.
+ *
+ * Substitutions are truthful only: a genuine rear view of the same vehicle
+ * (mirrored where lateral symmetry allows), or the brake-lit rear where the
+ * archetype has no unlit rear at all — a moving car with brake lights reads
+ * as a driver touching the pedal; a reversing car reads as a broken game.
+ * The real fix is regenerated art: prompts NEW_VEHICLE-001..009.
+ *
+ * Keyed by texture stem, then the facing being drawn. `brake` picks the
+ * brake-lit file of `direction`; `flip` mirrors the substitute.
+ */
+export interface VehicleFacingFix {
+  readonly direction: SpriteDirectionName;
+  readonly brake?: boolean;
+  readonly flip?: boolean;
+}
+
+/** The fix for one archetype facing, or undefined where the art is truthful. */
+export function vehicleFacingFix(
+  archetype: number,
+  direction: SpriteDirectionName,
+): VehicleFacingFix | undefined {
+  const stem = ARCHETYPE_SPECS[archetype]?.textureStem ?? 'veh_sedan';
+  return VEHICLE_FACING_FIXES[stem]?.[direction];
+}
+
+/** The frame a facing fix resolves to. */
+export function vehicleFixFrame(archetype: number, fix: VehicleFacingFix): string {
+  const stem = ARCHETYPE_SPECS[archetype]?.textureStem ?? 'veh_sedan';
+  return `${stem}_${fix.brake === true ? 'brake' : 'default'}_${fix.direction}${SUFFIX}`;
+}
+
+const VEHICLE_FACING_FIXES: Readonly<
+  Record<string, Readonly<Partial<Record<SpriteDirectionName, VehicleFacingFix>>>>
+> = {
+  // The delivered n file is a front three-quarter heading sw; nw is a true
+  // rear three-quarter, and 22.5 degrees of lean beats a car in reverse.
+  veh_sedan: { n: { direction: 'nw' } },
+  // No unlit rear exists at any receding slot — n is a front elevation, ne a
+  // front three-quarter heading se, nw one heading sw. The brake set is the
+  // archetype's only truthful rear art.
+  veh_pickup: {
+    n: { direction: 'n', brake: true },
+    ne: { direction: 'ne', brake: true },
+    nw: { direction: 'ne', brake: true, flip: true },
+  },
+  // Same delivery fault as the pickup, same resolution.
+  veh_van: {
+    n: { direction: 'n', brake: true },
+    ne: { direction: 'ne', brake: true },
+    nw: { direction: 'ne', brake: true, flip: true },
+  },
+  // The n file is a front elevation; nw is a true rear three-quarter.
+  veh_motorcycle: { n: { direction: 'nw' } },
+  // The se file ships with a baked checkerboard "transparency" background —
+  // the ghost rectangle in the 2026-08-22 captures. The s file is a genuine
+  // sw-leaning front, so it and its mirror serve both forward quarters.
+  veh_sports: { se: { direction: 's', flip: true }, sw: { direction: 's' } },
+} as const;
+
+/**
  * The world objects a stage layout can place, by the id its `statics` use.
  *
  * The ids were `ph-prop-short` and `ph-prop-tall` with a comment saying what
@@ -493,13 +563,15 @@ export const FX_FRAMES = {
   sparkle: `fx_sparkle_soft${SUFFIX}`,
 } as const;
 
-/**
- * The baked road tile — Phase 16, the first regeneration-list item to receive
- * real art (delivered 2026-08-20 as a 16 m isometric slice; ASSET_PIPELINE §5
- * names the format). One tile for every stage: the road is the one surface
- * that genuinely is the same place at all four.
+/*
+ * `road_segment_tile-a` is deliberately no longer referenced here. The
+ * delivered slice is a self-contained diorama tile — its verge wraps its own
+ * ends and its sides carry a painted dirt cliff — so laying copies of it along
+ * the band produced the seam staircase of the 2026-08-22 captures. The road is
+ * now composed continuously in world space (`WorldScene.drawRoad`), and the
+ * seamless-strip replacement is prompt NEW_UI_WORLD_FIX-001 in the catalogue.
+ * The file itself remains a delivered production asset in the manifest.
  */
-export const ROAD_FRAME = `road_segment_tile-a${SUFFIX}`;
 
 /** The baked lot surface, one slice per stage where a stage has its own. */
 export const GROUND_FRAMES: Readonly<Record<number, string>> = {

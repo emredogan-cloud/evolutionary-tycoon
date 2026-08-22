@@ -40,7 +40,12 @@ export const STAGE2_LAYOUT: StageLayout = {
      * width), so a door there is unreachable and the customer never gets out.
      * Caught by `navigationIntact` before any of these layouts shipped.
      */
-    { id: 'p5', x: 3.5, y: 12.4, heading: { x: 1, y: 0 }, door: { x: 3.5, y: 10.9 } },
+    /*
+     * At y 12.9, not 12.4 — the layby row's cars now end at y 10.5, and a
+     * second row at 12.4 left no free navigation row for its own door. 12.9
+     * opens the 11.0-11.5 band as the walkway both rows' doors stand in.
+     */
+    { id: 'p5', x: 3.5, y: 12.9, heading: { x: 1, y: 0 }, door: { x: 4.0, y: 11.3 } },
   ],
 
   /*
@@ -70,17 +75,25 @@ export const STAGE2_LAYOUT: StageLayout = {
 
   waitingArea: [
     ...STAGE1_LAYOUT.waitingArea,
-    { x: 18.2, y: 10.0 },
-    { x: 18.2, y: 11.8 },
-    { x: 19.1, y: 10.0 },
-    { x: 19.1, y: 11.8 },
+    // East of the inherited rows, clear of the layby cars (which end at
+    // y 10.5) and of bay p4's door at (20.5, 11.05).
+    { x: 19.8, y: 11.6 },
+    { x: 19.8, y: 13.2 },
+    { x: 20.7, y: 11.6 },
+    { x: 20.7, y: 13.2 },
   ],
 
   statics: [
     // The truck, where the counter used to be — the counter point itself is
     // unchanged, so every system that aims at it still works.
     { objectId: 'counter-lv1', x: 12, y: 11, z: 0 },
-    { objectId: 'truck', x: 10.6, y: 11.6, z: 0 }, // the truck's body
+    /*
+     * At y 12.5, not 11.6 — the correction pass. The truck's 2.4 m body used
+     * to reach y 10.4, which walled off the 10.5..11.0 walkway every parking
+     * door now stands in (flood-probe evidence, stages 2-4). South of the
+     * counter line the body reads as the kitchen behind the window.
+     */
+    { objectId: 'truck', x: 10.6, y: 12.5, z: 0 },
     { objectId: 'sign', x: 9.5, y: 11.5, z: 0 }, // the lit sign
     { objectId: 'grill-lv1', x: 13.2, y: 11.9, z: 0 }, // the kitchen, now visible
     { objectId: 'fryer', x: 14.1, y: 11.9, z: 0 },
@@ -99,8 +112,10 @@ export const STAGE2_LAYOUT: StageLayout = {
     { objectId: 'bush-round-01', x: 18.2, y: 15.2, z: 0 },
     { objectId: 'bush-flowering-01', x: 6.4, y: 16.4, z: 0 },
     { objectId: 'lamp', x: 2.5, y: 8.2, z: 0 },
-    { objectId: 'bin', x: 16, y: 13, z: 0 },
-    { objectId: 'barrier', x: 8.2, y: 8.4, z: 0 }, // the lot edge, where the traffic passes
+    // Both repositioned by the correction pass: the bin's old cell is now a
+    // waiting spot, and the barrier's old verge is inside the marked layby.
+    { objectId: 'bin', x: 21.2, y: 12.6, z: 0 },
+    { objectId: 'barrier', x: 23.2, y: 11.6, z: 0 },
   ],
 
   tables: [],

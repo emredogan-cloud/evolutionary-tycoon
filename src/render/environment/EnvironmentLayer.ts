@@ -96,12 +96,21 @@ export class EnvironmentLayer {
      * provably drawn and visibly absent. Precipitation rides on top of
      * everything: rain falls in front of the lights.
      */
+    /*
+     * The full-cover quads live in **world space** and are re-fitted to the
+     * camera's visible world rect every update. They used to be viewport-sized
+     * rectangles at scroll factor zero, and that is the Phaser trap this pass
+     * closes wherever it appears: scroll factor exempts an object from scroll,
+     * not from zoom, so at 0.6x the "full-screen" night tint shrank to 60% of
+     * the frame and drew as a hard-edged dark rectangle floating over the
+     * world — plainly visible in the user's zoomed-out capture.
+     */
     this.tint = scene.add.rectangle(0, 0, width, height, 0x000000, 0);
-    this.tint.setOrigin(0, 0).setScrollFactor(0);
+    this.tint.setOrigin(0, 0);
     layer.add(this.tint);
 
     this.wetGround = scene.add.rectangle(0, 0, width, height, 0x10141c, 0);
-    this.wetGround.setOrigin(0, 0).setScrollFactor(0).setBlendMode(BLEND_MULTIPLY);
+    this.wetGround.setOrigin(0, 0).setBlendMode(BLEND_MULTIPLY);
     layer.add(this.wetGround);
 
     // World-space light: beams and glows live at iso coordinates and scroll
@@ -117,8 +126,8 @@ export class EnvironmentLayer {
     if (options.noParticles) {
       this.precipitation = null;
     } else {
+      // World-space too — the sky must cover the frame at every zoom.
       this.precipitation = scene.add.graphics();
-      this.precipitation.setScrollFactor(0);
       layer.add(this.precipitation);
     }
 
@@ -128,11 +137,19 @@ export class EnvironmentLayer {
         this.glowUpgradeIndexes.push({ index, flicker: glow.flicker, radius: glow.radius });
       }
     }
+  }
 
-    scene.scale.on('resize', (size: { width: number; height: number }) => {
-      this.tint.setSize(size.width, size.height);
-      this.wetGround.setSize(size.width, size.height);
-    });
+  /** The camera's visible world rect — scroll and zoom arithmetic, no cache. */
+  private viewRect(): { left: number; top: number; width: number; height: number } {
+    const camera = this.scene.cameras.main;
+    const width = camera.width / camera.zoom;
+    const height = camera.height / camera.zoom;
+    return {
+      left: camera.scrollX + (camera.width - width) / 2,
+      top: camera.scrollY + (camera.height - height) / 2,
+      width,
+      height,
+    };
   }
 
   /** Once per rendered frame, from the view the frame is drawing. */
@@ -141,6 +158,11 @@ export class EnvironmentLayer {
     const night = nightIntensityAt(hour);
     const weather = WEATHER_STATES[view.weather];
     const weatherTint = WEATHER_TINT[view.weather] ?? WEATHER_TINT[0];
+
+    // Fit the cover quads to what the camera can actually see this frame.
+    const rect = this.viewRect();
+    this.tint.setPosition(rect.left, rect.top).setSize(rect.width, rect.height);
+    this.wetGround.setPosition(rect.left, rect.top).setSize(rect.width, rect.height);
 
     // ── Ambient ───────────────────────────────────────────────────────────
     const ambient = ambientAt(hour);
@@ -157,9 +179,12 @@ export class EnvironmentLayer {
       this.beams.setAlpha(0.9 * night);
       for (const actor of actors) {
         if (!actor.active || actor.kind !== ACTOR_KIND_VEHICLE) continue;
-        // The iso projection halves vertical motion; so does the beam.
-        const dx = actor.headingX;
-        const dy = actor.headingY * 0.5;
+        // The world heading, projected the way every sprite facing is: screen
+        // direction of world (dx, dy) is (dx - dy, (dx + dy) / 2). The old
+        // form ignored the Y axis's screen skew, so an eastbound car threw
+        // its beam due screen-right instead of down the road it was on.
+        const dx = actor.headingX - actor.headingY;
+        const dy = (actor.headingX + actor.headingY) * 0.5;
         const magnitude = Math.hypot(dx, dy);
         const length = magnitude > 0 ? magnitude : 1;
         const ux = dx / length;
@@ -232,23 +257,25 @@ export class EnvironmentLayer {
       this.precipitation.clear();
       const particles = weather?.particles ?? 'none';
       if (particles !== 'none') {
-        const { width, height } = this.scene.scale;
+        // The visible world rect, not the viewport: the sky is drawn in world
+        // space so it covers the frame at every zoom (see the constructor).
+        const { width, height } = rect;
         // Frozen sky under reduced motion: the offset holds at a fixed phase.
         const t = this.options.reducedMotion ? 0 : view.simTimeMs;
         if (particles === 'rain') {
           this.precipitation.lineStyle(1, 0xbed2eb, 0.4);
           for (let i = 0; i < 130; i++) {
-            const x = (scatter(i, 3) * (width + 80) + t * 0.03) % (width + 80);
+            const x = rect.left + ((scatter(i, 3) * (width + 80) + t * 0.03) % (width + 80)) - 40;
             const fall = scatter(i, 7) * height;
-            const y = (fall + t * (0.42 + scatter(i, 11) * 0.2)) % (height + 20);
+            const y = rect.top + ((fall + t * (0.42 + scatter(i, 11) * 0.2)) % (height + 20)) - 10;
             this.precipitation.lineBetween(x, y, x - 3, y + 12);
           }
         } else {
           for (let i = 0; i < 90; i++) {
             const drift = Math.sin((t * 0.001 + i) * 0.9) * 14;
-            const x = (scatter(i, 5) * (width + 60) + drift + 60) % (width + 60);
+            const x = rect.left + ((scatter(i, 5) * (width + 60) + drift + 60) % (width + 60)) - 30;
             const fall = scatter(i, 13) * height;
-            const y = (fall + t * (0.05 + scatter(i, 17) * 0.05)) % (height + 12);
+            const y = rect.top + ((fall + t * (0.05 + scatter(i, 17) * 0.05)) % (height + 12)) - 6;
             this.precipitation.fillStyle(0xf0f6fc, 0.75);
             this.precipitation.fillCircle(x, y, 1 + scatter(i, 23) * 1.6);
           }

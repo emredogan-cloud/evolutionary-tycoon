@@ -153,9 +153,11 @@ test.describe('buying an upgrade', () => {
     await page.locator('[data-testid="upgrade-buy"]').click();
 
     /*
-     * One tick to apply the command — they land at the start of a tick, never on
-     * dispatch — then the bridge's next sample carries it. Polled rather than
-     * slept: the sequence is deterministic but its wall-clock timing is not.
+     * One tick to apply the command — they land at the start of a tick, never
+     * on dispatch — then the bridge's next sample carries it. Polled rather
+     * than slept: the sequence is deterministic but its wall-clock timing is
+     * not. The money moves NOW; the level lands when the site completes
+     * (the correction pass) — both halves asserted, in order.
      */
     await advance(page, 1);
     await expect
@@ -164,6 +166,11 @@ test.describe('buying an upgrade', () => {
 
     // ₡6 since Phase 12's ladder rescale — see the note on the buy button above.
     expect(before - (await readCash(page))).toBeCloseTo(6, 1);
+    // Mid-build: the rung is charged but not applied.
+    await expect(page.locator('[data-testid="upgrade-building"]')).toBeVisible();
+
+    // Through the construction (buildDurationMs(6) = 3.4 s = 68 ticks).
+    await advance(page, 80);
     await expect(
       page.locator('[data-testid="build-card"][data-upgrade="hand-painted-sign"]'),
     ).toHaveAttribute('data-level', '1');
@@ -190,7 +197,9 @@ test.describe('buying an upgrade', () => {
     await page.locator('[data-testid="upgrade-buy"]').click();
     await advance(page, 1);
     // One rendered frame is enough — the scene rebuilds its statics on the
-    // revision change, which is checked every frame.
+    // revision change, which is checked every frame. What appears first is
+    // the construction silhouette with its progress bar; that IS the visible
+    // world change the rule demands, arriving within the same second.
     await page.waitForTimeout(250);
 
     const after = await canvas.screenshot();

@@ -43,6 +43,7 @@ const TASK_KIND_DELIVER = TASK_KINDS.indexOf('DELIVER_ORDER');
 const TASK_KIND_CLEAN = TASK_KINDS.indexOf('CLEAN_TABLE');
 import { ARRIVAL_EPSILON_METRES } from '@config/customer';
 import { BRAKE_LIGHT_DECEL } from '@config/traffic';
+import { MAX_PLACED_OBJECTS } from '../systems/LayoutSystem';
 import { stageManeuverSystem } from '../systems/noop';
 import type { VehicleManeuverSystem } from '../systems/VehicleManeuverSystem';
 import type { CustomerRecord } from '../stores/customers';
@@ -135,6 +136,27 @@ export class Sim {
   private readonly maneuvers: VehicleManeuverSystem;
   /** Reused by `readView`, aligned to `UPGRADES`. */
   private readonly upgradeLevelBuffer: number[] = new Array<number>(UPGRADES.length).fill(0);
+  /** Reused rows for the placed decor the renderer draws — the correction pass. */
+  private readonly placedBuffer: { objectId: string; x: number; y: number; z: number }[] = Array.from(
+    { length: MAX_PLACED_OBJECTS },
+    () => ({ objectId: '', x: 0, y: 0, z: 0 }),
+  );
+  /** Reused rows for the construction sites, progress refreshed per read. */
+  private readonly pendingBuffer: {
+    upgradeId: string;
+    objectId: string;
+    x: number;
+    y: number;
+    progress: number;
+    remainingMs: number;
+  }[] = Array.from({ length: MAX_PLACED_OBJECTS }, () => ({
+    upgradeId: '',
+    objectId: '',
+    x: 0,
+    y: 0,
+    progress: 0,
+    remainingMs: 0,
+  }));
   /** Reused by `copyVehicles`; sampling allocates nothing. */
   private readonly laneSample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
 
@@ -190,6 +212,11 @@ export class Sim {
       actorCount: 0,
       upgradeLevels: this.upgradeLevelBuffer,
       upgradeRevision: 0,
+      placed: this.placedBuffer,
+      placedCount: 0,
+      pendingBuilds: this.pendingBuffer,
+      pendingBuildCount: 0,
+      layoutRevision: 0,
       audioSettings: { master: 1, music: 1, sfx: 1, ambience: 1, muted: false },
       stage: 1,
     };
@@ -284,6 +311,41 @@ export class Sim {
     v.orderCount = this.world.orders.activeCount;
     v.actorCount = this.fillActors();
     v.stage = this.world.progression.stage;
+
+    /*
+     * The placed decor and the construction sites, for the renderer — the
+     * correction pass. Same reused-row discipline as `actors`; the revision
+     * is the world's own layout counter, which every membership change bumps.
+     */
+    const placedSource = this.world.layout.placed;
+    const placedCount = Math.min(placedSource.length, this.placedBuffer.length);
+    for (let i = 0; i < placedCount; i++) {
+      const source = placedSource[i];
+      const row = this.placedBuffer[i];
+      if (source === undefined || row === undefined) break;
+      row.objectId = source.objectId;
+      row.x = source.x;
+      row.y = source.y;
+      row.z = source.z;
+    }
+    v.placedCount = placedCount;
+
+    const pendingSource = this.world.layout.pendingBuilds;
+    const pendingCount = Math.min(pendingSource.length, this.pendingBuffer.length);
+    for (let i = 0; i < pendingCount; i++) {
+      const source = pendingSource[i];
+      const row = this.pendingBuffer[i];
+      if (source === undefined || row === undefined) break;
+      row.upgradeId = source.upgradeId;
+      row.objectId = source.objectId;
+      row.x = source.x;
+      row.y = source.y;
+      row.remainingMs = Math.max(0, source.remainingMs);
+      row.progress =
+        source.totalMs > 0 ? Math.min(1, Math.max(0, 1 - source.remainingMs / source.totalMs)) : 1;
+    }
+    v.pendingBuildCount = pendingCount;
+    v.layoutRevision = this.world.layout.revision;
 
     /*
      * Levels and a revision. Summing six numbers per call is cheaper than the
@@ -402,7 +464,14 @@ export class Sim {
       target.activity = 0;
       target.headingX = this.laneSample.tangentX;
       target.headingY = this.laneSample.tangentY;
-      target.braking = (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
+      /*
+       * `accel` is only recomputed for vehicles the follower model owns, so a
+       * parked car still holds whatever deceleration stopped it. Reading it
+       * raw kept the brake lights lit and the nose dipped for the whole stay
+       * — every parked car in the layby sat pitched forward. A car that is
+       * not moving is not braking; the light is a statement about slowing.
+       */
+      target.braking = (vehicles.speed[slot] ?? 0) > 0 && (vehicles.accel[slot] ?? 0) <= -BRAKE_LIGHT_DECEL;
       target.patience = 0;
       target.moving = (vehicles.speed[slot] ?? 0) > 0;
       index++;
