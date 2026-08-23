@@ -1,17 +1,47 @@
 <script lang="ts">
+  import { ensureSheet, frameStyle, onIconsReady } from '../lib/atlasIcons';
   import type { RoleView, StaffView } from '@app/bridge/hudModel';
 
   /**
-   * The payroll — GAME_EXECUTION_ROADMAP Phase 10.
+   * The payroll — GAME_EXECUTION_ROADMAP Phase 10, rebuilt against
+   * UI_REFERENCE_AUDIT §STAGE1_PRODUCT_EXPANSION_REFERENCES
+   * (`personel-list-design.png`).
    *
    * "Personel paneli: liste, rol, skill, maaş, işe al/çıkar." A list rather than
    * a world-in-place card, and that is a deliberate difference from the upgrade
    * UI: an upgrade is a *place* — you click the sign — and a hire is not. There
    * is no object in the world to open a card beside before somebody exists.
    *
-   * It is collapsed by default. Eight employees, three roles and a wage bill is
-   * a lot of chrome for a screen whose whole point is that the game is visible,
-   * and TECHNICAL_ARCHITECTURE §7 budgets 22% of the viewport for all UI.
+   * ## What the reference changes, and what it does not
+   *
+   * The reference's point is that **an employee is a person, not a row**: a
+   * portrait, a name, and a coloured pill saying how they are getting on. The
+   * old panel was three columns of grey text at one size, which is what the
+   * directive means by the bare developer list.
+   *
+   * Two things in the reference are *not* copied, because the game does not
+   * have them and drawing them would be the panel inventing mechanics:
+   *
+   * - The reference's `12 dk` per row is a tenure or shift clock. There is no
+   *   such concept, so the second figure on our card is `busy01`, which is
+   *   measured and varies and is the number a player actually needs.
+   * - The reference's pills read `İyi / Orta / Uzman` — skill tiers. Every
+   *   hire is at the same skill today (`DEFAULT_SKILL`), so a skill pill would
+   *   say the same word on every card forever. Ours carries the **live state**
+   *   instead, which is real, changes while you watch, and is what the colour
+   *   is for.
+   *
+   * ## The names are cosmetic and say so
+   *
+   * `StaffView` has no name; the simulation has no reason to carry one. The
+   * label is picked from a fixed table by `entityId`, so it is stable across a
+   * save and identical on every machine, and nothing reads it back — it is not
+   * hashed, not commanded, and not persisted. It exists because "Aşçı" three
+   * times in a column is a spreadsheet and "Deniz, Aşçı" is a staff list.
+   *
+   * It is collapsed-capable but arrives open: Phase 18's dock owns opening
+   * this panel, and a player who pressed "Personel" asked to see the staff,
+   * not a second closed door.
    */
   interface Props {
     staff: readonly StaffView[];
@@ -24,17 +54,29 @@
 
   const { staff, roles, payroll, full, onhire, onfire }: Props = $props();
 
-  /*
-   * Phase 18: the dock owns opening this panel, so it arrives expanded — a
-   * player who pressed "Personel" asked to see the staff, not a second
-   * closed door. The internal toggle stays for collapsing in place.
-   */
   let open = $state(true);
+
+  ensureSheet('ui');
+  let iconRevision = $state(0);
+  $effect(() => onIconsReady(() => (iconRevision += 1)));
+  const icon = (frame: string, px: number): string | null => {
+    void iconRevision;
+    return frameStyle('ui', `${frame}@2x`, px);
+  };
+
+  /* `{@const}` is only legal inside a block; the header's icon is not. */
+  const headIcon = $derived(icon('ui_icon_staff', 16));
 
   const ROLE_LABELS: Record<string, string> = {
     cook: 'Aşçı',
     waiter: 'Garson',
     cleaner: 'Temizlikçi',
+  };
+
+  const ROLE_FRAMES: Record<string, string> = {
+    cook: 'ui_icon_role-cook',
+    waiter: 'ui_icon_role-waiter',
+    cleaner: 'ui_icon_role-cleaner',
   };
 
   /**
@@ -63,18 +105,45 @@
    * an employee with nothing to do and an employee whose work somebody else
    * had taken were both BLOCKED. They are different problems with opposite
    * answers (hire fewer / hire more), so they now read differently.
+   *
+   * The tone is what the reference's coloured dot carries: working is good,
+   * moving is neutral, waiting behind someone else is a warning, and having
+   * nothing to do at all is simply quiet.
    */
-  const STATE_LABELS: Record<string, string> = {
-    IDLE: 'iş yok',
-    MOVING: 'yolda',
-    PERFORMING: 'çalışıyor',
-    BLOCKED: 'sırada bekliyor',
+  const STATES: Record<string, { label: string; tone: string }> = {
+    IDLE: { label: 'iş yok', tone: 'idle' },
+    MOVING: { label: 'yolda', tone: 'moving' },
+    PERFORMING: { label: 'çalışıyor', tone: 'working' },
+    BLOCKED: { label: 'sırada bekliyor', tone: 'blocked' },
   };
 
   const money = new Intl.NumberFormat('tr-TR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+
+  /*
+   * Cosmetic labels only — see the component note. Kept deliberately short so
+   * a name never pushes the wage off its own row, and deliberately plain so no
+   * card has to be re-cut when the table grows.
+   */
+  const NAMES = [
+    'Deniz',
+    'Ayşe',
+    'Gürcan',
+    'Selin',
+    'Emre',
+    'Nur',
+    'Kerem',
+    'Bora',
+    'Elif',
+    'Tolga',
+    'Sema',
+    'Ozan',
+  ] as const;
+
+  const nameOf = (entityId: number): string =>
+    NAMES[((entityId % NAMES.length) + NAMES.length) % NAMES.length] ?? 'Personel';
 
   /*
    * Every hire is at the same skill for now. The applicant pool — three
@@ -95,8 +164,11 @@
       open = !open;
     }}
   >
-    <span>Personel</span>
-    <span class="count" data-testid="staff-count">{staff.length}</span>
+    <span class="title">Personel</span>
+    <span class="count" data-testid="staff-count">
+      {#if headIcon !== null}<i style={headIcon} aria-hidden="true"></i>{/if}
+      {staff.length}
+    </span>
     <span class="payroll" data-testid="staff-payroll" data-payroll={payroll.toFixed(2)}>
       ₡{money.format(payroll)}/dk
     </span>
@@ -105,44 +177,60 @@
   {#if open}
     <ul class="list">
       {#each staff as person (person.entityId)}
+        {@const state = STATES[person.state] ?? { label: person.state, tone: 'idle' }}
+        {@const portrait = icon(ROLE_FRAMES[person.roleId] ?? 'ui_icon_staff', 38)}
         <li data-testid="staff-row" data-entity={person.entityId} data-role={person.roleId}>
-          <div class="who">
-            <span class="role">{ROLE_LABELS[person.roleId] ?? person.roleId}</span>
-            <span class="state" data-testid="staff-state">{STATE_LABELS[person.state] ?? person.state}</span>
+          <span class="portrait {person.roleId}" aria-hidden="true">
+            {#if portrait !== null}<i style={portrait}></i>{/if}
+          </span>
+
+          <div class="card">
+            <div class="line">
+              <strong class="name">{nameOf(person.entityId)}</strong>
+              <span class="wage">₡{money.format(person.wagePerMinute)}/dk</span>
+            </div>
+
+            <div class="line">
+              <span class="role">{ROLE_LABELS[person.roleId] ?? person.roleId}</span>
+              <span
+                class="busy"
+                class:cold={person.busy01 < 0.05}
+                title="Son bir dakikada çalışma oranı"
+                data-testid="staff-busy"
+                data-busy={person.busy01.toFixed(3)}
+              >
+                %{(person.busy01 * 100).toFixed(0)} meşgul
+              </span>
+            </div>
+
+            <div class="line">
+              <span class="pill {state.tone}" data-testid="staff-state">
+                <b aria-hidden="true"></b>
+                {state.label}
+              </span>
+              <button
+                class="fire"
+                type="button"
+                data-testid="staff-fire"
+                onclick={() => {
+                  onfire(person.entityId);
+                }}
+              >
+                Çıkar
+              </button>
+            </div>
           </div>
-          <div class="numbers">
-            <span title="Yetenek">★ {(person.skill * 100).toFixed(0)}</span>
-            <span title="Ücret">₡{money.format(person.wagePerMinute)}/dk</span>
-            <span
-              class="busy"
-              class:cold={person.busy01 < 0.05}
-              title="Son bir dakikada çalışma oranı"
-              data-testid="staff-busy"
-              data-busy={person.busy01.toFixed(3)}
-            >
-              %{(person.busy01 * 100).toFixed(0)} meşgul
-            </span>
-          </div>
-          <button
-            class="fire"
-            type="button"
-            data-testid="staff-fire"
-            onclick={() => {
-              onfire(person.entityId);
-            }}
-          >
-            Çıkar
-          </button>
         </li>
       {/each}
 
       {#if staff.length === 0}
-        <li class="empty">Henüz kimse yok.</li>
+        <li class="empty">Henüz kimse yok. Aşağıdan ilk kişiyi işe al.</li>
       {/if}
     </ul>
 
     <div class="hire">
       {#each roles as role (role.id)}
+        {@const portrait = icon(ROLE_FRAMES[role.id] ?? 'ui_icon_hire', 32)}
         <button
           type="button"
           data-testid="staff-hire"
@@ -152,6 +240,9 @@
             onhire(role.id, DEFAULT_SKILL);
           }}
         >
+          <span class="portrait small {role.id}" aria-hidden="true">
+            {#if portrait !== null}<i style={portrait}></i>{/if}
+          </span>
           <span class="hire-role">{ROLE_LABELS[role.id] ?? role.id}</span>
           <span class="cost">₡{role.hireCost}</span>
           <span class="pitch">{ROLE_PITCH[role.id] ?? ''}</span>
@@ -165,173 +256,283 @@
 </section>
 
 <style>
-  .busy {
-    font-variant-numeric: tabular-nums;
-  }
-
-  .busy.cold {
-    color: var(--ink-dim);
-  }
-
-  .hire button {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      'role cost'
-      'pitch pitch';
-    gap: 0.1rem var(--space-2);
-    text-align: left;
-  }
-
-  .hire-role {
-    grid-area: role;
-  }
-
-  .hire .cost {
-    grid-area: cost;
-  }
-
-  .pitch {
-    grid-area: pitch;
-    color: var(--ink-secondary);
-    font-size: var(--text-xs);
-    line-height: 1.25;
-  }
-
   .panel {
     position: absolute;
-    right: var(--sp-4);
+    right: var(--space-4);
     /* Clear of the action dock: the dock owns the bottom edge (Phase 18),
        and a panel underlapping it eats the very clicks that opened it. */
-    bottom: calc(var(--touch-target) + var(--space-4) + var(--sp-4));
+    bottom: calc(var(--touch-target) + var(--space-4) + var(--space-4));
     z-index: var(--z-panel);
-    width: 14rem;
-    background: color-mix(in srgb, var(--c-surface) 90%, transparent);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    pointer-events: auto;
-    backdrop-filter: blur(6px);
     overflow: hidden;
+    width: 17rem;
+    max-width: calc(100vw - 2 * var(--space-4));
+    border: var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface-glass);
+    box-shadow: var(--shadow-panel);
+    backdrop-filter: blur(6px);
+    pointer-events: auto;
   }
+
+  /* ---- header ---- */
 
   .toggle {
     display: flex;
     width: 100%;
-    align-items: baseline;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3);
-    background: none;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
     border: none;
-    color: var(--c-text);
-    font: inherit;
-    font-size: var(--fs-xs);
+    background: none;
+    color: var(--ink);
     cursor: pointer;
+    font: inherit;
+    gap: var(--space-2);
     text-align: left;
   }
 
-  .count {
-    padding: 0 6px;
-    border-radius: 999px;
-    background: var(--c-surface-raised);
+  .title {
+    font-size: var(--text-base);
     font-weight: 700;
+  }
+
+  .count {
+    display: flex;
+    align-items: center;
+    color: var(--info);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    gap: 3px;
   }
 
   .payroll {
     margin-left: auto;
-    color: var(--c-error);
+    color: var(--danger);
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
+    font-weight: 700;
   }
 
+  /* ---- the people ---- */
+
   .list {
+    display: grid;
     margin: 0;
-    padding: 0 var(--sp-3) var(--sp-2);
+    padding: 0 var(--space-3) var(--space-2);
+    gap: var(--space-2);
     list-style: none;
   }
 
   .list li {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0 var(--sp-2);
-    padding: var(--sp-2) 0;
-    border-top: 1px solid var(--c-border);
-    font-size: var(--fs-xs);
+    align-items: stretch;
+    gap: var(--space-2);
+    grid-template-columns: auto 1fr;
   }
 
-  .who {
+  /*
+   * The reference's square portrait tile — with what the delivered set
+   * actually contains in it.
+   *
+   * `ui_icon_role-*` are not portraits: each is a ~120 px *scene* of four to
+   * six objects (a chef's hat over a board and a pan; a cloche, clipboard,
+   * waistcoat and napkin; a mop, trolley and wet-floor sign). Rendered at
+   * portrait size the cook survives on the hat's silhouette and the other two
+   * collapse into a grey-white blob and a blue-yellow blob — checked by
+   * cropping the three frames out of `ui.webp` and looking at them at the size
+   * they are drawn.
+   *
+   * So the tile carries a role-tinted ground under the illustration. The tint
+   * is what actually distinguishes the three at a glance; the illustration
+   * says which trade once you look. It is a real fix for a measured legibility
+   * problem, not a stand-in for the missing art — the per-role portrait set is
+   * filed as an asset requirement, and when it lands it drops into this tile
+   * and the tint can go.
+   */
+  .portrait {
+    display: grid;
+    width: 48px;
+    border: var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    place-items: center;
+  }
+
+  .portrait.cook {
+    background: color-mix(in srgb, var(--amber-700) 40%, var(--surface-sunken));
+  }
+  .portrait.waiter {
+    background: color-mix(in srgb, var(--azure-700) 40%, var(--surface-sunken));
+  }
+  .portrait.cleaner {
+    background: color-mix(in srgb, var(--foliage-700) 40%, var(--surface-sunken));
+  }
+
+  .portrait.small {
+    width: 40px;
+    height: 40px;
+    grid-area: art;
+  }
+
+  .card {
+    display: grid;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    gap: 2px;
+  }
+
+  .line {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
   }
 
-  .role {
+  .name {
+    font-size: var(--text-sm);
     font-weight: 700;
   }
 
-  .state {
-    color: var(--c-text-dim);
+  .wage {
+    color: var(--ink-secondary);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
   }
 
-  .numbers {
-    display: flex;
-    flex-direction: column;
-    align-items: end;
-    color: var(--c-text-muted);
+  .role {
+    color: var(--info);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .busy {
+    color: var(--ink-dim);
+    font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
+  }
+
+  .busy.cold {
+    color: var(--ink-dim);
+    opacity: 0.7;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px var(--space-2) 1px var(--space-1);
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--neutral-900) 60%, transparent);
+    color: var(--ink-secondary);
+    font-size: var(--text-xs);
+    gap: 4px;
+  }
+
+  /* Never colour alone: the dot is the colour, the word is the meaning. */
+  .pill b {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentcolor;
+  }
+
+  .pill.working {
+    color: var(--ok);
+  }
+  .pill.moving {
+    color: var(--info);
+  }
+  .pill.blocked {
+    color: var(--warning);
+  }
+  .pill.idle {
+    color: var(--ink-dim);
   }
 
   .fire {
-    grid-column: 1 / -1;
-    justify-self: start;
-    padding: 2px 6px;
-    background: none;
-    border: 1px solid var(--c-border);
+    padding: 2px var(--space-2);
+    border: var(--border);
     border-radius: var(--radius-sm);
-    color: var(--c-text-dim);
-    font-size: var(--fs-xs);
+    background: none;
+    color: var(--ink-dim);
     cursor: pointer;
+    font-size: var(--text-xs);
   }
 
   .fire:hover {
-    border-color: var(--c-error);
-    color: var(--c-error);
+    border-color: var(--danger);
+    color: var(--danger);
   }
 
   .empty {
-    color: var(--c-text-dim);
+    color: var(--ink-dim);
+    font-size: var(--text-xs);
   }
+
+  /* ---- hiring ---- */
 
   .hire {
     display: grid;
-    gap: var(--sp-1);
-    padding: var(--sp-2) var(--sp-3) var(--sp-3);
-    border-top: 1px solid var(--c-border);
+    padding: var(--space-2) var(--space-3) var(--space-3);
+    border-top: var(--border);
+    gap: var(--space-2);
   }
 
   .hire button {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--sp-2);
-    background: var(--c-surface-raised);
-    border: 1px solid var(--c-border);
+    display: grid;
+    align-items: center;
+    padding: var(--space-2);
+    border: var(--border);
     border-radius: var(--radius-sm);
-    color: var(--c-text);
-    font-size: var(--fs-xs);
-    font-weight: 600;
+    background: var(--surface-sunken);
+    color: var(--ink);
     cursor: pointer;
+    gap: 0 var(--space-2);
+    grid-template-areas:
+      'art role cost'
+      'art pitch pitch';
+    grid-template-columns: auto 1fr auto;
+    text-align: left;
   }
 
   .hire button:disabled {
-    color: var(--c-text-dim);
     cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .hire-role {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    grid-area: role;
   }
 
   .cost {
+    color: var(--accent);
+    font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
-    color: var(--c-accent);
+    font-weight: 700;
+    grid-area: cost;
+  }
+
+  .pitch {
+    color: var(--ink-secondary);
+    font-size: var(--text-xs);
+    grid-area: pitch;
+    line-height: 1.3;
   }
 
   .full {
     margin: 0;
-    font-size: var(--fs-xs);
-    color: var(--c-text-dim);
+    color: var(--ink-dim);
+    font-size: var(--text-xs);
+  }
+
+  @media (max-width: 700px) {
+    .panel {
+      width: 14.5rem;
+    }
+    .portrait {
+      width: 38px;
+    }
   }
 </style>

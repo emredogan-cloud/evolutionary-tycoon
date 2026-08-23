@@ -67,6 +67,152 @@
 - The XP numbers (`320/600`) as literals — the progression task defines real curves; the _pattern_ (level chip + bar) is what's adopted.
 - Bottom-centre bar being always-open (main ref shows Build selected; when nothing is selected the panel collapses — directive §7).
 
+## STAGE1_PRODUCT_EXPANSION_REFERENCES
+
+> Added 2026-08-23 for Decision E of the Stage-1 continuation directive. Inputs,
+> located and opened rather than recalled:
+>
+> | File                                           | Bytes     | Subject                  |
+> | ---------------------------------------------- | --------- | ------------------------ |
+> | `docs/assets/sources/new-gösterge-desing.png`  | 1 550 032 | dashboard / HUD          |
+> | `docs/assets/sources/new-menü-design.png`      | 1 780 872 | Dükkan → Menü & Fiyatlar |
+> | `docs/assets/sources/personel-list-design.png` | 1 850 723 | Personel                 |
+>
+> Same standing as §1–3: **design references, not clone targets.** Section E.6
+> records what was deliberately not taken and why.
+
+### E.1 The visual system these three agree on
+
+| Aspect                  | As seen in the three images                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Layout hierarchy**    | One dark rounded panel per subject. Inside it, content is banded: a headline band, then a rail or grid, then a footer. Bands are separated by a hairline rule, never by a gap alone.              |
+| **Sub-surfaces**        | Each band sits on its own fill — the XP rail and every product/person card are _darker_ than the panel they sit on. Depth is fill, not shadow.                                                    |
+| **Spacing**             | Panel padding ≈ card gap ≈ 20–24 px; inside a card, label→value ≈ 2–4 px and group→group ≈ 12 px. Two rhythms only: between things, and within a thing.                                           |
+| **Card style**          | Radius ~16 px on cards, ~24–28 px on panels and pills. Border is a barely-there hairline; separation is carried by the fill difference.                                                           |
+| **Icon placement**      | Always leading, never trailing, and always paired with the value it qualifies (coin→price, clock→duration, star→level). In the stat strip the icon sits _above_ its label.                        |
+| **Typography**          | Three steps and they are never adjacent in weight: value (large, 700–800, tabular), name (medium, 700), label (small, 400–600, muted). Values are always larger _and_ brighter than their labels. |
+| **Selected state**      | Amber outline **plus** amber label, on a faint amber fill. Not a solid fill — the fill stays available to mean "pressed".                                                                         |
+| **Locked / inactive**   | Grey outline, muted label, full opacity — inactive is quiet, not faded out.                                                                                                                       |
+| **Active / status**     | A pill with a coloured dot and a word: green good, blue neutral, purple special, red cost. The dot carries the colour, the word carries the meaning.                                              |
+| **Price presentation**  | Coin glyph, then the figure in amber at the largest size on the card. Secondary money (list, profit, wage) is small, neutral-coloured and **labelled**.                                           |
+| **Avatar presentation** | A square, rounded, bordered portrait tile at the row's leading edge, the full height of the card beside it.                                                                                       |
+| **Information density** | Five or six facts per card and every one of them visible — nothing behind a hover, nothing behind a chevron.                                                                                      |
+| **Panel placement**     | Each panel hugs one edge and leaves the world the middle, matching §1's world-first law.                                                                                                          |
+
+### E.2 `new-gösterge-desing.png` → the dashboard
+
+Read: three bands. **(1)** gold coin, `72,38` very large in white, `+7,20/dk`
+in green beside it, an `i` tile at the right. **(2)** a sunken pill holding a
+star badge, `Seviye 4`, an amber progress bar, and `13 / 170` with `XP` in
+blue. **(3)** a rule, then four ruled columns, each icon-over-label-over-value:
+`Gün 1 · 00:00`, `Servis 27`, `Bekleyen 0`, `İtibar 50`.
+
+Adopted in `src/ui/components/HudCash.svelte`: all three bands, the sunken
+rail, the column rules, the `i`, and the type hierarchy. The data was already
+there — what changed is that money, progress and today are no longer three
+lines of the same grey text at the same size.
+
+### E.3 `new-menü-design.png` → Dükkan → Menü & Fiyatlar
+
+Read: a tab row (active = amber outline + amber label + icon; inactive = grey
+outline + icon) with an info pill at the right; a three-across grid of product
+cards; a centred `↻ Varsayılana dön` footer. Each card: large food art, name,
+coin + amber price, a green `↑ +50%` badge top-right, a `Liste`/`Kâr` labelled
+pair, a `−` / blue slider / `+` stepper, the band written out
+(`₡2,03 – ₡6,07 aralığında`), and a duration.
+
+Adopted in `src/ui/components/PricePanel.svelte` and the `.shop` chrome in
+`GameHud.svelte`: the grid (`auto-fill`, so three across on a desktop and one
+on a phone from a single rule), the card's field order, the stepper, the badge,
+the written band, the footer reset, and the tab treatment.
+
+The badge is **computed** — `price / base − 1` — and turns red below the list
+price. Every card in the reference reads `+50%` because every card in the
+reference is at the top of its band; ours reads what the price actually is.
+
+### E.4 `personel-list-design.png` → Personel
+
+Read: a header (`Personel`, person icon, count; total wage in red at the
+right); rows of `[square portrait] [dark card]`; each card carrying a name, a
+blue role or a description, a duration, a wage, and a coloured status pill;
+a footer tip strip.
+
+Adopted in `src/ui/components/StaffPanel.svelte`: the header, the portrait +
+card row shape, the name, the blue role, the wage, and the status pill with its
+dot. This is the surface the directive singled out as "the old bare developer-
+list appearance", and the reference's actual argument is the one adopted: **an
+employee is a person, not a row.**
+
+### E.5 The root cause found underneath the redesign
+
+The references' whole hierarchy is _labels dimmer than their values_. Ours had
+none, and not because of the CSS in the components:
+
+`src/ui/theme/tokens.css` aliased three ramp steps that do not exist. The
+locked palette is 12 ramps × 4 steps — 900/700/500/300, and 900/600/300/050 for
+`neutral` — and the file named `steel-600`, `amber-600` and `neutral-500`. A
+custom property that references an undefined custom property becomes the
+_guaranteed-invalid value_, and every declaration built on it is dropped
+silently at computed-value time. Nothing warns; the build, the type-checker and
+ESLint all pass.
+
+Measured in Chromium against the preview build, before the fix:
+
+| Token             | Resolved to | Consequence                                                |
+| ----------------- | ----------- | ---------------------------------------------------------- |
+| `--edge`          | invalid     | `--border` invalid → **16 components rendered `0px none`** |
+| `--ink-dim`       | invalid     | inherited → **8 components painted labels pure white**     |
+| `--accent-strong` | invalid     | gradient invalid → **the XP bar's fill painted `none`**    |
+| `--text-md`       | invalid     | the 380 px type step was dropped                           |
+
+`getComputedStyle` on the dashboard returned `rgb(255,255,255)` for both the
+label and its value, and `0px none rgb(255,255,255)` for the panel border.
+
+Fixed to `steel-700`, `amber-500` and `steel-500`; `--text-md` retired in
+favour of the scale's own `--text-base`. `--c-text-dim`, the legacy
+vocabulary's tertiary, was also 3.63:1 against `--surface-raised` — below AA
+for small text while this file's header claimed the set passed — and now
+resolves to the same 5.29:1 tone.
+
+`tests/unit/ui/tokens.test.ts` is the gate: every `var(--x)` without a fallback
+must name a defined token, and no `--ramp-NNN` name may reference a step
+`palette.json` does not have. A visual golden could not have caught this — the
+goldens were recorded from the same broken cascade and agreed with it.
+
+### E.6 What was deliberately not taken
+
+- **The reference's menu contents** (Su, Sandviç, Dondurma). Ours renders
+  `MENU`; the reference is a mock-up.
+- **`12 dk` on a staff row.** That is a tenure or shift clock and the game has
+  no such concept. The second figure on our card is `busy01`, which is measured
+  and varies — measured at Stage 1, a cook is idle 97.7% of a session, and the
+  panel offering the hire should say so.
+- **`İyi / Orta / Uzman` skill pills.** Every hire is at `DEFAULT_SKILL` today,
+  so a skill pill would print the same word on every card forever. The pill
+  carries the **live state** instead — working / moving / waiting / idle — which
+  is real and changes while you watch. The pattern is adopted; the content is
+  ours.
+- **The wrench beside `Servis` and the parcel beside `İtibar`.** Decorative
+  there. Ours name what they count, from the delivered set: a customer for
+  customers, a star for standing.
+- **The bar-chart glyph beside `2,5 sn`.** A duration gets a clock.
+- **`€` and `%10 maaş al`.** The game's unit is `₡`, and there is no wage-cut
+  mechanic to offer.
+- **All three bands on a phone.** The full dashboard measured **32.5%** of a
+  360×640 viewport against GDD §14.1's 28% mobile budget (this panel alone at
+  16.3%). On phone breakpoints the day strip folds behind the `i` that was
+  already there to explain it, taking the chrome to 26.5%. Money and progress —
+  what the player is actually watching — stay on screen. Measured, per viewport,
+  in `tests/e2e/responsive.spec.ts`.
+
+### E.7 Asset gap opened by this section
+
+The portrait tile is real and shaped as the reference shapes it, but it is
+filled with the delivered **role** icon (`ui_icon_role-cook`, `-waiter`,
+`-cleaner`), not a per-person portrait — that set does not exist. Recorded as
+an asset requirement rather than faked with a silhouette; see
+`docs/ASSET_GENERATION_PROMPTS.html`, marker `NEW_STAGE1_CONTINUATION_*`.
+
 ## 4. Asset linkage
 
 The parchment tiles and icon chips in the references are the same visual language

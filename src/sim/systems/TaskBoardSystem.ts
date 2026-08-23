@@ -1,5 +1,5 @@
 import { euclidean } from '../math/length';
-import { PASS, station } from '@config/economy/stations';
+import { PASS } from '@config/economy/stations';
 import { layoutForStage } from '@config/layouts';
 import { TASK_BASE_MS, TASK_KINDS, TASK_SCORING, role } from '@config/employees';
 import type { TaskKind } from '@config/employees';
@@ -139,7 +139,7 @@ export class TaskBoardSystem implements SimSystem {
         // Only if a station could actually take it. Posting work nobody can do
         // fills the board with tasks that score higher every tick and starves
         // the ones that can be done.
-        if (startable >= 0) this.ensureTask(world, 'PREP_ORDER', slot, startable, stamps, stamp);
+        if (startable >= 0) this.ensureTask(world, 'PREP_ORDER', slot, stamps, stamp);
       } else if (order.state === ORDER_ON_PASS) {
         /*
          * One delivery per **tray**, not per plate — ADR-016. A basket is
@@ -151,7 +151,7 @@ export class TaskBoardSystem implements SimSystem {
          * cannot be served from yet.
          */
         if (basketReady(world, order.customerSlot) && firstOrderOf(world, order.customerSlot) === slot) {
-          this.ensureTask(world, 'DELIVER_ORDER', slot, startable, stamps, stamp);
+          this.ensureTask(world, 'DELIVER_ORDER', slot, stamps, stamp);
         }
       }
     }
@@ -177,14 +177,7 @@ export class TaskBoardSystem implements SimSystem {
   private stampCounter = 0;
 
   /** Post a task for this subject unless one already exists. */
-  private ensureTask(
-    world: World,
-    kind: TaskKind,
-    subject: number,
-    startable: number,
-    stamps: Int32Array,
-    stamp: number,
-  ): void {
+  private ensureTask(world: World, kind: TaskKind, subject: number, stamps: Int32Array, stamp: number): void {
     const kindIndex = TASK_KINDS.indexOf(kind);
     const key = kindIndex * world.orders.capacity + subject;
     if (stamps[key] === stamp) return;
@@ -200,27 +193,35 @@ export class TaskBoardSystem implements SimSystem {
     task.postedAtMs = world.clock.simTimeMs;
     task.durationMs = TASK_BASE_MS[kind];
 
-    const where = this.placeOf(world, kind, startable, subject);
+    const where = this.placeOf(world, kind, subject);
     task.x = where.x;
     task.y = where.y;
     stamps[key] = stamp;
   }
 
   /** Where the work happens. */
-  private placeOf(
-    world: World,
-    kind: TaskKind,
-    startable: number,
-    subject: number,
-  ): { x: number; y: number } {
+  private placeOf(world: World, kind: TaskKind, subject: number): { x: number; y: number } {
     if (kind === 'PREP_ORDER') {
-      const free = startable;
-      if (free >= 0 && world.orders.isActive(free)) {
-        // The station the kitchen would pick. Walking to the pass and then
-        // discovering the work is elsewhere is how an employee looks aimless.
-        const target = world.orders.at(free);
-        if (target.station >= 0) return station(target.station);
-      }
+      /*
+       * The pass, always.
+       *
+       * This used to read the order's own station first — "the station the
+       * kitchen would pick", so an employee would not walk to the pass and
+       * discover the work was elsewhere. That branch could never run.
+       * `Order.station` is `-1` from the moment the order is acquired
+       * (`OrderStore.ts`) and is only assigned inside `startPrep`
+       * (`KitchenSystem.ts`), which is what *finishing* this task does — so at
+       * posting time, when the order is still `ORDER_PLACED`, it is always
+       * `-1` and the code always fell through to here.
+       *
+       * Removed rather than left standing, because a branch that cannot run
+       * is a comment claiming a behaviour the game does not have. Cooks work
+       * at the pass. Making the original intent real means predicting the
+       * bench `freeStationOfType` would choose and keeping that prediction
+       * true across the walk — a change to where employees stand, so a change
+       * to timings, to the world hash, and to every balance number measured
+       * before it (WORKING_DISCIPLINE §6). It is not a comment fix.
+       */
       return PASS;
     }
     if (kind === 'DELIVER_ORDER') {

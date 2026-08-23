@@ -35,6 +35,7 @@
   import StaffPanel from './StaffPanel.svelte';
   import UpgradeCard from './UpgradeCard.svelte';
   import WorldMarkers from './WorldMarkers.svelte';
+  import { ensureSheet, frameStyle, onIconsReady } from '../lib/atlasIcons';
 
   /**
    * The overlay root — the consolidation pass's reference layout
@@ -63,6 +64,22 @@
   let storeTab = $state<'prices' | 'decor'>('prices');
   /** And of the İnşa Et panel: the upgrade tree, or the functional buildings. */
   let buildTab = $state<'upgrades' | 'buildings'>('upgrades');
+
+  /*
+   * The reference's tabs carry an icon each, and the icon is what separates
+   * them at a glance once the labels are both two Turkish words long.
+   */
+  ensureSheet('ui');
+  let iconRevision = $state(0);
+  $effect(() => onIconsReady(() => (iconRevision += 1)));
+  const tabIcon = (frame: string): string | null => {
+    void iconRevision;
+    return frameStyle('ui', `${frame}@2x`, 18);
+  };
+  const upgradeTabIcon = $derived(tabIcon('ui_icon_upgrade'));
+  const buildingsTabIcon = $derived(tabIcon('ui_icon_grill'));
+  const menuTabIcon = $derived(tabIcon('ui_icon_drink'));
+  const decorTabIcon = $derived(tabIcon('ui_icon_build'));
   /**
    * The one armed thing in the interface, and it starts as nothing.
    *
@@ -294,6 +311,7 @@
             disarm();
           }}
         >
+          {#if upgradeTabIcon !== null}<i style={upgradeTabIcon} aria-hidden="true"></i>{/if}
           Yükseltmeler
         </button>
         <button
@@ -305,6 +323,7 @@
             buildTab = 'buildings';
           }}
         >
+          {#if buildingsTabIcon !== null}<i style={buildingsTabIcon} aria-hidden="true"></i>{/if}
           Mutfak &amp; Tesisler
         </button>
       </nav>
@@ -452,6 +471,7 @@
             disarm();
           }}
         >
+          {#if menuTabIcon !== null}<i style={menuTabIcon} aria-hidden="true"></i>{/if}
           Menü & Fiyatlar
         </button>
         <button
@@ -463,6 +483,7 @@
             storeTab = 'decor';
           }}
         >
+          {#if decorTabIcon !== null}<i style={decorTabIcon} aria-hidden="true"></i>{/if}
           Dekor & Tabela
         </button>
       </nav>
@@ -525,36 +546,47 @@
     right: var(--space-3);
     bottom: calc(var(--space-3) + 4.5rem);
     display: grid;
-    gap: var(--space-2);
-    width: min(34rem, calc(100vw - 2 * var(--space-3)));
+    /* Wide enough for the reference's three-across product grid at a desktop
+       viewport; `auto-fill` in the panel itself takes it down to two and then
+       one as the window narrows, so there is one rule rather than three. */
+    width: min(45rem, calc(100vw - 2 * var(--space-3)));
     padding: var(--space-3);
     border: var(--border);
     border-radius: var(--radius-card);
     background: var(--surface-glass);
     box-shadow: var(--shadow-panel);
+    gap: var(--space-2);
     pointer-events: auto;
     z-index: var(--z-panel);
   }
 
   .tabs {
     display: flex;
-    gap: var(--space-1);
+    gap: var(--space-2);
   }
 
+  /* The reference distinguishes the open tab by an amber outline and an amber
+     label, not by a filled pill — so a tab row reads as one control with one
+     thing lit, and the fill stays available to mean "pressed". */
   .tabs button {
+    display: flex;
     min-height: var(--touch-target);
+    align-items: center;
     padding: 0 var(--space-3);
     border: var(--border);
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-card);
     background: var(--surface-sunken);
     color: var(--ink-secondary);
     cursor: pointer;
     font-size: var(--text-sm);
+    font-weight: 600;
+    gap: var(--space-2);
   }
 
   .tabs button.on {
+    border-color: var(--accent);
     background: var(--accent-soft);
-    color: var(--ink);
+    color: var(--accent);
   }
 
   /*
@@ -569,10 +601,10 @@
    */
   .shop :global([data-testid='price-panel']) {
     position: static;
-    width: 100%;
-    max-height: 17rem;
-    padding: 0;
     overflow-y: auto;
+    width: 100%;
+    max-height: min(24rem, 55vh);
+    padding: 0;
     border: 0;
     background: transparent;
     backdrop-filter: none;

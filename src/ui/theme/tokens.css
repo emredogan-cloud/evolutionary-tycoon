@@ -64,12 +64,23 @@
   --surface: #14161cf2;
   --surface-raised: #1b1e27f5;
   --surface-overlay: #14161ccc;
-  --edge: var(--steel-600);
+  /*
+   * The ramps are four steps — 900/700/500/300, and 900/600/300/050 for
+   * neutral. There is no 600 in steel or amber and no 500 in neutral, so
+   * `steel-600`, `amber-600` and `neutral-500` were three names for the
+   * guaranteed-invalid value, and every property built on them was dropped at
+   * computed-value time: `--border` resolved to nothing in sixteen components,
+   * `--ink-dim` inherited plain white in eight, and the XP bar's gradient
+   * painted `none`. Measured in Chromium at :4173 before the fix — the labels
+   * and their values were the same colour, which is the one distinction the
+   * whole interface is built on. Every step below exists in palette.json.
+   */
+  --edge: var(--steel-700);
   --ink: #eef0f5;
   --ink-secondary: var(--neutral-300);
   --ink-inverse: var(--neutral-900);
   --accent: var(--amber-300);
-  --accent-strong: var(--amber-600);
+  --accent-strong: var(--amber-500);
   --positive: var(--meadow-300);
   --negative: var(--crimson-300);
   --warning: var(--amber-300);
@@ -100,7 +111,10 @@
   --surface-sunken: #0d0f14e6;
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --ink-muted: var(--ink-secondary);
-  --ink-dim: var(--neutral-500);
+  /* 5.29:1 on --surface-raised. The tertiary tone carries every label in the
+     references ("Liste", "Kâr", "Gün"), so it has to pass AA as body text
+     rather than as decoration — pavement-500, the legacy dim, is 3.63:1. */
+  --ink-dim: var(--steel-500);
   --ok: var(--positive);
   --danger: var(--negative);
   --radius-pill: 24px;
@@ -148,7 +162,10 @@
   --c-border: var(--edge);
   --c-text: var(--ink);
   --c-text-muted: var(--ink-secondary);
-  --c-text-dim: var(--pavement-500);
+  /* Was pavement-500 at 3.63:1 — the legacy vocabulary's dim tone failed AA
+     for small text while this file's header claimed the set passed it. Both
+     vocabularies now resolve to the same compliant tertiary. */
+  --c-text-dim: var(--ink-dim);
   --c-accent: var(--accent);
   --c-accent-dim: var(--accent-strong);
   --c-ok: var(--positive);
