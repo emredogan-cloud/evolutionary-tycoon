@@ -1,4 +1,4 @@
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { buildDurationMs } from '@config/economy/upgrades';
 import { ROADSIDE_BAND_METRES } from '@config/store';
 import type { PlacementZone } from '@config/store';
@@ -69,7 +69,7 @@ export interface PlacementOptions {
 export function zoneAllows(world: World, zone: PlacementZone, x: number, y: number): boolean {
   if (zone === 'lot') return true;
 
-  const road = layoutForStage(world.progression.stage).road;
+  const road = layoutOf(world).road;
   const limit = ROADSIDE_BAND_METRES + road.widthMetres / 2;
 
   for (const lane of road.lanes) {
@@ -122,7 +122,7 @@ export function placeObject(
 ): PlacementOutcome {
   if (world.layout.placed.length >= MAX_PLACED_OBJECTS) return 'full';
 
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   const snappedX = snapToGrid(x);
   const snappedY = snapToGrid(y);
 
@@ -204,7 +204,7 @@ export function previewPlacement(
 ): PlacementOutcome {
   if (world.layout.placed.length >= MAX_PLACED_OBJECTS) return 'full';
 
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   const snappedX = snapToGrid(x);
   const snappedY = snapToGrid(y);
 

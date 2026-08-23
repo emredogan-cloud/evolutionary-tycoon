@@ -254,6 +254,8 @@ export interface HudModel {
   readonly markers: readonly WorldMarker[];
   /** Objects the player has placed, in placement order. Reused, like `markers`. */
   readonly placed: readonly PlacedView[];
+  /** Every property, in the order the interface shows them. */
+  readonly properties: readonly PropertyView[];
   /** How much of `placed` is live; entries past it are stale. */
   readonly placedCount: number;
   readonly markerCount: number;
@@ -354,6 +356,68 @@ export interface PlacementPreview {
   readonly screenY: number;
 }
 
+/**
+ * One property, as the inspect card sees it — the restaurant evolution system.
+ *
+ * Everything here is read out of the simulation on the sample that produced it:
+ * the level from the ladder it derives from, the capacity and its usage from
+ * the world, the price from config at the moment it is offered. The card shows
+ * numbers, so the numbers have to be the simulation's own — a benefit invented
+ * in a component is exactly what §39's "DO NOT SHOW FAKE BENEFITS" forbids.
+ */
+export interface PropertyView {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly level: number;
+  readonly maxLevel: number;
+  /** True while a site is raising this property. */
+  readonly building: boolean;
+  /** 0..1 through that site, and the simulation ms left on it. */
+  readonly buildProgress: number;
+  readonly buildRemainingMs: number;
+
+  /** What it provides now, and how much is in use. -1 capacity = not countable. */
+  readonly capacity: number;
+  readonly used: number;
+  readonly unit: string;
+
+  /** What this level is called — "Yol kenarı tezgâhı", "5 araç". */
+  readonly levelLabel: string;
+  /** What the next level would be called, or '' at the ceiling. */
+  readonly nextLabel: string;
+
+  /** -1 when there is no next level to buy. */
+  readonly nextCost: number;
+  readonly nextBuildMs: number;
+  /** The restaurant stage the next level needs. */
+  readonly nextStage: number;
+  /** Empty when the next level can be bought right now. */
+  readonly lockReason: string;
+  /**
+   * How the next level's picture exists — `sprite`, `prompted` or `procedural`.
+   *
+   * The preview must never show the current asset as if it were the next one
+   * (§17). `sprite` is the only value that licenses drawing `nextAsset`;
+   * `prompted` says the art is still being made, and `procedural` says there
+   * will never be a sprite because the thing is painted from the layout.
+   */
+  readonly nextArt: 'sprite' | 'prompted' | 'procedural';
+  /** How many cells a `procedural` next level paints — its whole picture. */
+  readonly nextCells: number;
+  /** The same count at the level that is already built, so the preview can
+   * shade the difference rather than just showing a bigger number. */
+  readonly cells: number;
+  /** The `WORLD_OBJECTS` id drawn for this level and for the next, or ''. */
+  readonly levelAsset: string;
+  readonly nextAsset: string;
+
+  /** The world anchor, already projected. */
+  readonly screenX: number;
+  readonly screenY: number;
+  readonly visible: boolean;
+}
+
 /** A placed object, for build mode's list. */
 export interface PlacedView {
   readonly objectId: string;
@@ -396,6 +460,16 @@ export interface UiCommands {
    * action at all — see `docs/COOK_PLAYER_INTERACTION_DESIGN.md`.
    */
   serve(orderSlot: number): void;
+  /**
+   * Raise a property one level.
+   *
+   * The card calls this for every property; `src/app` decides which command it
+   * becomes. A property with its own ladder gets `UPGRADE_PROPERTY`; a derived
+   * one gets `BUY_UPGRADE` for the rung it reads its level from; the main
+   * building gets `EVOLVE`. One verb in the interface, three doors behind it,
+   * and none of them a second economy.
+   */
+  upgradeProperty(id: string): void;
   /** Simulation speed, through the same command door as everything else. */
   setSpeed(mult: 1 | 2 | 4): void;
   /** Confirm the stage transition the player has been offered. */

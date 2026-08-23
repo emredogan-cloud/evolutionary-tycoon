@@ -60,19 +60,19 @@ footer{padding:20px 24px;border-top:1px solid var(--edge);color:var(--dim);font-
   </p>
   <p class="sub">
     Prompts are reproduced <b>exactly</b> as emitted. Do not reword, shorten or reflow them — the immutable
-    style block is the only thing keeping 314 separately generated images looking like one world.
+    style block is the only thing keeping 320 separately generated images looking like one world.
   </p>
   <div class="stats">
-    <div class="stat"><b>314</b><span>prompts</span></div>
-    <div class="stat"><b>25</b><span>batches</span></div>
-    <div class="stat"><b>9</b><span>categories</span></div>
-    <div class="stat"><b><span id="shown">314</span></b><span>shown</span></div>
+    <div class="stat"><b>320</b><span>prompts</span></div>
+    <div class="stat"><b>26</b><span>batches</span></div>
+    <div class="stat"><b>10</b><span>categories</span></div>
+    <div class="stat"><b><span id="shown">320</span></b><span>shown</span></div>
   </div>
 </header>
 
 <div class="bar">
   <input id="q" type="search" placeholder="Search prompt id, filename, subject or description…" autocomplete="off">
-  <div class="filters"><button data-cat="all" class="on">all</button><button data-cat="char">char</button><button data-cat="food">food</button><button data-cat="fx">fx</button><button data-cat="ground">ground</button><button data-cat="nature">nature</button><button data-cat="prop">prop</button><button data-cat="struct">struct</button><button data-cat="ui">ui</button><button data-cat="veh">veh</button></div>
+  <div class="filters"><button data-cat="all" class="on">all</button><button data-cat="char">char</button><button data-cat="food">food</button><button data-cat="fx">fx</button><button data-cat="ground">ground</button><button data-cat="nature">nature</button><button data-cat="prop">prop</button><button data-cat="property">property</button><button data-cat="struct">struct</button><button data-cat="ui">ui</button><button data-cat="veh">veh</button></div>
 </div>
 
 <main>
@@ -22541,6 +22541,465 @@ No text baked into the artwork. Signage lettering is decorative shape only.
 [NOTE: This half must look unfinished on its own. That is correct; it is never shown without its partner.]
 [NOTE: The renderer puts the upper half’s bottom-centre on the lower half’s top edge with one pixel of overlap, so anything that does not line up shows as a seam.]
 [CRITICAL: the cut must be at the same y in both halves, and every shape crossing it — trunk, branch, body panel — must match in width, position and colour to the pixel. tests/unit/config/splitComposition.test.ts measures exactly that row and fails below 90%]</pre>
+        <div class="acts"><button data-copy="one">Copy prompt</button></div>
+      </article>
+    </section>
+    <section class="batch" id="batch-restaurant-evolution">
+      <h2>restaurant-evolution <span class="n">6 prompts</span>
+        <button data-copy="batch">Copy all in batch</button></h2>
+      <p class="note">Generate this batch in ONE session with the approved golden references attached (ASSET_PIPELINE §4.3 step 3). Same-session coherence is most of what keeps a category looking related; never generate these one at a time.</p>
+      <article class="card" data-cat="property" data-file="struct_counter_lv3@2x.png" data-search="p315 struct_counter_lv3@2x.png property property/struct counter lv3 the stage-4 restaurant frontage that struct_counter_lv2 grows into — same 3.0 x 0.8 m counter block and the same serving face, now a finished building front: rendered wall panel above the counter, a proper fascia band, a wide glazed section to one side and a tiled sill course, reading as a permanent premises rather than a converted stall">
+        <div class="head">
+          <span class="pid">P315</span>
+          <span class="file">struct_counter_lv3@2x.png</span>
+          <span class="tag">property</span>
+          <span class="tag">property/struct counter lv3</span>
+          
+          <span class="tag new">new in this audit</span>
+        </div>
+        <div class="meta">
+          <div><b>Subject:</b> the STAGE-4 restaurant frontage that struct_counter_lv2 grows into — same 3.0 x 0.8 m counter block and the same serving face, now a finished building front: rendered wall panel above the counter, a proper fascia band, a wide glazed section to one side and a tiled sill course, reading as a permanent premises rather than a converted stall</div>
+          <div><b>Size:</b> derived per part</div>
+          <div><b>Target file:</b> <span class="file">struct_counter_lv3@2x.png</span></div>
+          <div><b>Status:</b> MISSING + PROMPT ADDED</div>
+          <div><b>Runtime role:</b> main property Lv4 frame — the finished Stage-4 frontage</div>
+          <div><b>Priority:</b> P2 · <b>Stage:</b> 4 · <b>Needed before:</b> P19</div>
+        </div>
+        <pre>```
+STYLE
+Clean, warm, lightly stylised isometric illustration.
+NOT photorealistic. NOT pixel art. NOT heavy cartoon.
+Reference feel: the upper segment of modern mobile tycoon games —
+readable silhouettes, soft volume, calm colour.
+
+CAMERA
+2:1 dimetric isometric. Fixed. No exceptions.
+Approximately 30 degrees elevation, 45 degrees yaw.
+Orthographic — NO perspective convergence.
+
+LIGHT
+A single key light from the north-west (upper-left on screen), 35 degree pitch.
+Shadow falls to the lower-right: soft, 30% opacity, cool and bluish.
+Ambient is warm daylight. This NEVER changes — day/night is a runtime shader
+tint, never baked into an asset.
+
+OUTLINE
+2px outer contour at 2x scale. Dark and colour-derived — the dark saturated
+form of the object's own colour, NOT black.
+NO interior line work. Volume is described by shading, not by lines.
+
+DETAIL
+Medium. Silhouette first. Must still be recognisable at 1x (half size).
+Small details do not read at game size; they only add noise.
+
+PALETTE
+Locked 48-colour palette, attached. No colour outside it.
+Twelve four-step ramps; step 900 is the shadow side and supplies the outline,
+step 300 is the lit side.
+
+BACKGROUND
+Fully transparent RGBA. The ground shadow is a separate file, never baked in.
+
+ANCHOR
+Composed so the footprint centre — not the visual centre — sits on the ground
+plane: between the feet for a character, the centre of the four wheels for a
+vehicle, the centre of the base rectangle for furniture and buildings.
+
+HEIGHT LIMIT
+Nothing may exceed 160px tall at 2x scale as a single sprite. Taller subjects
+are produced as two separate images, a lower and an upper part, each complete
+and independently croppable.
+
+TEXT
+No text baked into the artwork. Signage lettering is decorative shape only.
+```
+
+[REFERENCE IMAGES: the delivered set this asset joins]
+---
+[SUBJECT: the STAGE-4 restaurant frontage that struct_counter_lv2 grows into — same 3.0 x 0.8 m counter block and the same serving face, now a finished building front: rendered wall panel above the counter, a proper fascia band, a wide glazed section to one side and a tiled sill course, reading as a permanent premises rather than a converted stall]
+[SIZE HINT: exactly the struct_counter_lv2 canvas at 2x (243 x 192 px), same anchor]
+[NOTE: Stage 4 is the same plot, the same camera and the same counter point as Stage 3 — the player must recognise the place they built. This is the Stage-3 diner having its frontage finished, not a new restaurant.]
+[NOTE: The counter surface must stay at the same height and the same y as struct_counter_lv2: the queue stands 0.8 m from the counter point and the serve animation targets that surface.]
+[DO NOT widen the footprint — the block is 3.0 x 0.8 m at every stage and the drive-thru is a separate asset]
+[DO NOT render legible signage text; the sign is its own object]</pre>
+        <div class="acts"><button data-copy="one">Copy prompt</button></div>
+      </article>
+      <article class="card" data-cat="property" data-file="struct_grill_lv3@2x.png" data-search="p316 struct_grill_lv3@2x.png property property/struct grill lv3 the third kitchen bench in the struct_grill_lv1 / struct_grill_lv2 family — same 1.2 x 0.7 m box and the same stainless language, now clearly the top of the line: a double burner section, a raised salamander shelf over the back edge, and a small utensil rail">
+        <div class="head">
+          <span class="pid">P316</span>
+          <span class="file">struct_grill_lv3@2x.png</span>
+          <span class="tag">property</span>
+          <span class="tag">property/struct grill lv3</span>
+          
+          <span class="tag new">new in this audit</span>
+        </div>
+        <div class="meta">
+          <div><b>Subject:</b> the THIRD kitchen bench in the struct_grill_lv1 / struct_grill_lv2 family — same 1.2 x 0.7 m box and the same stainless language, now clearly the top of the line: a double burner section, a raised salamander shelf over the back edge, and a small utensil rail</div>
+          <div><b>Size:</b> derived per part</div>
+          <div><b>Target file:</b> <span class="file">struct_grill_lv3@2x.png</span></div>
+          <div><b>Status:</b> MISSING + PROMPT ADDED</div>
+          <div><b>Runtime role:</b> kitchen property Lv3 frame — the third bench</div>
+          <div><b>Priority:</b> P2 · <b>Stage:</b> all · <b>Needed before:</b> P19</div>
+        </div>
+        <pre>```
+STYLE
+Clean, warm, lightly stylised isometric illustration.
+NOT photorealistic. NOT pixel art. NOT heavy cartoon.
+Reference feel: the upper segment of modern mobile tycoon games —
+readable silhouettes, soft volume, calm colour.
+
+CAMERA
+2:1 dimetric isometric. Fixed. No exceptions.
+Approximately 30 degrees elevation, 45 degrees yaw.
+Orthographic — NO perspective convergence.
+
+LIGHT
+A single key light from the north-west (upper-left on screen), 35 degree pitch.
+Shadow falls to the lower-right: soft, 30% opacity, cool and bluish.
+Ambient is warm daylight. This NEVER changes — day/night is a runtime shader
+tint, never baked into an asset.
+
+OUTLINE
+2px outer contour at 2x scale. Dark and colour-derived — the dark saturated
+form of the object's own colour, NOT black.
+NO interior line work. Volume is described by shading, not by lines.
+
+DETAIL
+Medium. Silhouette first. Must still be recognisable at 1x (half size).
+Small details do not read at game size; they only add noise.
+
+PALETTE
+Locked 48-colour palette, attached. No colour outside it.
+Twelve four-step ramps; step 900 is the shadow side and supplies the outline,
+step 300 is the lit side.
+
+BACKGROUND
+Fully transparent RGBA. The ground shadow is a separate file, never baked in.
+
+ANCHOR
+Composed so the footprint centre — not the visual centre — sits on the ground
+plane: between the feet for a character, the centre of the four wheels for a
+vehicle, the centre of the base rectangle for furniture and buildings.
+
+HEIGHT LIMIT
+Nothing may exceed 160px tall at 2x scale as a single sprite. Taller subjects
+are produced as two separate images, a lower and an upper part, each complete
+and independently croppable.
+
+TEXT
+No text baked into the artwork. Signage lettering is decorative shape only.
+```
+
+[REFERENCE IMAGES: the delivered set this asset joins]
+---
+[SUBJECT: the THIRD kitchen bench in the struct_grill_lv1 / struct_grill_lv2 family — same 1.2 x 0.7 m box and the same stainless language, now clearly the top of the line: a double burner section, a raised salamander shelf over the back edge, and a small utensil rail]
+[SIZE HINT: exactly the struct_grill_lv2 canvas at 2x, same anchor]
+[NOTE: The three benches are read side by side in the kitchen, so the progression must be legible at a glance: lv1 plain, lv2 with the extended top, lv3 with the shelf above it.]
+[NOTE: Silhouette carries the difference — the shelf is what a player sees from the isometric camera.]
+[DO NOT add food, flames or steam — the renderer emits those as FX]</pre>
+        <div class="acts"><button data-copy="one">Copy prompt</button></div>
+      </article>
+      <article class="card" data-cat="property" data-file="struct_counter_wide_lv1@2x.png" data-search="p317 struct_counter_wide_lv1@2x.png property property/struct counter wide lv1 the widened service counter the bigger-counter rung installs — the struct_counter_lv1 cabinet extended along its long axis with a second serving position: two till stations on the surface, a longer sneeze-guard rail, one continuous cabinet front">
+        <div class="head">
+          <span class="pid">P317</span>
+          <span class="file">struct_counter_wide_lv1@2x.png</span>
+          <span class="tag">property</span>
+          <span class="tag">property/struct counter wide lv1</span>
+          
+          <span class="tag new">new in this audit</span>
+        </div>
+        <div class="meta">
+          <div><b>Subject:</b> the WIDENED service counter the bigger-counter rung installs — the struct_counter_lv1 cabinet extended along its long axis with a second serving position: two till stations on the surface, a longer sneeze-guard rail, one continuous cabinet front</div>
+          <div><b>Size:</b> derived per part</div>
+          <div><b>Target file:</b> <span class="file">struct_counter_wide_lv1@2x.png</span></div>
+          <div><b>Status:</b> MISSING + PROMPT ADDED</div>
+          <div><b>Runtime role:</b> service property Lv2 frame — the widened counter</div>
+          <div><b>Priority:</b> P2 · <b>Stage:</b> all · <b>Needed before:</b> P19</div>
+        </div>
+        <pre>```
+STYLE
+Clean, warm, lightly stylised isometric illustration.
+NOT photorealistic. NOT pixel art. NOT heavy cartoon.
+Reference feel: the upper segment of modern mobile tycoon games —
+readable silhouettes, soft volume, calm colour.
+
+CAMERA
+2:1 dimetric isometric. Fixed. No exceptions.
+Approximately 30 degrees elevation, 45 degrees yaw.
+Orthographic — NO perspective convergence.
+
+LIGHT
+A single key light from the north-west (upper-left on screen), 35 degree pitch.
+Shadow falls to the lower-right: soft, 30% opacity, cool and bluish.
+Ambient is warm daylight. This NEVER changes — day/night is a runtime shader
+tint, never baked into an asset.
+
+OUTLINE
+2px outer contour at 2x scale. Dark and colour-derived — the dark saturated
+form of the object's own colour, NOT black.
+NO interior line work. Volume is described by shading, not by lines.
+
+DETAIL
+Medium. Silhouette first. Must still be recognisable at 1x (half size).
+Small details do not read at game size; they only add noise.
+
+PALETTE
+Locked 48-colour palette, attached. No colour outside it.
+Twelve four-step ramps; step 900 is the shadow side and supplies the outline,
+step 300 is the lit side.
+
+BACKGROUND
+Fully transparent RGBA. The ground shadow is a separate file, never baked in.
+
+ANCHOR
+Composed so the footprint centre — not the visual centre — sits on the ground
+plane: between the feet for a character, the centre of the four wheels for a
+vehicle, the centre of the base rectangle for furniture and buildings.
+
+HEIGHT LIMIT
+Nothing may exceed 160px tall at 2x scale as a single sprite. Taller subjects
+are produced as two separate images, a lower and an upper part, each complete
+and independently croppable.
+
+TEXT
+No text baked into the artwork. Signage lettering is decorative shape only.
+```
+
+[REFERENCE IMAGES: the delivered set this asset joins]
+---
+[SUBJECT: the WIDENED service counter the bigger-counter rung installs — the struct_counter_lv1 cabinet extended along its long axis with a second serving position: two till stations on the surface, a longer sneeze-guard rail, one continuous cabinet front]
+[SIZE HINT: exactly the struct_counter_lv1 canvas at 2x, same anchor]
+[NOTE: Drawn at the same counter point as struct_counter_lv1; the extra width is what tells the player their queue got shorter.]
+[NOTE: The overhang stays over the same 0.4 m blocked band — customers walk under the lip, and moving it changes where the queue can stand.]
+[DO NOT draw staff or customers; DO NOT bake a ground shadow]</pre>
+        <div class="acts"><button data-copy="one">Copy prompt</button></div>
+      </article>
+      <article class="card" data-cat="property" data-file="struct_forecourt_lv1@2x.png" data-search="p318 struct_forecourt_lv1@2x.png property property/struct forecourt lv1 front-of-house dressing for a tidied forecourt: a low planter run, two rope-and-post stanchions and a small paved apron, as one cluster on transparent ground, arranged along the isometric x axis so it reads as an edge rather than a blob">
+        <div class="head">
+          <span class="pid">P318</span>
+          <span class="file">struct_forecourt_lv1@2x.png</span>
+          <span class="tag">property</span>
+          <span class="tag">property/struct forecourt lv1</span>
+          
+          <span class="tag new">new in this audit</span>
+        </div>
+        <div class="meta">
+          <div><b>Subject:</b> front-of-house dressing for a tidied forecourt: a low planter run, two rope-and-post stanchions and a small paved apron, as ONE cluster on transparent ground, arranged along the isometric x axis so it reads as an edge rather than a blob</div>
+          <div><b>Size:</b> derived per part</div>
+          <div><b>Target file:</b> <span class="file">struct_forecourt_lv1@2x.png</span></div>
+          <div><b>Status:</b> MISSING + PROMPT ADDED</div>
+          <div><b>Runtime role:</b> service property Lv4 frame — the tidied forecourt</div>
+          <div><b>Priority:</b> P2 · <b>Stage:</b> all · <b>Needed before:</b> P19</div>
+        </div>
+        <pre>```
+STYLE
+Clean, warm, lightly stylised isometric illustration.
+NOT photorealistic. NOT pixel art. NOT heavy cartoon.
+Reference feel: the upper segment of modern mobile tycoon games —
+readable silhouettes, soft volume, calm colour.
+
+CAMERA
+2:1 dimetric isometric. Fixed. No exceptions.
+Approximately 30 degrees elevation, 45 degrees yaw.
+Orthographic — NO perspective convergence.
+
+LIGHT
+A single key light from the north-west (upper-left on screen), 35 degree pitch.
+Shadow falls to the lower-right: soft, 30% opacity, cool and bluish.
+Ambient is warm daylight. This NEVER changes — day/night is a runtime shader
+tint, never baked into an asset.
+
+OUTLINE
+2px outer contour at 2x scale. Dark and colour-derived — the dark saturated
+form of the object's own colour, NOT black.
+NO interior line work. Volume is described by shading, not by lines.
+
+DETAIL
+Medium. Silhouette first. Must still be recognisable at 1x (half size).
+Small details do not read at game size; they only add noise.
+
+PALETTE
+Locked 48-colour palette, attached. No colour outside it.
+Twelve four-step ramps; step 900 is the shadow side and supplies the outline,
+step 300 is the lit side.
+
+BACKGROUND
+Fully transparent RGBA. The ground shadow is a separate file, never baked in.
+
+ANCHOR
+Composed so the footprint centre — not the visual centre — sits on the ground
+plane: between the feet for a character, the centre of the four wheels for a
+vehicle, the centre of the base rectangle for furniture and buildings.
+
+HEIGHT LIMIT
+Nothing may exceed 160px tall at 2x scale as a single sprite. Taller subjects
+are produced as two separate images, a lower and an upper part, each complete
+and independently croppable.
+
+TEXT
+No text baked into the artwork. Signage lettering is decorative shape only.
+```
+
+[REFERENCE IMAGES: the delivered set this asset joins]
+---
+[SUBJECT: front-of-house dressing for a tidied forecourt: a low planter run, two rope-and-post stanchions and a small paved apron, as ONE cluster on transparent ground, arranged along the isometric x axis so it reads as an edge rather than a blob]
+[SIZE HINT: 320 x 200 px at 2x, footprint 3.0 x 1.0 m]
+[NOTE: Sits in front of the counter where the queue forms; it must not read as an obstacle in the walking lane, because it is not one — nothing blocks here.]
+[NOTE: Joins struct_barrier and struct_planter in language: same stone, same rope, same value range.]
+[DO NOT enclose the space — an open front is what makes it a forecourt and not a fence]</pre>
+        <div class="acts"><button data-copy="one">Copy prompt</button></div>
+      </article>
+      <article class="card" data-cat="property" data-file="struct_sign_large_lit_upper@2x.png" data-search="p319 struct_sign_large_lit_upper@2x.png property property/struct sign large lit upper the upper half only of the delivered struct_sign_large signboard, now illuminated: same board, same posts, same twin lamps, with the lamps lit — warm pool of light across the board face, the painted menu illustration clearly visible inside it, and a soft glow falloff at the board edges">
+        <div class="head">
+          <span class="pid">P319</span>
+          <span class="file">struct_sign_large_lit_upper@2x.png</span>
+          <span class="tag">property</span>
+          <span class="tag">property/struct sign large lit upper</span>
+          
+          <span class="tag new">new in this audit</span>
+        </div>
+        <div class="meta">
+          <div><b>Subject:</b> the UPPER HALF ONLY of the delivered struct_sign_large signboard, now ILLUMINATED: same board, same posts, same twin lamps, with the lamps LIT — warm pool of light across the board face, the painted menu illustration clearly visible inside it, and a soft glow falloff at the board edges</div>
+          <div><b>Size:</b> derived per part</div>
+          <div><b>Target file:</b> <span class="file">struct_sign_large_lit_upper@2x.png</span></div>
+          <div><b>Status:</b> MISSING + PROMPT ADDED</div>
+          <div><b>Runtime role:</b> frontage property Lv3 frame — the illuminated board</div>
+          <div><b>Priority:</b> P2 · <b>Stage:</b> all · <b>Needed before:</b> P19</div>
+        </div>
+        <pre>```
+STYLE
+Clean, warm, lightly stylised isometric illustration.
+NOT photorealistic. NOT pixel art. NOT heavy cartoon.
+Reference feel: the upper segment of modern mobile tycoon games —
+readable silhouettes, soft volume, calm colour.
+
+CAMERA
+2:1 dimetric isometric. Fixed. No exceptions.
+Approximately 30 degrees elevation, 45 degrees yaw.
+Orthographic — NO perspective convergence.
+
+LIGHT
+A single key light from the north-west (upper-left on screen), 35 degree pitch.
+Shadow falls to the lower-right: soft, 30% opacity, cool and bluish.
+Ambient is warm daylight. This NEVER changes — day/night is a runtime shader
+tint, never baked into an asset.
+
+OUTLINE
+2px outer contour at 2x scale. Dark and colour-derived — the dark saturated
+form of the object's own colour, NOT black.
+NO interior line work. Volume is described by shading, not by lines.
+
+DETAIL
+Medium. Silhouette first. Must still be recognisable at 1x (half size).
+Small details do not read at game size; they only add noise.
+
+PALETTE
+Locked 48-colour palette, attached. No colour outside it.
+Twelve four-step ramps; step 900 is the shadow side and supplies the outline,
+step 300 is the lit side.
+
+BACKGROUND
+Fully transparent RGBA. The ground shadow is a separate file, never baked in.
+
+ANCHOR
+Composed so the footprint centre — not the visual centre — sits on the ground
+plane: between the feet for a character, the centre of the four wheels for a
+vehicle, the centre of the base rectangle for furniture and buildings.
+
+HEIGHT LIMIT
+Nothing may exceed 160px tall at 2x scale as a single sprite. Taller subjects
+are produced as two separate images, a lower and an upper part, each complete
+and independently croppable.
+
+TEXT
+No text baked into the artwork. Signage lettering is decorative shape only.
+```
+
+[REFERENCE IMAGES: the delivered set this asset joins]
+---
+[SUBJECT: the UPPER HALF ONLY of the delivered struct_sign_large signboard, now ILLUMINATED: same board, same posts, same twin lamps, with the lamps LIT — warm pool of light across the board face, the painted menu illustration clearly visible inside it, and a soft glow falloff at the board edges]
+[SIZE HINT: same canvas as struct_sign_large_upper at 2x]
+[NOTE: Anchor, proportions and palette identical to struct_sign_large_upper and to struct_sign_large_painted_upper (P307) — the runtime swaps the frame as the sign rung is bought, and the three must line up to the pixel.]
+[NOTE: This is the painted board with its lamps on. Draw the painted board first, then light it.]
+[NOTE: The lower half is unchanged and is NOT regenerated; only the board above the cut is lit.]
+[DO NOT render legible text — squiggles that read as writing, never actual letters]
+[DO NOT let the glow cross the bottom edge of the canvas; the join row must stay identical to the unlit upper half]</pre>
+        <div class="acts"><button data-copy="one">Copy prompt</button></div>
+      </article>
+      <article class="card" data-cat="property" data-file="struct_frontage_lights@2x.png" data-search="p320 struct_frontage_lights@2x.png property property/struct frontage lights a run of warm festoon lights for the building frontage — a gentle catenary of small bulbs on a dark cable, lit, with a short bracket at each end, on transparent ground">
+        <div class="head">
+          <span class="pid">P320</span>
+          <span class="file">struct_frontage_lights@2x.png</span>
+          <span class="tag">property</span>
+          <span class="tag">property/struct frontage lights</span>
+          
+          <span class="tag new">new in this audit</span>
+        </div>
+        <div class="meta">
+          <div><b>Subject:</b> a run of warm festoon lights for the building frontage — a gentle catenary of small bulbs on a dark cable, lit, with a short bracket at each end, on transparent ground</div>
+          <div><b>Size:</b> derived per part</div>
+          <div><b>Target file:</b> <span class="file">struct_frontage_lights@2x.png</span></div>
+          <div><b>Status:</b> MISSING + PROMPT ADDED</div>
+          <div><b>Runtime role:</b> frontage property Lv4 frame — facade lighting</div>
+          <div><b>Priority:</b> P2 · <b>Stage:</b> 4 · <b>Needed before:</b> P19</div>
+        </div>
+        <pre>```
+STYLE
+Clean, warm, lightly stylised isometric illustration.
+NOT photorealistic. NOT pixel art. NOT heavy cartoon.
+Reference feel: the upper segment of modern mobile tycoon games —
+readable silhouettes, soft volume, calm colour.
+
+CAMERA
+2:1 dimetric isometric. Fixed. No exceptions.
+Approximately 30 degrees elevation, 45 degrees yaw.
+Orthographic — NO perspective convergence.
+
+LIGHT
+A single key light from the north-west (upper-left on screen), 35 degree pitch.
+Shadow falls to the lower-right: soft, 30% opacity, cool and bluish.
+Ambient is warm daylight. This NEVER changes — day/night is a runtime shader
+tint, never baked into an asset.
+
+OUTLINE
+2px outer contour at 2x scale. Dark and colour-derived — the dark saturated
+form of the object's own colour, NOT black.
+NO interior line work. Volume is described by shading, not by lines.
+
+DETAIL
+Medium. Silhouette first. Must still be recognisable at 1x (half size).
+Small details do not read at game size; they only add noise.
+
+PALETTE
+Locked 48-colour palette, attached. No colour outside it.
+Twelve four-step ramps; step 900 is the shadow side and supplies the outline,
+step 300 is the lit side.
+
+BACKGROUND
+Fully transparent RGBA. The ground shadow is a separate file, never baked in.
+
+ANCHOR
+Composed so the footprint centre — not the visual centre — sits on the ground
+plane: between the feet for a character, the centre of the four wheels for a
+vehicle, the centre of the base rectangle for furniture and buildings.
+
+HEIGHT LIMIT
+Nothing may exceed 160px tall at 2x scale as a single sprite. Taller subjects
+are produced as two separate images, a lower and an upper part, each complete
+and independently croppable.
+
+TEXT
+No text baked into the artwork. Signage lettering is decorative shape only.
+```
+
+[REFERENCE IMAGES: the delivered set this asset joins]
+---
+[SUBJECT: a run of warm festoon lights for the building frontage — a gentle catenary of small bulbs on a dark cable, lit, with a short bracket at each end, on transparent ground]
+[SIZE HINT: 384 x 96 px at 2x, footprint 3.0 x 0.2 m]
+[NOTE: Drawn across the front of the building at Stage-4 frontage level; the cable sags below the fascia and the bulbs are the only light source in the sprite.]
+[NOTE: Must read at dusk and at noon — the bulbs carry a lit core plus a small warm halo rather than a full-sprite bloom.]
+[DO NOT bake the wall behind it — this composites over whatever building it hangs on]
+[DO NOT animate; the renderer handles any flicker]</pre>
         <div class="acts"><button data-copy="one">Copy prompt</button></div>
       </article>
     </section>

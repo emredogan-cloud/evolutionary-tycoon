@@ -3,6 +3,9 @@ import { UPGRADES } from '@config/economy/upgrades';
 import { Sim } from '@sim/core/Sim';
 import type { World } from '@sim/core/World';
 import { EMPLOYEE_ROLES } from '@config/employees';
+import { property, propertyCost, propertyVia } from '@config/properties';
+import { requirementFor } from '@config/progression';
+import { missingProperties } from '@sim/systems/ProgressionSystem';
 import { BUILDINGS, buildingAsset, buildingCost, stageForLevel } from '@config/buildings';
 import { navigationIntact } from '@sim/nav/reachability';
 import { previewPlacement } from '@sim/systems/LayoutSystem';
@@ -209,12 +212,42 @@ function snapshot(world: World, tick: number, spentThisStage: number): PolicySna
     employees: world.employees.activeCount,
     employeesByRole: roleCounts(world),
     buildings: buildingOptions(world),
+    missingProperties: propertyGaps(world),
     upgradesBought: totalUpgradeLevels(world),
     spentOnUpgradesThisStage: spentThisStage,
     upgrades: optionsFor(world),
     canEvolve: world.progression.pendingStage > 0,
     constructing: world.construction.targetStage !== 0,
   };
+}
+
+/**
+ * What the next stage's property floor still wants, and what it would cost.
+ *
+ * Priced from the same config the purchase charges — a derived property's rung
+ * from `UPGRADES`, an own ladder's level from `PROPERTIES` — so a policy
+ * budgeting against these numbers is budgeting against the real ones.
+ */
+function propertyGaps(world: World): PolicySnapshot['missingProperties'] {
+  const requirement = requirementFor(world.progression.stage);
+  if (requirement === null) return [];
+
+  const gaps: { id: string; have: number; need: number; cost: number; via: string | null }[] = [];
+  for (const { id, have, need } of missingProperties(world, requirement)) {
+    const spec = property(id);
+    if (spec === undefined) continue;
+    if (spec.ladder === 'own') {
+      gaps.push({ id, have, need, cost: propertyCost(spec, have + 1) ?? 0, via: null });
+      continue;
+    }
+    const via = propertyVia(spec, have + 1);
+    if (via === undefined) continue;
+    gaps.push({ id, have, need, cost: nextUpgradeCost(world, via), via });
+  }
+  // Cheapest first: a policy short of cash should be able to make progress on
+  // the floor rather than stall against its most expensive rung.
+  gaps.sort((a, b) => (a.cost === b.cost ? a.id.localeCompare(b.id) : a.cost - b.cost));
+  return gaps;
 }
 
 /**

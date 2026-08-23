@@ -1,4 +1,4 @@
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from '../systems/properties';
 import type { World } from '../core/World';
 import { NavGrid } from './NavGrid';
 
@@ -36,7 +36,7 @@ import { NavGrid } from './NavGrid';
  * reaches the counter is no comfort to a lane that does not reach its window.
  */
 export function navigationIntact(world: World): boolean {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   const grid = new NavGrid(layout);
   grid.rebuild(world.layout.placed);
 

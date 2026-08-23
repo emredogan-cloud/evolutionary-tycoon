@@ -90,6 +90,26 @@ export interface PolicySnapshot {
     /** A legal cell for a first purchase, or null when the lot is full. */
     readonly spot: { readonly x: number; readonly y: number } | null;
   }[];
+  /**
+   * Properties still below the next stage's floor, cheapest route first.
+   *
+   * The restaurant evolution system gave stage transitions a *property* floor
+   * on top of the cash and the milestone: a stage does not open because the
+   * till is full, it opens because the car park, the counter and the frontage
+   * have been developed. A policy blind to that never evolves at all —
+   * measured, all four reported `stage-2-timing: never` the moment the floor
+   * shipped, which is the gate doing its job.
+   *
+   * `via` is the command the policy should issue: an upgrade id for a derived
+   * property, or `null` for one with its own ladder (`UPGRADE_PROPERTY`).
+   */
+  readonly missingProperties: readonly {
+    readonly id: string;
+    readonly have: number;
+    readonly need: number;
+    readonly cost: number;
+    readonly via: string | null;
+  }[];
   readonly upgradesBought: number;
   /** Credits already spent on upgrades since entering this stage. */
   readonly spentOnUpgradesThisStage: number;

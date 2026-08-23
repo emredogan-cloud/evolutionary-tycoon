@@ -3,6 +3,7 @@ import { STAGE_TRANSITION_MODE, requirementFor } from '@config/progression';
 import { TICK_MS } from '@config/simulation';
 import { STATE_GONE } from '@sim/ai/fsm/customerFsm';
 import { Sim } from '@sim/core/Sim';
+import { upgradeProperty } from '@sim/systems/properties';
 import { meetsRequirement } from '@sim/systems/ProgressionSystem';
 import { buyUpgrade } from '@sim/systems/UpgradeSystem';
 
@@ -27,6 +28,22 @@ const LONG_RUN_TIMEOUT_MS = 180_000;
  * event into a decision they chose the timing of — and the requirements stay
  * met, so nothing is lost by waiting.
  */
+/**
+ * What a Stage-1 player spends on, every thirty seconds.
+ *
+ * Deliberately *not* the balance simulator's budgeted policy: this one spends
+ * as it earns. What changed on 2026-08-23 is what it spends on — the stage
+ * requirement gained a property floor, so a player working toward Stage 2 buys
+ * the car park and the wider counter rather than a fifth sign. Ordered by what
+ * the floor asks for; the sign is last because it is the cheapest and the
+ * player already owns level 1 of it long before the others land.
+ */
+function spendTowardStageTwo(sim: Sim): void {
+  if (upgradeProperty(sim.world, 'parking') === 'ok') return;
+  if (buyUpgrade(sim.world, 'bigger-counter') === 'ok') return;
+  buyUpgrade(sim.world, 'hand-painted-sign');
+}
+
 describe('what is happening when a stage unlocks', () => {
   it(
     'is always the middle of service, on every seed',
@@ -44,7 +61,7 @@ describe('what is happening when a stage unlocks', () => {
           sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
           sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
           // A player spending as they go, which is how the milestone is reached.
-          if (tick % 600 === 0) buyUpgrade(sim.world, 'hand-painted-sign');
+          if (tick % 600 === 0) spendTowardStageTwo(sim);
           sim.tick();
           if (meetsRequirement(sim.world, requirement)) break;
         }
@@ -105,7 +122,7 @@ describe('what is happening when a stage unlocks', () => {
       for (; tick < 200_000; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
         sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
-        if (tick % 600 === 0) buyUpgrade(sim.world, 'hand-painted-sign');
+        if (tick % 600 === 0) spendTowardStageTwo(sim);
         sim.tick();
         if (meetsRequirement(sim.world, requirement)) break;
       }

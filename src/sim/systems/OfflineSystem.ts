@@ -10,7 +10,7 @@ import {
 import type { OfflineReportLimiter } from '@config/economy/offline';
 import { MENU } from '@config/economy/menu';
 import { STATIONS, station } from '@config/economy/stations';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import type { World } from '../core/World';
 import { effectValue } from './UpgradeSystem';
 import type { OfflineMeterSummary } from './offlineMeter';
@@ -121,7 +121,7 @@ export function decideElapsed(evidence: ClockEvidence): ElapsedDecision {
  * flow, which the measured throughput already is.
  */
 export function physicalCapacityPerMin(world: World): number {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
 
   let fastestPrepMs = Number.POSITIVE_INFINITY;
   for (const item of MENU) {

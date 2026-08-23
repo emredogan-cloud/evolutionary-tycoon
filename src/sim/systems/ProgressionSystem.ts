@@ -5,6 +5,7 @@ import { building, buildingAsset } from '@config/buildings';
 import type { PendingBuild, Stage } from '../core/types';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
+import { applyPropertyLevel, propertyLevel } from './properties';
 import { applyUpgradeLevel, totalUpgradeLevels } from './UpgradeSystem';
 
 /**
@@ -150,8 +151,32 @@ export function meetsRequirement(world: World, requirement: StageRequirement): b
     world.stats.customersServed >= requirement.customersServed &&
     totalUpgradeLevels(world) >= requirement.upgradesBought &&
     world.employees.activeCount >= requirement.employeesHired &&
-    world.economy.reputation >= requirement.reputation
+    world.economy.reputation >= requirement.reputation &&
+    missingProperties(world, requirement).length === 0
   );
+}
+
+/**
+ * Which properties are still below the incoming stage's floor.
+ *
+ * Returns the shortfall rather than a boolean so the interface can say **which**
+ * one is missing and by how much — "PARK LV2 GEREKLİ", not a greyed-out button.
+ * The directive's §16 is explicit about that and it is the same principle the
+ * upgrade cards already follow: locked content stays visible with its reason.
+ */
+export function missingProperties(
+  world: World,
+  requirement: StageRequirement,
+): readonly { readonly id: string; readonly have: number; readonly need: number }[] {
+  const short: { id: string; have: number; need: number }[] = [];
+  // Sorted, because this reaches the interface and a set's iteration order is
+  // not something a player should see change between two identical worlds.
+  for (const id of Object.keys(requirement.requiredProperties).sort()) {
+    const need = requirement.requiredProperties[id] ?? 0;
+    const have = propertyLevel(world, id);
+    if (have < need) short.push({ id, have, need });
+  }
+  return short;
 }
 
 /**
@@ -237,7 +262,15 @@ export function advancePendingBuilds(world: World, deltaMs: number): void {
      * frame is swapped with the level so the two cannot disagree.
      */
     const target = build.targetLevel ?? 0;
-    if (target > 0) applyBuildingLevel(world, build, target);
+    /*
+     * A property site raises a property; a building site raises the object
+     * standing on its cell. They are told apart by `propertyId` rather than by
+     * `objectId === ''`, because "no object" is a fact about how a car park is
+     * drawn and not about what the site is for.
+     */
+    const propertyId = build.propertyId ?? '';
+    if (propertyId !== '') applyPropertyLevel(world, propertyId, target);
+    else if (target > 0) applyBuildingLevel(world, build, target);
   }
   if (write !== builds.length) {
     builds.length = write;

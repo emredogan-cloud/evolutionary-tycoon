@@ -1,4 +1,6 @@
 import { UiBridge } from '@app/bridge/UiBridge';
+import { property, propertyVia } from '@config/properties';
+import { propertyLevel } from '@sim/systems/properties';
 import { EVENT_SPECS } from '@config/events';
 import { WEATHER_STATES } from '@config/weather';
 import type { UiCommands } from '@app/bridge/hudModel';
@@ -323,6 +325,33 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       },
       setSpeed: (mult: 1 | 2 | 4) => {
         sim.dispatch({ t: 'SET_SPEED', mult });
+      },
+      /*
+       * One verb, three doors — `docs/RESTAURANT_EVOLUTION_ROADMAP.md` §D.
+       *
+       * The inspect card asks to raise a property and does not care how; this
+       * is the only place that knows. The main building is the stage, so it
+       * evolves; a property with its own ladder gets `UPGRADE_PROPERTY`; a
+       * derived one buys the rung it reads its level from, through the ordinary
+       * upgrade path so every gate that path enforces still applies.
+       *
+       * Deciding it here rather than in the component is what keeps the
+       * component from needing to know what a "derived property" is — and what
+       * stops a second mapping of property → purchase existing to drift.
+       */
+      upgradeProperty: (id: string) => {
+        const spec = property(id);
+        if (spec === undefined) return;
+        if (spec.ladder === 'stage') {
+          sim.dispatch({ t: 'EVOLVE' });
+          return;
+        }
+        if (spec.ladder === 'own') {
+          sim.dispatch({ t: 'UPGRADE_PROPERTY', propertyId: id });
+          return;
+        }
+        const via = propertyVia(spec, propertyLevel(sim.world, id) + 1);
+        if (via !== undefined) sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: via });
       },
       buyUpgrade: (id: string) => {
         sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: id });

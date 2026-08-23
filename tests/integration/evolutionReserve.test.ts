@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buyBuilt } from '../helpers/build';
+import { buyBuilt, raiseProperties } from '../helpers/build';
 import { requirementFor } from '@config/progression';
 import { TICK_MS } from '@config/simulation';
 import { Sim } from '@sim/core/Sim';
@@ -51,6 +51,10 @@ function qualifyExceptCash(sim: Sim, stage: 1 | 2 | 3): void {
     if (!bought) throw new Error('no purchasable upgrade left below the milestone');
   }
   for (let i = 0; i < requirement.employeesHired; i++) hire(sim.world, 'cook', 0.5);
+  // And the property floor, through the real purchase paths — see
+  // `raiseProperties`. The sweep above may already have bought some of the
+  // rungs a derived property reads; raising is idempotent against that.
+  raiseProperties(sim.world, requirement);
   sim.world.economy.cash = held;
 }
 

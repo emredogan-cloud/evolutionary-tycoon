@@ -34,6 +34,8 @@ export interface WorldSnapshot {
     readonly milestones: readonly string[];
     /** A stage whose requirements are met, awaiting the player — Phase 11. */
     readonly pendingStage: number;
+    /** Property id → level, for ladders a property owns — schema v15. */
+    readonly propertyLevels: readonly (readonly [string, number])[];
   };
   /**
    * The building mid-growth — Phase 11.
@@ -243,6 +245,7 @@ export function snapshotWorld(world: World): WorldSnapshot {
       unlocks: [...world.progression.unlocks],
       milestones: [...world.progression.milestones],
       pendingStage: world.progression.pendingStage,
+      propertyLevels: sortedEntries(world.progression.propertyLevels),
     },
     construction: {
       targetStage: world.construction.targetStage,
@@ -329,6 +332,9 @@ export function restoreWorld(world: World, snapshot: WorldSnapshot): void {
   world.progression.unlocks.push(...snapshot.progression.unlocks);
   world.progression.milestones.push(...snapshot.progression.milestones);
   world.progression.pendingStage = snapshot.progression.pendingStage;
+  for (const [key, value] of snapshot.progression.propertyLevels) {
+    world.progression.propertyLevels.set(key, value);
+  }
   world.construction.targetStage = snapshot.construction.targetStage;
   world.construction.elapsedMs = snapshot.construction.elapsedMs;
   world.construction.totalMs = snapshot.construction.totalMs;

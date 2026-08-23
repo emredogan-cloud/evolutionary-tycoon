@@ -434,6 +434,44 @@ const v13ToV14: Migration = {
   up: (save) => ({ ...save, schemaVersion: 14 }),
 };
 
+/**
+ * v15 — the restaurant evolution system's property levels.
+ *
+ * `progression.propertyLevels` is a new field and it is **not** defaulted to
+ * empty. A v14 save at Stage N already had that stage's car park — Stage 2's
+ * five bays, Stage 3's eight — because the bay count was a property of the
+ * stage layout and nothing else. Migrating it to `parking: 1` would take four
+ * bays away from a player who never lost them, so the level is set to the one
+ * that reproduces the car park the save already had:
+ *
+ *     parking = min(3, stage)
+ *
+ * Which is the whole reason the level→bay table is the existing stage counts
+ * (`PARKING_BAYS_BY_LEVEL = [4, 5, 8]`, `src/config/properties.ts`): at
+ * `level === stage` the resolved layout **is** the stage layout, so every
+ * migrated save and every balance number measured before this system keeps its
+ * exact value.
+ *
+ * `pendingBuilds[].propertyId` is optional and absent everywhere in a v14 save,
+ * which reads as "this site is a machine or an upgrade" — the truth.
+ */
+const v14ToV15: Migration = {
+  from: 14,
+  to: 15,
+  up: (save) => {
+    const progression = (save['progression'] ?? {}) as Record<string, unknown>;
+    const stage = typeof progression['stage'] === 'number' ? progression['stage'] : 1;
+    return {
+      ...save,
+      schemaVersion: 15,
+      progression: {
+        ...progression,
+        propertyLevels: [['parking', Math.max(1, Math.min(3, Math.trunc(stage)))]],
+      },
+    };
+  },
+};
+
 export const migrations: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -448,6 +486,7 @@ export const migrations: readonly Migration[] = [
   v11ToV12,
   v12ToV13,
   v13ToV14,
+  v14ToV15,
 ];
 
 assertContiguous(migrations);

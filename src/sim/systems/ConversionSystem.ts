@@ -22,7 +22,7 @@ import {
   WEATHER_FACTOR_PLACEHOLDER,
 } from '@config/conversion';
 import { DRIVE_THRU_SHARE } from '@config/driveThru';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { CHANNEL_COUNTER, CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
 import { queueCapacityOf } from './QueueSystem';
@@ -233,7 +233,7 @@ export class ConversionSystem implements SimSystem {
      * subtracts from the drive-thru share, floored at zero: rain sends people
      * inside, it does not conjure a lane where none exists.
      */
-    const layoutNow = layoutForStage(world.progression.stage);
+    const layoutNow = layoutOf(world);
     const driveThruShare = Math.max(0, DRIVE_THRU_SHARE - environmentSeatedBias(world));
     customer.channel =
       layoutNow.driveThru !== null && world.rng.customer.next() < driveThruShare
@@ -245,7 +245,7 @@ export class ConversionSystem implements SimSystem {
     customer.patienceMaxMs = 0;
     customer.reason = REASON_JUST_PASSING;
     customer.arrivedAtMs = world.clock.simTimeMs;
-    const layout = layoutForStage(world.progression.stage);
+    const layout = layoutOf(world);
     customer.x = layout.pullIn.x;
     customer.y = layout.pullIn.y;
     customer.z = 0;
@@ -300,7 +300,7 @@ export class ConversionSystem implements SimSystem {
     this.set(2, MENU_APPEAL_PLACEHOLDER * effectValue(world, 'menuAppeal'), REASON_NO_DESIRED_ITEM);
     this.set(3, PRICE_FIT_PLACEHOLDER, REASON_PRICE_TOO_HIGH);
     this.set(4, queuePenalty(queueLength), REASON_QUEUE_TOO_LONG);
-    const layout = layoutForStage(world.progression.stage);
+    const layout = layoutOf(world);
     this.set(5, spilloverPenalty(queueLength, queueCapacityOf(world, layout)), REASON_QUEUE_TOO_LONG);
     this.set(6, reputationFactor(world.economy.reputation), REASON_REPUTATION_LOW);
     this.set(7, timeOfDayFit(hour), REASON_WRONG_TIME);

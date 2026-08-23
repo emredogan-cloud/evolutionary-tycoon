@@ -85,6 +85,19 @@ export interface ProgressionState {
    * busiest.
    */
   pendingStage: number;
+  /**
+   * Property id → level, for the ladders a property owns itself.
+   *
+   * Only `parking` has an entry today; every other property's level is
+   * *derived* from the upgrade tree, so storing it would be a second copy of a
+   * number that already exists (`src/config/properties.ts`). A Map rather than
+   * a field for the same reason `layout.upgrades` is one: the set grows, and a
+   * new field per ladder is a save migration per ladder.
+   *
+   * Hashed and saved. It changes outcomes — the number of bays decides how many
+   * cars convert — so it is simulation state, not presentation.
+   */
+  propertyLevels: Map<string, number>;
 }
 
 /**
@@ -152,6 +165,17 @@ export interface PendingBuild {
    * than merely intended.
    */
   targetLevel?: number | undefined;
+  /**
+   * The property this site is raising, or `''`.
+   *
+   * Set only by `upgradeProperty`. A property site has no object and no cell —
+   * a car park is groundwork, not a prop — so `objectId` is empty and the
+   * renderer draws no silhouette for it; the progress the player watches is
+   * the inspect card's own bar. Completion writes the level and bumps the
+   * layout revision, which is what rebuilds the navigation fields around the
+   * bays that just appeared.
+   */
+  propertyId?: string | undefined;
 }
 
 /** A construction site as the renderer sees it. */

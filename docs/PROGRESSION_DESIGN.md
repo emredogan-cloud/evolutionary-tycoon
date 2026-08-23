@@ -5,16 +5,30 @@
 > `employees.ts`, `progression.ts`) — the tables are generated, not
 > remembered — and every pacing claim cites a measured run.
 
-## 1. Three axes, deliberately distinct (§21 of the directive)
+## 1. Five axes, deliberately distinct (§21 of the directive)
 
-| Axis                 | What it is                                                 | Where it lives                                                   | Where the player reads it                           |
-| -------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------- |
-| **Player level**     | XP over lifetime counters — the _presentation_ of progress | Derived, never stored: `playerLevel(world)` over hashed counters | The economy pill: `Seviye N` + XP bar               |
-| **Restaurant stage** | The venue itself, 1→4                                      | `world.progression.stage`, hashed, save-carried                  | Objective card headline, evolution flow             |
-| **Upgrade rung**     | One purchase ladder's depth                                | `world.layout.upgrades`, hashed                                  | Build cards (`Sv.`) and the detail's `Kademe n / m` |
+| Axis                 | What it is                                                  | Where it lives                                                   | Where the player reads it                                |
+| -------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------- |
+| **Player level**     | XP over lifetime counters — the _presentation_ of progress  | Derived, never stored: `playerLevel(world)` over hashed counters | The economy pill: `Seviye N` + XP bar                    |
+| **Restaurant stage** | The venue itself, 1→4                                       | `world.progression.stage`, hashed, save-carried                  | Objective card headline, evolution flow                  |
+| **Property level**   | How built-out one part of the premises is                   | Derived per property; parking stores its own in `propertyLevels` | The world hotspot pip and the inspect card's `Sv. n / m` |
+| **Building level**   | A placed machine's depth (`cola-machine`, `burger-machine`) | `placed[].level`, hashed                                         | The building card's level badge                          |
+| **Upgrade rung**     | One purchase ladder's depth                                 | `world.layout.upgrades`, hashed                                  | Build cards (`Sv.`) and the detail's `Kademe n / m`      |
 
-A Level 7 player can run a Stage 2 truck with a Kademe 3 sign; no UI string
-uses one word for two of these.
+A Level 7 player can run a Stage 2 truck with a Kademe 3 sign, an Otopark Sv. 3
+and a Lv2 burger station; no UI string uses one word for two of these.
+
+**Decor has no level, and that is a decision** rather than an omission
+([`RESTAURANT_EVOLUTION_ROADMAP.md`](RESTAURANT_EVOLUTION_ROADMAP.md) §B.5): a
+bench, a bin or a shrub is personalisation, and personalisation that demands a
+ladder stops being a choice. The one decorative object that _does_ move —
+the sign — moves because it changes conversion from the road, which makes it
+the frontage property rather than decor.
+
+**The main building's level is the stage.** There is one counter and evolution
+moves it from stand to truck to diner to restaurant on the same plot with the
+same camera. A separate "main building level" beside the stage would be two
+names for one number, which is exactly what the axis table exists to prevent.
 
 ## 2. The player level
 
@@ -107,15 +121,39 @@ require its own stage's future.
 
 ## 7. Stage transitions (the spine)
 
-| to  | cash    | served | upgrades | staff            | reputation | build time |
-| --- | ------- | ------ | -------- | ---------------- | ---------- | ---------- |
-| 2   | ₡140    | 25     | 1        | 0                | —          | 12 s       |
-| 3   | ₡800    | 120    | 4        | 1                | 40         | 20 s       |
-| 4   | ₡12.000 | 600    | 10       | 3 (waiter dahil) | 55         | 30 s       |
+| to  | cash    | served | upgrades | staff            | reputation | property floor                            | build time |
+| --- | ------- | ------ | -------- | ---------------- | ---------- | ----------------------------------------- | ---------- |
+| 2   | ₡125    | 25     | 0        | 0                | —          | otopark 2 · servis 2 · cephe 2            | 12 s       |
+| 3   | ₡800    | 120    | 4        | 1                | 40         | otopark 3 · mutfak 2 · servis 3 · cephe 3 | 20 s       |
+| 4   | ₡12.000 | 600    | 10       | 3 (waiter dahil) | 55         | otopark 3 · mutfak 3 · servis 4 · cephe 4 | 30 s       |
 
 The offer always waits for the player (GDD §25.2); construction runs on sim
 time and the reveal is the mask, the dust and the celebration burst
 (scenario F, green).
+
+### 7.1 The property floor (2026-08-23, restaurant evolution)
+
+**A stage may not open onto a lot that cannot serve it.** A Stage-2 building
+with a four-car park and a two-deep queue is a restaurant that looks bigger and
+works worse, and the cash threshold alone cannot prevent it — cash is the one
+thing an idle stand accumulates by itself.
+
+So Stage 2's bare `upgradesBought: 1` became a **named** floor. Counting
+purchases said "buy anything"; naming properties says "the lot has to be
+ready", which is the thing the requirement was always trying to express. The
+count is now 0 for Stage 2 precisely because the floor already implies three
+purchases, and asking for both would be charging twice for one idea.
+
+`₡140 → ₡125` at the same time, and the two moves are one decision: the floor's
+cheapest satisfying path costs about ₡22, so leaving the threshold at ₡140
+pushed the measured Stage-2 arrival to 25.0 min against a 22 min ceiling. At
+₡125 it is back inside the window with the total the player spends roughly
+where it was. Measured by `tests/integration/stageTransitionPacing.test.ts`.
+
+Every floor is reachable from inside the stage below, because the property
+ceiling is `min(4, stage + 1)` — one tier of headroom, asserted by
+`tests/unit/config/properties.test.ts`. Model and ladders:
+[`RESTAURANT_EVOLUTION_ROADMAP.md`](RESTAURANT_EVOLUTION_ROADMAP.md) §B.
 
 ## 8. Pacing — why this does not finish in a day or two (§17/§24)
 

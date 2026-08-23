@@ -4,7 +4,7 @@ import {
   OFFLINE_METER_BUCKET_MS,
   OFFLINE_METER_WINDOW_MS,
 } from '@config/economy/offline';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { STATIONS, station } from '@config/economy/stations';
 import { ORDER_COOKING } from '../stores/OrderStore';
 import { STATE_IDLE } from '../ai/EmployeeBrain';
@@ -63,7 +63,7 @@ export function advanceOfflineMeter(world: World, deltaMs: number): void {
 
 /** One pass over each pool, writing this bucket's occupancy fractions. */
 function sampleUtilization(world: World, bucket: number): void {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   const meter = world.offline;
 
   let parked = 0;

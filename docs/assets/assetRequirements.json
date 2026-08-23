@@ -3963,5 +3963,83 @@
     "priority": "P3",
     "requiredBefore": null,
     "note": "NEW_CONSTRUCTION_01 — the timed-construction flow shipped 2026-08-22 with a tinted-silhouette site; a painted scaffold makes the site read at a glance."
+  },
+  {
+    "id": "struct_counter_lv3",
+    "category": "STRUCTURES",
+    "subject": "struct counter lv3",
+    "stage": "4",
+    "role": "main property Lv4 frame — the finished Stage-4 frontage",
+    "consumer": "atlas via AssetRegistry (PROPERTY_LEVEL_ART main[3])",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P315",
+    "priority": "P2",
+    "requiredBefore": "P19",
+    "note": "RESTAURANT_EVOLUTION_01 — main property Lv4 is classified EXTERNAL PROMPT REQUIRED: Stage 4 currently reuses struct_counter_lv2, so the inspect card refuses to preview it (docs/LEVEL_ASSET_EVOLUTION_LIBRARY.md)."
+  },
+  {
+    "id": "struct_grill_lv3",
+    "category": "STRUCTURES",
+    "subject": "struct grill lv3",
+    "stage": "all",
+    "role": "kitchen property Lv3 frame — the third bench",
+    "consumer": "atlas via AssetRegistry (PROPERTY_LEVEL_ART kitchen[2])",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P316",
+    "priority": "P2",
+    "requiredBefore": "P19",
+    "note": "RESTAURANT_EVOLUTION_02 — kitchen Lv3 exists in the simulation (prepStations 2 opens prep-3) and reuses struct_grill_lv2 on screen."
+  },
+  {
+    "id": "struct_counter_wide_lv1",
+    "category": "STRUCTURES",
+    "subject": "struct counter wide lv1",
+    "stage": "all",
+    "role": "service property Lv2 frame — the widened counter",
+    "consumer": "atlas via AssetRegistry (PROPERTY_LEVEL_ART service[1])",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P317",
+    "priority": "P2",
+    "requiredBefore": "P19",
+    "note": "RESTAURANT_EVOLUTION_03 — the bigger-counter rung changes queue capacity and nothing visible; the counter is still struct_counter_lv1."
+  },
+  {
+    "id": "struct_forecourt_lv1",
+    "category": "STRUCTURES",
+    "subject": "struct forecourt lv1",
+    "stage": "all",
+    "role": "service property Lv4 frame — the tidied forecourt",
+    "consumer": "atlas via AssetRegistry (PROPERTY_LEVEL_ART service[3])",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P318",
+    "priority": "P2",
+    "requiredBefore": "P19",
+    "note": "RESTAURANT_EVOLUTION_04 — service Lv4 is the second queue-barriers rung; today it reuses struct_barrier."
+  },
+  {
+    "id": "struct_sign_large_lit_upper",
+    "category": "STRUCTURES",
+    "subject": "struct sign large lit upper",
+    "stage": "all",
+    "role": "frontage property Lv3 frame — the illuminated board",
+    "consumer": "atlas via AssetRegistry (PROPERTY_LEVEL_ART frontage[2])",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P319",
+    "priority": "P2",
+    "requiredBefore": "P19",
+    "note": "RESTAURANT_EVOLUTION_05 — upper half only, cut identically to struct_sign_large_upper and struct_sign_large_painted_upper (P307); the lower half is unchanged."
+  },
+  {
+    "id": "struct_frontage_lights",
+    "category": "STRUCTURES",
+    "subject": "struct frontage lights",
+    "stage": "4",
+    "role": "frontage property Lv4 frame — facade lighting",
+    "consumer": "atlas via AssetRegistry (PROPERTY_LEVEL_ART frontage[3])",
+    "status": "MISSING + PROMPT ADDED",
+    "prompt": "P320",
+    "priority": "P2",
+    "requiredBefore": "P19",
+    "note": "RESTAURANT_EVOLUTION_06 — frontage Lv4 is the third hand-painted-sign rung; today it reuses the sign frame and adds nothing to the building."
   }
 ]

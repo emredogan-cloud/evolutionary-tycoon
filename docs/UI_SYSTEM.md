@@ -31,6 +31,7 @@ validation. Enforced by dependency-cruiser (`src/ui` cannot import `src/sim`).
 | Top right, under nav  | `ObjectivePanel`         | stage headline, primary goal + bar, the stage checklist with live counters                                                                           |
 | Bottom right          | `EvolutionPanel`         | compact chip → offer → construction progress                                                                                                         |
 | Right edge            | `NotificationStrip`      | sim-time TTL notices, never modal                                                                                                                    |
+| World layer           | `InspectCard`            | a hotspot pip on every property at its own world anchor; selecting one opens the BİLGİ / İNŞA ET card beside it                                      |
 | Overlay               | `PauseOverlay`           | player pauses only (harness pauses never veil)                                                                                                       |
 
 World-dominance rules: the centre band belongs to the canvas; one panel at a
@@ -124,3 +125,56 @@ player's decision, and a button on only one card would have made it for them.
 a dining room is carried rather than handed over, so from Stage 3 the flag is
 false everywhere and the card shows the takings instead of an action that would
 refuse.
+
+## 13. Object inspection — the world is the interface (2026-08-23)
+
+`InspectCard` is the restaurant evolution system's whole surface. Every
+property carries a pip at its own world anchor showing its level; selecting one
+opens a card **beside** it — not over it, because a panel centred on the anchor
+hides the object it is describing.
+
+Two faces, and the split is the point:
+
+- **BİLGİ** — what it is, what level, what it provides, how much is in use.
+- **İNŞA ET** — the next level, its price, its duration, what it will look
+  like, and, when it cannot be bought, exactly which requirement is short.
+
+### Nothing on the card is computed by the component
+
+Every number arrives on `PropertyView`, derived by `UiBridge` from the
+simulation on the sample that produced it — including "can I afford this" and
+"why is this locked". A component that worked either of those out itself would
+be a second implementation of a rule the purchase then applies differently,
+which is how a card ends up green over a refusal. The overlay names an intent;
+the simulation decides.
+
+That is also why the lock reason is a **string from the bridge** rather than a
+disabled state: `CEPHE SV. 2 GEREKLİ` is the actual first shortfall out of
+`missingProperties`, not a guess the UI assembled from a boolean.
+
+### The preview has three answers, not two
+
+`nextArt` is `sprite`, `prompted` or `procedural`, and the card draws a
+different thing for each: the frame, the words _Görsel üretimde_, or — for the
+car park, which has no sprite by design — the bays themselves at card size with
+the ones this level adds picked out in the accent colour.
+
+**This was a boolean first, and the boolean was wrong in both directions at
+once.** The car park had no asset and claimed verified art, so the card rendered
+"the picture is still being made" over a `data-art="real"`: an apology for a
+delay nobody was causing, on top of a claim of art nobody had drawn.
+`tests/e2e/inspectCard.spec.ts` found it; the three-way type makes the
+combination unsayable, and `tests/unit/config/properties.test.ts` fails if a
+`sprite` level ever names a frame the atlas does not carry.
+
+### The hotspot is a place, never an average of places
+
+Anchors are derived from the layout — the sign object, the grill object, the bay
+nearest the middle, the queue slot in the middle. The first version used the
+_mean_ of the car park's bays and rendered the dot on the carriageway: Stage 1
+authors its four bays in two pairs at x 2.5/7.5 and 16.5/21.5, so their mean is
+the gap between them. The arithmetic was correct the entire time. Two rules now
+hold it (`tests/unit/sim/properties/propertyLevels.test.ts`): the car park's
+anchor is one of the live bays, and no two anchors are within a metre of each
+other — two 44 px touch targets on one spot is a button that "sometimes does
+nothing".

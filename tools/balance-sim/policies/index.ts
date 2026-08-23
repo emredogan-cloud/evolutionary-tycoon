@@ -200,6 +200,30 @@ function common(snapshot: PolicySnapshot): { commands: CommandInput[]; busy: boo
     return { commands, busy: true };
   }
 
+  /*
+   * Close the next stage's property floor before buying anything strategic.
+   *
+   * The floor is not an upgrade the policy may weigh against another upgrade —
+   * it is the price of the stage, in a different currency. A policy that treated
+   * it as one more option would keep choosing the higher-scoring rung and never
+   * evolve, which is precisely what all four did the moment the floor shipped:
+   * `stage-2-timing: never`, four times.
+   *
+   * Cheapest gap first (the runner sorts them), and only when it is affordable
+   * out of the same spendable budget everything else uses — a policy that spent
+   * its evolution reserve on a car park would be the ADR-014 stranding wearing
+   * a different hat.
+   */
+  const gap = snapshot.missingProperties[0];
+  if (gap !== undefined && gap.cost <= spendable(snapshot)) {
+    commands.push(
+      gap.via === null
+        ? { t: 'UPGRADE_PROPERTY', propertyId: gap.id }
+        : { t: 'BUY_UPGRADE', upgradeId: gap.via },
+    );
+    return { commands, busy: true };
+  }
+
   const needed = missingRole(snapshot);
   if (needed !== null) {
     const cost = HIRE_COST[needed] ?? 20;

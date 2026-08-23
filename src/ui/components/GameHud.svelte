@@ -3,6 +3,7 @@
     HudSource,
     OrderCardView,
     PlacedView,
+    PropertyView,
     PlayerLevelView,
     PriceView,
     ProgressionView,
@@ -21,6 +22,7 @@
   import DiagnosticsPanel from '../screens/DiagnosticsPanel.svelte';
   import NavRail from './NavRail.svelte';
   import NotificationStrip from './NotificationStrip.svelte';
+  import InspectCard from './InspectCard.svelte';
   import OrderCards from './OrderCards.svelte';
   import PauseOverlay from './PauseOverlay.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
@@ -112,6 +114,9 @@
   let eventRemainingMs = $state(0);
   let markers = $state<WorldMarker[]>([]);
   let placed = $state<PlacedView[]>([]);
+  let properties = $state<PropertyView[]>([]);
+  /** Which property's inspect card is open, or '' for none. */
+  let inspecting = $state('');
   let incomePerMinute = $state(0);
   let upgrades = $state<UpgradeView[]>([]);
   let prices = $state<PriceView[]>([]);
@@ -200,6 +205,7 @@
        */
       const placedCount: number = model.placedCount;
       placed = model.placed.slice(0, placedCount).map((object): PlacedView => ({ ...object }));
+      properties = model.properties.map((item): PropertyView => ({ ...item }));
 
       incomePerMinute = model.incomePerMinute;
       objective = model.objective;
@@ -290,6 +296,21 @@
     }}
   />
   <ActionTiles open={openPanel} ontoggle={togglePanel} />
+  <!--
+    The world's own interface: a hotspot on every property, and the Bilgi /
+    İnşa Et card beside whichever one is open. Sits above the canvas and below
+    the panels, so a card never fights a shop that the player opened over it.
+  -->
+  <InspectCard
+    {properties}
+    selected={inspecting}
+    onselect={(id: string) => {
+      inspecting = id;
+    }}
+    onupgrade={(id: string) => {
+      commands.upgradeProperty(id);
+    }}
+  />
   <OrderCards
     {orders}
     onprep={(slot: number) => {

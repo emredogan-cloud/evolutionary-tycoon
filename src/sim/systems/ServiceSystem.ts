@@ -13,7 +13,7 @@ import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import type { CustomerRecord } from '../stores/customers';
 import { ORDER_COOKING, ORDER_DELIVERED, ORDER_ON_PASS, ORDER_PAID } from '../stores/OrderStore';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { stepDriveThruCustomer } from './DriveThruSystem';
 import { recordExpense, recordRevenue } from './EconomySystem';
 import { recordOfflineSale } from './offlineMeter';
@@ -325,7 +325,7 @@ export function deliverOrder(world: World, orderSlot: number): boolean {
  * so, rather than offering a button that would refuse.
  */
 export function nextServable(world: World): number {
-  if (layoutForStage(world.progression.stage).tables.length > 0) return -1;
+  if (layoutOf(world).tables.length > 0) return -1;
 
   /*
    * One pass, not one `isServable` per slot.
@@ -427,7 +427,7 @@ function ensureServableScratch(capacity: number): ServableScratch {
  *    down (`tests/e2e/tableService.spec.ts`).
  */
 export function isServable(world: World, slot: number): boolean {
-  if (layoutForStage(world.progression.stage).tables.length > 0) return false;
+  if (layoutOf(world).tables.length > 0) return false;
   if (slot < 0 || !world.orders.isActive(slot)) return false;
 
   const order = world.orders.at(slot);

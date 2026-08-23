@@ -1,5 +1,5 @@
 import { DRIVE_THRU_ORDER_MS, DRIVE_THRU_WINDOW_MS } from '@config/driveThru';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { menuItem } from '@config/economy/menu';
 import { REPUTATION } from '@config/satisfaction';
 import {
@@ -51,7 +51,7 @@ import { VEHICLE_DT_ADVANCING, VEHICLE_PARKED } from './VehicleManeuverSystem';
  * one rule that matters — nothing sets a position directly — in one place.
  */
 export function compactDriveThruLane(world: World): void {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   if (layout.driveThru === null) return;
 
   const customers = world.customers;
@@ -119,7 +119,7 @@ export function laneLength(world: World): number {
  * stops "build a lane and capture everything" from being the only strategy.
  */
 export function driveThruOverflow(world: World): number {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   if (layout.driveThru === null) return 0;
   return Math.max(0, laneLength(world) - driveThruCapacity(world, layout.driveThru.laneCapacity));
 }
@@ -134,7 +134,7 @@ export function driveThruOverflow(world: World): number {
  * the overflow penalty the lane is fine while there is nowhere for the next car.
  */
 function driveThruCapacity(world: World, authored: number): number {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   const points = layout.driveThru?.lane.length ?? authored;
   return Math.min(points, authored + effectValue(world, 'laneCapacity'));
 }

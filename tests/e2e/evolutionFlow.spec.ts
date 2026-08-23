@@ -81,8 +81,17 @@ async function playTheThreshold(page: Page): Promise<boolean> {
       for (let tick = 0; tick < 2000; tick++) {
         hooks.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
         hooks.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
-        // A player spending as they go, which is how the upgrade milestone is met.
+        /*
+         * A player spending as they go — which is how both milestones are met.
+         * The sign is the upgrade count; the counter and the car park are the
+         * **property floor** the restaurant evolution system added, and a run
+         * that skipped them would bank the cash forever and never be offered
+         * the stage. Cheapest-first, and re-tried: an early dispatch that
+         * cannot be afforded is simply refused, and comes round again.
+         */
         if ((index * 2000 + tick) % 600 === 0) {
+          hooks.dispatch({ t: 'UPGRADE_PROPERTY', propertyId: 'parking' });
+          hooks.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'bigger-counter' });
           hooks.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'hand-painted-sign' });
         }
         hooks.advanceTicks(1);

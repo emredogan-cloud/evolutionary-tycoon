@@ -1,4 +1,5 @@
-import { ALL_LAYOUTS, layoutForStage } from '@config/layouts';
+import { ALL_LAYOUTS } from '@config/layouts';
+import { layoutOf } from './properties';
 import { CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import { compactDriveThruLane, driveThruOverflow } from './DriveThruSystem';
 import type { StageLayout } from '@config/layouts/stage1';
@@ -84,7 +85,7 @@ export class QueueSystem implements SimSystem {
     compactDriveThruLane(world);
     seatCustomers(world);
 
-    const layout = layoutForStage(world.progression.stage);
+    const layout = layoutOf(world);
     this.queueSlots = Math.min(this.occupants.length, layout.queue.length);
     this.waitingSlots = Math.min(this.waiting.length, layout.waitingArea.length);
 
@@ -216,7 +217,7 @@ export class QueueSystem implements SimSystem {
       let best = Number.POSITIVE_INFINITY;
       for (let index = 0; index < this.waitingSlots; index++) {
         if (this.waiting[index] !== -1) continue;
-        const position = layoutForStage(world.progression.stage).waitingArea[index];
+        const position = layoutOf(world).waitingArea[index];
         if (position === undefined) continue;
         const distance = (position.x - customer.x) ** 2 + (position.y - customer.y) ** 2;
         if (distance < best) {
@@ -241,7 +242,7 @@ export class QueueSystem implements SimSystem {
       const slot = this.waiting[index];
       if (slot === undefined || slot < 0) continue;
       if (!customers.isActive(slot)) continue;
-      const position = layoutForStage(world.progression.stage).waitingArea[index];
+      const position = layoutOf(world).waitingArea[index];
       if (position === undefined) continue;
       const customer = customers.at(slot);
       customer.targetX = position.x;
@@ -281,7 +282,7 @@ export class QueueSystem implements SimSystem {
       if (slot === undefined || slot < 0) continue;
       if (!world.customers.isActive(slot)) continue;
 
-      const position = layoutForStage(world.progression.stage).queue[index];
+      const position = layoutOf(world).queue[index];
       if (position === undefined) continue;
 
       const customer = world.customers.at(slot);
@@ -361,7 +362,7 @@ export class QueueSystem implements SimSystem {
  * tick would weave between two of them.
  */
 function seatCustomers(world: World): void {
-  const layout = layoutForStage(world.progression.stage);
+  const layout = layoutOf(world);
   if (layout.tables.length === 0) return;
 
   const customers = world.customers;

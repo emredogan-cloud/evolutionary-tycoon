@@ -84,7 +84,13 @@ export class World {
     paused: false,
   };
 
-  readonly progression: ProgressionState = { stage: 1, unlocks: [], milestones: [], pendingStage: 0 };
+  readonly progression: ProgressionState = {
+    stage: 1,
+    unlocks: [],
+    milestones: [],
+    pendingStage: 0,
+    propertyLevels: new Map<string, number>(),
+  };
   readonly economy: EconomyState = {
     cash: 0,
     reputation: STARTING_REPUTATION,
@@ -320,6 +326,7 @@ export class World {
       hashStringList(h, this.progression.unlocks);
       hashStringList(h, this.progression.milestones);
       h.writeU8(this.progression.pendingStage);
+      hashStringNumberMap(h, this.progression.propertyLevels);
       h.writeU8(this.construction.targetStage);
       h.writeF64(this.construction.elapsedMs);
       h.writeF64(this.construction.totalMs);
@@ -448,6 +455,7 @@ export class World {
     hashStringNumberMap(h, this.layout.upgrades);
 
     h.writeU8(this.progression.pendingStage);
+    hashStringNumberMap(h, this.progression.propertyLevels);
     h.writeU8(this.construction.targetStage);
     h.writeF64(this.construction.elapsedMs);
     h.writeF64(this.construction.totalMs);
@@ -508,6 +516,8 @@ export class World {
     this.progression.stage = 1;
     this.progression.unlocks.length = 0;
     this.progression.milestones.length = 0;
+    this.progression.pendingStage = 0;
+    this.progression.propertyLevels.clear();
 
     this.economy.cash = 0;
     this.economy.reputation = STARTING_REPUTATION;

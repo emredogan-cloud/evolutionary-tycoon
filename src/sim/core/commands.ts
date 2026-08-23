@@ -7,6 +7,7 @@ import { placeObject } from '../systems/LayoutSystem';
 import { buyPlace, movePlaced, sellPlaced, upgradeBuilding } from '../systems/StoreSystem';
 import { advancePendingBuilds } from '../systems/ProgressionSystem';
 import { beginConstruction } from '../systems/ProgressionSystem';
+import { upgradeProperty } from '../systems/properties';
 import { deliverOrder, isServable, nextServable } from '../systems/ServiceSystem';
 import { fire, hire } from '../systems/StaffSystem';
 import { buyUpgrade } from '../systems/UpgradeSystem';
@@ -118,6 +119,25 @@ interface ServeOrderCommand {
   readonly t: 'SERVE_ORDER';
   readonly tick: number;
   readonly orderSlot: number;
+}
+
+/**
+ * Raise a property one level — the restaurant evolution system.
+ *
+ * Only properties with a ladder of their own (`parking` today) travel this way.
+ * A *derived* property — kitchen, service area, frontage — is raised by buying
+ * the upgrade rung it reads its level from, through `BUY_UPGRADE`, so there is
+ * exactly one place that sells any given effect and the card is a front end
+ * rather than a second till. See `docs/RESTAURANT_EVOLUTION_ROADMAP.md` §B.2.
+ *
+ * Carries the id and nothing else: the level it is building toward, the price
+ * and the duration are all looked up from config at the tick this lands on,
+ * for the same reason `BUY_UPGRADE` does not carry its own cost.
+ */
+interface UpgradePropertyCommand {
+  readonly t: 'UPGRADE_PROPERTY';
+  readonly tick: number;
+  readonly propertyId: string;
 }
 
 /**
@@ -283,6 +303,7 @@ export type Command =
   | SetPausedCommand
   | ManualPrepCommand
   | ServeOrderCommand
+  | UpgradePropertyCommand
   | BuyUpgradeCommand
   | SetPriceCommand
   | HireCommand
@@ -305,6 +326,7 @@ export type CommandInput =
   | Omit<SetPausedCommand, 'tick'>
   | Omit<ManualPrepCommand, 'tick'>
   | Omit<ServeOrderCommand, 'tick'>
+  | Omit<UpgradePropertyCommand, 'tick'>
   | Omit<BuyUpgradeCommand, 'tick'>
   | Omit<SetPriceCommand, 'tick'>
   | Omit<HireCommand, 'tick'>
@@ -395,6 +417,17 @@ export function apply(world: World, command: Command): void {
           ? command.orderSlot
           : nextServable(world);
       if (tray >= 0) deliverOrder(world, tray);
+      break;
+    }
+    case 'UPGRADE_PROPERTY': {
+      /*
+       * Refusing is a normal outcome, exactly like every other purchase: the
+       * ladder may be at its ceiling, the stage may not allow the next level
+       * yet, a site may already be up, or the money may have been spent between
+       * the click and the tick. `upgradeProperty` answers which; the card reads
+       * the same world state and says so before the click.
+       */
+      upgradeProperty(world, command.propertyId);
       break;
     }
     case 'BUY_UPGRADE': {
@@ -508,6 +541,8 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'MANUAL_PREP', tick, orderSlot: input.orderSlot };
     case 'SERVE_ORDER':
       return { t: 'SERVE_ORDER', tick, orderSlot: input.orderSlot };
+    case 'UPGRADE_PROPERTY':
+      return { t: 'UPGRADE_PROPERTY', tick, propertyId: input.propertyId };
     case 'BUY_UPGRADE':
       return { t: 'BUY_UPGRADE', tick, upgradeId: input.upgradeId };
     case 'SET_PRICE':

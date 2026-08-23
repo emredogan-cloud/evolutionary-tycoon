@@ -173,6 +173,10 @@ describe('the navigation cache notices', () => {
     sim.world.stats.customersServed = 10_000;
     sim.world.economy.reputation = 100;
     for (let i = 0; i < 12; i++) sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'hand-painted-sign' });
+    // And the property floor the stage now asks for — bought the way a player
+    // buys it, through the commands, not by writing the levels.
+    sim.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'bigger-counter' });
+    sim.dispatch({ t: 'UPGRADE_PROPERTY', propertyId: 'parking' });
     sim.dispatch({ t: 'HIRE', roleId: 'cook', skill: 0.5 });
     // Through the sign rungs' construction: purchases apply when their sites
     // complete (the correction pass), and the milestone EVOLVE checks counts

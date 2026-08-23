@@ -22,7 +22,10 @@ const DELIVERED_PROMPTS = 172;
  * continuation's 2 (P309–P310 — the broadleaf-01 split pair, which the
  * delivery painted as two unrelated pictures), and the 2026-08-23 UI final
  * correction's 4 (P311–P314 — the broadleaf-02 pair at 0.40 join coverage and
- * the stage-2 food truck at 0.00, whose two halves are each a whole truck).
+ * the stage-2 food truck at 0.00, whose two halves are each a whole truck), and
+ * the restaurant evolution system's 6 (P315–P320 — every property level whose
+ * §23 classification is EXTERNAL PROMPT REQUIRED, which is exactly the set the
+ * inspect card refuses to preview).
  *
  * The stage-1 continuation also flipped three role icons to NEEDS REGEN. They
  * do **not** appear here, and that is the point: they already had audit prompt
@@ -30,14 +33,17 @@ const DELIVERED_PROMPTS = 172;
  * end would have renumbered every prompt in between. Their *wording* changed;
  * the catalogue's numbering did not move.
  */
-const EXPECTED_PROMPTS = 314;
+const EXPECTED_PROMPTS = 320;
 /**
  * One per batch, and a batch is a generation *session* — the pipeline's rule is
  * that a category is generated together or it stops looking related. The
- * stage-1 continuation's regenerations are their own batch, and so is the
- * 2026-08-23 UI final correction's food-truck pair.
+ * stage-1 continuation's regenerations are their own batch, so is the
+ * 2026-08-23 UI final correction's food-truck pair, and so is
+ * `restaurant-evolution`: six frame swaps that only make sense generated
+ * against each other, because each one has to line up with the frame it
+ * replaces.
  */
-const EXPECTED_BATCHES = 25;
+const EXPECTED_BATCHES = 26;
 const HTML_PATH = resolve(import.meta.dirname, '../../../docs/ASSET_GENERATION_PROMPTS.html');
 
 describe('prompt numbering', () => {

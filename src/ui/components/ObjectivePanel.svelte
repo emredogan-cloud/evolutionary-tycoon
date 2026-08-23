@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ProgressionView } from '@app/bridge/hudModel';
+  import { PROPERTIES } from '@config/properties';
   import { upgradeLabel } from '../lib/upgradeLabels';
 
   /**
@@ -24,12 +25,20 @@
     3: 'KÜÇÜK LOKANTA',
     4: 'BÜYÜK RESTORAN',
   };
+  /*
+   * The five counters, then the property floor — one label per property, taken
+   * from the table rather than retyped, so a property added to the config
+   * cannot appear on this list as a bare `property:whatever`.
+   */
   const ROW_LABELS: Record<string, string> = {
     cash: 'Nakit biriktir',
     served: 'Servis yap',
     upgrades: 'Yükseltme al',
     staff: 'Personel çalıştır',
     reputation: 'İtibar kazan',
+    // "Otopark Sv." rather than "Otopark seviyesi": the same vocabulary the
+    // inspect card uses, and short enough that the row never wraps.
+    ...Object.fromEntries(PROPERTIES.map((spec) => [`property:${spec.id}`, `${spec.label} Sv.`])),
   };
 
   const rows = $derived(progression.requirements.filter((row) => row.need > 0));
@@ -133,13 +142,23 @@
     padding: 0;
     list-style: none;
     display: grid;
-    gap: var(--space-1);
+    gap: 2px;
   }
+  /*
+   * The tick is 13 px and the text is `--text-xs`, so a row's natural height is
+   * the tick's. Pinning `line-height` to it removes the leading the font would
+   * otherwise add on top — worth doing because this list got longer: the
+   * property floor added three rows at Stage 1 and will add four at Stage 3,
+   * and the HUD has a measured share of the screen it may not exceed
+   * (`responsive.spec.ts`, 22% at 1024×768). The alternative was hiding rows,
+   * which is the one thing a checklist must not do.
+   */
   .reqs li {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     font-size: var(--text-xs);
+    line-height: 13px;
     color: var(--ink-muted);
   }
   .reqs li.done {
@@ -150,8 +169,8 @@
   }
   .tick {
     flex: none;
-    width: 15px;
-    height: 15px;
+    width: 13px;
+    height: 13px;
     border-radius: 50%;
     border: 1.5px solid var(--ink-dim);
     display: grid;

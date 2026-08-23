@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ACTOR_KIND_SPECS, ACTOR_KIND_VEHICLE } from '@config/actors';
-import { ALL_LAYOUTS, layoutForStage } from '@config/layouts';
+import { ALL_LAYOUTS, layoutFor, layoutForStage } from '@config/layouts';
 import type { StageLayout } from '@config/layouts/stage1';
+import { maxPropertyLevel, parkingBays, property } from '@config/properties';
 
 /**
  * Geometry the four stage layouts have to satisfy — Phase 11.
@@ -137,5 +138,93 @@ describe('the lot only ever grows', () => {
     expect(layoutForStage(2).driveThru).toBeNull();
     expect(layoutForStage(3).driveThru).toBeNull();
     expect(layoutForStage(4).driveThru).not.toBeNull();
+  });
+});
+
+describe('every car park a property level can resolve', () => {
+  /*
+   * The property system makes the car park a dial the player turns *inside* a
+   * stage, so the four authored layouts are no longer the only ones the game
+   * runs. A Stage-1 lot with the level-2 car park is a combination nobody
+   * authored, and it has to satisfy exactly the same geometry as the ones
+   * somebody did — which is what the three rules above are for, applied to
+   * every pair that `maxPropertyLevel` allows a world to be in.
+   */
+  const COMBINATIONS: readonly (readonly [number, number])[] = [1, 2, 3, 4].flatMap((stage) => {
+    const levels: number[] = [];
+    for (
+      let level = 1;
+      level <= Math.min(property('parking')?.maxLevel ?? 1, maxPropertyLevel(stage));
+      level++
+    ) {
+      levels.push(level);
+    }
+    return levels.map((level) => [stage, level] as const);
+  });
+
+  it.each(COMBINATIONS)('stage %i at parking level %i keeps its cars apart and inside', (stage, level) => {
+    const layout = layoutFor(stage, level);
+    const where = `stage ${String(stage)} level ${String(level)}`;
+    expect(layout.parking, where).toHaveLength(parkingBays(level));
+
+    const bays = layout.parking.map(carBox);
+    for (let i = 0; i < bays.length; i++) {
+      const a = bays[i];
+      if (a === undefined) continue;
+
+      expect(a.minX, `${where}: ${String(layout.parking[i]?.id)} off the west edge`).toBeGreaterThanOrEqual(
+        layout.lot.minX,
+      );
+      expect(a.maxX, `${where}: ${String(layout.parking[i]?.id)} off the east edge`).toBeLessThanOrEqual(
+        layout.lot.maxX,
+      );
+      expect(a.maxY, `${where}: ${String(layout.parking[i]?.id)} off the south edge`).toBeLessThanOrEqual(
+        layout.lot.maxY,
+      );
+
+      for (const table of layout.tables) {
+        const pad = { minX: table.x - 0.7, minY: table.y - 0.7, maxX: table.x + 0.7, maxY: table.y + 0.7 };
+        expect(overlaps(a, pad), `${where}: ${String(layout.parking[i]?.id)} parks on ${table.id}`).toBe(
+          false,
+        );
+      }
+
+      for (let j = i + 1; j < bays.length; j++) {
+        const b = bays[j];
+        if (b === undefined) continue;
+        expect(
+          overlaps(a, b),
+          `${where}: ${String(layout.parking[i]?.id)} and ${String(layout.parking[j]?.id)} share tarmac`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('changes nothing but the car park', () => {
+    // The level is a dial on one thing. If it ever moved a queue slot or a
+    // table, the balance numbers measured per stage would stop meaning anything.
+    for (const [stage, level] of COMBINATIONS) {
+      const base = layoutForStage(stage);
+      const resolved = layoutFor(stage, level);
+      const where = `stage ${String(stage)} level ${String(level)}`;
+      expect(resolved.queue, where).toBe(base.queue);
+      expect(resolved.tables, where).toBe(base.tables);
+      expect(resolved.statics, where).toBe(base.statics);
+      expect(resolved.counter, where).toBe(base.counter);
+      expect(resolved.driveThru, where).toBe(base.driveThru);
+      expect(resolved.registers, where).toBe(base.registers);
+    }
+  });
+
+  it('gives a Stage-1 player the bay they paid for', () => {
+    /*
+     * **The defect this exists for.** Sliced against the stage's own parking
+     * list, buying the level-2 car park in Stage 1 charged the money, ran the
+     * construction, raised the level — and delivered four bays, exactly as
+     * before. The player would have had to evolve before their purchase did
+     * anything, which is the fake benefit §39 forbids and is invisible from
+     * inside the simulation: every level, cost and hash was correct.
+     */
+    expect(layoutFor(1, 2).parking.length).toBeGreaterThan(layoutFor(1, 1).parking.length);
   });
 });

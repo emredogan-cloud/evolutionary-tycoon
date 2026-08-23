@@ -158,7 +158,25 @@ pass a "the config has an effects array" test and fail every one of these.
 asserted as a relationship against the bare run rather than against literals,
 so the economy can be tuned without rewriting the test.
 
-## 8. Related
+## 8. A machine is not a property (2026-08-23)
+
+The restaurant evolution system added a second thing with a level, and the
+question it had to answer first was whether these two should be one system.
+They are not, and the reason is the one this document already records: a
+machine is **bought, placed and owned by the player**, and its level lives on
+its placed row. A property is **the premises** — there is one car park, one
+kitchen, one frontage, and none of them can be picked up and moved.
+
+What they share is the construction queue, and that is deliberate: both push a
+`pendingBuilds` row and both apply in the same completion branch, so pause,
+speed multipliers, reload and offline collection behave identically without
+either system knowing about the other.
+
+What they do not share is a price. Folding the machines into properties would
+have given `grillStationSpeed` two doors with two ladders, which is the exact
+mistake `buildings.ts` §1 records refusing when the Prep Counter was cut.
+
+## 9. Related
 
 - [`STAGE1_PRODUCT_SYSTEM.md`](STAGE1_PRODUCT_SYSTEM.md) — the preparation
   times these buildings act on.
@@ -166,3 +184,5 @@ so the economy can be tuned without rewriting the test.
   matrix the deferral decisions were measured against.
 - [`STAGE1_STORE_SYSTEM.md`](STAGE1_STORE_SYSTEM.md) — the identity chain
   buildings share with decor.
+- [`RESTAURANT_EVOLUTION_ROADMAP.md`](RESTAURANT_EVOLUTION_ROADMAP.md) — the
+  property system this ladder is the working precedent for.

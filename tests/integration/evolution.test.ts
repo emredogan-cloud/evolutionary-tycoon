@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { buyBuilt } from '../helpers/build';
+import { buyBuilt, raiseProperties } from '../helpers/build';
 import { STAGE_REQUIREMENTS, requirementFor, stageRequirementListSchema } from '@config/progression';
 import { layoutForStage } from '@config/layouts';
 import { TICK_MS } from '@config/simulation';
 import { Sim } from '@sim/core/Sim';
 import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 import { constructionProgress, isConstructing } from '@sim/systems/ConstructionSystem';
-import { beginConstruction, meetsRequirement } from '@sim/systems/ProgressionSystem';
+import { beginConstruction, meetsRequirement, missingProperties } from '@sim/systems/ProgressionSystem';
+import { layoutOf, propertyLevel } from '@sim/systems/properties';
+import { parkingBays } from '@config/properties';
 import { hire } from '@sim/systems/StaffSystem';
 
 const LONG_RUN_TIMEOUT_MS = 120_000;
@@ -39,6 +41,12 @@ function qualify(sim: Sim, stage: number): void {
     buyBuilt(sim.world, i % 2 === 0 ? 'hand-painted-sign' : 'menu-board');
   }
   for (let i = 0; i < requirement.employeesHired; i++) hire(sim.world, 'cook', 0.5);
+  /*
+   * And the property floor — the restaurant evolution system. Raised through
+   * the real purchase paths, not by writing the levels: the requirement's whole
+   * claim is that a player can *reach* this state from inside the stage below.
+   */
+  raiseProperties(sim.world, requirement);
   sim.world.economy.cash = funds;
 }
 
@@ -100,6 +108,78 @@ describe('money alone is not enough', () => {
   });
 });
 
+describe('the property floor', () => {
+  /**
+   * The restaurant evolution system's gate — `docs/RESTAURANT_EVOLUTION_ROADMAP.md`
+   * §B.4. A stage may not open onto a lot that cannot serve it: a Stage-2
+   * building with a four-car park and a two-deep queue is a restaurant that
+   * looks bigger and works worse, and the money threshold alone cannot prevent
+   * it because money is the one thing an idle stand accumulates by itself.
+   */
+  it('refuses a stage whose lot is still the stage below', () => {
+    const sim = new Sim({ seed: 1 });
+    const requirement = requirementFor(1);
+    expect(requirement).not.toBeNull();
+    if (requirement === null) return;
+
+    // Everything except the property floor: cash, customers, reputation.
+    sim.world.economy.cash = requirement.cashRequired + 500;
+    sim.world.stats.customersServed = requirement.customersServed;
+    sim.world.economy.reputation = requirement.reputation;
+
+    expect(meetsRequirement(sim.world, requirement)).toBe(false);
+    expect(beginConstruction(sim.world)).toBe('not-ready');
+
+    // And it names what is short, rather than greying a button out. The
+    // interface says "OTOPARK SV.2 GEREKLİ"; this is where that string's
+    // content comes from.
+    const missing = missingProperties(sim.world, requirement);
+    expect(missing.length).toBeGreaterThan(0);
+    for (const gap of missing) {
+      expect(gap.have).toBeLessThan(gap.need);
+      expect(requirement.requiredProperties[gap.id]).toBe(gap.need);
+    }
+  });
+
+  it('opens once the lot has been built up, through the real purchase paths', () => {
+    const sim = new Sim({ seed: 1 });
+    qualify(sim, 1);
+
+    const requirement = requirementFor(1);
+    expect(requirement).not.toBeNull();
+    if (requirement === null) return;
+
+    expect(missingProperties(sim.world, requirement)).toEqual([]);
+    for (const [id, need] of Object.entries(requirement.requiredProperties)) {
+      expect(propertyLevel(sim.world, id), `${id} was never raised`).toBeGreaterThanOrEqual(need);
+    }
+    expect(meetsRequirement(sim.world, requirement)).toBe(true);
+  });
+
+  it('keeps what the player built when the stage arrives', () => {
+    /*
+     * Evolution replaces the layout. The property levels are progression state,
+     * not layout state, so a car park bought during Stage 1 must still be a car
+     * park in Stage 2 — otherwise the floor is a toll rather than a lot.
+     */
+    const sim = new Sim({ seed: 1 });
+    qualify(sim, 1);
+    const parking = propertyLevel(sim.world, 'parking');
+    expect(parking).toBeGreaterThan(1);
+
+    sim.dispatch({ t: 'EVOLVE' });
+    sim.advance(20);
+    expect(isConstructing(sim.world)).toBe(true);
+    for (let i = 0; i < 200 && isConstructing(sim.world); i++) sim.advance(600);
+
+    expect(sim.world.progression.stage).toBe(2);
+    expect(propertyLevel(sim.world, 'parking')).toBe(parking);
+    // The bays are really there: the new stage's layout is resolved at the
+    // level that was paid for, not reset to the stage's own default.
+    expect(layoutOf(sim.world).parking).toHaveLength(parkingBays(parking));
+  });
+});
+
 describe('the transition is player-confirmed', () => {
   it('waits for the command rather than evolving on its own', () => {
     /*
@@ -126,9 +206,16 @@ describe('the transition is player-confirmed', () => {
     sim.tick();
 
     expect(isConstructing(sim.world)).toBe(true);
-    // Evolution is a purchase, not a threshold you merely touch — otherwise a
-    // player could hover at the requirement forever and evolve for free.
-    expect(before - sim.world.economy.cash).toBeCloseTo(140, 6);
+    /*
+     * Evolution is a purchase, not a threshold you merely touch — otherwise a
+     * player could hover at the requirement forever and evolve for free.
+     *
+     * Read from the requirement rather than written as a literal: the figure
+     * moved from ₡140 to ₡125 when the property floor arrived, and the *total*
+     * cost of reaching Stage 2 stayed where it was — the difference is now
+     * spent on the car park and the counter instead of merely held.
+     */
+    expect(before - sim.world.economy.cash).toBeCloseTo(requirementFor(1)?.cashRequired ?? 0, 6);
   });
 
   it('refuses a second EVOLVE while the building is going up', () => {
@@ -366,6 +453,7 @@ describe('a stage may never ask for less than the one before it', () => {
     employeesHired: 0,
     reputation: 0,
     constructionMs: 10_000,
+    requiredProperties: { parking: 2 },
   };
 
   it('refuses a later stage that costs no more', () => {

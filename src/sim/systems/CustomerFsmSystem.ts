@@ -17,7 +17,7 @@ import {
   customerStateSpec,
 } from '../ai/fsm/customerFsm';
 import { DRIVE_THRU_PATIENCE_SCALE } from '@config/driveThru';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { CHANNEL_DRIVE_THRU } from '../ai/fsm/driveThruFsm';
 import type { SimSystem } from '../core/SystemPipeline';
 import { effectValue } from './UpgradeSystem';
@@ -183,7 +183,7 @@ export class CustomerFsmSystem implements SimSystem {
     if (customer.timerMs < DOOR_OPEN_SECONDS * 1000) return;
 
     customer.timerMs = 0;
-    const bay = layoutForStage(world.progression.stage).parking[customer.parkingSlot];
+    const bay = layoutOf(world).parking[customer.parkingSlot];
     if (bay !== undefined) {
       customer.x = bay.door.x;
       customer.y = bay.door.y;
@@ -196,7 +196,7 @@ export class CustomerFsmSystem implements SimSystem {
      * slot later in the tick order, so for exactly one tick this is the only
      * target there is, and a customer with none would stand in the bay.
      */
-    const layout = layoutForStage(world.progression.stage);
+    const layout = layoutOf(world);
     customer.targetX = layout.counter.x;
     customer.targetY = layout.counter.y - 1;
   }
@@ -271,7 +271,7 @@ export class CustomerFsmSystem implements SimSystem {
   }
 
   private aimAtOwnCar(world: World, customer: CustomerRecord): void {
-    const bay = layoutForStage(world.progression.stage).parking[customer.parkingSlot];
+    const bay = layoutOf(world).parking[customer.parkingSlot];
     if (bay === undefined) {
       customer.targetX = customer.x;
       customer.targetY = customer.y;

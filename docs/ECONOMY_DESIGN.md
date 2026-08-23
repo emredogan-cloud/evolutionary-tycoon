@@ -51,10 +51,19 @@ Tüm ekonomi bu tablodan türer. Bu tablo değişirse her şey değişir; bu yü
 | Başlangıç net/dk (aşamaya girişte)        |                ₡6 |               ₡20 |               ₡62 |                   ₡190 |
 | Hedef aşama süresi                        |          12–18 dk |          30–45 dk |        150–240 dk |              açık uçlu |
 | Aşama içi yükseltme toplamı               |               ₡55 |              ₡500 |            ₡8.000 |               ₡150.000 |
-| **Sonraki aşamanın maliyeti**             |              ₡140 |              ₡800 |           ₡12.000 |                      — |
+| **Sonraki aşamanın maliyeti**             |              ₡125 |              ₡800 |           ₡12.000 |                      — |
 
 **Aşamalar arası gelir oranı:** 1 → 3.7× → 3.3× → 2.7×
 **Bu azalan bir dizidir. Bu kasıtlıdır.** Üstel değil, yavaşlayan bir büyüme. Sayılar hiçbir zaman okunamaz hâle gelmez; oyunun sonunda bile dört haneli/dk gelirdeyiz, `1.2e47` değil.
+
+> **Aşama 2 eşiği ₡140 → ₡125 (2026-08-23, restoran evrimi).** Tek bir sayı
+> ucuzlatılmadı; **harcamanın bir kısmı taşındı**. Aşama 2'nin gereksinimi artık
+> bir _mülk tabanı_ içeriyor (otopark Sv.2, servis Sv.2, cephe Sv.2) ve bunun en
+> ucuz karşılanma yolu ≈₡22. Eşik ₡140'ta bırakılsaydı ölçülen Aşama 2 varışı
+> 22 dk tavanına karşı **25,0 dk** oluyordu — pencerenin dışında. ₡125'te varış
+> tekrar pencerenin içinde ve oyuncunun toplam harcaması kabaca eskisi kadar.
+> Ölçüm: `tests/integration/stageTransitionPacing.test.ts`; gerekçe
+> [`PROGRESSION_DESIGN.md`](PROGRESSION_DESIGN.md) §7.1.
 
 > **Sepet modeli (ADR-016, 2026-08-18).** "Ortalama ticket" satırı artık mekanik olarak
 > üretilebilir: sipariş bir **sepettir** — aşama menüsünden üniform seçilen ana ürün + yan ürün ve

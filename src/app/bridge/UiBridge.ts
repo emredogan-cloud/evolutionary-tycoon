@@ -6,6 +6,8 @@ import { activeEventSlot, currentWeather } from '@sim/systems/EventSystem';
 import { UPGRADES } from '@config/economy/upgrades';
 import { EMPLOYEE_ROLES, MAX_EMPLOYEES, TASK_KINDS, role } from '@config/employees';
 import { requirementFor } from '@config/progression';
+import type { StageRequirement } from '@config/progression';
+import { buildDurationMs } from '@config/economy/upgrades';
 import { PASS, station } from '@config/economy/stations';
 import type { Sim } from '@sim/core/Sim';
 import { ORDER_PAID, orderStateName } from '@sim/stores/OrderStore';
@@ -14,11 +16,23 @@ import { isServable } from '@sim/systems/ServiceSystem';
 import { playerLevel, upgradeLevelRequirement } from '@sim/systems/playerLevel';
 import { effectValue } from '@sim/systems/UpgradeSystem';
 import type { World } from '@sim/core/World';
+import { PROPERTIES, propertyLevelArt } from '@config/properties';
+import type { LevelArtKind } from '@config/properties';
+import {
+  maxPropertyLevel,
+  pendingPropertyLevel,
+  propertyBuildMs,
+  propertyCapacity,
+  propertyCost,
+  propertyAnchor,
+  propertyLevel,
+  propertyVia,
+} from '@sim/systems/properties';
 import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
 import { brainStateName } from '@sim/ai/EmployeeBrain';
 import { netIncomePerMinute } from '@sim/systems/EconomySystem';
-import { reserveFor } from '@sim/systems/ProgressionSystem';
+import { missingProperties, reserveFor } from '@sim/systems/ProgressionSystem';
 import {
   constructionProgress,
   constructionRemainingMs,
@@ -97,6 +111,15 @@ const ORDER_BUBBLE_HEIGHT_METRES = 1.95;
 const PREP_RING_HEIGHT_METRES = 1.4;
 /** The card's hotspot sits at head height on the object it upgrades. */
 const UPGRADE_CARD_HEIGHT_METRES = 1.7;
+
+/**
+ * How high above its anchor a property's hotspot floats, in metres.
+ *
+ * Head height, so the dot sits above whatever it labels rather than inside it —
+ * a hotspot buried in the counter's own pixels is a hotspot that reads as part
+ * of the counter.
+ */
+const PROPERTY_CARD_HEIGHT_METRES = 2.1;
 /** The task icon sits over an employee's head, like a customer's bubble. */
 const STAFF_ICON_HEIGHT_METRES = 1.95;
 
@@ -161,6 +184,7 @@ type MutableRole = { -readonly [K in keyof RoleView]: RoleView[K] };
 interface MutableHud {
   analytics: { sampleSize: number; converted: number; reasonCounts: number[] };
   orders: MutableOrderCard[];
+  properties: MutableProperty[];
   orderCount: number;
   level: { level: number; xp: number; levelFloor: number; nextLevelXp: number };
   notices: { id: number; kind: string; text: string }[];
@@ -213,6 +237,34 @@ interface MutableProgression {
   constructionRemainingMs: number;
   constructing: boolean;
   requirements: MutableRequirement[];
+}
+
+interface MutableProperty {
+  id: string;
+  label: string;
+  description: string;
+  level: number;
+  maxLevel: number;
+  building: boolean;
+  buildProgress: number;
+  buildRemainingMs: number;
+  capacity: number;
+  used: number;
+  unit: string;
+  levelLabel: string;
+  nextLabel: string;
+  nextCost: number;
+  nextBuildMs: number;
+  nextStage: number;
+  lockReason: string;
+  nextArt: LevelArtKind;
+  nextCells: number;
+  cells: number;
+  levelAsset: string;
+  nextAsset: string;
+  screenX: number;
+  screenY: number;
+  visible: boolean;
 }
 
 interface MutableOrderCard {
@@ -371,6 +423,35 @@ export class UiBridge implements HudSource {
         level: 0,
       })),
       placedCount: 0,
+      // One row per property, allocated once: the set is fixed in shape even
+      // though every number on it changes on each sample.
+      properties: PROPERTIES.map((spec) => ({
+        id: spec.id,
+        label: spec.label,
+        description: spec.description,
+        level: 1,
+        maxLevel: spec.maxLevel,
+        building: false,
+        buildProgress: 0,
+        buildRemainingMs: 0,
+        capacity: -1,
+        used: 0,
+        unit: '',
+        levelLabel: '',
+        nextLabel: '',
+        nextCost: -1,
+        nextBuildMs: 0,
+        nextStage: 1,
+        lockReason: '',
+        nextArt: 'prompted',
+        nextCells: 0,
+        cells: 0,
+        levelAsset: '',
+        nextAsset: '',
+        screenX: 0,
+        screenY: 0,
+        visible: false,
+      })),
       markerCount: 0,
       incomePerMinute: 0,
       orders: Array.from({ length: MAX_ORDER_CARDS }, () => ({
@@ -412,14 +493,19 @@ export class UiBridge implements HudSource {
         constructionProgress: 0,
         constructionRemainingMs: 0,
         constructing: false,
-        // Five rows, allocated once — the requirement list is fixed in shape
-        // even though its numbers change every sample.
+        /*
+         * Allocated once — the requirement list is fixed in shape even though
+         * its numbers change every sample. Five counters, then one row per
+         * property: the panel drops any row whose `need` is 0, so a stage that
+         * asks nothing of the car park simply does not mention it.
+         */
         requirements: [
           { label: 'cash', have: 0, need: 0, met: false },
           { label: 'served', have: 0, need: 0, met: false },
           { label: 'upgrades', have: 0, need: 0, met: false },
           { label: 'staff', have: 0, need: 0, met: false },
           { label: 'reputation', have: 0, need: 0, met: false },
+          ...PROPERTIES.map((spec) => ({ label: `property:${spec.id}`, have: 0, need: 0, met: false })),
         ],
       },
     };
@@ -775,6 +861,7 @@ export class UiBridge implements HudSource {
     this.refillObjective(world);
     this.refillStaff(world);
     this.refillProgression(world);
+    this.refillProperties(world);
   }
 
   /**
@@ -814,13 +901,168 @@ export class UiBridge implements HudSource {
             requirement.reputation,
           ];
 
+    /*
+     * Then the property floor, one row per property, appended in the order the
+     * table declares them (`property:<id>`).
+     *
+     * It belongs on this checklist and not only on the inspect card, and the
+     * reason is what the panel is *for*: "what am I trying to accomplish next",
+     * answerable at a glance. Without these rows a player who has met the cash
+     * and the customer count sees two ticks, no third row, and no offer — with
+     * the explanation hidden behind clicking the right thing in the world. The
+     * checklist has to name every clause the gate enforces or it is not a
+     * checklist.
+     */
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       if (row === undefined) continue;
-      row.have = have[i] ?? 0;
-      row.need = need[i] ?? 0;
+
+      if (i < have.length) {
+        row.have = have[i] ?? 0;
+        row.need = need[i] ?? 0;
+      } else {
+        const id = PROPERTIES[i - have.length]?.id ?? '';
+        row.have = propertyLevel(world, id);
+        row.need = requirement?.requiredProperties[id] ?? 0;
+      }
       row.met = row.have >= row.need;
     }
+  }
+
+  /**
+   * Every property, as the inspect card reads it.
+   *
+   * The whole card is derived here rather than in the component, and that is
+   * the same boundary every other panel keeps: the overlay may not import
+   * `src/sim`, so "how many bays are live", "what does the next one cost" and
+   * "why is it locked" are answered once, by the simulation, and copied into a
+   * reused row. A component that worked any of those out itself would be a
+   * second implementation of a rule the purchase then enforces differently.
+   */
+  private refillProperties(world: World): void {
+    const requirement = requirementFor(world.progression.stage);
+    const ceiling = maxPropertyLevel(world.progression.stage);
+
+    for (let i = 0; i < PROPERTIES.length; i++) {
+      const spec = PROPERTIES[i];
+      const view = this.model.properties[i];
+      if (spec === undefined || view === undefined) continue;
+
+      const level = propertyLevel(world, spec.id);
+      const capacity = propertyCapacity(world, spec.id);
+      const art = propertyLevelArt(spec.id, level);
+      const nextArt = propertyLevelArt(spec.id, level + 1);
+
+      view.level = level;
+      view.capacity = capacity.capacity;
+      view.used = capacity.used;
+      view.unit = capacity.unit;
+      // The count when there is one to give, the level's own name otherwise.
+      // "5 araç" is a fact; "Genişletilmiş otopark" is a word somebody chose.
+      view.levelLabel = capacity.capacity >= 0 ? `${String(capacity.capacity)} ${capacity.unit}` : art.name;
+      view.levelAsset = art.asset;
+      view.cells = art.cells;
+
+      const anchor = propertyAnchor(world, spec.id);
+      view.visible = this.projectInto(anchor.x, anchor.y, PROPERTY_CARD_HEIGHT_METRES, view);
+
+      const site = pendingPropertyLevel(world, spec.id);
+      view.building = site > 0;
+      view.buildProgress = 0;
+      view.buildRemainingMs = 0;
+      if (site > 0) {
+        for (const build of world.layout.pendingBuilds) {
+          if (build.propertyId !== spec.id) continue;
+          view.buildRemainingMs = Math.max(0, build.remainingMs);
+          view.buildProgress = build.totalMs > 0 ? Math.min(1, 1 - build.remainingMs / build.totalMs) : 0;
+        }
+      }
+
+      const next = level + 1;
+      const maxed = next > spec.maxLevel;
+      view.nextLabel = maxed ? '' : nextArt.name;
+      view.nextAsset = maxed ? '' : nextArt.asset;
+      view.nextArt = maxed ? 'prompted' : nextArt.kind;
+      view.nextCells = maxed ? 0 : nextArt.cells;
+      view.nextStage = maxed ? 0 : Math.max(1, next - 1);
+      view.nextCost = -1;
+      view.nextBuildMs = 0;
+      view.lockReason = '';
+
+      if (maxed) {
+        view.lockReason = 'Azami seviye';
+        continue;
+      }
+
+      /*
+       * The main building's "next level" is the next stage, and its price and
+       * its lock are the stage's — including the property floor it is itself
+       * the top of. Routing it through the same card is what makes evolving
+       * feel like upgrading the restaurant rather than pressing a separate
+       * button somewhere else.
+       */
+      if (spec.ladder === 'stage') {
+        view.nextCost = requirement?.cashRequired ?? -1;
+        view.nextBuildMs = requirement?.constructionMs ?? 0;
+        view.lockReason = this.stageLockReason(world, requirement);
+        continue;
+      }
+
+      if (next > ceiling) {
+        view.lockReason = `Aşama ${String(next - 1)} gerekli`;
+        continue;
+      }
+
+      if (spec.ladder === 'own') {
+        view.nextCost = propertyCost(spec, next) ?? -1;
+        view.nextBuildMs = propertyBuildMs(spec, next) ?? 0;
+        if (view.building) view.lockReason = 'İnşa ediliyor';
+        else if (view.nextCost > world.economy.cash) {
+          view.lockReason = `₡${(view.nextCost - world.economy.cash).toFixed(2)} eksik`;
+        }
+        continue;
+      }
+
+      // Derived: the price and the lock are the underlying rung's, asked of the
+      // same code the purchase runs, so the card cannot quote a gate that the
+      // click then applies differently.
+      const via = propertyVia(spec, next);
+      if (via === undefined) {
+        view.lockReason = 'Azami seviye';
+        continue;
+      }
+      const rung = UPGRADES.find((item) => item.id === via);
+      view.nextCost = nextUpgradeCost(world, via);
+      view.nextBuildMs = view.nextCost >= 0 ? buildDurationMs(view.nextCost) : 0;
+      if (rung !== undefined && rung.stage > world.progression.stage) {
+        view.lockReason = `Aşama ${String(rung.stage)} gerekli`;
+      } else if (upgradeLevelRequirement(via) > playerLevel(world).level) {
+        view.lockReason = `Oyuncu sv. ${String(upgradeLevelRequirement(via))} gerekli`;
+      } else if (view.nextCost > world.economy.cash) {
+        view.lockReason = `₡${(view.nextCost - world.economy.cash).toFixed(2)} eksik`;
+      }
+    }
+  }
+
+  /** Why the stage cannot be taken yet, in the player's own terms. */
+  private stageLockReason(world: World, requirement: StageRequirement | null): string {
+    if (requirement === null) return 'Azami seviye';
+    if (isConstructing(world)) return 'İnşa ediliyor';
+
+    const short = missingProperties(world, requirement);
+    const first = short[0];
+    if (first !== undefined) {
+      const spec = PROPERTIES.find((item) => item.id === first.id);
+      return `${spec?.label ?? first.id} Sv. ${String(first.need)} gerekli`;
+    }
+    const price = requirement.cashRequired + reserveFor(world, requirement);
+    if (world.economy.cash < price) return `₡${(price - world.economy.cash).toFixed(2)} eksik`;
+    if (world.stats.customersServed < requirement.customersServed) {
+      return `${String(requirement.customersServed - world.stats.customersServed)} müşteri daha`;
+    }
+    if (world.employees.activeCount < requirement.employeesHired) return 'Personel gerekli';
+    if (world.economy.reputation < requirement.reputation) return 'İtibar yetersiz';
+    return '';
   }
 
   /**

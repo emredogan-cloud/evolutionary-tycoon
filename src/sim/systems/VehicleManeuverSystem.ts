@@ -1,5 +1,5 @@
 import { DRIVE_THRU_ADVANCE_MPS } from '@config/driveThru';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import {
   CHANNEL_COUNTER,
   CHANNEL_DRIVE_THRU,
@@ -670,7 +670,7 @@ export class VehicleManeuverSystem implements SimSystem {
    * teleporting.
    */
   private freeLaneSlot(world: World): number {
-    const layout = layoutForStage(world.progression.stage);
+    const layout = layoutOf(world);
     const driveThru = layout.driveThru;
     if (driveThru === null) return -1;
 

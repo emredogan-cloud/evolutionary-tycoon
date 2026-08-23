@@ -77,7 +77,29 @@ overlay is prompted as `struct_scaffold_site` (P308, NEW_CONSTRUCTION_01);
 until it lands the silhouette carries the site alone — an explicit
 AWAITING EXTERNAL ASSET note, not a placeholder.
 
-## 5. What deliberately did NOT change
+## 5. Property levels use this, and nothing else (2026-08-23)
+
+The restaurant evolution system added one purchasable ladder — the car park —
+and it goes up through **this** queue. `upgradeProperty` charges the cash and
+pushes a `pendingBuilds` row carrying `propertyId`; `advancePendingBuilds`
+applies the level when the timer lands, in the same branch that applies a
+machine's. There is no second construction mechanism, and that is deliberate: a
+second one would be a second set of pause, speed-multiplier, offline and reload
+behaviours to keep in step, and the first time they disagreed it would be a bug
+report about a car park that finished during a pause.
+
+Two consequences fall out for free, both browser-verified in the inspect card:
+
+- The card's countdown is the site's own `remainingMs`, so 2× halves it and
+  pause holds it.
+- The level cannot arrive before the building that produces it, because the
+  only writer of `propertyLevels` is the completion branch.
+
+The one thing a property site does not do is occupy a tile: it has no `x`/`y`
+and draws no silhouette, because a car park's construction is the tarmac
+itself. The card's progress bar is the whole visual.
+
+## 6. What deliberately did NOT change
 
 Stage evolution (EVOLVE) keeps its own construction path (`world.construction`,
 12–30 s, the growing-building mask) — it predates this pass and is the model

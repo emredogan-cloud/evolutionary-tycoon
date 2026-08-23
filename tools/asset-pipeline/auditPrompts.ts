@@ -196,6 +196,103 @@ const FX_SUBJECT: Readonly<Record<string, string>> = {
   coin: 'single small gold coin, slight tilt, soft rim light',
 };
 
+/**
+ * The restaurant evolution system's level art — `LEVEL_ASSET_EVOLUTION_LIBRARY`.
+ *
+ * Every property level whose classification is **EXTERNAL PROMPT REQUIRED**
+ * appears here, and nowhere else: the library document is generated from the
+ * same rows, so the copy-ready text a person pastes into a generator and the
+ * text this catalog prints are one string, not two that drift.
+ *
+ * All six are **frame swaps into an existing world box**. That is deliberate:
+ * a level that changed an object's footprint would move its anchor, its
+ * navigation blocker and every depth comparison it takes part in, so the level
+ * would be a layout change wearing a sprite's clothes. Same box, new picture,
+ * and the game's geometry never learns about it.
+ */
+const LEVEL_ART: Readonly<
+  Record<
+    string,
+    {
+      readonly subject: string;
+      readonly size: string;
+      readonly notes: readonly string[];
+      readonly doNots: readonly string[];
+    }
+  >
+> = {
+  struct_counter_lv3: {
+    subject:
+      'the STAGE-4 restaurant frontage that struct_counter_lv2 grows into — same 3.0 x 0.8 m counter block and the same serving face, now a finished building front: rendered wall panel above the counter, a proper fascia band, a wide glazed section to one side and a tiled sill course, reading as a permanent premises rather than a converted stall',
+    size: 'exactly the struct_counter_lv2 canvas at 2x (243 x 192 px), same anchor',
+    notes: [
+      'Stage 4 is the same plot, the same camera and the same counter point as Stage 3 — the player must recognise the place they built. This is the Stage-3 diner having its frontage finished, not a new restaurant.',
+      'The counter surface must stay at the same height and the same y as struct_counter_lv2: the queue stands 0.8 m from the counter point and the serve animation targets that surface.',
+    ],
+    doNots: [
+      'DO NOT widen the footprint — the block is 3.0 x 0.8 m at every stage and the drive-thru is a separate asset',
+      'DO NOT render legible signage text; the sign is its own object',
+    ],
+  },
+  struct_grill_lv3: {
+    subject:
+      'the THIRD kitchen bench in the struct_grill_lv1 / struct_grill_lv2 family — same 1.2 x 0.7 m box and the same stainless language, now clearly the top of the line: a double burner section, a raised salamander shelf over the back edge, and a small utensil rail',
+    size: 'exactly the struct_grill_lv2 canvas at 2x, same anchor',
+    notes: [
+      'The three benches are read side by side in the kitchen, so the progression must be legible at a glance: lv1 plain, lv2 with the extended top, lv3 with the shelf above it.',
+      'Silhouette carries the difference — the shelf is what a player sees from the isometric camera.',
+    ],
+    doNots: ['DO NOT add food, flames or steam — the renderer emits those as FX'],
+  },
+  struct_counter_wide_lv1: {
+    subject:
+      'the WIDENED service counter the bigger-counter rung installs — the struct_counter_lv1 cabinet extended along its long axis with a second serving position: two till stations on the surface, a longer sneeze-guard rail, one continuous cabinet front',
+    size: 'exactly the struct_counter_lv1 canvas at 2x, same anchor',
+    notes: [
+      'Drawn at the same counter point as struct_counter_lv1; the extra width is what tells the player their queue got shorter.',
+      'The overhang stays over the same 0.4 m blocked band — customers walk under the lip, and moving it changes where the queue can stand.',
+    ],
+    doNots: ['DO NOT draw staff or customers; DO NOT bake a ground shadow'],
+  },
+  struct_forecourt_lv1: {
+    subject:
+      'front-of-house dressing for a tidied forecourt: a low planter run, two rope-and-post stanchions and a small paved apron, as ONE cluster on transparent ground, arranged along the isometric x axis so it reads as an edge rather than a blob',
+    size: '320 x 200 px at 2x, footprint 3.0 x 1.0 m',
+    notes: [
+      'Sits in front of the counter where the queue forms; it must not read as an obstacle in the walking lane, because it is not one — nothing blocks here.',
+      'Joins struct_barrier and struct_planter in language: same stone, same rope, same value range.',
+    ],
+    doNots: ['DO NOT enclose the space — an open front is what makes it a forecourt and not a fence'],
+  },
+  struct_sign_large_lit_upper: {
+    subject:
+      'the UPPER HALF ONLY of the delivered struct_sign_large signboard, now ILLUMINATED: same board, same posts, same twin lamps, with the lamps LIT — warm pool of light across the board face, the painted menu illustration clearly visible inside it, and a soft glow falloff at the board edges',
+    size: 'same canvas as struct_sign_large_upper at 2x',
+    notes: [
+      'Anchor, proportions and palette identical to struct_sign_large_upper and to struct_sign_large_painted_upper (P307) — the runtime swaps the frame as the sign rung is bought, and the three must line up to the pixel.',
+      'This is the painted board with its lamps on. Draw the painted board first, then light it.',
+      'The lower half is unchanged and is NOT regenerated; only the board above the cut is lit.',
+    ],
+    doNots: [
+      'DO NOT render legible text — squiggles that read as writing, never actual letters',
+      'DO NOT let the glow cross the bottom edge of the canvas; the join row must stay identical to the unlit upper half',
+    ],
+  },
+  struct_frontage_lights: {
+    subject:
+      'a run of warm festoon lights for the building frontage — a gentle catenary of small bulbs on a dark cable, lit, with a short bracket at each end, on transparent ground',
+    size: '384 x 96 px at 2x, footprint 3.0 x 0.2 m',
+    notes: [
+      'Drawn across the front of the building at Stage-4 frontage level; the cable sags below the fascia and the bulbs are the only light source in the sprite.',
+      'Must read at dusk and at noon — the bulbs carry a lit core plus a small warm halo rather than a full-sprite bloom.',
+    ],
+    doNots: [
+      'DO NOT bake the wall behind it — this composites over whatever building it hangs on',
+      'DO NOT animate; the renderer handles any flicker',
+    ],
+  },
+};
+
 interface Rendered {
   readonly subject: string;
   readonly sizeHint: string;
@@ -207,6 +304,17 @@ interface Rendered {
 
 function renderRow(row: RequirementRow): Rendered {
   const id = row.id;
+  const level = LEVEL_ART[id];
+  if (level !== undefined) {
+    return {
+      subject: level.subject,
+      sizeHint: level.size,
+      notes: level.notes,
+      doNots: level.doNots,
+      batch: 'restaurant-evolution',
+      subjectKey: `property/${row.subject}`,
+    };
+  }
   if (row.category === 'VEHICLES') {
     const [, arch, variant, direction] = id.split('_');
     const archKey = arch ?? '';

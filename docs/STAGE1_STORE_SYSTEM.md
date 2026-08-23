@@ -176,3 +176,27 @@ Detail: [`STAGE1_BUILDING_SYSTEM.md`](STAGE1_BUILDING_SYSTEM.md).
   a placeholder would break REAL ASSET > PLACEHOLDER. Whether those two should
   be produced at all is an open user decision.
 - The İnşa Et door now has both tabs: the upgrade tree and **Mutfak & Tesisler**.
+
+## 11. Decor is not a property (2026-08-23)
+
+The restaurant evolution system levels five things and **none of them is a
+store item**. That is a decision, and the directive's own words are the reason:
+_"Do NOT make every decorative prop levelable just because it exists."_
+
+A bench, a bin, a shrub or a lamp post is personalisation. A player buys it
+because they want the lot to look a certain way, and that is a complete
+transaction. Attaching a ladder to it turns a choice into an obligation: the
+shrub now has a level, the level has a cost, and the player who liked the shrub
+is now behind on something.
+
+The one apparent exception proves the rule. `roadside-sign` places the `sign`
+object, and the sign **does** move a level — but the level belongs to the
+**frontage property**, because what changes is conversion from the road, not
+how the sign looks to its owner. The store sells the object; the property sells
+what it does.
+
+So the store's catalogue, its zones, its 30% refund and its identity chain are
+untouched by this pass. The only overlap is visual: a player who has placed a
+`roadside-sign` sees the frontage hotspot sitting on it, because
+`propertyAnchor` finds the sign in the layout rather than carrying a coordinate
+of its own.

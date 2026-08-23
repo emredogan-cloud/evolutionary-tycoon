@@ -1,5 +1,5 @@
 import { euclidean } from '../math/length';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { ARRIVAL_EPSILON_METRES, WALK_SPEED_METRES_PER_SECOND } from '@config/customer';
 import { STATE_WALKING_TO_CAR, STATE_WALKING_TO_DOOR } from '../ai/fsm/customerFsm';
 import type { SimSystem } from '../core/SystemPipeline';
@@ -194,7 +194,7 @@ export class NavigationSystem implements SimSystem {
      */
     const signature = world.layout.revision;
     if (signature !== this.builtFor) {
-      this.fields.rebuild(world.layout.placed, layoutForStage(world.progression.stage));
+      this.fields.rebuild(world.layout.placed, layoutOf(world));
       this.builtFor = signature;
     }
 

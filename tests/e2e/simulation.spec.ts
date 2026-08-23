@@ -105,7 +105,26 @@ const REFERENCE = {
    *
    * Recomputed by the Node suite for seed 424242 and asserted here.
    */
-  hashAtTick0: '2bf994f0ebc020ac',
+  /*
+   * A sixteenth time, and the smallest reason yet — the restaurant evolution
+   * system put `progression.propertyLevels` into the digest (2026-08-23).
+   *
+   * A property level changes what the world *does*: the car park's level is
+   * how many bays exist, and a world with five bays turns away fewer cars than
+   * one with four. State that changes an outcome belongs in the hash, which is
+   * exactly the rule the three deliberate exclusions are measured against.
+   *
+   * Both figures move even though the map is **empty** at tick 0 and at tick
+   * 1000 of a fresh seed: the digest writes the entry count either way, so a
+   * new hashed field shifts every hash whether or not it holds anything yet.
+   * Nothing about Stage 1's simulation changed — the Stage-1 car park is four
+   * bays before and after — and tick 1000 moved by the same single field.
+   *
+   * Recomputed by the Node suite for seed 424242 and asserted here; Chromium
+   * produced this value independently before the pin was updated, which is the
+   * agreement this test exists to prove.
+   */
+  hashAtTick0: 'b40274e81d70e0cc',
   /*
    * Tick 1000 moved again with Phase 12's balancing — traffic, prices and the
    * reputation curve all feed the digest by the thousandth tick. Tick 0 did not:
@@ -166,7 +185,11 @@ const REFERENCE = {
    * is motionless and did not move. Node-suite recomputation, seed 424242;
    * the browser reproduces it independently, which is what this test is for.
    */
-  hashAtTick1000: '695660099b0e47a8',
+  /*
+   * Renewed with tick 0 above, by the same single added field and nothing
+   * else — see that note. Node-suite recomputation, seed 424242.
+   */
+  hashAtTick1000: '3a394327b3f0fba8',
 } as const;
 
 interface TestApi {

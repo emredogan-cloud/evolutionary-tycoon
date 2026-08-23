@@ -1,6 +1,6 @@
 import { euclidean } from '../math/length';
 import { PASS } from '@config/economy/stations';
-import { layoutForStage } from '@config/layouts';
+import { layoutOf } from './properties';
 import { COUNTER_HANDOVER_MS, TASK_BASE_MS, TASK_KINDS, TASK_SCORING, role } from '@config/employees';
 import type { TaskKind } from '@config/employees';
 import { assignTask, releaseToIdle, STATE_BLOCKED, STATE_IDLE } from '../ai/EmployeeBrain';
@@ -373,7 +373,7 @@ function tableOfOrder(world: World, orderSlot: number): { x: number; y: number }
 
   const table = world.customers.at(customerSlot).tableSlot;
   if (table < 0) return null;
-  return layoutForStage(world.progression.stage).tables[table] ?? null;
+  return layoutOf(world).tables[table] ?? null;
 }
 
 /**
@@ -398,8 +398,7 @@ export function mayClaimTask(world: World, employee: EmployeeRecord, taskSlot: n
 
   const spec = role(employee.role);
   const waited = world.clock.simTimeMs - task.postedAtMs >= COUNTER_HANDOVER_MS;
-  const counterHandover =
-    kind === 'DELIVER_ORDER' && layoutForStage(world.progression.stage).tables.length === 0;
+  const counterHandover = kind === 'DELIVER_ORDER' && layoutOf(world).tables.length === 0;
 
   /*
    * The counter is the player's station, so **every** role waits the window

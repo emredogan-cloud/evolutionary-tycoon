@@ -75,6 +75,26 @@ const requirementSchema = z.object({
    * from minute 92 to the end of a twelve-hour run.
    */
   requiredRoles: z.array(z.string()),
+  /**
+   * The property floor — the restaurant evolution system.
+   *
+   * "Money is not enough" already had a milestone half; this is its *state*
+   * half. `docs/RESTAURANT_EVOLUTION_ROADMAP.md` §B.4: a stage does not open
+   * because the till is full, it opens because the property has been developed
+   * to a coherent standard — a car park that holds the traffic, a kitchen that
+   * can run the orders, a queue that fits the customers, a frontage the road
+   * can read.
+   *
+   * Property id → minimum level. Every entry is reachable from inside the
+   * *previous* stage, because `maxPropertyLevel(stage) = stage + 1` gives
+   * exactly one tier of headroom — so a Stage-2 floor of "level 2" is bought
+   * during Stage 1.
+   *
+   * **This replaced the bare `upgradesBought` count for Stage 2.** Counting
+   * rungs said "you found the upgrade card"; naming properties says "your
+   * stand is ready", which is the lesson the transition is a check on.
+   */
+  requiredProperties: z.record(z.string(), z.number().int().min(1).max(4)),
 });
 
 export type StageRequirement = z.infer<typeof requirementSchema>;
@@ -82,12 +102,33 @@ export type StageRequirement = z.infer<typeof requirementSchema>;
 const REQUIREMENTS: StageRequirement[] = [
   {
     stage: 2,
-    cashRequired: 140,
+    cashRequired: 125,
     customersServed: 25,
-    upgradesBought: 1,
+    /*
+     * Zero, and the property floor below is why. Four named levels are a
+     * strictly stronger statement than "one rung, any rung": the old milestone
+     * was satisfied by a single ₡6 sign, and the floor asks for a car park, a
+     * bench, a wider counter and that same sign. Keeping both would count the
+     * same purchases twice.
+     */
+    upgradesBought: 0,
     employeesHired: 0,
     reputation: 0,
     constructionMs: 12_000,
+    /*
+     * Three properties, not four — and the missing one is **measured**, not
+     * chosen. Stage 2 fires at 25 customers served, which is **player level 2**
+     * (`playerLevel.ts`); the kitchen's level-2 rung, `second-prep-station`, is
+     * gated at player level **5**. Requiring it here would ask for something
+     * the player cannot buy at the moment they are asked — the ADR-014
+     * stranding class, one system over.
+     *
+     * The three that remain are reachable at player level 1:
+     *   parking 2  — its own ladder, ungated
+     *   service 2  — `bigger-counter` ₡11
+     *   frontage 2 — `hand-painted-sign` ₡6
+     */
+    requiredProperties: { parking: 2, service: 2, frontage: 2 },
     // The truck's counter works exactly like the stand's; nothing new is
     // mandatory to earn, so the reserve is wage runway alone.
     requiredRoles: [],
@@ -100,6 +141,13 @@ const REQUIREMENTS: StageRequirement[] = [
     employeesHired: 1,
     reputation: 40,
     constructionMs: 20_000,
+    /*
+     * The kitchen joins here, and this is exactly where it becomes reachable:
+     * Stage 3 asks for 120 customers, which is player level 5, which is
+     * `second-prep-station`'s own gate. The floor and the gate meet rather
+     * than fight.
+     */
+    requiredProperties: { parking: 3, kitchen: 2, service: 3, frontage: 3 },
     // The diner serves at tables, and food reaches a table in a waiter's hands.
     requiredRoles: ['waiter'],
   },
@@ -111,6 +159,16 @@ const REQUIREMENTS: StageRequirement[] = [
     employeesHired: 3,
     reputation: 55,
     constructionMs: 30_000,
+    /*
+     * Parking stays at 3 — its ceiling. Stage 4's answer to more cars is the
+     * drive-thru lane, not more tarmac (`stage4.ts`), so asking for a fourth
+     * parking level would be asking for a level that does not exist.
+     *
+     * Kitchen tops out at 3 for the same kind of reason: `STATIONS` has two
+     * benches behind the `prepStations` effect, so a fourth level would be a
+     * number with no kitchen behind it.
+     */
+    requiredProperties: { parking: 3, kitchen: 3, service: 4, frontage: 4 },
     // The restaurant keeps its tables; the drive-thru is worked from the
     // kitchen, so the waiter remains the one role income cannot exist without.
     requiredRoles: ['waiter'],
