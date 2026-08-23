@@ -814,9 +814,19 @@ export class WorldScene extends Phaser.Scene {
        * whole pixel and the overlap tucks the upper's soft edge behind the
        * lower's, which is invisible on every split object and exactly what
        * hides a seam that is genuinely zero data wide.
+       *
+       * Plus whatever the object declares. A pair that was painted as two
+       * separate pictures rather than cut from one does not meet at its
+       * authored edge, and `upperOverlapMetres` is the measured depth at which
+       * it does — see `WorldObjectSpec`. In metres because that is what the
+       * rest of the object is in; `TILE_Z` is the screen height of one metre
+       * of elevation, which is the axis the upper half moves along.
        */
+      const overlapPx = Math.round((spec.upperOverlapMetres ?? 0) * TILE_Z);
       const top =
-        Math.round(view.screenY - ((lowerInfo?.height ?? 0) / ART_SCALE) * (lowerInfo?.originY ?? 1)) + 1;
+        Math.round(view.screenY - ((lowerInfo?.height ?? 0) / ART_SCALE) * (lowerInfo?.originY ?? 1)) +
+        1 +
+        overlapPx;
       const upperSprite = this.quadFor(quad, upperAtlas, upper);
       // The upper half's anchor is its own bottom centre (`assets:import`), so
       // putting that on the lower half's top edge is what makes the two meet.

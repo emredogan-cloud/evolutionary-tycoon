@@ -377,15 +377,40 @@ export const STAGE1_LAYOUT: StageLayout = {
   statics: [
     { objectId: 'counter-lv1', x: 12, y: 12.6, z: 0 }, // the stand itself
     /*
-     * The canopy, mounted OVER the counter — the correction pass. It used to
-     * sit at (12, 10.2, z 0): eighty centimetres in front of the counter at
-     * ground level, which drew the whole striped canopy lying on the road
-     * apron like a fallen tarp (the 2026-08-22 captures). The art is a
-     * wall-mount awning whose bar is its high edge; z lifts the bar to
-     * head height above the counter top, and the slight north offset lets the
-     * canopy slope forward over the serving side, where the queue stands.
+     * The canopy, clear of the counter — the 2026-08-23 correction.
+     *
+     * Its history is two fixes deep. It began at (12, 10.2, z 0), which drew
+     * the striped canopy lying on the road apron like a fallen tarp. The
+     * 2026-08-22 pass lifted it to (12, 12.45, z 1.75) and the tarp stood up
+     * — but 1.75 m is only 65 cm above a 1.1 m counter, and the sprite's own
+     * mass hangs *below* its anchor, so the valance came down across the
+     * counter top and hid every readable thing on it: the till, the display
+     * case, the drinks, the plant. That is what "the canopy interferes with
+     * the service view" means, and it was measured rather than eyeballed —
+     * the counter's top edge sits at anchorY − 60.5 screen px, the awning's
+     * lower edge at anchorY + 58.5, so the two overlap for every z below
+     * ~2.5 m.
+     *
+     * Measured, by compositing the two delivered sprites at their layout
+     * positions and counting how much of the counter the canopy paints over:
+     *
+     *   z 1.75 (before) — 47% of the counter hidden, **87% of its top band**
+     *   z 2.40          — 14% / 34%
+     *   z 2.60          —  6% / 16%
+     *   z 2.80 (now)    —  2% /  5%
+     *
+     * The top band is the upper 45% of the counter sprite, which is where the
+     * till, the display case, the drinks and the plant are drawn — everything
+     * that tells a player this is a place that sells food. At the old placement
+     * the canopy covered nearly all of it.
+     *
+     * Plan centred on the counter (12.45 → 12.6, the same point the counter
+     * uses), so the canopy sits over the stand rather than drifting off it.
+     * `tests/unit/render/standComposition.test.ts` re-measures the occlusion on
+     * every run, so a future nudge to either number cannot quietly put the
+     * canopy back on top of the merchandise.
      */
-    { objectId: 'awning', x: 12, y: 12.45, z: 1.75 },
+    { objectId: 'awning', x: 12, y: 12.6, z: 2.8 },
     { objectId: 'sign', x: 9.5, y: 13.1, z: 0 }, // the hand-painted sign by the walkway
     // East of the waiting rows since the correction pass — its old spot at
     // (16, 13) is now a standing position.

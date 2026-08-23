@@ -295,6 +295,33 @@ export interface WorldObjectSpec {
   readonly frame: string;
   /** The upper half of a split object, drawn stacked above `frame`. */
   readonly upperFrame?: string;
+  /**
+   * How far the upper half sinks into the lower one, in world metres.
+   *
+   * Zero for a pair genuinely cut from one painting on one scanline: the two
+   * cut edges then match column for column and edge-to-edge stacking is exact
+   * (`WorldScene.drawStatic` still tucks a single pixel to hide the
+   * antialiased seam).
+   *
+   * It is **not** zero when the halves were painted separately, which is what
+   * the delivered set actually contains. Measured on the join row — the
+   * fraction of the lower half's top-row opaque columns that have upper-half
+   * material above them — the delivered pairs read:
+   *
+   *   lamp 1.00 · sign 0.93 · conifer-01 0.85 · **broadleaf-02 0.40**
+   *
+   * At 0.40 three fifths of that tree's top row is branch ends with open sky
+   * above them: the amputated stumps and the floating crown of the user's
+   * 2026-08-23 capture. Sinking the crown until its foliage reaches those
+   * stumps is the only correction available without new art, and it is a
+   * composition parameter rather than a fudge — the pair still takes two
+   * depths, still stacks by the lower half's own top edge, and the number is
+   * the measured overlap at which coverage reaches 1.00.
+   *
+   * `tests/unit/config/splitComposition.test.ts` re-measures every pair
+   * against its declared overlap from the delivered PNGs.
+   */
+  readonly upperOverlapMetres?: number;
   readonly footprintX: number;
   readonly footprintY: number;
   readonly heightMetres: number;
@@ -359,8 +386,25 @@ export const WORLD_OBJECTS = [
   },
   {
     id: 'truck',
+    /*
+     * Lower only, and this is the broadleaf-01 fault a second time — found by
+     * the 2026-08-23 split-pair audit and confirmed in Chromium at `?stage=2`,
+     * where the venue rendered as **two food trucks stacked in mid-air**.
+     *
+     * The join measurement says why: at the authored cut the lower half's top
+     * row has six opaque columns and the upper half's bottom row has around
+     * six hundred, so coverage is 0.00 — the upper is not resting on the lower,
+     * it is a second vehicle floating above it. Rendered apart, each half is a
+     * complete truck: the lower has wheels, ground contact and a serving hatch;
+     * the upper is cut off below the cab, so the lower is the one that can
+     * stand on its own.
+     *
+     * Out of this pass's Stage-1 scope and fixed anyway, because the
+     * alternative was to waive `splitComposition.test.ts` for a defect whose
+     * remedy is one line. The pair is filed for regeneration
+     * (NEW_STAGE1_UI_FIX_02) and `upperFrame` comes back with it.
+     */
     frame: `struct_truck_lv1_lower${SUFFIX}`,
-    upperFrame: `struct_truck_lv1_upper${SUFFIX}`,
     footprintX: 6.5,
     footprintY: 2.4,
     heightMetres: 2.9,
@@ -476,6 +520,23 @@ export const WORLD_OBJECTS = [
     blockFootprintY: 0.9,
     frame: `nature_tree_broadleaf-02_lower${SUFFIX}`,
     upperFrame: `nature_tree_broadleaf-02_upper${SUFFIX}`,
+    /*
+     * 1.25 m of overlap — 80 art pixels, and the number is a measurement.
+     *
+     * The stage-1 continuation pass reconstructed this pair offline and read
+     * it as sound; the runtime says otherwise, and so did the user. At the
+     * authored join the lower half's top row carries five opaque runs — the
+     * trunk and **four branch ends** — and the upper half's bottom row carries
+     * one, the trunk. Coverage 0.40. Sliding the crown down, coverage reaches
+     * 0.90 at 60 art px and 1.00 at 80; at 80 every stump is inside foliage
+     * and the tree reads as one tree.
+     *
+     * The height stays 5.0 m: it is the world box the depth sorter and the
+     * navigation grid use, and `blockFootprint` already tells the grid this is
+     * a 0.9 m trunk rather than a 3 m canopy. What changed is where the crown
+     * is drawn, not how much room the tree takes up.
+     */
+    upperOverlapMetres: 1.25,
     footprintX: 3.0,
     footprintY: 3.0,
     heightMetres: 5.0,
@@ -487,6 +548,15 @@ export const WORLD_OBJECTS = [
     blockFootprintY: 0.9,
     frame: `nature_tree_conifer-01_lower${SUFFIX}`,
     upperFrame: `nature_tree_conifer-01_upper${SUFFIX}`,
+    /*
+     * Half a metre. This pair joins at 0.85 coverage unaided — the tapering
+     * edges of the lower foliage mass, not a severed branch — which is why it
+     * survived the eye-read that broadleaf-02 also survived. 0.5 m (34 art px
+     * against a measured 31 px minimum) takes it to 1.00. Nothing places a
+     * conifer today; the value is here so that the day something does, the
+     * pair is already correct rather than 15% short.
+     */
+    upperOverlapMetres: 0.5,
     footprintX: 3.0,
     footprintY: 3.0,
     heightMetres: 5.0,

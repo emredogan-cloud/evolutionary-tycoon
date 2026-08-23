@@ -18,17 +18,26 @@ import { allPrompts, renderPromptHtml } from '../../../tools/asset-pipeline/prom
 const DELIVERED_PROMPTS = 172;
 /**
  * The delivered 172, the 2026-08-21 audit's 131 (P173–P303), the 2026-08-22
- * UI/world correction pass's 5 (P304–P308), and the 2026-08-23 stage-1
+ * UI/world correction pass's 5 (P304–P308), the 2026-08-23 stage-1
  * continuation's 2 (P309–P310 — the broadleaf-01 split pair, which the
- * delivery painted as two unrelated pictures).
+ * delivery painted as two unrelated pictures), and the 2026-08-23 UI final
+ * correction's 4 (P311–P314 — the broadleaf-02 pair at 0.40 join coverage and
+ * the stage-2 food truck at 0.00, whose two halves are each a whole truck).
  *
- * The same pass also flipped three role icons to NEEDS REGEN. They do **not**
- * appear here, and that is the point: they already had audit prompt ids
- * (P291–P293), and ids are positional, so giving them new numbers at the end
- * would have renumbered every prompt in between. Their *wording* changed; the
- * catalogue's numbering did not move.
+ * The stage-1 continuation also flipped three role icons to NEEDS REGEN. They
+ * do **not** appear here, and that is the point: they already had audit prompt
+ * ids (P291–P293), and ids are positional, so giving them new numbers at the
+ * end would have renumbered every prompt in between. Their *wording* changed;
+ * the catalogue's numbering did not move.
  */
-const EXPECTED_PROMPTS = 310;
+const EXPECTED_PROMPTS = 314;
+/**
+ * One per batch, and a batch is a generation *session* — the pipeline's rule is
+ * that a category is generated together or it stops looking related. The
+ * stage-1 continuation's regenerations are their own batch, and so is the
+ * 2026-08-23 UI final correction's food-truck pair.
+ */
+const EXPECTED_BATCHES = 25;
 const HTML_PATH = resolve(import.meta.dirname, '../../../docs/ASSET_GENERATION_PROMPTS.html');
 
 describe('prompt numbering', () => {
@@ -127,7 +136,7 @@ describe('the exported page', () => {
 
   it('lists every batch as its own section', () => {
     const batches = [...new Set(numbered.map((asset) => asset.batch))];
-    expect(batches).toHaveLength(24);
+    expect(batches).toHaveLength(EXPECTED_BATCHES);
     for (const batch of batches) {
       expect(html).toContain(`id="batch-${batch}"`);
     }
@@ -141,7 +150,7 @@ describe('the exported page', () => {
 
   it('shows the counts a reader would check first', () => {
     expect(html).toContain(`<b>${EXPECTED_PROMPTS}</b><span>prompts</span>`);
-    expect(html).toContain('<b>24</b><span>batches</span>');
+    expect(html).toContain(`<b>${String(EXPECTED_BATCHES)}</b><span>batches</span>`);
   });
 
   it('is self-contained and offline', () => {
@@ -162,8 +171,7 @@ describe('the exported page', () => {
 
   it('offers per-prompt and per-batch copying', () => {
     expect(html.split('data-copy="one"').length - 1).toBe(EXPECTED_PROMPTS);
-    // 24 batches: the stage-1 continuation's regenerations are their own.
-    expect(html.split('data-copy="batch"').length - 1).toBe(24);
+    expect(html.split('data-copy="batch"').length - 1).toBe(EXPECTED_BATCHES);
   });
 
   it('renders identically on a second run', () => {

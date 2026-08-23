@@ -1124,11 +1124,11 @@
     "stage": "all",
     "role": "runtime frame",
     "consumer": "atlas via AssetRegistry",
-    "status": "PRESENT + VERIFIED",
-    "prompt": "P124",
+    "status": "PRESENT + NEEDS REGEN",
+    "prompt": "P311",
     "priority": "—",
     "requiredBefore": null,
-    "note": ""
+    "note": "regen 2026-08-23: join-row coverage 0.40 — four branch ends with nothing above them. Runtime sinks the crown 1.25 m meanwhile."
   },
   {
     "id": "nature_tree_broadleaf-02_upper",
@@ -1137,11 +1137,11 @@
     "stage": "all",
     "role": "runtime frame",
     "consumer": "atlas via AssetRegistry",
-    "status": "PRESENT + VERIFIED",
-    "prompt": "P125",
+    "status": "PRESENT + NEEDS REGEN",
+    "prompt": "P312",
     "priority": "—",
     "requiredBefore": null,
-    "note": ""
+    "note": "regen 2026-08-23: painted independently of its lower half; see P311."
   },
   {
     "id": "nature_tree_conifer-01_lower",
@@ -1406,28 +1406,28 @@
   {
     "id": "struct_truck_lv1_lower",
     "category": "STRUCTURES",
-    "subject": "struct truck lv1 lower",
-    "stage": "all",
+    "subject": "stage-2 food truck lower",
+    "stage": "2",
     "role": "runtime frame",
-    "consumer": "atlas via AssetRegistry",
-    "status": "PRESENT + VERIFIED",
-    "prompt": "P109",
+    "consumer": "WORLD_OBJECTS truck",
+    "status": "PRESENT + NEEDS REGEN",
+    "prompt": "P313",
     "priority": "—",
     "requiredBefore": null,
-    "note": ""
+    "note": "regen 2026-08-23: each delivered half is a complete truck; stacked they rendered as two trucks. Runtime draws the lower alone meanwhile."
   },
   {
     "id": "struct_truck_lv1_upper",
     "category": "STRUCTURES",
-    "subject": "struct truck lv1 upper",
-    "stage": "all",
+    "subject": "stage-2 food truck upper",
+    "stage": "2",
     "role": "runtime frame",
-    "consumer": "atlas via AssetRegistry",
-    "status": "PRESENT + VERIFIED",
-    "prompt": "P110",
+    "consumer": "WORLD_OBJECTS truck",
+    "status": "PRESENT + NEEDS REGEN",
+    "prompt": "P314",
     "priority": "—",
     "requiredBefore": null,
-    "note": ""
+    "note": "regen 2026-08-23: see P313. Not drawn at all until the pair is regenerated."
   },
   {
     "id": "struct_window_default",

@@ -126,10 +126,49 @@ const ROLE_GLYPH: Readonly<Record<string, string>> = {
  * canopy. `sprites.ts` draws the lower alone until this pair lands.
  *
  * The two sibling pairs (`broadleaf-02`, `conifer-01`) were reconstructed the
- * same way and are correct, so this is one bad pair rather than a fault in the
- * split rule itself.
+ * same way and read as correct — **by eye, on the whole sprite, and that was
+ * the wrong instrument.** The 2026-08-23 pass measured the *join row* instead
+ * and found broadleaf-02 at 0.40 coverage (four branch ends with nothing above
+ * them) and the stage-2 food truck at 0.00 (each half is a complete truck).
+ * So it is not one bad pair; it is a delivery that painted halves separately,
+ * and `tests/unit/config/splitComposition.test.ts` is the instrument that says
+ * so per pair rather than per impression.
  */
-const MISMATCHED_SPLIT = new Set(['nature_tree_broadleaf-01_lower', 'nature_tree_broadleaf-01_upper']);
+const MISMATCHED_SPLIT = new Set([
+  'nature_tree_broadleaf-01_lower',
+  'nature_tree_broadleaf-01_upper',
+  'nature_tree_broadleaf-02_lower',
+  'nature_tree_broadleaf-02_upper',
+]);
+
+/** The join-row measurement behind each regenerated split pair. */
+const SPLIT_EVIDENCE: Readonly<Record<string, string>> = {
+  'nature_tree_broadleaf-01':
+    'The delivered pair were never halves of one painting — verified by cropping both out of nature.webp and stacking them at their own anchors, which produces a tree wearing a second canopy. Join-row coverage 0.00.',
+  'nature_tree_broadleaf-02':
+    'Join-row coverage 0.40: the lower half’s top row carries five opaque runs — the trunk and four branch ends — and the upper half’s bottom row carries one. Three fifths of that row is branches cut off in mid-air. The runtime sinks the crown 1.25 m to hide the stumps meanwhile, which shortens the tree.',
+  struct_truck_lv1:
+    'Join-row coverage 0.00, and the reason is not a misaligned cut: each delivered half is a COMPLETE food truck. Confirmed in Chromium at ?stage=2, where the venue rendered as two trucks stacked in mid-air. The runtime draws the lower half alone meanwhile.',
+};
+
+/** The stage-2 food truck, whose halves are two whole trucks rather than two halves. */
+const MISMATCHED_TRUCK = new Set(['struct_truck_lv1_lower', 'struct_truck_lv1_upper']);
+
+/**
+ * Which prompt each half must be cut against.
+ *
+ * Written out rather than derived, because the numbering is positional and the
+ * pairs were filed in three different passes — a partner computed from "the id
+ * next door" would be right today and wrong the moment anything is appended.
+ */
+const PARTNER_PROMPT: Readonly<Record<string, string>> = {
+  'nature_tree_broadleaf-01_lower': 'P310',
+  'nature_tree_broadleaf-01_upper': 'P309',
+  'nature_tree_broadleaf-02_lower': 'P312',
+  'nature_tree_broadleaf-02_upper': 'P311',
+  struct_truck_lv1_lower: 'P314',
+  struct_truck_lv1_upper: 'P313',
+};
 
 const FOOD_SUBJECT: Readonly<Record<string, string>> = {
   breakfast: 'breakfast set — plate with eggs, toast and a small coffee',
@@ -318,27 +357,35 @@ function renderRow(row: RequirementRow): Rendered {
       subjectKey: 'fx/particle',
     };
   }
-  if (MISMATCHED_SPLIT.has(id)) {
+  if (MISMATCHED_SPLIT.has(id) || MISMATCHED_TRUCK.has(id)) {
     const half = id.endsWith('_lower') ? 'LOWER' : 'UPPER';
-    const partner = half === 'LOWER' ? 'P310' : 'P309';
-    const body =
-      half === 'LOWER'
+    const group = id.replace(/_(lower|upper)$/, '');
+    const truck = MISMATCHED_TRUCK.has(id);
+    const partner = PARTNER_PROMPT[id] ?? '';
+    const body = truck
+      ? half === 'LOWER'
+        ? 'chassis, wheels, cab lower, the serving hatch counter and the ground contact, with NOTHING of the roof above the cut'
+        : 'roof, awning, signage board, solar panel and speaker, with the body cross-section visible at the bottom edge'
+      : half === 'LOWER'
         ? 'trunk, root flare, the stone kerb bed around it and the first branch stubs, with NO crown above the cut'
         : 'the crown and the branches that carry it, with the trunk cross-section visible at the bottom edge';
+    const subject = truck
+      ? `REGENERATION — the ${half} HALF ONLY of the stage-2 food truck: ${body}, cut cleanly at a single horizontal scanline`
+      : `REGENERATION — the ${half} HALF ONLY of one broadleaf tree: ${body}, cut cleanly at a single horizontal scanline`;
     return {
-      subject: `REGENERATION — the ${half} HALF ONLY of one broadleaf tree: ${body}, cut cleanly at a single horizontal scanline`,
+      subject,
       sizeHint: 'same footprint as the delivered file it replaces',
       notes: [
-        'The delivered pair were never halves of one painting — verified by cropping both out of nature.webp and stacking them at their own anchors, which produces a tree wearing a second canopy.',
-        `Generate the WHOLE tree first, then cut it into this file and its partner (${partner}). Do not paint the two halves separately.`,
+        SPLIT_EVIDENCE[group] ?? 'The delivered pair are not halves of one painting.',
+        `Generate the WHOLE ${truck ? 'truck' : 'tree'} first, then cut it into this file and its partner (${partner}). Do not paint the two halves separately.`,
         'This half must look unfinished on its own. That is correct; it is never shown without its partner.',
         'The renderer puts the upper half’s bottom-centre on the lower half’s top edge with one pixel of overlap, so anything that does not line up shows as a seam.',
       ],
       doNots: [
-        'CRITICAL: the cut must be at the same y in both halves, and the trunk width and bark colour at the cut must match to the pixel',
+        'CRITICAL: the cut must be at the same y in both halves, and every shape crossing it — trunk, branch, body panel — must match in width, position and colour to the pixel. tests/unit/config/splitComposition.test.ts measures exactly that row and fails below 90%',
       ],
-      batch: 'audit-stage1-continuation',
-      subjectKey: 'nature/tree',
+      batch: truck ? 'stage1-ui-final-correction' : 'audit-stage1-continuation',
+      subjectKey: truck ? 'struct/truck' : 'nature/tree',
     };
   }
   if (row.category === 'UI_ICONS' && UNREADABLE_AT_SIZE_ICONS.has(id)) {
