@@ -3,6 +3,14 @@
 > Branch `feat/stage1-product-expansion`, base `ce00284`.
 > Plan: [STAGE1_PRODUCT_EXPANSION_PLAN.md](STAGE1_PRODUCT_EXPANSION_PLAN.md) (`b1f8ae2`, written before any code).
 > Commits: `0295930` · `a86677a` · `bbd8077` · `c71f4be` · `6102635`.
+>
+> **This report covers the first pass only, and closed 🟡 PARTIAL.** The
+> decision-locked continuation that finished the outstanding work is
+> [`STAGE1_CONTINUATION_REPORT.md`](STAGE1_CONTINUATION_REPORT.md) — decisions
+> A–E, commits `af43973` · `6dd7d49` · `d17db82` · `f699478` · `2f77004`.
+> Everything listed as _not started_ below (S2 kitchen effect consumers, U2
+> functional buildings, A1 asset audit, the cross-stage balance matrix and the
+> viewport matrix) is done there.
 
 ## Execution Plan
 

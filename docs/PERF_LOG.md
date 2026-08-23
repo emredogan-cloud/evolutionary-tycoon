@@ -401,3 +401,64 @@ user's decision.
 > adresini ÖN PLANDA 30 sn açık tutup konsolda
 > `JSON.stringify(__EVOTYCOON__.getFrameStats())` okumak — p50/p95 kare süresi
 > ve p05 FPS bu tabloya işlenmeli (GTX 1660 Ti'da bütçe: p95 ≤ 16.6 ms).
+
+## 2026-08-23 — Stage-1 continuation: the real-GPU frame time, finally measured
+
+The two entries above both record this measurement as **not taken** — P17 as
+`KOŞULMADI` (automation Chromium fell back to SwiftShader on every flag
+combination) and 2026-08-22 as `ÖLÇÜLMEDİ` (the MCP tab was
+`visibilityState: hidden`, so `requestAnimationFrame` never fired and thirty
+seconds produced zero samples). The 2026-08-22 entry closes by asking the user
+to open the page in the foreground and read the numbers off by hand.
+
+**That is no longer necessary.** With the tab in the foreground, rAF runs:
+612 frames in five seconds on the first sample. Measured directly from
+`requestAnimationFrame` deltas rather than through `getFrameStats()`, which
+still reported `samples: 0` and is a separate loose end.
+
+| Scene                                          |   FPS | p50 frame | p95 frame | p99 frame |    max |
+| ---------------------------------------------- | ----: | --------: | --------: | --------: | -----: |
+| Stage 1, live, 1×                              | 122.3 |    8.2 ms |    8.6 ms |    8.9 ms | 9.7 ms |
+| Stage 4 layout, live, 4×, quiet lot            | 122.7 |    8.1 ms |    8.5 ms |    8.7 ms | 9.4 ms |
+| Stage 4, 13 vehicles · 9 customers · 31 orders | 120.9 |    8.2 ms |    8.8 ms |    9.0 ms | 9.5 ms |
+
+Viewport 2060 × 1012 at DPR 0.9, seed 424242, production build served by
+`pnpm preview`. `getLoopStats()` reported **0 dropped ticks** across 2585
+frames / 433 ticks on the Stage-1 sample.
+
+### Reading these honestly
+
+- **The budget is p95 ≤ 16.6 ms** (the 2026-08-22 entry, for this station).
+  The worst p95 measured is **8.8 ms**, a little over half of it.
+- **8.33 ms is this display's vsync interval.** A p50 of 8.1–8.2 ms means the
+  renderer is finishing inside the refresh window and waiting — these numbers
+  are the _cap_, not the ceiling, and they do not say how much headroom is
+  left. What they do establish is that nothing in this pass costs a frame.
+- **The busiest scene is barely busier than the quiet one** (120.9 against
+  122.7 with 13 vehicles, 9 customers and 31 orders in flight). That is
+  consistent with the sim being nowhere near the constraint, which is what
+  `bench:sim` has said all along.
+- **The renderer string reads `Brave`**, not the
+  `ANGLE (NVIDIA GeForce GTX 1660 Ti/PCIe/SSE2, OpenGL 4.5.0)` recorded on
+  2026-08-22. The browser masks `WEBGL_debug_renderer_info` for fingerprinting
+  reasons. Same station, same GPU; the string is redacted, the frame times are
+  real. Recorded as measured rather than as assumed.
+
+### The rest of the pass
+
+| Measurement          | Value                                         | How                  |
+| -------------------- | --------------------------------------------- | -------------------- |
+| Sim bench            | **22/22 green**                               | `pnpm bench:sim`     |
+| Bundle (gzip)        | **497.39 / 550 kB** JS · **8.94 / 30 kB** CSS | `pnpm size`          |
+| Ground + road budget | 10.94 / 11.50 MB (95.1%)                      | `pnpm assets:build`  |
+| HUD viewport share   | 8.2–26.5% against 22% / 28% caps, all seven   | `responsive.spec.ts` |
+
+The CSS figure rose from 7.3 kB to 8.94 kB — the three rebuilt panels, well
+inside the 30 kB budget.
+
+### Still open
+
+`__EVOTYCOON__.getFrameStats()` returns `samples: 0` even while rAF is
+demonstrably running, so the in-app instrument is not recording. The numbers
+above come from rAF deltas and are unaffected; the instrument itself is a
+separate defect and is **not** fixed here.

@@ -121,19 +121,58 @@ migration produce the same world.
 
 ## 8. Coverage
 
-| Where                                         | What it proves                                                                                                                                                                                 |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tests/unit/sim/layout/storeIdentity.test.ts` | buys **every** entry and asserts the world got that entry and no other; refund is exactly 30% and never a profit; stage/zone/funds gates; move keeps identity, site and till; the edge indexes |
-| `tests/unit/app/browserWiring.test.ts`        | the container's verbs become the commands the simulation actually applies                                                                                                                      |
-| `tests/unit/persistence/migration.test.ts`    | v12 rows stay anonymous across v13; v13 round-trips a bought item                                                                                                                              |
-| `tests/e2e/store.spec.ts`                     | the whole chain through real cards, a real pointer and a real canvas — including that opening a panel arms **nothing**                                                                         |
-| `tests/e2e/buildMode.spec.ts`                 | the ghost answers before the click and the click obeys it, armed from a store card                                                                                                             |
+| Where                                         | What it proves                                                                                                                                                                                                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/unit/sim/layout/storeIdentity.test.ts` | buys **every** entry and asserts the world got that entry and no other; refund is exactly 30% and never a profit; stage/zone/funds gates; move keeps identity, site and till; the edge indexes; and **the whole chain through a save and a reload** — see below |
+| `tests/unit/app/browserWiring.test.ts`        | the container's verbs become the commands the simulation actually applies                                                                                                                                                                                       |
+| `tests/unit/persistence/migration.test.ts`    | v12 rows stay anonymous across v13; v13 round-trips a bought item                                                                                                                                                                                               |
+| `tests/e2e/store.spec.ts`                     | the whole chain through real cards, a real pointer and a real canvas — including that opening a panel arms **nothing**                                                                                                                                          |
+| `tests/e2e/buildMode.spec.ts`                 | the ghost answers before the click and the click obeys it, armed from a store card                                                                                                                                                                              |
 
-## 9. Known gaps
+### The save leg, added 2026-08-23
 
-- **Cosmetic only.** No store item feeds an economy effect. That is deliberate
-  for this step — an `atmosphere` contribution would move the calibrated
-  Stage 1 economy and belongs with a balance run, not with a placement system.
-- **No billboard / directional sign** until the art exists (see §4).
-- The İnşa Et door still shows only the upgrade tree; the functional-buildings
-  tab (plan D3, steps S2/U2) is not built.
+The directive's chain is buy → place → move → **save → reload** → remove →
+refund, and the save leg had no test across all eleven items. It has one now.
+
+Identity is the whole point of the leg. A save writes `itemId` and a reload
+reads it back, and every later answer — what this refunds, whether it may stand
+here, what the player actually owns — is derived from that one field. If a
+round-trip dropped it, the object would still be **drawn correctly**, because
+`objectId` is stored beside it, and would silently refund nothing: a sign that
+became a flower on the only axis the player can measure.
+
+The test reloads all eleven, checks each row's identity, object and position,
+then sells every one back and asserts the till holds exactly
+`Σ cost × DEMOLISH_REFUND_FRACTION`.
+
+## 9. Functional buildings come through the same door
+
+Added 2026-08-23. `buyPlace` dispatches to `buyBuilding` when the id names a
+building, so equipment and decor share one command, one transaction and one
+identity chain. What differs is only what happens after the object lands:
+
+- a decor item is finished on the click;
+- a building is **real from the click** — it holds its cell and blocks
+  navigation exactly as a prop does — but its **level is zero until the site
+  completes**, so it contributes no effect and draws no upgraded art meanwhile.
+
+`movePlaced` carries a building's level with it. That was a real bug caught
+before it shipped: `moveObject` reset `level`, so relocating a level-3 machine
+silently demoted it to level-1 art and no effect.
+
+Detail: [`STAGE1_BUILDING_SYSTEM.md`](STAGE1_BUILDING_SYSTEM.md).
+
+## 10. Known gaps
+
+- **Cosmetic only.** No _decor_ item feeds an economy effect. That is deliberate
+  — an `atmosphere` contribution would move the calibrated Stage 1 economy and
+  belongs with a balance run, not with a placement system. (The two functional
+  buildings above are not decor and do feed effects.)
+- **The roadside verge is two of four.** `flower-bed` (₡6) is the
+  stone-bordered bed and `roadside-sign` (₡12) _is_ the illuminated billboard
+  (`struct_sign_large_lower/_upper`); `zone: 'lot'` is unrestricted, so lot
+  items may already stand on the verge. A distinct **wooden planter box** and a
+  **directional sign** have no art and are not shipped — a store card that drew
+  a placeholder would break REAL ASSET > PLACEHOLDER. Whether those two should
+  be produced at all is an open user decision.
+- The İnşa Et door now has both tabs: the upgrade tree and **Mutfak & Tesisler**.
