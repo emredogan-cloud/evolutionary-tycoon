@@ -18,20 +18,20 @@ validation. Enforced by dependency-cruiser (`src/ui` cannot import `src/sim`).
 
 ## 2. Screen composition (the reference layout)
 
-| Region                | Component                | Content                                                                                                                                            |
-| --------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Top left              | `HudCash`                | animated cash, ₡/dk rate, player level + XP bar, Gün/Servis/Bekleyen/İtibar row                                                                    |
-| Top centre            | `EnvironmentStrip`       | day + clock pill, weather pill (painted `ui_icon_weather-*`), event chip with countdown                                                            |
-| Top right             | `NavRail`                | Analiz · Ayarlar · Menü tiles (vector chrome glyphs)                                                                                               |
-| Left edge             | `SpeedRail`              | pause + 1×/2×/4× (`SET_SPEED`)                                                                                                                     |
-| Left, upper third     | `OrderCards`             | live orders: state machine verbatim, patience meter, cook bar, **Hazırla**                                                                         |
-| Bottom left           | `ActionTiles`            | İnşa Et · Dükkan · Personel                                                                                                                        |
-| Bottom centre         | `ContextPanel` (build)   | the whole 30-rung tree, family-grouped cards with painted `ui_upgrade_*` icons and explicit lock reasons; decor strip (`BuildMode`) rides above it |
-| Bottom centre, raised | `UpgradeCard` (centered) | the detail: effects before/after, cost, the buy                                                                                                    |
-| Top right, under nav  | `ObjectivePanel`         | stage headline, primary goal + bar, the stage checklist with live counters                                                                         |
-| Bottom right          | `EvolutionPanel`         | compact chip → offer → construction progress                                                                                                       |
-| Right edge            | `NotificationStrip`      | sim-time TTL notices, never modal                                                                                                                  |
-| Overlay               | `PauseOverlay`           | player pauses only (harness pauses never veil)                                                                                                     |
+| Region                | Component                | Content                                                                                                                                              |
+| --------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Top left              | `HudCash`                | animated cash, ₡/dk rate, player level + XP bar, Gün/Servis/Bekleyen/İtibar row                                                                      |
+| Top centre            | `EnvironmentStrip`       | day + clock pill, weather pill (painted `ui_icon_weather-*`), event chip with countdown                                                              |
+| Top right             | `NavRail`                | Analiz · Ayarlar · Menü tiles (vector chrome glyphs)                                                                                                 |
+| Left edge             | `SpeedRail`              | pause + 1×/2×/4× (`SET_SPEED`)                                                                                                                       |
+| Left, upper third     | `OrderCards`             | live orders: state machine verbatim, patience meter, cook bar + countdown, **Hazırla** (PLACED) and **Servis et · +₡x,xx** (ON_PASS, counter stages) |
+| Bottom left           | `ActionTiles`            | İnşa Et · Dükkan · Personel                                                                                                                          |
+| Bottom centre         | `ContextPanel` (build)   | the whole 30-rung tree, family-grouped cards with painted `ui_upgrade_*` icons and explicit lock reasons; decor strip (`BuildMode`) rides above it   |
+| Bottom centre, raised | `UpgradeCard` (centered) | the detail: effects before/after, cost, the buy                                                                                                      |
+| Top right, under nav  | `ObjectivePanel`         | stage headline, primary goal + bar, the stage checklist with live counters                                                                           |
+| Bottom right          | `EvolutionPanel`         | compact chip → offer → construction progress                                                                                                         |
+| Right edge            | `NotificationStrip`      | sim-time TTL notices, never modal                                                                                                                    |
+| Overlay               | `PauseOverlay`           | player pauses only (harness pauses never veil)                                                                                                       |
 
 World-dominance rules: the centre band belongs to the canvas; one panel at a
 time (`openPanel`); Escape closes; Space pauses.
@@ -91,3 +91,36 @@ clamped by `cameraMath`. Larger viewports reveal more world; nothing scales
 the stand down to preserve a fixed framing. `?e2e=1` exposes
 `window.__EVOTYCOON_CAMERA__` (set/state through the same clamped
 `centreOn`) so acceptance can photograph exact zooms.
+
+## 12. The order card is the whole manual loop (2026-08-23)
+
+Two corrections landed on this one component, and both were only visible in a
+browser.
+
+**The countdown was reading the wrong clock.** `UiBridge.refillOrders`
+computed the remaining preparation from `world.tick * TICK_MS`, which starts at
+zero, while every order timestamp is stamped from `world.clock.simTimeMs`,
+which starts at 08:00 — **240 000 ms** in. A five-second lemonade therefore
+rendered `243 sn` over a progress bar that never moved (`cook01` clamped at 0),
+and every order reported an age of zero forever. One line, `world.clock.simTimeMs`,
+and no constant added anywhere. Gated by `tests/unit/app/orderCards.test.ts`
+(four assertions that fail on the old code) and `tests/e2e/prepTimer.spec.ts`
+(the same numbers read out of the DOM, at 1x, 2x, 4x and paused).
+
+Format: whole seconds, rounded up, `X sn`; over a minute, `m:ss`. Rounding up
+is the deliberate half of a conflict — it opens on exactly the advertised prep
+time, where rounding down would open a 5.0 s drink on `4` and spend its last
+whole second showing `0 sn` on food that is visibly still cooking.
+
+**`ON_PASS` gained a button.** A finished tray is no longer handed over by the
+passage of time; the player serves it, or a cook covers after four seconds
+(`docs/COOK_PLAYER_INTERACTION_DESIGN.md`). The button sits exactly where
+`Hazırla` sits on the same card and carries the money, because what serving is
+worth is the reason to press it. **Every** ready tray gets one, not just the
+oldest — with three ready and one register, who gets theirs first is the
+player's decision, and a button on only one card would have made it for them.
+
+`servable` comes from the bridge rather than being inferred in the component:
+a dining room is carried rather than handed over, so from Stage 3 the flag is
+false everywhere and the card shows the takings instead of an action that would
+refuse.

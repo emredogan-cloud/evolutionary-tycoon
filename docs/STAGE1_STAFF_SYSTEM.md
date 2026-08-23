@@ -12,14 +12,32 @@
 | Garson     |  ₡18 | Carries assembled trays from the pass to tables    |
 | Temizlikçi |  ₡14 | Clears tables, slowing the satisfaction decay      |
 
-A cook accepts only `PREP_ORDER`, a waiter only `DELIVER_ORDER`, a cleaner only
-`CLEAN_TABLE`. The role tables are in `src/config/employees.ts`.
+A cook accepts `PREP_ORDER`, a waiter `DELIVER_ORDER` and `CLEAN_TABLE`, a
+cleaner only `CLEAN_TABLE`. The role tables are in `src/config/employees.ts`.
 
-**A Stage-1 waiter is idle by design.** `ServiceSystem` auto-delivers whenever
-the stage's layout has no tables, so no `DELIVER_ORDER` ever exists before
-Stage 3. The panel's own pitch says so — "Aşama 3'ten itibaren şart" — and
-that is deliberate: a panel that offered a hire without saying when it starts
-paying would be selling a number that does not move.
+## 1.1 The counter is the player's, and every role waits for it
+
+**Rewritten 2026-08-23.** This section used to say a Stage-1 waiter is idle by
+design, because `ServiceSystem` auto-delivered wherever the layout had no
+tables. It does not any more — see
+[`COOK_PLAYER_INTERACTION_DESIGN.md`](COOK_PLAYER_INTERACTION_DESIGN.md).
+
+One `DELIVER_ORDER` now means two jobs, and the stage decides which:
+
+- **Table service** (the stage has tables) — the waiter's own work, claimed the
+  instant it is posted. This is what the ₡18 buys, from Stage 3.
+- **The counter handover** (no tables) — the tray goes to somebody standing
+  right at it. That is the **player's** action (`SERVE_ORDER`), and every role,
+  waiter included, waits `COUNTER_HANDOVER_MS` (4 s) before covering it.
+
+A cook may also cover a _table_ delivery, but only after the same window. That
+is what stops a diner with a cook and no waiter from silently ceasing to serve
+anyone; it costs the cook their place in the kitchen while they walk, and a
+waiter is instant, faster on foot and on a lower wage.
+
+So a Stage-1 waiter is no longer _idle_ — they are **cover**, which is a
+different and honest thing to sell. The panel's pitch still says "Aşama 3'ten
+itibaren şart", because that is still where the walk becomes real work.
 
 ## 2. What a cook is worth, measured
 
@@ -31,6 +49,14 @@ unless stated, sampling `world.employees` **every tick**:
 | Player cooks, no staff        | 36 000 |   base |                — |
 | Cook hired, player absent     |  **0** | > 0.6× |              ~4% |
 | Cook hired, player also cooks | 36 000 | ≤ base |             < 2% |
+
+> **These three rows are the pre-2026-08-23 picture, and they are why the
+> responsibility split exists.** They say a cook buys the same throughput for
+> none of the clicking — which also means the player's presence was worth
+> nothing. Since the counter handover became an action, the same harness
+> measures Stage 2 at **370 served with the player away against 542 with them
+> serving**, and cook utilisation at **10–13%** rather than 4%. The current
+> table is in [`COOK_PLAYER_INTERACTION_DESIGN.md`](COOK_PLAYER_INTERACTION_DESIGN.md) §3.
 
 The middle row is the whole point of the role, and it is the roadmap's Phase 10
 Player Value line in measurable form: **comparable service for none of the

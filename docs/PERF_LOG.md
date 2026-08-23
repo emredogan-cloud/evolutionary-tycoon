@@ -462,3 +462,33 @@ inside the 30 kB budget.
 demonstrably running, so the in-app instrument is not recording. The numbers
 above come from rAF deltas and are unaffected; the instrument itself is a
 separate defect and is **not** fixed here.
+
+### Stage-1 UI final correction — 2026-08-23
+
+Not an FPS entry. The one performance fact this pass produced is a **gate
+catching a regression the moment it shipped**, which is worth recording as
+precisely as a frame time.
+
+| Metric                     |               Value | How measured                          |
+| -------------------------- | ------------------: | ------------------------------------- |
+| Balance suite, before      |              69.5 s | `pnpm balance:check`, this machine    |
+| Balance suite, naive serve |         **103.9 s** | same, with `nextServable` as a filter |
+| Balance suite, single pass |          **68.1 s** | same, after the rewrite               |
+| CI budget                  |                90 s | `tests/balance/economy.test.ts`       |
+| Sim bench                  |      **22/22 pass** | `pnpm bench:sim`, run alone           |
+| JS bundle (gzip)           | **498.27 kB** / 550 | `pnpm size`                           |
+| CSS (gzip)                 |    **9.07 kB** / 30 | `pnpm size`                           |
+
+**What happened.** The player's serve dispatches `SERVE_ORDER` every tick, and
+the first `nextServable` was `isServable` used as a filter — which asks
+`basketReady` and `firstOrderOf`, and both scan the order pool. O(orders²), on
+a hot path, 720 000 ticks per balance run. The suite went to 103.9 s against a
+90 s ceiling and the gate went red. Rewritten as one sweep with a reused
+scratch buffer (WORKING_DISCIPLINE §2.3) it is back to 68.1 s — **below the
+pre-change figure**, and no threshold was touched.
+
+**A harness note, recorded because it wasted a cycle.** `pnpm bench:sim` failed
+two timing assertions when run _concurrently with the full Playwright suite_ on
+this machine, and passed 22/22 when run alone. That is the machine, not the
+code — the same shape as the cross-machine calibration caveat above. A bench
+number taken while five browsers are running is not a measurement.

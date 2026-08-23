@@ -74,3 +74,19 @@ short-fused early hold was implemented and **measured** to collapse the road
 (mean speed 13.9 → 3.1 m/s, spawn throughput −5.6%, genuine merge overlap),
 so the sub-second crossing transient stays and belongs to the open road/lot
 user decision (`STAGE_2_4_CALIBRATION_REPORT` §4, `LEFT_TURN` config note).
+
+## 5. The 2026-08-23 final correction — four items, all reproduced first
+
+Every row below was seen in a live Chromium session against the production
+build (`localhost:4173`, seed 424242) **before any code changed**, and the
+user's own four captures (`assets/Screenshot from 2026-08-23 12-0*.png`) are
+the baseline record.
+
+| Observed                                                                                | Root cause                                                                                                                                                   | Outcome                                                                                                                      |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| The canopy lying across the counter; till, display case and drinks all under the fabric | Awning at z 1.75 over a 1.1 m counter, and the sprite's mass hangs _below_ its anchor. Measured: **87% of the counter's top band** covered                   | Plan centred on the counter, z 2.8 → **5%**. Gated by `standComposition.test.ts`, which is red at the old placement          |
+| A tree whose crown floats above four branches cut off in mid-air                        | `broadleaf-02`'s halves were painted separately. Measured on the join row: **0.40** of the lower half's top row has anything above it                        | Declared `upperOverlapMetres` 1.25 m → coverage **1.00**. Gated by `splitComposition.test.ts`                                |
+| Stage 2's food truck drawn as **two trucks stacked in mid-air**                         | Same class, found by the same measurement: join coverage 0.00, and each delivered half is a complete truck                                                   | `upperFrame` dropped; regen filed as P313/P314. Out of the pass's scope and fixed anyway, because the new gate was red on it |
+| `Limonata · Hazırlanıyor · 243 sn` over an empty progress bar                           | The bridge subtracted a **tick count** (epoch 0) from a **clock reading** (epoch 240 000 = 08:00). Confirmed live: tick 42 → `simTimeMs 242 100`             | `world.clock.simTimeMs`, no constant. Four unit assertions + a DOM-level e2e at 1x/2x/4x/paused                              |
+| Hire a cook and the player has nothing left to do                                       | Stage 1's only player action was `MANUAL_PREP`, and delivery happened by itself on the tick food reached the pass — so a ₡20 hire bought the end of the loop | Counter handover is the player's (`SERVE_ORDER`), staff cover after 4 s. Stage 2: **370 served absent against 542 serving**  |
+| Nobody ever sits at a Stage-3 table (found while fixing the above)                      | The first version let the player serve at any stage, so the handover caught seated customers while they were still at the counter                            | `SERVE_ORDER` is the counter only; the dining room is carried. Caught by `tableService.spec.ts`, not by review               |
