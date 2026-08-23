@@ -37,11 +37,38 @@
     cleaner: 'Temizlikçi',
   };
 
+  /**
+   * What each role is actually for — the directive's "Why should I hire this
+   * person?", answered from measurement rather than from flavour text.
+   *
+   * The cook's line is the honest one and it took a measurement to write. At
+   * Stage 1, over fifty simulated minutes, hiring a cook while the player is
+   * also cooking changes throughput by **exactly nothing** (106 orders served
+   * either way) and costs ₡37 in wages, because the player takes every order
+   * the instant it is startable. The same cook, with the player not cooking at
+   * all, serves 99 of those 106. So a cook is not a throughput upgrade; it is
+   * what keeps the stand earning while nobody is playing it, which is the
+   * light-idle model the game is built on. Saying "increases capacity" here
+   * would be the panel lying about the simulation.
+   */
+  const ROLE_PITCH: Record<string, string> = {
+    cook: 'Siparişleri kendi hazırlar. Sen tezgâhta değilken ayakta tutar.',
+    waiter: "Pass'teki tabakları masalara taşır. Aşama 3'ten itibaren şart.",
+    cleaner: 'Masaları toplar, memnuniyet düşüşünü yavaşlatır.',
+  };
+
+  /*
+   * Four states, four different sentences. "İş yok" and "engellendi" used to
+   * be the same word here because the simulation reported them as one state —
+   * an employee with nothing to do and an employee whose work somebody else
+   * had taken were both BLOCKED. They are different problems with opposite
+   * answers (hire fewer / hire more), so they now read differently.
+   */
   const STATE_LABELS: Record<string, string> = {
-    IDLE: 'boşta',
+    IDLE: 'iş yok',
     MOVING: 'yolda',
     PERFORMING: 'çalışıyor',
-    BLOCKED: 'iş yok',
+    BLOCKED: 'sırada bekliyor',
   };
 
   const money = new Intl.NumberFormat('tr-TR', {
@@ -86,6 +113,15 @@
           <div class="numbers">
             <span title="Yetenek">★ {(person.skill * 100).toFixed(0)}</span>
             <span title="Ücret">₡{money.format(person.wagePerMinute)}/dk</span>
+            <span
+              class="busy"
+              class:cold={person.busy01 < 0.05}
+              title="Son bir dakikada çalışma oranı"
+              data-testid="staff-busy"
+              data-busy={person.busy01.toFixed(3)}
+            >
+              %{(person.busy01 * 100).toFixed(0)} meşgul
+            </span>
           </div>
           <button
             class="fire"
@@ -116,8 +152,9 @@
             onhire(role.id, DEFAULT_SKILL);
           }}
         >
-          <span>{ROLE_LABELS[role.id] ?? role.id}</span>
+          <span class="hire-role">{ROLE_LABELS[role.id] ?? role.id}</span>
           <span class="cost">₡{role.hireCost}</span>
+          <span class="pitch">{ROLE_PITCH[role.id] ?? ''}</span>
         </button>
       {/each}
       {#if full}
@@ -128,6 +165,39 @@
 </section>
 
 <style>
+  .busy {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .busy.cold {
+    color: var(--ink-dim);
+  }
+
+  .hire button {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'role cost'
+      'pitch pitch';
+    gap: 0.1rem var(--space-2);
+    text-align: left;
+  }
+
+  .hire-role {
+    grid-area: role;
+  }
+
+  .hire .cost {
+    grid-area: cost;
+  }
+
+  .pitch {
+    grid-area: pitch;
+    color: var(--ink-secondary);
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+
   .panel {
     position: absolute;
     right: var(--sp-4);

@@ -329,23 +329,51 @@ describe('cancellation is safe from either side', () => {
 });
 
 describe('a blocked stand still progresses', () => {
-  it('marks employees blocked rather than wedging when there is nothing to do', () => {
+  it('is idle with nothing on the board, and blocked only when the work is taken', () => {
     /*
-     * The deadlock check the roadmap asks for: "tüm çalışanlar bloke → sistem
-     * ilerliyor". Blocked is a normal, *timed* state, so "briefly idle" and
-     * "stuck forever" are different observable things.
+     * The deadlock check the roadmap asks for — "tüm çalışanlar bloke → sistem
+     * ilerliyor" — plus the distinction that check is meaningless without.
+     *
+     * The board used to mark *every* employee without a task as blocked, so
+     * "there is nothing to clean" and "somebody else is cleaning it" were one
+     * state and `blockedMs` counted quiet as obstruction. Measured, that read
+     * a Stage 1 cook as blocked 97.5% of a fifty-minute session in which it
+     * simply had nothing to cook. Both halves are pinned here, because either
+     * one alone can be satisfied by collapsing them again.
      */
     const sim = new Sim({ seed: 1 });
     for (let i = 0; i < 3; i++) staff(sim, 'cleaner');
 
     sim.advance(600);
 
+    // Nothing on the board: quiet, and honestly reported as quiet.
     for (let slot = 0; slot < sim.world.employees.scanLimit; slot++) {
       if (!sim.world.employees.isActive(slot)) continue;
       const employee = sim.world.employees.at(slot);
-      expect([STATE_IDLE, STATE_BLOCKED]).toContain(employee.state);
-      expect(employee.blockedMs).toBeGreaterThan(0);
+      expect(employee.state, 'a quiet stand reported a jam').toBe(STATE_IDLE);
+      expect(employee.blockedMs, 'idle time was counted as blocked time').toBe(0);
     }
+
+    /*
+     * And blocked when it is true: two cooks, one order. One takes it; the
+     * other wants work that exists, is work a cook does, and is spoken for.
+     */
+    const busy = new Sim({ seed: 2 });
+    staff(busy, 'cook');
+    staff(busy, 'cook');
+    placeOrder(busy);
+    busy.tick();
+
+    let holders = 0;
+    let blocked = 0;
+    for (let slot = 0; slot < busy.world.employees.scanLimit; slot++) {
+      if (!busy.world.employees.isActive(slot)) continue;
+      const employee = busy.world.employees.at(slot);
+      if (employee.taskSlot !== UNCLAIMED) holders++;
+      if (employee.state === STATE_BLOCKED) blocked++;
+    }
+    expect(holders, 'nobody took the only order').toBe(1);
+    expect(blocked, 'the cook that lost the race did not report as blocked').toBe(1);
 
     /*
      * And the stand is not wedged: a cook hired now gets an order cooking.

@@ -151,6 +151,9 @@ interface MutableUpgrade {
   buildRemainingMs: number;
 }
 type MutablePrice = { -readonly [K in keyof PriceView]: PriceView[K] };
+/** Samples behind the busy figure: one per publish (~100 ms), so about a minute. */
+const BUSY_WINDOW_SAMPLES = 600;
+
 type MutableStaff = { -readonly [K in keyof StaffView]: StaffView[K] };
 type MutableRole = { -readonly [K in keyof RoleView]: RoleView[K] };
 interface MutableHud {
@@ -330,6 +333,7 @@ export class UiBridge implements HudSource {
       wagePerMinute: 0,
       state: 'IDLE',
       taskKind: '',
+      busy01: 0,
       screenX: 0,
       screenY: 0,
       visible: false,
@@ -838,8 +842,41 @@ export class UiBridge implements HudSource {
     model.placedCount = count;
   }
 
+  /**
+   * How much of the recent past each employee spent actually working.
+   *
+   * An *observation*, kept here and not in the world: it changes nothing, it
+   * is not hashed, and a counter in the simulation would need a save-schema
+   * version to display a percentage. Keyed by entity id rather than slot,
+   * because slots are recycled and a new hire would otherwise inherit the
+   * previous occupant's record.
+   *
+   * It exists because the honest answer to "why is my cook standing there"
+   * is a number. Measured at Stage 1, a cook is idle 97.7% of a session and,
+   * while the player is also cooking, adds exactly nothing to throughput —
+   * so the panel that offers the hire should be able to say so rather than
+   * leaving the player to infer it from a wage bill.
+   */
+  private readonly busyHistory = new Map<number, { samples: Uint8Array; cursor: number; filled: number }>();
+
+  private sampleBusy(entityId: number, working: boolean): number {
+    let record = this.busyHistory.get(entityId);
+    if (record === undefined) {
+      record = { samples: new Uint8Array(BUSY_WINDOW_SAMPLES), cursor: 0, filled: 0 };
+      this.busyHistory.set(entityId, record);
+    }
+    record.samples[record.cursor] = working ? 1 : 0;
+    record.cursor = (record.cursor + 1) % BUSY_WINDOW_SAMPLES;
+    record.filled = Math.min(BUSY_WINDOW_SAMPLES, record.filled + 1);
+
+    let sum = 0;
+    for (let i = 0; i < record.filled; i++) sum += record.samples[i] ?? 0;
+    return record.filled === 0 ? 0 : sum / record.filled;
+  }
+
   private refillStaff(world: World): void {
     let count = 0;
+    const seen = new Set<number>();
     for (let slot = 0; slot < world.employees.scanLimit; slot++) {
       if (!world.employees.isActive(slot)) continue;
       const view = this.model.staff[count];
@@ -855,11 +892,24 @@ export class UiBridge implements HudSource {
         employee.taskSlot >= 0 && world.tasks.isActive(employee.taskSlot)
           ? (TASK_KINDS[world.tasks.at(employee.taskSlot).kind] ?? '')
           : '';
+      // `view.state` is the brain state's *name*, resolved a few lines above;
+      // the record itself carries an index.
+      view.busy01 = this.sampleBusy(
+        employee.entityId,
+        view.state === 'MOVING' || view.state === 'PERFORMING',
+      );
+      seen.add(employee.entityId);
       // The icon sits over their head, like the customer's order bubble.
       view.visible = this.projectInto(employee.x, employee.y, STAFF_ICON_HEIGHT_METRES, view);
       count++;
     }
     this.model.staffCount = count;
+
+    // A fired employee's history goes with them; the map must not grow for
+    // the life of the session.
+    for (const entityId of this.busyHistory.keys()) {
+      if (!seen.has(entityId)) this.busyHistory.delete(entityId);
+    }
 
     for (let i = 0; i < EMPLOYEE_ROLES.length; i++) {
       const spec = EMPLOYEE_ROLES[i];

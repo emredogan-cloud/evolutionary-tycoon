@@ -9,6 +9,7 @@ import { MARKER_COIN, MARKER_ORDER, MARKER_PASS, MARKER_PREP, type HudModel } fr
 import { HOLD_DECAY_MS } from '@config/economy/menu';
 import { PASS } from '@config/economy/stations';
 import { Sim } from '@sim/core/Sim';
+import { hire } from '@sim/systems/StaffSystem';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
 import { STATE_WAITING_FOR_FOOD } from '@sim/ai/fsm/customerFsm';
 
@@ -163,6 +164,64 @@ describe('what the HUD is told', () => {
 
     const bridge = new UiBridge(sim, IDENTITY_PROJECTOR);
     expect(capture(bridge).latest().customersWaiting).toBe(3);
+  });
+});
+
+describe('how busy the staff have been', () => {
+  /**
+   * The figure the staff panel answers "why is my cook standing there" with.
+   *
+   * An observation made in the bridge, not simulation state: it changes
+   * nothing and is not hashed. What matters is that it is *honest* — a cook
+   * with nothing to do has to read as near zero, because the measurement it
+   * exists to surface is that a Stage 1 cook is idle 97.7% of a session.
+   */
+  it('reads near zero for staff with nothing to do', () => {
+    const sim = new Sim({ seed: 1 });
+    sim.world.economy.cash = 1000;
+    expect(hire(sim.world, 'cook', 0.5)).toBe('ok');
+
+    const bridge = new UiBridge(sim, IDENTITY_PROJECTOR);
+    const feed = capture(bridge);
+    for (let i = 1; i <= 20; i++) {
+      sim.advance(UI_SAMPLE_MS / TICK_MS);
+      bridge.sample(i * UI_SAMPLE_MS);
+    }
+
+    const model = feed.latest();
+    expect(model.staffCount).toBe(1);
+    const person = model.staff[0];
+    expect(person?.state, 'an unoccupied cook reported a jam').toBe('IDLE');
+    expect(person?.busy01).toBe(0);
+  });
+
+  it('forgets somebody who has been let go', () => {
+    // The history is keyed by entity id and slots are recycled, so a new hire
+    // must not inherit the last occupant's record — and the map must not grow
+    // for the life of the session.
+    const sim = new Sim({ seed: 1 });
+    sim.world.economy.cash = 1000;
+    expect(hire(sim.world, 'cook', 0.5)).toBe('ok');
+
+    const bridge = new UiBridge(sim, IDENTITY_PROJECTOR);
+    const feed = capture(bridge);
+    sim.advance(UI_SAMPLE_MS / TICK_MS);
+    bridge.sample(UI_SAMPLE_MS);
+    const hired = feed.latest().staff[0]?.entityId ?? -1;
+    expect(hired).toBeGreaterThanOrEqual(0);
+
+    sim.dispatch({ t: 'FIRE', entityId: hired });
+    sim.advance(UI_SAMPLE_MS / TICK_MS);
+    bridge.sample(2 * UI_SAMPLE_MS);
+    expect(feed.latest().staffCount).toBe(0);
+
+    // A fresh hire starts from nothing rather than from the departed record.
+    expect(hire(sim.world, 'cook', 0.5)).toBe('ok');
+    sim.advance(UI_SAMPLE_MS / TICK_MS);
+    bridge.sample(3 * UI_SAMPLE_MS);
+    const replacement = feed.latest().staff[0];
+    expect(replacement?.entityId).not.toBe(hired);
+    expect(replacement?.busy01).toBe(0);
   });
 });
 

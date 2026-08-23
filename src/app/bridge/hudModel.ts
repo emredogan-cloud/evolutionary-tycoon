@@ -141,6 +141,16 @@ export interface StaffView {
   readonly state: string;
   /** What they are doing, for the icon over their head. Empty when idle. */
   readonly taskKind: string;
+  /**
+   * Share of the last minute or so spent moving or working, 0..1.
+   *
+   * An observation made in the bridge, not simulation state — nothing reads
+   * it back and it is not hashed. It exists because "why is my cook standing
+   * there" deserves a number: measured at Stage 1 a cook is idle 97.7% of a
+   * session, and while the player is also cooking it adds nothing at all to
+   * throughput. A panel that offers the hire should say so.
+   */
+  readonly busy01: number;
   readonly screenX: number;
   readonly screenY: number;
   readonly visible: boolean;

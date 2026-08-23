@@ -256,9 +256,26 @@ export class TaskBoardSystem implements SimSystem {
 
       const best = this.bestTaskFor(world, employee, slot);
       if (best < 0) {
-        // Wanted work, found none. Blocked rather than idle, and timed, so a
-        // stand where nobody can do anything is distinguishable from a quiet one.
-        employee.state = STATE_BLOCKED;
+        /*
+         * Idle and blocked are different, and this is where they part.
+         *
+         * The comment that used to sit here said the state existed "so a stand
+         * where nobody can do anything is distinguishable from a quiet one" —
+         * and then marked *every* employee without a task as blocked, which
+         * made those two things identical. Measured at Stage 1: a cook reads
+         * blocked 97.5% of a fifty-minute session and 100% of one where the
+         * player is also cooking, in a world where the honest answer is that
+         * there was nothing to cook. Everything downstream inherits that: the
+         * staff panel reports a jam, and `blockedMs` — the counter a
+         * utilisation figure would be built on — counts quiet as obstruction.
+         *
+         * So: nothing on the board this role could ever take is IDLE, and
+         * work this role accepts that somebody else already claimed is
+         * BLOCKED. One of those is a reason to hire fewer people and the other
+         * is a reason to hire more, which is exactly why they may not share a
+         * state.
+         */
+        employee.state = this.hasClaimableKind(world, employee) ? STATE_BLOCKED : STATE_IDLE;
         continue;
       }
 
@@ -266,6 +283,24 @@ export class TaskBoardSystem implements SimSystem {
       task.claimedBy = slot;
       assignTask(employee, best, task.x, task.y);
     }
+  }
+
+  /**
+   * Is there work of a kind this role does, that somebody else is holding?
+   *
+   * The question `bestTaskFor` cannot answer, because it stops caring the
+   * moment a task is claimed. Here a claimed task of an accepted kind is
+   * precisely the evidence that the employee is *blocked* rather than idle:
+   * the work exists, they can do it, and it is spoken for.
+   */
+  private hasClaimableKind(world: World, employee: EmployeeRecord): boolean {
+    const accepted = role(employee.role).tasks;
+    for (let slot = 0; slot < world.tasks.scanLimit; slot++) {
+      if (!world.tasks.isActive(slot)) continue;
+      const kind = TASK_KINDS[world.tasks.at(slot).kind];
+      if (kind !== undefined && accepted.includes(kind)) return true;
+    }
+    return false;
   }
 
   /** The highest-scoring unclaimed task this employee may take, or -1. */
