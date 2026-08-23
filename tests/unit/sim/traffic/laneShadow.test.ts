@@ -42,6 +42,62 @@ describe('the parking lane shadow', () => {
     return slot;
   }
 
+  /** The directive's §15 matrix: the four bodies a blocker can have. */
+  const ARCHETYPES = [
+    { name: 'sedan', index: 0 },
+    { name: 'motorcycle', index: 3 },
+    { name: 'truck', index: 5 },
+    { name: 'bus', index: 6 },
+  ] as const;
+
+  for (const blocker of ARCHETYPES) {
+    for (const followers of [2, 5, 10]) {
+      it(`${String(followers)} followers queue behind a parking ${blocker.name}, and resume`, () => {
+        const { world, motion } = rig();
+        const lanes = new LaneGraph(STAGE1_LAYOUT);
+        const entryS = lanes.lane(0).entryS;
+        const leader = enteringLeader(world, entryS, 0, blocker.index);
+        const slots: number[] = [];
+        for (let i = 0; i < followers; i++) {
+          slots.push(put(world, entryS - 10 - i * 9, 13, 12 + (i % 4), i % 3));
+        }
+
+        for (let tick = 0; tick < 400; tick++) {
+          motion.run(world, 50);
+          const leaderRear =
+            at(world.vehicles.laneS, leader) -
+            (ARCHETYPE_SPECS[at(world.vehicles.archetype, leader)]?.lengthMetres ?? 4.5);
+          for (const slot of slots) {
+            if (!world.vehicles.isActive(slot)) continue;
+            // No overlap, no pass-through: nobody is ever inside the blocker.
+            expect(
+              at(world.vehicles.laneS, slot),
+              `tick ${String(tick)}: a follower drove through the ${blocker.name}`,
+            ).toBeLessThanOrEqual(leaderRear + 1e-4);
+            // And nobody is thrown backwards to achieve it.
+            expect(at(world.vehicles.speed, slot)).toBeGreaterThanOrEqual(0);
+          }
+        }
+
+        // The queue really formed rather than the road being empty.
+        const nearest = Math.max(...slots.map((slot) => at(world.vehicles.laneS, slot)));
+        expect(nearest, 'nobody ever queued behind the blocker').toBeGreaterThan(entryS - 12);
+
+        // And it clears once the body swings off the carriageway.
+        world.vehicles.maneuverS[leader] = 40;
+        let resumed = false;
+        for (let tick = 0; tick < 400 && !resumed; tick++) {
+          motion.run(world, 50);
+          for (const slot of slots) {
+            if (!world.vehicles.isActive(slot)) resumed = true;
+            else if (at(world.vehicles.laneS, slot) > entryS) resumed = true;
+          }
+        }
+        expect(resumed, `traffic never resumed after the ${blocker.name} cleared`).toBe(true);
+      });
+    }
+  }
+
   for (const followers of [2, 5, 10]) {
     it(`${String(followers)} followers queue behind an entering vehicle and never touch it`, () => {
       const { world, motion } = rig();

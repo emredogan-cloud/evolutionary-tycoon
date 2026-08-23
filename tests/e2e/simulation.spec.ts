@@ -154,7 +154,19 @@ const REFERENCE = {
    * statics reflowed at every stage), so every walking position from the
    * first conversion on is different. Node-suite recomputation, seed 424242.
    */
-  hashAtTick1000: '20b859c2fccaf88f',
+  /*
+   * A fifteenth time, and this one is the road rather than the lot — the
+   * continuation's bay-proximate turn-off. Every bay now has its own
+   * `entryS` and its own merge, so a car stays on the carriageway at road
+   * speed until it is beside its space instead of leaving at one shared
+   * mouth and crawling to it at 2.6 m/s (up to 13.5 m of crawl, 5.5 m of it
+   * backwards). Every vehicle position from the first conversion on is
+   * therefore different, and the lane shadow — enabled in the same commit —
+   * makes followers brake for the bodies that are still in the lane. Tick 0
+   * is motionless and did not move. Node-suite recomputation, seed 424242;
+   * the browser reproduces it independently, which is what this test is for.
+   */
+  hashAtTick1000: '695660099b0e47a8',
 } as const;
 
 interface TestApi {

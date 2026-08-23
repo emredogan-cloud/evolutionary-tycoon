@@ -1,7 +1,7 @@
 import { euclidean } from '../math/length';
 import { LANE_SHADOW_BAND_METRES } from '@config/traffic';
 import type { StageLayout } from '@config/layouts/stage1';
-import type { LaneGraph } from './LaneGraph';
+import type { Lane, LaneGraph } from './LaneGraph';
 import { Polyline } from './spline';
 import type { LaneSample } from './spline';
 
@@ -85,6 +85,23 @@ export interface ManeuverSet {
    * measured and deliberately left to the open road/lot decision
    * (STAGE_2_4_CALIBRATION_REPORT §4) rather than pay for twice.
    */
+  /**
+   * Where on the lane this bay's turn-off begins, in the lane's arc length.
+   *
+   * Per (lane, bay), not one point for the whole layby — the continuation's
+   * geometry fix. Every car used to leave the road at a single `lane.entryS`
+   * whatever bay it was going to and then crawl to it at 2.6 m/s: with bays
+   * at x = 2.5, 7.5, 16.5, 21.5 and the mouth at x ≈ 16, a westbound car
+   * bound for the far bay travelled **5.5 m backwards** at walking pace, and
+   * one bound for the near bay crawled 13.5 m. That crawl is what put 62–85%
+   * of a near-lane manoeuvre inside the carriageway.
+   *
+   * A driver stays on the road, at road speed, until they are beside their
+   * bay. So does this: the curve starts a short lead before the bay's own
+   * projection onto the lane, and the manoeuvre is a lateral hop rather than
+   * a parallel crawl.
+   */
+  readonly entryS: number;
   readonly exitHoldS: number;
   /**
    * The arc position where the exit enters its own lane's band — the tick the
@@ -277,6 +294,15 @@ interface LaneFrame {
   readonly dy: number;
 }
 
+/**
+ * How far before its bay a car begins the turn, and how far after it merges.
+ *
+ * Two car lengths. Enough for the Bézier to swing off and back without a kink
+ * at either end, short enough that the manoeuvre stays a hop: at 2.6 m/s the
+ * whole turn is under four seconds, most of it already clear of the lane.
+ */
+const TURN_LEAD_METRES = 9;
+
 /** Sampling pitch for the hold-point walk. Once per table build, so cheap. */
 const HOLD_STEP_METRES = 0.2;
 /**
@@ -309,6 +335,45 @@ function exitBandEntry(exit: Maneuver, frame: LaneFrame | undefined): number {
   // Every exit ends on its own lane, so this is unreachable geometry — but a
   // degenerate curve holding at its own end is the old behaviour, not a crash.
   return exit.length;
+}
+
+/**
+ * A world point's distance along a lane, in the lane's own arc length.
+ *
+ * The lanes are straight runs, so this is the projection onto the line from
+ * the lane's start — the same quantity `LaneGraph.project` reports, computed
+ * here without a `LaneGraph` because the table is built before one is handy.
+ */
+function projectOntoLane(lane: Lane, x: number, y: number): number {
+  const sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  lane.path.sample(0, sample);
+  return (x - sample.x) * sample.tangentX + (y - sample.y) * sample.tangentY;
+}
+
+/**
+ * The furthest a manoeuvre may reach along a lane and still be somewhere the
+ * camera can show.
+ *
+ * The lanes deliberately overshoot the lot by ten metres each side so the
+ * decision point has room, and a merge placed out there would put the curve —
+ * and the car on it — outside the world the camera is bounded to, which reads
+ * as driving through the scenery. Found by walking rather than by arithmetic
+ * so it holds for a curved road as well as a straight one.
+ */
+function maxLaneSInsideLot(lane: Lane, layout: StageLayout): number {
+  const sample: LaneSample = { x: 0, y: 0, tangentX: 0, tangentY: 0 };
+  const margin = layout.cameraMarginMetres;
+  let best = 0;
+  for (let s = 0; s <= lane.path.length; s += 0.5) {
+    lane.path.sample(s, sample);
+    const inside =
+      sample.x >= layout.lot.minX - margin &&
+      sample.x <= layout.lot.maxX + margin &&
+      sample.y >= layout.lot.minY - margin &&
+      sample.y <= layout.lot.maxY + margin;
+    if (inside) best = s;
+  }
+  return best;
 }
 
 /** One straight path per lane slot, from it to the slot in front. */
@@ -448,6 +513,8 @@ export class ManeuverTable {
           entryTangentY,
         ),
         exit: passThroughExit,
+        // The turned-away route has no bay to aim at, so it leaves at the mouth.
+        entryS: lane.entryS,
         exitHoldS: Math.max(0, passThroughBandS - HOLD_SETBACK_METRES),
         exitBandS: passThroughBandS,
         rejoinS: lane.rejoinS,
@@ -476,22 +543,53 @@ export class ManeuverTable {
          */
         const dX = bay.x - entryX;
         const dY = bay.y - entryY;
-        const along = dX * bayTangentX + dY * bayTangentY;
-        let normX = dX - along * bayTangentX;
-        let normY = dY - along * bayTangentY;
+        const alongBay = dX * bayTangentX + dY * bayTangentY;
+        let normX = dX - alongBay * bayTangentX;
+        let normY = dY - alongBay * bayTangentY;
         const normLen = euclidean(normX, normY);
         if (normLen > 1e-6) {
           normX /= normLen;
           normY /= normLen;
         }
-        const CLEAR = 1.6;
-        const AHEAD = 4.5;
-        const isRealBay = bayIndex < this.parkingBayCount && normLen > CLEAR;
+        /*
+         * The corridor rides the bay line itself, not 1.6 m toward the road.
+         *
+         * That offset used to put the approach at y 7.8 — inside a carriageway
+         * that runs to 8.50 — so every car reaching a bay drove up the traffic
+         * lane at 2.6 m/s to get there. It existed to keep the sweep clear of
+         * parked neighbours, and with a bay-proximate turn-off (`entryS`
+         * below) there are no neighbours to sweep past: the car arrives beside
+         * its own bay and turns straight in. The via point stays half a bay
+         * gap short of the bay so the final swing still happens beside empty
+         * apron rather than through the next car along.
+         */
+        const CLEAR = 0;
+        const AHEAD = 2.5;
+        const isRealBay = bayIndex < this.parkingBayCount && normLen > 1;
 
         const exitViaX = bay.x + bayTangentX * AHEAD - normX * CLEAR;
         const exitViaY = bay.y + bayTangentY * AHEAD - normY * CLEAR;
 
-        const setRejoinS = lane.rejoinS;
+        /*
+         * This bay's own turn-off and merge, a lead before and after its own
+         * projection onto the lane — see `ManeuverSet.entryS`. Clamped so a
+         * car never turns off before the authored mouth (it has not decided
+         * yet, and the braking window is measured to that point) and never
+         * merges outside the lot the camera can see.
+         */
+        const bayAlong = projectOntoLane(lane, bay.x, bay.y);
+        const setEntryS = Math.min(Math.max(bayAlong - TURN_LEAD_METRES, lane.entryS), lane.path.length);
+        const setRejoinS = Math.min(
+          Math.max(bayAlong + TURN_LEAD_METRES, lane.rejoinS),
+          maxLaneSInsideLot(lane, layout),
+        );
+
+        lane.path.sample(setEntryS, sample);
+        const turnX = sample.x;
+        const turnY = sample.y;
+        const turnTangentX = sample.tangentX;
+        const turnTangentY = sample.tangentY;
+
         lane.path.sample(setRejoinS, sample);
         const mergeX = sample.x;
         const mergeY = sample.y;
@@ -528,10 +626,10 @@ export class ManeuverTable {
         sets.push({
           entry: isRealBay
             ? buildCorridorManeuver(
-                entryX,
-                entryY,
-                entryTangentX,
-                entryTangentY,
+                turnX,
+                turnY,
+                turnTangentX,
+                turnTangentY,
                 bay.x - bayTangentX * AHEAD - normX * CLEAR,
                 bay.y - bayTangentY * AHEAD - normY * CLEAR,
                 bayTangentX,
@@ -541,17 +639,9 @@ export class ManeuverTable {
                 bayTangentX,
                 bayTangentY,
               )
-            : buildManeuver(
-                entryX,
-                entryY,
-                entryTangentX,
-                entryTangentY,
-                bay.x,
-                bay.y,
-                bayTangentX,
-                bayTangentY,
-              ),
+            : buildManeuver(turnX, turnY, turnTangentX, turnTangentY, bay.x, bay.y, bayTangentX, bayTangentY),
           exit,
+          entryS: setEntryS,
           exitHoldS: Math.max(0, bandS - HOLD_SETBACK_METRES),
           exitBandS: bandS,
           rejoinS: setRejoinS,

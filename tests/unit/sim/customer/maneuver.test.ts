@@ -98,17 +98,33 @@ describe('the stage-1 manoeuvre table', () => {
     }
   });
 
-  it('starts every entry on its own lane, at the entry point', () => {
+  it("starts every entry on its own lane, at that bay's own turn-off", () => {
+    /*
+     * Per bay since the continuation's geometry fix, not one shared mouth.
+     * Every car used to leave the lane at `lane.entryS` whatever bay it held
+     * and then crawl to it at 2.6 m/s — up to 13.5 m, and 5.5 m of that
+     * *backwards* for a bay behind the mouth — with the crawl inside the
+     * carriageway. Three things are asserted, and together they are stricter
+     * than the single point was: the curve starts exactly at its own
+     * `entryS`, that point is genuinely on the lane, and no bay may turn off
+     * before the authored mouth (the braking window is measured to it).
+     */
     for (let laneIndex = 0; laneIndex < table.laneCount; laneIndex++) {
       const lane = lanes.lane(laneIndex);
-      lane.path.sample(lane.entryS, out);
-      const expectedX = out.x;
-      const expectedY = out.y;
 
       for (let bay = 0; bay < table.bayCount; bay++) {
-        table.get(laneIndex, bay).entry.path.sample(0, out);
-        expect(out.x, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(expectedX, 6);
-        expect(out.y, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(expectedY, 6);
+        const set = table.get(laneIndex, bay);
+        expect(set.entryS, `lane ${laneIndex} bay ${bay} turns off before the mouth`).toBeGreaterThanOrEqual(
+          lane.entryS - 1e-9,
+        );
+
+        lane.path.sample(set.entryS, out);
+        const onLaneX = out.x;
+        const onLaneY = out.y;
+
+        set.entry.path.sample(0, out);
+        expect(out.x, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(onLaneX, 6);
+        expect(out.y, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(onLaneY, 6);
       }
     }
   });
@@ -126,18 +142,27 @@ describe('the stage-1 manoeuvre table', () => {
     }
   });
 
-  it('rejoins every exit onto its own lane, at the rejoin point', () => {
+  it("rejoins every exit onto its own lane, at that bay's own merge", () => {
+    // The mirror of the turn-off: a car leaving a bay merges just after it,
+    // never crawls the length of the layby to a shared point. Same three
+    // claims — exactly at `rejoinS`, genuinely on the lane, never before the
+    // authored rejoin.
     for (let laneIndex = 0; laneIndex < table.laneCount; laneIndex++) {
       const lane = lanes.lane(laneIndex);
-      lane.path.sample(lane.rejoinS, out);
-      const expectedX = out.x;
-      const expectedY = out.y;
 
       for (let bay = 0; bay < table.bayCount; bay++) {
-        const maneuver = table.get(laneIndex, bay).exit;
-        maneuver.path.sample(maneuver.length, out);
-        expect(out.x, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(expectedX, 6);
-        expect(out.y, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(expectedY, 6);
+        const set = table.get(laneIndex, bay);
+        expect(set.rejoinS, `lane ${laneIndex} bay ${bay} merges before the rejoin`).toBeGreaterThanOrEqual(
+          lane.rejoinS - 1e-9,
+        );
+
+        lane.path.sample(set.rejoinS, out);
+        const onLaneX = out.x;
+        const onLaneY = out.y;
+
+        set.exit.path.sample(set.exit.length, out);
+        expect(out.x, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(onLaneX, 6);
+        expect(out.y, `lane ${laneIndex} bay ${bay}`).toBeCloseTo(onLaneY, 6);
       }
     }
   });

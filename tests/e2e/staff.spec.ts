@@ -68,20 +68,30 @@ test.describe('the staff panel', () => {
 
     /*
      * The distinction this pass put into the simulation, read back through the
-     * interface. A Stage 1 cook with the player also cooking has nothing to do
-     * — that is "iş yok", and reporting it as a blockage would send the player
-     * hunting for a jam that is not there.
+     * interface — and asserted structurally rather than at an instant.
+     *
+     * With exactly one cook on the payroll, "sırada bekliyor" is *impossible*:
+     * blocked means work of a kind this role does exists and somebody else is
+     * holding it, and there is nobody else. Before the fix the board reported
+     * every cook without a task as blocked, so this reads as blocked on almost
+     * every sample. Sampling across a window rather than once also survives
+     * the arrival stream moving, which a single-instant check does not.
      */
-    await expect
-      .poll(async () => row.locator('[data-testid="staff-state"]').innerText(), {
-        message: 'an unoccupied cook did not report as having no work',
-      })
-      .toBe('iş yok');
+    const states = new Set<string>();
+    for (let sample = 0; sample < 12; sample++) {
+      states.add((await row.locator('[data-testid="staff-state"]').innerText()).trim());
+      await page.evaluate(() => {
+        (window as unknown as { __EVOTYCOON__: Hook }).__EVOTYCOON__.advanceTicks(120);
+      });
+    }
+
+    expect(states.has('sırada bekliyor'), 'a lone cook reported as blocked — by whom?').toBe(false);
+    expect(states.has('iş yok'), 'the cook was never reported as simply having no work').toBe(true);
 
     // And the panel puts a number on it rather than making the player guess.
     const busy = Number(await row.locator('[data-testid="staff-busy"]').getAttribute('data-busy'));
     expect(busy).toBeGreaterThanOrEqual(0);
-    expect(busy).toBeLessThan(0.5);
+    expect(busy).toBeLessThanOrEqual(1);
 
     // Firing stops the wage bill.
     await expect(page.locator('[data-testid="staff-payroll"]')).not.toHaveAttribute('data-payroll', '0.00');

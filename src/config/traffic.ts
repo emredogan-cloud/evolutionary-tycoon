@@ -252,7 +252,7 @@ export const LANE_SHADOW_BAND_METRES = 1.9;
  * moving the layby 0.7 m south clears the corridor of the lane but starves
  * the road by a different route (1 656 arrivals).
  */
-export const LANE_SHADOW_ENABLED = false;
+export const LANE_SHADOW_ENABLED = true;
 
 /**
  * Left-turn gap acceptance — Phase 15, GDD §9.1: the far lane's pull-in

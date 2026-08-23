@@ -201,6 +201,20 @@ export class VehicleManeuverSystem implements SimSystem {
     const customer = world.customers.at(customerSlot);
 
     /*
+     * Already holding a space: the only question left is whether the car has
+     * reached that bay's own turn-off. Re-running the search every tick would
+     * hand it a different bay each time and make the reservation meaningless.
+     */
+    const held = at(vehicles.parkingSlot, slot);
+    if (held >= 0) {
+      if (at(vehicles.laneS, slot) >= this.maneuvers.setFor(laneIndex, held).entryS) {
+        vehicles.state[slot] = VEHICLE_ENTERING;
+        vehicles.maneuverS[slot] = 0;
+      }
+      return;
+    }
+
+    /*
      * The drive-thru is chosen at conversion, so by the time a car turns in it
      * already knows which channel it wants. A lane slot is assigned exactly as a
      * parking bay is — same manoeuvre, same reservation, same "there was nowhere
@@ -229,9 +243,28 @@ export class VehicleManeuverSystem implements SimSystem {
 
     const bay = this.nearestFreeBay(world, at(vehicles.laneS, slot), laneIndex, slot);
 
+    /*
+     * Assigned here, but not necessarily turned in here — the continuation's
+     * geometry fix. Each bay has its own turn-off (`ManeuverSet.entryS`): a
+     * driver stays on the road, at road speed, until they are beside the space
+     * they are aiming for. Cars used to leave the lane at this one point
+     * whatever bay they had, then crawl to it at 2.6 m/s — up to 13.5 m of it,
+     * and 5.5 m of that *backwards* for a bay behind the mouth. That crawl was
+     * inside the carriageway, and it is what made a near-lane manoeuvre spend
+     * most of its length in the traffic lane.
+     *
+     * The reservation still happens at the mouth, so nothing about who gets
+     * which bay changes; only where the metal leaves the road does.
+     */
+    vehicles.parkingSlot[slot] = bay;
+    if (bay >= 0 && at(vehicles.laneS, slot) < this.maneuvers.setFor(laneIndex, bay).entryS) {
+      customer.state = STATE_SEEKING_PARKING;
+      customer.parkingSlot = bay;
+      return;
+    }
+
     vehicles.state[slot] = VEHICLE_ENTERING;
     vehicles.maneuverS[slot] = 0;
-    vehicles.parkingSlot[slot] = bay;
 
     if (bay < 0) {
       /*
@@ -730,8 +763,14 @@ export class VehicleManeuverSystem implements SimSystem {
     for (let slot = 0; slot < vehicles.scanLimit; slot++) {
       if (!vehicles.isActive(slot)) continue;
       const state = at(vehicles.state, slot);
-      if (state === VEHICLE_ON_ROAD) continue;
       if (at(vehicles.parkingSlot, slot) !== bay) continue;
+      /*
+       * A car still on the road but holding this bay counts — since the
+       * continuation's bay-proximate turn-off, a driver reserves at the mouth
+       * and keeps driving to the space, so the reservation has to survive the
+       * metres in between or two cars aim at one bay.
+       */
+      if (state === VEHICLE_ON_ROAD) return true;
 
       /*
        * A departing car holds its bay until it COMMITS to the merge — the
