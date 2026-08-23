@@ -46,6 +46,8 @@ export type PlacementOutcome =
 export interface PlacementOptions {
   /** The catalogue entry being placed — see `PlacedObject.itemId`. */
   readonly itemId?: string;
+  /** A functional building's level — see `PlacedObject.level`. */
+  readonly level?: number;
   /**
    * Whether to raise a construction site over it. True everywhere a thing
    * comes into existence; false for a *move*, where the object already
@@ -141,6 +143,7 @@ export function placeObject(
 
   const row: PlacedObject = { objectId, x: snappedX, y: snappedY, z: 0 };
   if (options.itemId !== undefined) row.itemId = options.itemId;
+  if (options.level !== undefined) row.level = options.level;
   world.layout.placed.push(row);
   world.layout.revision++;
 
@@ -295,6 +298,7 @@ export function moveObject(
    */
   const outcome = placeObject(world, previous.objectId, x, y, reachable, {
     ...(previous.itemId === undefined ? {} : { itemId: previous.itemId }),
+    ...(previous.level === undefined ? {} : { level: previous.level }),
     site: false,
   });
   if (outcome !== 'ok') {

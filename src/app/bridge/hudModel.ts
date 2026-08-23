@@ -357,6 +357,8 @@ export interface PlacedView {
    * rather than an absent field keeps the reused row buffers a fixed shape.
    */
   readonly itemId: string;
+  /** A functional building's level, or 0 — see `PlacedObject.level`. */
+  readonly level: number;
 }
 
 export interface HudSource {
@@ -392,6 +394,8 @@ export interface UiCommands {
   buyPlace(itemId: string, x: number, y: number): void;
   /** Pick a placed object up and set it down elsewhere, identity intact. */
   movePlaced(index: number, x: number, y: number): void;
+  /** Raise a placed functional building one level, in place. */
+  upgradeBuilding(index: number): void;
   /** Sell a placement back, by its index in `HudModel.placed`. */
   removePlaced(index: number): void;
   /**

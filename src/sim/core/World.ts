@@ -300,6 +300,7 @@ export class World {
          * field, or `hashSections` stops naming the right neighbourhood.
          */
         h.writeString(object.itemId ?? '');
+        h.writeU32(object.level ?? 0);
       }
       h.writeU32(this.layout.pendingBuilds.length);
       for (const build of this.layout.pendingBuilds) {
@@ -309,6 +310,7 @@ export class World {
         h.writeF64(build.y);
         h.writeF64(build.remainingMs);
         h.writeF64(build.totalMs);
+        h.writeU32(build.targetLevel ?? 0);
       }
       h.writeU32(this.layout.revision);
       hashStringNumberMap(h, this.layout.upgrades);
@@ -430,6 +432,7 @@ export class World {
        * field, or `hashSections` stops naming the right neighbourhood.
        */
       h.writeString(object.itemId ?? '');
+      h.writeU32(object.level ?? 0);
     }
     h.writeU32(this.layout.pendingBuilds.length);
     for (const build of this.layout.pendingBuilds) {
@@ -439,6 +442,7 @@ export class World {
       h.writeF64(build.y);
       h.writeF64(build.remainingMs);
       h.writeF64(build.totalMs);
+      h.writeU32(build.targetLevel ?? 0);
     }
     h.writeU32(this.layout.revision);
     hashStringNumberMap(h, this.layout.upgrades);

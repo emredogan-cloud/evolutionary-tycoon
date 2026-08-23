@@ -7,6 +7,7 @@ import {
   upgradeCost,
 } from '@config/economy/upgrades';
 import type { EffectKind, Upgrade } from '@config/economy/upgrades';
+import { buildingEffectTerms } from '@config/buildings';
 import { combineDiminishing } from '../math/combineDiminishing';
 import type { World } from '../core/World';
 import { playerLevel, upgradeLevelRequirement } from './playerLevel';
@@ -101,14 +102,41 @@ function scaleContribution(item: Upgrade, level: number, kind: EffectKind): numb
  * unconditionally. A caller that had to check "did they buy anything?" first is
  * a caller that will eventually forget.
  */
+/**
+ * The buildings the player has finished, as (id, level) pairs.
+ *
+ * Read off `world.layout.placed`: a building *is* a placed object, and its
+ * level lives on the row. A building still under construction contributes
+ * nothing — the site holds `targetLevel`, and the level only moves when the
+ * site completes, so an effect and its art arrive together.
+ */
+function ownedBuildings(world: World): { id: string; level: number }[] {
+  const owned: { id: string; level: number }[] = [];
+  for (const object of world.layout.placed) {
+    if (object.itemId === undefined) continue;
+    const level = object.level ?? 0;
+    if (level > 0) owned.push({ id: object.itemId, level });
+  }
+  return owned;
+}
+
 export function effectValue(world: World, kind: EffectKind): number {
   const mode = EFFECT_MODE_OF[kind];
+
+  /*
+   * Buildings contribute beside the tree, through the same modes. A building
+   * is not a second economy: it is another owner of the same effect kinds, so
+   * `drinkStationSpeed` reads the same whether a machine or an upgrade
+   * produced it, and the inertness test covers both.
+   */
+  const buildings = ownedBuildings(world);
 
   if (mode === 'additive') {
     let total = 0;
     for (const item of UPGRADES) {
       total += contribution(item, upgradeLevel(world, item.id), kind);
     }
+    for (const term of buildingEffectTerms(kind, buildings)) total += term;
     return total;
   }
 
@@ -117,6 +145,7 @@ export function effectValue(world: World, kind: EffectKind): number {
     for (const item of UPGRADES) {
       total *= scaleContribution(item, upgradeLevel(world, item.id), kind);
     }
+    for (const term of buildingEffectTerms(kind, buildings)) total *= term;
     return total;
   }
 
@@ -132,6 +161,9 @@ export function effectValue(world: World, kind: EffectKind): number {
   for (const item of UPGRADES) {
     const value = contribution(item, upgradeLevel(world, item.id), kind);
     if (value !== 0) terms.push(value);
+  }
+  for (const term of buildingEffectTerms(kind, buildings)) {
+    if (term !== 0) terms.push(term);
   }
   if (terms.length === 0) return 1;
   return 1 + combineDiminishing(terms, CATEGORY_WEIGHT[kind]);

@@ -4,7 +4,7 @@ import type { SpeedMultiplier } from '@config/simulation';
 import { nextStartable, startPrep } from '../systems/KitchenSystem';
 import { navigationIntact } from '../nav/reachability';
 import { placeObject } from '../systems/LayoutSystem';
-import { buyPlace, movePlaced, sellPlaced } from '../systems/StoreSystem';
+import { buyPlace, movePlaced, sellPlaced, upgradeBuilding } from '../systems/StoreSystem';
 import { advancePendingBuilds } from '../systems/ProgressionSystem';
 import { beginConstruction } from '../systems/ProgressionSystem';
 import { fire, hire } from '../systems/StaffSystem';
@@ -218,6 +218,20 @@ interface BuyPlaceCommand {
   readonly y: number;
 }
 
+/**
+ * Raise a placed functional building one level, in place.
+ *
+ * Carries the row's index and nothing else — no level and no price. The level
+ * is `current + 1` derived in the simulation, and the price is read from
+ * config at the tick this lands on, so a log replays correctly across a
+ * balance change and a save cannot smuggle a level it did not pay for.
+ */
+interface UpgradeBuildingCommand {
+  readonly t: 'UPGRADE_BUILDING';
+  readonly tick: number;
+  readonly index: number;
+}
+
 /** Pick a placed object up and set it down somewhere else. */
 interface MovePlacedCommand {
   readonly t: 'MOVE_PLACED';
@@ -236,6 +250,7 @@ interface RemoveCommand {
 
 export type Command =
   | BuyPlaceCommand
+  | UpgradeBuildingCommand
   | MovePlacedCommand
   | SetSpeedCommand
   | SetPausedCommand
@@ -256,6 +271,7 @@ export type Command =
 /** A command before the simulation stamps it with the tick it lands on. */
 export type CommandInput =
   | Omit<BuyPlaceCommand, 'tick'>
+  | Omit<UpgradeBuildingCommand, 'tick'>
   | Omit<MovePlacedCommand, 'tick'>
   | Omit<SetSpeedCommand, 'tick'>
   | Omit<SetPausedCommand, 'tick'>
@@ -370,6 +386,10 @@ export function apply(world: World, command: Command): void {
       movePlaced(world, command.index, command.x, command.y);
       break;
     }
+    case 'UPGRADE_BUILDING': {
+      upgradeBuilding(world, command.index);
+      break;
+    }
     case 'REMOVE': {
       /*
        * Through the store, so a bought object pays its thirty percent back.
@@ -452,6 +472,8 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'BUY_PLACE', tick, itemId: input.itemId, x: input.x, y: input.y };
     case 'MOVE_PLACED':
       return { t: 'MOVE_PLACED', tick, index: input.index, x: input.x, y: input.y };
+    case 'UPGRADE_BUILDING':
+      return { t: 'UPGRADE_BUILDING', tick, index: input.index };
     case 'REMOVE':
       return { t: 'REMOVE', tick, index: input.index };
     case 'COLLECT_OFFLINE':

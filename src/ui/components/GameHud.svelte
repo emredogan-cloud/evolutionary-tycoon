@@ -25,6 +25,7 @@
   import PauseOverlay from './PauseOverlay.svelte';
   import BuildMode from '../screens/BuildMode.svelte';
   import StorePanel from '../screens/StorePanel.svelte';
+  import BuildingPanel from '../screens/BuildingPanel.svelte';
   import { STORE_ITEMS } from '@config/store';
   import ActionTiles from './ActionTiles.svelte';
   import ObjectivePanel from './ObjectivePanel.svelte';
@@ -60,6 +61,8 @@
   let openPanel = $state<'settings' | 'staff' | 'analytics' | 'diagnostics' | 'menu' | 'build' | null>(null);
   /** Which half of the Dükkan panel is showing — plan D1's two tabs. */
   let storeTab = $state<'prices' | 'decor'>('prices');
+  /** And of the İnşa Et panel: the upgrade tree, or the functional buildings. */
+  let buildTab = $state<'upgrades' | 'buildings'>('upgrades');
   /**
    * The one armed thing in the interface, and it starts as nothing.
    *
@@ -207,8 +210,15 @@
   const togglePanel = (panel: NonNullable<typeof openPanel>): void => {
     openPanel = openPanel === panel ? null : panel;
     if (openPanel !== 'build') openUpgrade = null;
-    // Leaving the store — or opening anything else — puts the tool down.
-    if (openPanel !== 'menu' || storeTab !== 'decor') disarm();
+    /*
+     * Leaving a placing surface — or opening anything else — puts the tool
+     * down. Two panels can arm something now (the store's decor tab and the
+     * build panel's buildings tab) and neither may leave the world listening
+     * after it closes.
+     */
+    const arming =
+      (openPanel === 'menu' && storeTab === 'decor') || (openPanel === 'build' && buildTab === 'buildings');
+    if (!arming) disarm();
   };
 </script>
 
@@ -272,14 +282,61 @@
   <ObjectivePanel {objective} progress={objectiveProgress} {progression} />
 
   {#if openPanel === 'build'}
-    <ContextPanel
-      {upgrades}
-      stage={progression.stage}
-      playerLevel={level.level}
-      onselect={(id: string) => {
-        openUpgrade = openUpgrade === id ? null : id;
-      }}
-    />
+    <section class="shop build" aria-label="İnşa Et" data-testid="build-doors">
+      <nav class="tabs">
+        <button
+          type="button"
+          class:on={buildTab === 'upgrades'}
+          data-testid="build-tab-upgrades"
+          aria-pressed={buildTab === 'upgrades'}
+          onclick={() => {
+            buildTab = 'upgrades';
+            disarm();
+          }}
+        >
+          Yükseltmeler
+        </button>
+        <button
+          type="button"
+          class:on={buildTab === 'buildings'}
+          data-testid="build-tab-buildings"
+          aria-pressed={buildTab === 'buildings'}
+          onclick={() => {
+            buildTab = 'buildings';
+          }}
+        >
+          Mutfak &amp; Tesisler
+        </button>
+      </nav>
+
+      {#if buildTab === 'buildings'}
+        <BuildingPanel
+          {cash}
+          stage={progression.stage}
+          playerLevel={level.level}
+          {placed}
+          {armedItemId}
+          onarm={(itemId: string) => {
+            movingIndex = -1;
+            armedItemId = armedItemId === itemId ? '' : itemId;
+          }}
+          onupgrade={(index: number) => {
+            commands.upgradeBuilding(index);
+          }}
+        />
+      {/if}
+    </section>
+
+    {#if buildTab === 'upgrades'}
+      <ContextPanel
+        {upgrades}
+        stage={progression.stage}
+        playerLevel={level.level}
+        onselect={(id: string) => {
+          openUpgrade = openUpgrade === id ? null : id;
+        }}
+      />
+    {/if}
   {/if}
 
   {#each upgrades as upgrade (upgrade.id)}
@@ -449,6 +506,20 @@
 </div>
 
 <style>
+  /*
+   * Above the upgrade tree, not on top of it. `ContextPanel` is a
+   * bottom-centred card strip that owns its own pointer events, so tabs
+   * placed at the same height are unreachable — the strip eats the click.
+   * Sitting clear of it also keeps the two doors legible as two doors.
+   */
+  .shop.build {
+    right: auto;
+    left: 50%;
+    bottom: calc(var(--space-3) + 12rem);
+    width: min(32rem, calc(100vw - 2 * var(--space-3)));
+    transform: translateX(-50%);
+  }
+
   .shop {
     position: absolute;
     right: var(--space-3);

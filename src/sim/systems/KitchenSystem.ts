@@ -60,14 +60,13 @@ export class KitchenSystem implements SimSystem {
    */
   private advanceCooking(world: World, order: OrderRecord): void {
     const item = menuItem(order.item);
-    const kitchen = station(order.station);
+    const kitchenSpeed = stationSpeed(world, order.station);
     /*
      * Prep time, divided by the station's own speed and scaled by whatever the
      * kitchen upgrades bought — Phase 13's `prepSpeed`. A `scale` kind, so two
      * upgrades that each cut ten per cent genuinely compound to nineteen.
      */
-    const finishesAt =
-      order.startedAtMs + (item.prepTimeMs * effectValue(world, 'prepSpeed')) / kitchen.speed;
+    const finishesAt = order.startedAtMs + (item.prepTimeMs * effectValue(world, 'prepSpeed')) / kitchenSpeed;
     if (world.clock.simTimeMs < finishesAt) return;
 
     /*
@@ -124,7 +123,7 @@ export function startPrep(world: World, orderSlot: number): boolean {
   world.eventQueue.emitPrepStarted(
     order.entityId,
     free,
-    (item.prepTimeMs * effectValue(world, 'prepSpeed')) / station(free).speed,
+    (item.prepTimeMs * effectValue(world, 'prepSpeed')) / stationSpeed(world, free),
   );
   return true;
 }
@@ -162,6 +161,24 @@ export function passLoad(world: World): number {
     if (world.orders.at(slot).state === ORDER_ON_PASS) count++;
   }
   return count;
+}
+
+/**
+ * A station's effective speed — its authored figure, times whatever equipment
+ * the player has installed for that *kind* of station.
+ *
+ * The consumer for the functional buildings' effects. Written with both kinds
+ * spelled out rather than looked up from a table because
+ * `tests/unit/sim/upgrades/fourProperties.test.ts` proves every declared kind
+ * is genuinely read by matching the literal call — a table would satisfy the
+ * type checker and leave the effect inert, which is exactly what Decision B
+ * forbids shipping.
+ */
+export function stationSpeed(world: World, index: number): number {
+  const spec = station(index);
+  if (spec.type === 'DRINK') return spec.speed * effectValue(world, 'drinkStationSpeed');
+  if (spec.type === 'GRILL') return spec.speed * effectValue(world, 'grillStationSpeed');
+  return spec.speed;
 }
 
 /** True when every station of every type is busy. */

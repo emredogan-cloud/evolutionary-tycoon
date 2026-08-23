@@ -124,6 +124,8 @@ interface MutablePlaced {
   worldY: number;
   /** `''` for anything the player did not buy — see `PlacedView.itemId`. */
   itemId: string;
+  /** A functional building's level, or 0. */
+  level: number;
 }
 
 interface MutableUpgrade {
@@ -365,6 +367,7 @@ export class UiBridge implements HudSource {
         worldX: 0,
         worldY: 0,
         itemId: '',
+        level: 0,
       })),
       placedCount: 0,
       markerCount: 0,
@@ -838,6 +841,7 @@ export class UiBridge implements HudSource {
       row.worldX = object.x;
       row.worldY = object.y;
       row.itemId = object.itemId ?? '';
+      row.level = object.level ?? 0;
     }
     model.placedCount = count;
   }

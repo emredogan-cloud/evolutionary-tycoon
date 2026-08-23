@@ -345,6 +345,9 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       movePlaced: (index: number, x: number, y: number) => {
         sim.dispatch({ t: 'MOVE_PLACED', index, x, y });
       },
+      upgradeBuilding: (index: number) => {
+        sim.dispatch({ t: 'UPGRADE_BUILDING', index });
+      },
       removePlaced: (index: number) => {
         sim.dispatch({ t: 'REMOVE', index });
       },

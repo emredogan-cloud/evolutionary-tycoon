@@ -40,6 +40,16 @@ export interface PlacedObject {
    * rows render by `objectId` exactly as they always did).
    */
   itemId?: string | undefined;
+  /**
+   * A functional building's level, 1..maxLevel — the continuation.
+   *
+   * Absent for everything that is not a building: decor has nothing to
+   * upgrade, and giving it a level would invite an interface to offer one.
+   * It moves only when a construction site completes, so the effect, the art
+   * and the badge change together and a building can never be reported at a
+   * level it is not yet drawing.
+   */
+  level?: number | undefined;
 }
 
 export interface HiredEmployee {
@@ -133,6 +143,15 @@ export interface PendingBuild {
   y: number;
   remainingMs: number;
   totalMs: number;
+  /**
+   * The building level this site is building toward, or 0.
+   *
+   * Non-zero only for a functional building — level 1 for the first purchase,
+   * level N for an upgrade in place. Completion writes it onto the placed
+   * object, which is what makes "the effect arrives with the art" true rather
+   * than merely intended.
+   */
+  targetLevel?: number | undefined;
 }
 
 /** A construction site as the renderer sees it. */

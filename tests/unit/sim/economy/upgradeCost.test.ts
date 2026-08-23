@@ -254,6 +254,20 @@ describe('minimum significance — ECONOMY_DESIGN §6.3', () => {
           case 'laneCapacity':
             note(first >= MIN_SIGNIFICANCE.capacity);
             break;
+
+          /*
+           * The functional buildings' kinds — scales *above* 1, because a
+           * machine multiplies a station's speed rather than shortening a
+           * duration. No upgrade in the tree declares them today (they belong
+           * to `src/config/buildings.ts`, whose own significance is asserted
+           * in `buildingEffect.test.ts` against the time a real order takes),
+           * but the switch stays exhaustive so adding one here cannot slip
+           * through without a threshold.
+           */
+          case 'drinkStationSpeed':
+          case 'grillStationSpeed':
+            note(first - 1 >= MIN_SIGNIFICANCE.speed);
+            break;
         }
       }
 

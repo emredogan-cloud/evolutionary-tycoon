@@ -144,12 +144,15 @@ export class Sim {
     z: number;
     /** What it was bought as, or `''` — see `PlacedObject.itemId`. */
     itemId: string;
+    /** A functional building's level, or 0 — see `PlacedObject.level`. */
+    level: number;
   }[] = Array.from({ length: MAX_PLACED_OBJECTS }, () => ({
     objectId: '',
     x: 0,
     y: 0,
     z: 0,
     itemId: '',
+    level: 0,
   }));
   /** Reused rows for the construction sites, progress refreshed per read. */
   private readonly pendingBuffer: {
@@ -338,6 +341,7 @@ export class Sim {
       row.y = source.y;
       row.z = source.z;
       row.itemId = source.itemId ?? '';
+      row.level = source.level ?? 0;
     }
     v.placedCount = placedCount;
 

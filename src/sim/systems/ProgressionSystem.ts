@@ -1,7 +1,8 @@
 import { STAGE_TRANSITION_MODE, operatingReserve, requirementFor } from '@config/progression';
 import { EMPLOYEE_ROLES } from '@config/employees';
 import type { StageRequirement } from '@config/progression';
-import type { Stage } from '../core/types';
+import { building, buildingAsset } from '@config/buildings';
+import type { PendingBuild, Stage } from '../core/types';
 import type { SimSystem } from '../core/SystemPipeline';
 import type { World } from '../core/World';
 import { applyUpgradeLevel, totalUpgradeLevels } from './UpgradeSystem';
@@ -193,6 +194,26 @@ export function beginConstruction(world: World): 'ok' | 'not-ready' | 'already-b
  * Exported so the offline path and the tests can advance sites by an
  * arbitrary span through the exact code the live tick runs.
  */
+/**
+ * Write a completed building's level onto the object standing on its site.
+ *
+ * Matched on the cell rather than an index, because indices shift when
+ * anything else is removed while a site is up, and a level written onto the
+ * wrong row is exactly the identity drift this pass exists to prevent.
+ */
+function applyBuildingLevel(world: World, build: PendingBuild, level: number): void {
+  for (const object of world.layout.placed) {
+    if (object.x !== build.x || object.y !== build.y) continue;
+    if (object.itemId === undefined) continue;
+    const item = building(object.itemId);
+    if (item === undefined) continue;
+    object.level = level;
+    object.objectId = buildingAsset(item, level);
+    world.eventQueue.emitUpgradeApplied(object.itemId, level, 0);
+    return;
+  }
+}
+
 export function advancePendingBuilds(world: World, deltaMs: number): void {
   const builds = world.layout.pendingBuilds;
   if (builds.length === 0) return;
@@ -208,6 +229,15 @@ export function advancePendingBuilds(world: World, deltaMs: number): void {
     // Finished. Decor already stands in `placed` (the scaffold was purely
     // visual); an upgrade's level lands now, with its event and its object.
     if (build.upgradeId !== '') applyUpgradeLevel(world, build.upgradeId);
+    /*
+     * A functional building's level lands here and nowhere else — the
+     * continuation. Until this moment the object stands on the lot with
+     * `level` 0, contributes no effect and draws its level-1 frame, so a
+     * building can never report a level it is not producing or drawing. The
+     * frame is swapped with the level so the two cannot disagree.
+     */
+    const target = build.targetLevel ?? 0;
+    if (target > 0) applyBuildingLevel(world, build, target);
   }
   if (write !== builds.length) {
     builds.length = write;

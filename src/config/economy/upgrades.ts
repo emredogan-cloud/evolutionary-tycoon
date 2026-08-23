@@ -46,6 +46,16 @@ const EFFECT_KINDS = [
   'orderSpeed',
   'prepStations',
   'prepSpeed',
+  /*
+   * Preparation speed of one *kind* of station — the continuation's
+   * functional buildings. Separate from `prepSpeed` (which scales every
+   * station at once) because a drinks dispenser makes drinks faster and does
+   * nothing for the grill, and a stat that pretended otherwise would be the
+   * fake effect Decision B forbids. Consumed in `KitchenSystem`, where the
+   * prep duration is divided by the station's speed.
+   */
+  'drinkStationSpeed',
+  'grillStationSpeed',
   'foodQuality',
   'holdToleranceMs',
   // Capacity — how many people the place can hold, and for how long.
@@ -83,6 +93,8 @@ export const EFFECT_MODE_OF: Readonly<Record<EffectKind, EffectMode>> = {
   orderSpeed: 'scale',
   prepStations: 'additive',
   prepSpeed: 'scale',
+  drinkStationSpeed: 'scale',
+  grillStationSpeed: 'scale',
   foodQuality: 'additive',
   holdToleranceMs: 'additive',
   queueCapacity: 'additive',
@@ -120,6 +132,8 @@ export const CATEGORY_WEIGHT: Readonly<Record<EffectKind, number>> = {
   orderSpeed: 1,
   prepStations: 1,
   prepSpeed: 1,
+  drinkStationSpeed: 1,
+  grillStationSpeed: 1,
   foodQuality: 1,
   holdToleranceMs: 1,
   queueCapacity: 1,

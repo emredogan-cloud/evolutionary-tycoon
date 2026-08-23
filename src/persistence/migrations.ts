@@ -419,6 +419,21 @@ const v12ToV13: Migration = {
   up: (save) => ({ ...save, schemaVersion: 13 }),
 };
 
+/**
+ * v13 → v14 — building levels, added by not inventing them either.
+ *
+ * Both new fields are optional, so a v13 save validates as a v14 save
+ * unchanged, and the only honest level for a row written before functional
+ * buildings existed is none: those rows are decor, and decor has nothing to
+ * upgrade. Same shape as v12 → v14's predecessor, and written out for the
+ * same reason — so the chain records that v14 asked nothing of the past.
+ */
+const v13ToV14: Migration = {
+  from: 13,
+  to: 14,
+  up: (save) => ({ ...save, schemaVersion: 14 }),
+};
+
 export const migrations: readonly Migration[] = [
   v1ToV2,
   v2ToV3,
@@ -432,6 +447,7 @@ export const migrations: readonly Migration[] = [
   v10ToV11,
   v11ToV12,
   v12ToV13,
+  v13ToV14,
 ];
 
 assertContiguous(migrations);

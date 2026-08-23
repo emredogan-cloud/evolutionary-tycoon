@@ -110,6 +110,8 @@ const saveFileV10Schema = z.object({
         // written before the store existed, and on anything the player did not
         // buy; those render by `objectId` and refund nothing.
         itemId: z.string().optional(),
+        // v14 — a functional building's level. Absent for everything else.
+        level: z.number().int().positive().optional(),
       }),
     ),
     // v12 — construction sites in flight survive a reload mid-build.
@@ -121,6 +123,8 @@ const saveFileV10Schema = z.object({
         y: z.number(),
         remainingMs: z.number().nonnegative(),
         totalMs: z.number().positive(),
+        // v14 — the building level this site is building toward.
+        targetLevel: z.number().int().positive().optional(),
       }),
     ),
     revision: z.number().int().nonnegative(),
