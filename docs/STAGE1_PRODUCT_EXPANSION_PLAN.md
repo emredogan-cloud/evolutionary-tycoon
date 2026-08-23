@@ -199,3 +199,74 @@ reverts cleanly (`git revert <sha>`); serve-delay and lane-shadow are
 config-gated (`COUNTER_HANDOVER_MS = 0`, shadow behind a constant) so
 product-level rollback needs no code revert; the branch merges only through
 PR with green CI, so main is never exposed mid-pass.
+
+---
+
+# CONTINUATION — decision-locked (2026-08-23)
+
+The user closed both open decisions and added three UI references. This
+section is the plan for the remaining scope; it precedes its first line of
+code, like the one above.
+
+## C1. Locked decisions
+
+| #   | Decision                                                                                                   | Consequence for this plan                                             |
+| --- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| A   | Lane shadow **on** — but fix the geometry first, then rebalance. No constant-tuning.                       | The layby manoeuvre must leave the carriageway before the flag flips. |
+| B   | Functional buildings **exist in Stage 1** — with real, consumed effects or converted to a real capability. | Effects must bind at Stage 1 or become capability/capacity unlocks.   |
+| C   | Prep times calibrated toward 5 s drink / 30 s burger, balance-matrix first.                                | Targets are UX goals, not literals; deviation must be reported.       |
+| D   | Stand inward is **not** accepted on a report's word — browser-audited, all dependents moved.               | Re-audit, then move what is still wrong.                              |
+| E   | Three new UI references are authoritative.                                                                 | Audit them, then redesign dashboard/menu/staff.                       |
+
+## C2. The measured geometry problem (why A is a geometry task)
+
+Measured from the layout, not inferred:
+
+```
+carriageway            y = 1.50 .. 8.50
+lane 0 (east, far)     y = 3.50   band 1.60 .. 5.40
+lane 1 (west, near)    y = 6.50   band 4.60 .. 8.40
+bays                   y = 9.40   parked body 8.45 .. 10.35
+manoeuvre corridor     y = 7.80   <-- inside the carriageway
+```
+
+Two separate faults produce the 62–85% in-lane manoeuvre time:
+
+1. **The corridor is on the road.** `CLEAR = 1.6` offsets the approach lane
+   _toward_ the carriageway, putting it at y 7.8 — inside lane 1's band and
+   inside the road itself.
+2. **One turn-off point for four bays.** Every car leaves the lane at
+   `lane.entryS` (x≈16) whatever bay it is going to, then crawls to it at
+   2.6 m/s. Bays sit at x = 2.5, 7.5, 16.5, 21.5, so a westbound car bound
+   for p4 travels **5.5 m backwards** at walking pace, and one bound for p1
+   crawls 13.5 m. Exits do the same in reverse: everything merges at one
+   `rejoinS`, up to 17.5 m from the bay.
+
+**The fix is what a real driver does:** stay on the road at road speed until
+you are beside your bay, then turn off; and rejoin just after it. Each
+`(lane, bay)` pair gets its own turn-off arc and its own merge arc, so the
+manoeuvre becomes a short lateral hop instead of a long parallel crawl. This
+removes the backwards travel, shortens every curve, and collapses the in-band
+time — without touching a tuning constant.
+
+## C3. Order
+
+```
+G1  bay-proximate turn-off + per-bay merge (manoeuvre table + handover)
+G2  corridor clear of the carriageway; flood-probe all four stages
+G3  stand/dependents browser audit (Decision D), fix what is still wrong
+G4  LANE_SHADOW_ENABLED = true; traffic matrix 2/5/10 x 4 archetypes
+B1  balance matrix stages 1-4 x 5 policies  ->  STAGE1_4_BALANCE_CALIBRATION.md
+B2  prep-time calibration toward 5 s / 30 s, reported BEFORE/TARGET/AFTER
+F1  buildings.ts + effects with real consumers + levels + construction
+F2  Insa Et panel tab; cook automation measured against the machines
+U1  UI_REFERENCE_AUDIT.md new section from the three references
+U2  dashboard, menu, staff redesign
+V1  roadside verge items; billboard + directional sign prompts
+V2  tree silhouette audit (code vs art)
+A1  full asset audit + prompt catalogue expansion + coverage gate
+Q1  browser matrix, viewports, Firefox, WebKit, perf, full verify
+```
+
+Geometry before economy, economy before features, features before chrome —
+because each earlier step invalidates the measurements of the later ones.
