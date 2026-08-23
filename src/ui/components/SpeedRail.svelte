@@ -50,6 +50,7 @@
     position: absolute;
     left: var(--space-3);
     top: 50%;
+    width: var(--speed-rail-width);
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;

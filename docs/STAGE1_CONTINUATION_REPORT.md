@@ -97,6 +97,15 @@ from the same broken cascade and agreed with it.
   through two functions; determinism 61/61 unchanged, which is the proof.
 - **Four of five comment blocks** above `stage1.ts`'s `parking` described
   geometry that no longer exists. Consolidated; every figure re-measured.
+- **The order stack covered every speed control.** Found in the browser on the
+  last pass over the finished UI: the stack and the rail both sit at
+  `left: var(--space-3)` with the same `z-index`, and the stack grows downward
+  with the queue. At five queued orders `document.elementFromPoint` at the
+  centre of **pause, 1×, 2× and 4×** all returned an `order-card` — the player
+  could not pause the game at exactly the moment they would want to. The two
+  now derive their columns from one shared `--speed-rail-width`, and
+  `tests/e2e/hudOverlap.spec.ts` hit-tests every control against a full queue.
+  Verified to fail on the old layout before being trusted on the new one.
 
 ---
 
@@ -109,7 +118,7 @@ from the same broken cascade and agreed with it.
 | Determinism                | **61/61**                        | `pnpm test:determinism`       |
 | Balance gate               | **5 passed, 1 skipped**          | `pnpm balance:check`          |
 | Sim bench                  | **22/22**                        | `pnpm bench:sim`              |
-| Chromium + Firefox e2e     | **exit 0** · 222 passed          | `pnpm e2e`                    |
+| Chromium + Firefox e2e     | **exit 0** · 226 passed          | `pnpm e2e`                    |
 | Visual goldens (container) | **24/24**                        | `pnpm test:visual:update`     |
 | Visual goldens (host)      | **18/18**, 6 container-canonical | `pnpm test:visual`            |
 | Prompt coverage            | **missing 0 · dup 0 · orphan 0** | `pnpm assets:prompt-coverage` |
@@ -331,7 +340,7 @@ Decision E  ✅  three surfaces rebuilt, root cause found and gated
 ```
 
 `pnpm verify` exit 0 · 1663 tests · determinism 61/61 · balance 5/5 ·
-Chromium + Firefox e2e exit 0 (222 passed, 111 per browser) ·
+Chromium + Firefox e2e exit 0 (226 passed, 113 per browser) ·
 goldens 24/24 container, 18/18 host · prompt coverage 0/0/0 ·
 WebKit smoke **NOT RUN** (host missing `libevent-2.1-7t64`).
 

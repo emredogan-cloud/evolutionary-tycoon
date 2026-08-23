@@ -144,6 +144,20 @@
 
   /* ---- interaction ---- */
   --touch-target: 44px;
+  /*
+   * The speed rail's own width, shared so the order stack can clear it.
+   *
+   * Both live at the left edge with the same z-index, and the order stack
+   * grows downward without bound — so at five queued orders the stack covered
+   * the vertically-centred rail completely and, being later in the DOM, took
+   * every click. Measured in Chromium: `elementFromPoint` at the centre of
+   * pause, 1x, 2x and 4x all returned an `order-card`. The player could not
+   * pause the game at exactly the moment they would want to.
+   *
+   * One token so the two cannot disagree: a touch target, the rail's padding
+   * either side, and its border.
+   */
+  --speed-rail-width: calc(var(--touch-target) + 2 * var(--space-1) + 2px);
   --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
 
   /* ---- a11y user preferences (JS sets these) ---- */

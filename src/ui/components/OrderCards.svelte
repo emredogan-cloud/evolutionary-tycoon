@@ -126,7 +126,9 @@
 <style>
   .stack {
     position: absolute;
-    left: var(--space-3);
+    /* Clear of the speed rail, which shares this edge and this z-index. The
+       stack grows with the queue and used to swallow every speed control. */
+    left: calc(var(--space-3) + var(--speed-rail-width) + var(--space-2));
     top: 20%;
     display: flex;
     flex-direction: column;
