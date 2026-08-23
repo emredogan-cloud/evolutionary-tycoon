@@ -94,9 +94,37 @@
    * would be the panel lying about the simulation.
    */
   const ROLE_PITCH: Record<string, string> = {
-    cook: 'Siparişleri kendi hazırlar. Sen tezgâhta değilken ayakta tutar.',
+    cook: 'Siparişleri kendi hazırlar. Sen tezgâhta değilken servisi de ayakta tutar.',
     waiter: "Pass'teki tabakları masalara taşır. Aşama 3'ten itibaren şart.",
     cleaner: 'Masaları toplar, memnuniyet düşüşünü yavaşlatır.',
+  };
+
+  /**
+   * "Aşçı ne yapar?" — what the hire does and, just as importantly, what it
+   * does not.
+   *
+   * The complaint this answers is that a ₡20 hire quietly took the whole game
+   * over. It no longer does, and a panel that only said what it automates
+   * would be hiding the half the player is being sold: **preparation is the
+   * cook's, the counter is yours.** Every line is a fact the simulation can be
+   * asked about — the cook's `tasks`, the cook's `fallbackTasks` and the
+   * handover window — and `tests/unit/ui/roleDuties.test.ts` asks it.
+   */
+  const ROLE_DUTIES: Record<string, readonly { readonly does: boolean; readonly text: string }[]> = {
+    cook: [
+      { does: true, text: 'Mutfağı yönetir, siparişleri hazırlar' },
+      { does: true, text: 'Sen yokken tezgâhı da devralır (4 sn sonra)' },
+      { does: false, text: 'Servisi senin yerine üstlenmez' },
+      { does: false, text: 'Fiyat, satın alma ve yerleşim kararı vermez' },
+    ],
+    waiter: [
+      { does: true, text: 'Tabakları masalara taşır' },
+      { does: false, text: 'Yemek pişirmez' },
+    ],
+    cleaner: [
+      { does: true, text: 'Masaları toplar' },
+      { does: false, text: 'Servise veya mutfağa girmez' },
+    ],
   };
 
   /*
@@ -246,6 +274,14 @@
           <span class="hire-role">{ROLE_LABELS[role.id] ?? role.id}</span>
           <span class="cost">₡{role.hireCost}</span>
           <span class="pitch">{ROLE_PITCH[role.id] ?? ''}</span>
+          <ul class="duties" data-testid="staff-duties" data-role={role.id}>
+            {#each ROLE_DUTIES[role.id] ?? [] as duty (duty.text)}
+              <li class:no={!duty.does}>
+                <span aria-hidden="true">{duty.does ? '✓' : '✕'}</span>
+                <span>{duty.text}</span>
+              </li>
+            {/each}
+          </ul>
         </button>
       {/each}
       {#if full}
@@ -490,7 +526,8 @@
     gap: 0 var(--space-2);
     grid-template-areas:
       'art role cost'
-      'art pitch pitch';
+      'art pitch pitch'
+      'duties duties duties';
     grid-template-columns: auto 1fr auto;
     text-align: left;
   }
@@ -519,6 +556,30 @@
     font-size: var(--text-xs);
     grid-area: pitch;
     line-height: 1.3;
+  }
+
+  /* What the hire does, and what it leaves to the player. Never colour alone:
+     the tick and the cross carry the meaning, the colour only reinforces it. */
+  .duties {
+    display: grid;
+    margin: var(--space-1) 0 0;
+    padding: 0;
+    grid-area: duties;
+    list-style: none;
+  }
+
+  .duties li {
+    display: grid;
+    align-items: start;
+    color: var(--ok);
+    font-size: var(--text-xs);
+    gap: 0 0.35em;
+    grid-template-columns: 1em 1fr;
+    line-height: 1.35;
+  }
+
+  .duties li.no {
+    color: var(--ink-dim);
   }
 
   .full {

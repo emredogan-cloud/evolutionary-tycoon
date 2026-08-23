@@ -19,7 +19,7 @@ import type { Page } from '@playwright/test';
 const TICKS_PER_MINUTE = 1200;
 
 interface TestApi {
-  dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number }): void;
+  dispatch(command: { t: 'MANUAL_PREP' | 'SERVE_ORDER'; orderSlot: number }): void;
   advanceTicks(n: number): void;
 }
 
@@ -44,6 +44,7 @@ async function cookFor(page: Page, ticks: number): Promise<void> {
     const hooks = (window as unknown as { __EVOTYCOON__: TestApi }).__EVOTYCOON__;
     for (let i = 0; i < count; i++) {
       hooks.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      hooks.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       hooks.advanceTicks(1);
     }
   }, ticks);

@@ -232,6 +232,10 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
       // would arrive at the target tick having never cooked anything.
       for (let i = 0; i < renderMode.freezeAt; i++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        // And the handover, which stopped being automatic on 2026-08-23. A
+        // fixture that only cooked would photograph a pass full of food and a
+        // queue of people who never got any.
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
       }
     } else {
@@ -308,6 +312,14 @@ export function createContainer(win: Window, seed: number, storage: StorageAdapt
        */
       prep: (orderSlot: number) => {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot });
+      },
+      /*
+       * Hand a finished tray over — the player's half of the service loop.
+       * Same no-refresh reasoning as `prep`: the command lands at the top of
+       * the next tick and the sample after it carries the result.
+       */
+      serve: (orderSlot: number) => {
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot });
       },
       setSpeed: (mult: 1 | 2 | 4) => {
         sim.dispatch({ t: 'SET_SPEED', mult });

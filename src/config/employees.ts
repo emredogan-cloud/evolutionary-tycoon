@@ -37,6 +37,16 @@ const roleSchema = z.object({
   id: z.string().min(1),
   /** Which tasks this role is eligible for, in preference order. */
   tasks: z.array(z.enum(TASK_KINDS)).min(1),
+  /**
+   * Tasks this role picks up only when nobody whose job it is has done it.
+   *
+   * A fallback task is claimable `COUNTER_HANDOVER_MS` after it was posted and
+   * never before (see `TaskBoardSystem.mayClaimTask`). It is how the stand
+   * keeps running with nobody at the controls without the hire taking the
+   * player's own actions away — the distinction
+   * `docs/COOK_PLAYER_INTERACTION_DESIGN.md` is entirely about.
+   */
+  fallbackTasks: z.array(z.enum(TASK_KINDS)).default([]),
   /** Metres per second at skill 0. Skill scales it — see `walkSpeed`. */
   baseSpeedMps: z.number().positive(),
   /** Credits per game minute at skill 0. */
@@ -66,6 +76,27 @@ const ROLES: EmployeeRole[] = [
   {
     id: 'cook',
     tasks: ['PREP_ORDER'],
+    /*
+     * The counter handover, and only after the player has had first refusal.
+     *
+     * The cook's job is the kitchen. Handing a finished tray across the counter
+     * is the *player's* action (`SERVE_ORDER`) — that is the whole
+     * responsibility split, and a cook who did it instantly would put the game
+     * back where the player found it, with nothing to do after one hire.
+     *
+     * But a stand that stops earning the moment nobody is watching is not
+     * "active management + light idle", it is a job. So the cook takes any
+     * delivery as a **fallback**: never on sight, only once it has gone
+     * begging for `COUNTER_HANDOVER_MS`. Present, the player is faster and the
+     * food is hotter; absent, the stand keeps running at the cook's pace.
+     *
+     * That covers a *table* too, and deliberately: a diner with a cook and no
+     * waiter would otherwise stop serving anyone at all. It costs the cook
+     * their place in the kitchen while they walk, and a waiter is instant,
+     * quicker on foot and on a lower wage — which is the argument for hiring
+     * one rather than leaning on this.
+     */
+    fallbackTasks: ['DELIVER_ORDER'],
     baseSpeedMps: 1.25,
     baseWagePerMinute: 0.55,
     hireCost: 20,
@@ -74,14 +105,21 @@ const ROLES: EmployeeRole[] = [
   },
   {
     /*
-     * Implemented and tested now, active from Phase 11. The roadmap's scope
-     * line: "Waiter and Cleaner are implemented and tested but only become
-     * active in Phase 11 when Stage 3 exists." A waiter has real work in
-     * Stage 1 — carrying plates off the pass — but Stage 1 delivery is
-     * automatic, so there is nothing to carry. See PHASE_10_REPORT.
+     * Table service, from Stage 3. That is the role, and it is now the only
+     * `DELIVER_ORDER` a waiter takes on sight.
+     *
+     * Before 2026-08-23 the note here said a Stage-1 waiter has nothing to
+     * carry, because delivery happened by itself. It does not any more — but
+     * a waiter hired at Stage 1 is still not the answer, because a tray handed
+     * across a counter to somebody standing at it is the *player's* move.
+     * `TaskBoardSystem.mayClaimTask` puts the counter handover behind the same
+     * `COUNTER_HANDOVER_MS` window for every role, waiters included, so hiring
+     * one early buys cover rather than the loop. From Stage 3 the walk to the
+     * table is real work and the waiter takes it the instant it is posted.
      */
     id: 'waiter',
     tasks: ['DELIVER_ORDER', 'CLEAN_TABLE'],
+    fallbackTasks: [],
     baseSpeedMps: 1.4,
     baseWagePerMinute: 0.5,
     hireCost: 18,
@@ -91,6 +129,7 @@ const ROLES: EmployeeRole[] = [
   {
     id: 'cleaner',
     tasks: ['CLEAN_TABLE'],
+    fallbackTasks: [],
     baseSpeedMps: 1.2,
     baseWagePerMinute: 0.4,
     hireCost: 14,
@@ -178,6 +217,22 @@ export const TASK_BASE_MS: Readonly<Record<TaskKind, number>> = {
  * table names "TaskBoard making bad decisions" as a Phase 10 risk and says the
  * mitigation is that the scoring function is tunable.
  */
+/**
+ * How long a finished tray waits at the pass before a cook takes it over.
+ *
+ * The player's window. Below it, serving is the player's move and only theirs;
+ * above it, the stand carries on without them. Four seconds because that is
+ * long enough for the action to be worth taking (the whole preparation of a
+ * lemonade is five) and short enough that an unattended stand loses throughput
+ * rather than customers — measured against patience and hold tolerance in
+ * `docs/COOK_PLAYER_INTERACTION_DESIGN.md` §5, where every candidate value is
+ * tabulated against served count, revenue and abandonment.
+ *
+ * Simulation milliseconds, so it obeys pause and the speed multiplier like
+ * every other duration in the game.
+ */
+export const COUNTER_HANDOVER_MS = 4_000;
+
 export const TASK_SCORING = {
   /** Reward per task kind — how much doing it is worth to the stand. */
   reward: { PREP_ORDER: 10, DELIVER_ORDER: 12, CLEAN_TABLE: 4 } as Readonly<Record<TaskKind, number>>,

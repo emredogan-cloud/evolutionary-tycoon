@@ -39,7 +39,10 @@ function isForeignCspViolation(text: string): boolean {
 }
 
 interface Api {
-  dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number } | { t: 'BUY_UPGRADE'; upgradeId: string }): void;
+  dispatch(
+    command:
+      { t: 'MANUAL_PREP' | 'SERVE_ORDER'; orderSlot: number } | { t: 'BUY_UPGRADE'; upgradeId: string },
+  ): void;
   advanceTicks(n: number): void;
   getWorldHash(): string;
   getState(): { tick: number };
@@ -68,6 +71,7 @@ async function play(page: Page, ticks: number): Promise<void> {
     const api = (window as unknown as { __EVOTYCOON__: Api }).__EVOTYCOON__;
     for (let i = 0; i < count; i++) {
       api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       api.advanceTicks(1);
     }
   }, ticks);

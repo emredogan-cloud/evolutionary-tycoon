@@ -17,6 +17,7 @@ describe('offline meter', () => {
     const sim = new Sim({ seed: 424242 });
     for (let i = 0; i < 6000; i++) {
       sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       sim.tick();
     }
     const summary = offlineMeterSummary(sim.world);
@@ -36,6 +37,7 @@ describe('offline meter', () => {
       const sim = new Sim({ seed: 77 });
       for (let i = 0; i < 4000; i++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
       }
       return offlineMeterSummary(sim.world);
@@ -98,6 +100,7 @@ describe('offline meter', () => {
     const sim = new Sim({ seed: 9 });
     for (let i = 0; i < 2000; i++) {
       sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       sim.tick();
     }
     expect(offlineMeterSummary(sim.world).throughputPerMin).toBeGreaterThanOrEqual(0);

@@ -23,7 +23,7 @@ async function cookFor(page: Page, ticks: number): Promise<void> {
     const api = (
       window as unknown as {
         __EVOTYCOON__: {
-          dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number }): void;
+          dispatch(command: { t: 'MANUAL_PREP' | 'SERVE_ORDER'; orderSlot: number }): void;
           advanceTicks(n: number): void;
         };
       }
@@ -31,6 +31,7 @@ async function cookFor(page: Page, ticks: number): Promise<void> {
 
     for (let i = 0; i < count; i++) {
       api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       api.advanceTicks(1);
     }
   }, ticks);
@@ -173,7 +174,7 @@ test.describe('the service loop, end to end', () => {
       const api = (
         window as unknown as {
           __EVOTYCOON__: {
-            dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number }): void;
+            dispatch(command: { t: 'MANUAL_PREP' | 'SERVE_ORDER'; orderSlot: number }): void;
             advanceTicks(n: number): void;
             drainEvents(): { t: string }[];
           };
@@ -182,6 +183,7 @@ test.describe('the service loop, end to end', () => {
 
       for (let i = 0; i < 12_000; i++) {
         api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         api.advanceTicks(1);
         if (api.drainEvents().some((event) => event.t === 'PREP_STARTED')) return true;
       }

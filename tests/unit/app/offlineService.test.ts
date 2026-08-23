@@ -51,6 +51,7 @@ async function playAndLeave(storage: MemoryStorageAdapter): Promise<void> {
   const first = rig(storage, T0);
   for (let i = 0; i < 6000; i++) {
     first.sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    first.sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     first.sim.tick();
   }
   expect(offlineMeterSummary(first.sim.world).throughputPerMin).toBeGreaterThan(0);
@@ -230,6 +231,7 @@ describe('OfflineService.boot', () => {
     // (the meter window deliberately does not survive a reload):
     for (let i = 0; i < 6000; i++) {
       mid.sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      mid.sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       mid.sim.tick();
     }
     mid.now = T0 + HOUR + 30 * 60_000;

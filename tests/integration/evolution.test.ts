@@ -333,6 +333,7 @@ describe('every stage runs', () => {
           () => {
             for (let i = 0; i < 12_000; i++) {
               sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+              sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
               sim.tick();
             }
           },

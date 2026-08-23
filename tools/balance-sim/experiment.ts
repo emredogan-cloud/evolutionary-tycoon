@@ -86,6 +86,7 @@ function play(
 
   for (let tick = 0; tick < warmUpTicks; tick++) {
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
   }
 
@@ -99,6 +100,7 @@ function play(
   const before = sim.world.economy.lifetimeRevenue;
   for (let tick = 0; tick < measureTicks; tick++) {
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
   }
   return sim.world.economy.lifetimeRevenue - before;

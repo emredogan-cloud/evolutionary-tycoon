@@ -40,6 +40,7 @@ async function earn(page: Page, target: number): Promise<void> {
       const api = (window as unknown as { __EVOTYCOON__: Hook }).__EVOTYCOON__;
       for (let i = 0; i < 1200; i++) {
         api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         api.advanceTicks(1);
       }
     });

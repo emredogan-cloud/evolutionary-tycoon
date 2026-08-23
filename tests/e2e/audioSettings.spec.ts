@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 interface Hook {
   advanceTicks(count: number): void;
-  dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number }): void;
+  dispatch(command: { t: 'MANUAL_PREP' | 'SERVE_ORDER'; orderSlot: number }): void;
   getState(): { tick: number };
 }
 
@@ -53,7 +53,7 @@ test.describe('the audio settings panel', () => {
     // sound.
     const before = Number(await page.getByTestId('hud-cash').getAttribute('data-cash'));
     await page.evaluate(
-      `(() => { const h = (${hook.toString()})(); for (let chunk = 0; chunk < 120; chunk++) { h.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 }); h.advanceTicks(20); } })()`,
+      `(() => { const h = (${hook.toString()})(); for (let chunk = 0; chunk < 120; chunk++) { h.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 }); h.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 }); h.advanceTicks(20); } })()`,
     );
     // The HUD samples at 10 Hz on frames — poll until the sample lands.
     await expect

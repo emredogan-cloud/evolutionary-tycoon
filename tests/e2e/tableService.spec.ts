@@ -53,6 +53,7 @@ async function cookFor(page: Page, ticks: number): Promise<void> {
     const api = (window as unknown as { __EVOTYCOON__: Hook }).__EVOTYCOON__;
     for (let i = 0; i < count; i++) {
       api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       api.advanceTicks(1);
     }
   }, ticks);
@@ -83,27 +84,42 @@ test.describe('stage 3 table service', () => {
     expect(await readCash(page)).toBeGreaterThanOrEqual(60);
 
     /*
-     * Somebody must be seated by now: seats assign the moment an order is
-     * placed, and the customer's navigation target is the table itself. The
-     * proof is geometric — a person standing within a metre of a configured
-     * table position.
+     * Somebody takes a seat: seats assign the moment an order is placed, and
+     * the customer's navigation target is the table itself. The proof is
+     * geometric — a person standing within a metre of a configured table
+     * position.
+     *
+     * **Sampled across a shift, not at one tick.** It used to read the world
+     * once, immediately after the earning loop, and that passed only because
+     * delivery was instantaneous and the dining room was therefore always
+     * full at a minute boundary. Since the counter handover became an action
+     * (2026-08-23) the pipeline runs a beat behind, and one snapshot can
+     * legitimately catch the room between sittings. The claim was always "a
+     * customer takes a real seat", never "at this exact tick".
      */
-    const seatedNear = await page.evaluate((tables) => {
-      const api = (window as unknown as { __EVOTYCOON__: Hook }).__EVOTYCOON__;
-      const view = api.getState();
-      let hits = 0;
-      for (let i = 0; i < view.actorCount; i++) {
-        const actor = view.actors[i];
-        if (actor?.kind !== 1) continue; // customers only
-        for (const table of tables) {
-          const dx = actor.x - table.x;
-          const dy = actor.y - table.y;
-          if (dx * dx + dy * dy < 1.0) hits++;
+    const countSeated = (): Promise<number> =>
+      page.evaluate((tables) => {
+        const api = (window as unknown as { __EVOTYCOON__: Hook }).__EVOTYCOON__;
+        const view = api.getState();
+        let hits = 0;
+        for (let i = 0; i < view.actorCount; i++) {
+          const actor = view.actors[i];
+          if (actor?.kind !== 1) continue; // customers only
+          for (const table of tables) {
+            const dx = actor.x - table.x;
+            const dy = actor.y - table.y;
+            if (dx * dx + dy * dy < 1.0) hits++;
+          }
         }
-      }
-      return hits;
-    }, TABLES);
-    expect(seatedNear, 'nobody is at a table').toBeGreaterThan(0);
+        return hits;
+      }, TABLES);
+
+    let seatedNear = await countSeated();
+    for (let sample = 0; sample < 60 && seatedNear === 0; sample++) {
+      await cookFor(page, TICKS_PER_MINUTE / 4);
+      seatedNear = await countSeated();
+    }
+    expect(seatedNear, 'nobody sat at a table in fifteen simulated minutes').toBeGreaterThan(0);
 
     // Hire the kitchen and the floor through the real commands.
     await page.evaluate(() => {

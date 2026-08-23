@@ -33,6 +33,7 @@ function stage4(seed = 424242): Sim {
 function playFor(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
   }
 }
@@ -67,6 +68,7 @@ describe('a car goes all the way through', () => {
 
       for (let tick = 0; tick < TICKS_PER_MINUTE * 12; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
         for (let slot = 0; slot < sim.world.customers.scanLimit; slot++) {
           if (!sim.world.customers.isActive(slot)) continue;
@@ -110,6 +112,7 @@ describe('the lane is a queue, not a car park', () => {
 
       for (let tick = 0; tick < TICKS_PER_MINUTE * 10; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
 
         const occupied = new Set<number>();
@@ -139,6 +142,7 @@ describe('the lane is a queue, not a car park', () => {
 
       for (let tick = 0; tick < TICKS_PER_MINUTE * 12; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
 
         if (laneLength(sim.world) >= 2) sawQueue = true;
@@ -306,6 +310,7 @@ describe('cars in the lane still obey the physics', () => {
 
       for (let tick = 0; tick < TICKS_PER_MINUTE * 10; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
 
         for (let slot = 0; slot < sim.world.customers.scanLimit; slot++) {

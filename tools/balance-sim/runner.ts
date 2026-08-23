@@ -310,7 +310,17 @@ export function runPolicy(options: RunOptions): RunResult {
      */
     const sinceVisit = (tick % decideEvery) * TICK_MS;
     const present = options.policy.presence === 'attentive' || sinceVisit < PERIODIC_SESSION_MS;
-    if (present) sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    if (present) {
+      sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      /*
+       * And the handover. Since 2026-08-23 a finished tray waits at the pass
+       * for the player or, after `COUNTER_HANDOVER_MS`, for a cook — so a
+       * player who only cooks is no longer running the whole loop, and a
+       * balance run that only cooked would be measuring an absent player who
+       * happens to press one button.
+       */
+      sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
+    }
 
     if (tick % decideEvery === 0) {
       const view = snapshot(world, tick, spentThisStage);

@@ -17,7 +17,9 @@ import { expect, test } from './fixtures';
 
 interface OfflineTestApi {
   getState(): { tick: number };
-  dispatch(command: { t: 'MANUAL_PREP'; orderSlot: number } | { t: 'SET_PAUSED'; paused: boolean }): void;
+  dispatch(
+    command: { t: 'MANUAL_PREP' | 'SERVE_ORDER'; orderSlot: number } | { t: 'SET_PAUSED'; paused: boolean },
+  ): void;
   advanceTicks(count: number): void;
   save(): Promise<{ ok: boolean; error: string | null }>;
   clearSaves(): Promise<void>;
@@ -51,6 +53,7 @@ async function playMeasurably(page: Page): Promise<void> {
     const api = (window as unknown as HookWindow).__EVOTYCOON__;
     for (let i = 0; i < 6000; i++) {
       api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       api.advanceTicks(1);
     }
   });

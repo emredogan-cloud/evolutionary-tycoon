@@ -295,6 +295,9 @@
     onprep={(slot: number) => {
       commands.prep(slot);
     }}
+    onserve={(slot: number) => {
+      commands.serve(slot);
+    }}
   />
   <ObjectivePanel {objective} progress={objectiveProgress} {progression} />
 

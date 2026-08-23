@@ -19,9 +19,10 @@
   interface Props {
     orders: readonly OrderCardView[];
     onprep: (slot: number) => void;
+    onserve: (slot: number) => void;
   }
 
-  const { orders, onprep }: Props = $props();
+  const { orders, onprep, onserve }: Props = $props();
 
   /*
    * Names from the menu, not from a map kept here. This component and the
@@ -43,8 +44,28 @@
     maximumFractionDigits: 2,
   });
 
-  /** Whole seconds, rounded up: a countdown that shows 0 while still cooking reads as stuck. */
-  const countdown = (ms: number): string => `${String(Math.ceil(ms / 1000))} sn`;
+  /**
+   * The remaining preparation, in whole seconds.
+   *
+   * Rounded **up**, and that is a deliberate choice between two rules the
+   * directive states together: a five-second drink must read `5 4 3 2 1`, and
+   * the number must not overstate what is left. Rounding down satisfies the
+   * second and breaks the first — a 5.0 s prep would open on `4` and spend its
+   * last whole second showing `0 sn` on an order that is visibly still cooking.
+   * Rounding up opens on exactly the advertised prep time and never exceeds it,
+   * so the overstatement is bounded by one second and only ever inside a second
+   * that has not finished. Recorded in STAGE1_UI_FINAL_CORRECTION_REPORT §3.
+   *
+   * Over a minute it becomes `m:ss` — Stage 1 never gets there (30 s is the
+   * longest item), but a `prepSpeed` penalty can, and `93 sn` is not a duration
+   * anyone reads at a glance.
+   */
+  const countdown = (ms: number): string => {
+    const seconds = Math.ceil(Math.max(0, ms) / 1000);
+    if (seconds <= 60) return `${String(seconds)} sn`;
+    const minutes = Math.floor(seconds / 60);
+    return `${String(minutes)}:${String(seconds % 60).padStart(2, '0')}`;
+  };
 
   ensureLoaded();
   let revision = $state(0);
@@ -109,6 +130,25 @@
               {countdown(order.cookRemainingMs)}
             </span>
           </div>
+        {:else if order.state === 'ON_PASS' && order.servable}
+          <!--
+            The player's half of the loop. A tray on the pass is not served
+            until somebody hands it over: this button, or a cook four seconds
+            later. It sits exactly where "Hazırla" sat on the same card, so the
+            action the player already learned continues into the one they have
+            not — and it carries the money, because what serving is worth is
+            the reason to press it.
+          -->
+          <button
+            type="button"
+            class="serve"
+            data-testid="order-serve"
+            onclick={() => {
+              onserve(order.slot);
+            }}
+          >
+            Servis et · +₡{money.format(order.price)}
+          </button>
         {:else if order.state === 'ON_PASS' || order.state === 'DELIVERED'}
           <!--
             What the order is worth, on the card, from the moment the food is
@@ -221,9 +261,25 @@
     color: var(--ink-dim);
     cursor: default;
   }
-  .prep:focus-visible {
+  .prep:focus-visible,
+  .serve:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
+  }
+  /* The ready state is the one that pays, so it is the one that is green. The
+     shape is the prep button's, because it is the same gesture one step on. */
+  .serve {
+    margin-top: var(--space-2);
+    width: 100%;
+    min-height: 34px;
+    background: var(--positive, #7dd87d);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #12161d;
+    font-weight: 700;
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
   }
   .bar {
     margin-top: var(--space-2);

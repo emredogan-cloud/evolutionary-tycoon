@@ -1,7 +1,7 @@
 import { euclidean } from '../math/length';
 import { PASS } from '@config/economy/stations';
 import { layoutForStage } from '@config/layouts';
-import { TASK_BASE_MS, TASK_KINDS, TASK_SCORING, role } from '@config/employees';
+import { COUNTER_HANDOVER_MS, TASK_BASE_MS, TASK_KINDS, TASK_SCORING, role } from '@config/employees';
 import type { TaskKind } from '@config/employees';
 import { assignTask, releaseToIdle, STATE_BLOCKED, STATE_IDLE } from '../ai/EmployeeBrain';
 import type { SimSystem } from '../core/SystemPipeline';
@@ -295,18 +295,46 @@ export class TaskBoardSystem implements SimSystem {
    * the work exists, they can do it, and it is spoken for.
    */
   private hasClaimableKind(world: World, employee: EmployeeRecord): boolean {
-    const accepted = role(employee.role).tasks;
     for (let slot = 0; slot < world.tasks.scanLimit; slot++) {
       if (!world.tasks.isActive(slot)) continue;
-      const kind = TASK_KINDS[world.tasks.at(slot).kind];
-      if (kind !== undefined && accepted.includes(kind)) return true;
+      if (this.mayClaim(world, employee, slot)) return true;
     }
     return false;
   }
 
+  /**
+   * May this employee take this task, right now?
+   *
+   * Two answers, and keeping them in one function is the point: `bestTaskFor`
+   * uses it to pick work and `hasClaimableKind` uses it to decide whether an
+   * employee with no work is *idle* or *blocked*. When those two disagreed —
+   * which they did while the second read `role().tasks` directly — a cook stood
+   * around reading "sırada bekliyor" over a tray they were not yet allowed to
+   * touch, which is a jam the staff panel would have reported as a reason to
+   * hire more people.
+   *
+   * One `DELIVER_ORDER` means two different jobs, and the stage decides which:
+   *
+   *  - **Table service** — the stage has tables. The waiter's own work, taken
+   *    the moment it is posted. Nothing else changes here; this is what the
+   *    ₡18 buys from Stage 3 onward.
+   *  - **The counter handover** — the stage has no tables, so the tray is being
+   *    passed across the counter to somebody standing right there. That is the
+   *    **player's** station (`SERVE_ORDER`), and staff only cover it after
+   *    `COUNTER_HANDOVER_MS`.
+   *
+   * The window is what makes serving a real action rather than a button racing
+   * the simulation, and the fallback is what stops an unattended stand from
+   * simply stopping. A role still has to be eligible at all — the cook through
+   * `fallbackTasks`, the waiter through `tasks` — so a cleaner never carries a
+   * tray.
+   */
+  private mayClaim(world: World, employee: EmployeeRecord, taskSlot: number): boolean {
+    return mayClaimTask(world, employee, taskSlot);
+  }
+
   /** The highest-scoring unclaimed task this employee may take, or -1. */
   private bestTaskFor(world: World, employee: EmployeeRecord, employeeSlot: number): number {
-    const accepted = role(employee.role).tasks;
     let bestSlot = -1;
     let bestScore = Number.NEGATIVE_INFINITY;
     let bestId = Number.POSITIVE_INFINITY;
@@ -316,8 +344,7 @@ export class TaskBoardSystem implements SimSystem {
       const task = world.tasks.at(slot);
       if (task.claimedBy !== UNCLAIMED) continue;
 
-      const kind = TASK_KINDS[task.kind];
-      if (kind === undefined || !accepted.includes(kind)) continue;
+      if (!this.mayClaim(world, employee, slot)) continue;
 
       const score = scoreTask(world, task.kind, task.postedAtMs, task.x, task.y, employee);
       /*
@@ -355,6 +382,45 @@ function tableOfOrder(world: World, orderSlot: number): { x: number; y: number }
  * Exported so the scoring can be tested directly rather than inferred from
  * which employee happened to move.
  */
+/**
+ * May this employee take this task, right now?
+ *
+ * A free function for the same reason `deliverOrder` is one: the rule is the
+ * *definition* of the responsibility split, and
+ * `tests/integration/cookAutomation.test.ts` has to be able to ask it directly
+ * at all four stages. Asking it through a thirty-minute simulation would prove
+ * the rule only where the traffic happened to exercise it.
+ */
+export function mayClaimTask(world: World, employee: EmployeeRecord, taskSlot: number): boolean {
+  const task = world.tasks.at(taskSlot);
+  const kind = TASK_KINDS[task.kind];
+  if (kind === undefined) return false;
+
+  const spec = role(employee.role);
+  const waited = world.clock.simTimeMs - task.postedAtMs >= COUNTER_HANDOVER_MS;
+  const counterHandover =
+    kind === 'DELIVER_ORDER' && layoutForStage(world.progression.stage).tables.length === 0;
+
+  /*
+   * The counter is the player's station, so **every** role waits the window
+   * there — a waiter hired at Stage 1 buys cover, not the loop.
+   */
+  if (counterHandover) {
+    return (spec.tasks.includes(kind) || spec.fallbackTasks.includes(kind)) && waited;
+  }
+
+  // Your own job, taken on sight.
+  if (spec.tasks.includes(kind)) return true;
+  /*
+   * Somebody else's job, taken only after it has gone begging. This is what
+   * stops a diner with a cook and no waiter from silently ceasing to serve
+   * anyone: the cook walks the plate out, slowly, at the cost of being away
+   * from the kitchen. A waiter is still strictly better — instant, faster on
+   * foot and on a lower wage — which is the whole argument for hiring one.
+   */
+  return spec.fallbackTasks.includes(kind) && waited;
+}
+
 export function scoreTask(
   world: World,
   kindIndex: number,

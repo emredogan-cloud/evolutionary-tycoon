@@ -81,6 +81,7 @@ test('the Stage 4 restaurant boots, renders and keeps serving', async ({ page })
       if (hooks === undefined) return;
       for (let tick = 0; tick < 2000; tick++) {
         hooks.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        hooks.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         hooks.advanceTicks(1);
       }
     });

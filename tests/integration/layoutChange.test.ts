@@ -214,6 +214,7 @@ describe('agents re-route', () => {
       let placedCount = 0;
       for (let tick = 0; tick < 12_000; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
 
         // Rearrange every fifteen seconds: put one down, take the oldest away.

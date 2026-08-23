@@ -42,6 +42,7 @@ describe('what is happening when a stage unlocks', () => {
 
         for (let tick = 0; tick < 200_000; tick++) {
           sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+          sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
           // A player spending as they go, which is how the milestone is reached.
           if (tick % 600 === 0) buyUpgrade(sim.world, 'hand-painted-sign');
           sim.tick();
@@ -103,6 +104,7 @@ describe('what is happening when a stage unlocks', () => {
       let tick = 0;
       for (; tick < 200_000; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         if (tick % 600 === 0) buyUpgrade(sim.world, 'hand-painted-sign');
         sim.tick();
         if (meetsRequirement(sim.world, requirement)) break;

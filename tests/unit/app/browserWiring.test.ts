@@ -615,12 +615,17 @@ describe('what the overlay is allowed to ask for', () => {
     container.commands.evolve();
     container.commands.place('ph-prop-short', 8, 16);
     container.commands.removePlaced(0);
+    container.commands.prep(-1);
+    // The player's half of the service loop — 2026-08-23. A refused serve is a
+    // normal outcome (nothing is ready), and it still has to arrive as a
+    // command: the translation is what this test is about, not the effect.
+    container.commands.serve(-1);
 
     // Queued, not applied: commands land at the start of a tick, never on
     // dispatch, so that wall-clock arrival time cannot change an outcome.
     expect(container.sim.world.stats.commandsApplied).toBe(applied);
     container.sim.advance(2);
-    expect(container.sim.world.stats.commandsApplied).toBe(applied + 6);
+    expect(container.sim.world.stats.commandsApplied).toBe(applied + 8);
   });
 
   it('fires an employee the overlay names by entity id', () => {

@@ -240,11 +240,13 @@ describe('the E9 exploit — clicking faster', () => {
     const slot = placeOrder(sim, 'chips');
 
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
     expect(sim.world.orders.at(slot).state).toBe(ORDER_COOKING);
 
     expect(() => {
       sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       sim.tick();
     }).not.toThrow();
   });
@@ -315,6 +317,7 @@ describe('the pass', () => {
     const sim = new Sim({ seed: 20260815 });
     for (let tick = 0; tick < 20 * 60 * 20; tick++) {
       sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       sim.tick();
       expect(passLoad(sim.world), `tick ${String(tick)}`).toBeLessThanOrEqual(PASS_CAPACITY);
     }

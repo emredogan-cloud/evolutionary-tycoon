@@ -199,6 +199,7 @@ async function trade(page: Page, ticks: number): Promise<void> {
     if (hooks === undefined) return;
     for (let tick = 0; tick < count; tick++) {
       hooks.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+      hooks.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
       hooks.advanceTicks(1);
     }
   }, ticks);

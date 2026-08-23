@@ -26,6 +26,7 @@ const LONG_RUN_TIMEOUT_MS = 120_000;
 function playFor(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
   }
 }
@@ -43,6 +44,7 @@ describe('the whole loop', () => {
 
       for (let tick = 0; tick < TICKS_PER_MINUTE * 20; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
         for (let slot = 0; slot < sim.world.customers.scanLimit; slot++) {
           if (!sim.world.customers.isActive(slot)) continue;
@@ -345,6 +347,7 @@ describe('the kitchen under pressure', () => {
       const sim = new Sim({ seed: 1234 });
       for (let tick = 0; tick < TICKS_PER_MINUTE * 10; tick++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
 
         const claimed = new Set<number>();

@@ -7,6 +7,7 @@ import { placeObject } from '../systems/LayoutSystem';
 import { buyPlace, movePlaced, sellPlaced, upgradeBuilding } from '../systems/StoreSystem';
 import { advancePendingBuilds } from '../systems/ProgressionSystem';
 import { beginConstruction } from '../systems/ProgressionSystem';
+import { deliverOrder, isServable, nextServable } from '../systems/ServiceSystem';
 import { fire, hire } from '../systems/StaffSystem';
 import { buyUpgrade } from '../systems/UpgradeSystem';
 import type { World } from './World';
@@ -89,6 +90,32 @@ interface SetHighContrastCommand {
  */
 interface ManualPrepCommand {
   readonly t: 'MANUAL_PREP';
+  readonly tick: number;
+  readonly orderSlot: number;
+}
+
+/**
+ * Hand a finished tray to the person waiting for it — the player at the pass.
+ *
+ * The other half of the responsibility split
+ * ([`COOK_PLAYER_INTERACTION_DESIGN.md`](../../../docs/COOK_PLAYER_INTERACTION_DESIGN.md)).
+ * A counter stage used to hand the tray over by itself on the tick it reached
+ * the pass, which meant that once a cook was hired the player had **no action
+ * left in the service loop at all** — the complaint this command exists to
+ * answer.
+ *
+ * `orderSlot` of -1 means "whichever tray has been waiting longest", the same
+ * convention `MANUAL_PREP` uses.
+ *
+ * Serving is a *choice*, not a chore: with several trays ready the player picks
+ * who gets theirs first, and everyone else keeps waiting on a clock that is
+ * eating their patience and their food's quality. The stand does not stall if
+ * nobody clicks — a cook takes the handover as a fallback after
+ * `COUNTER_HANDOVER_MS` — so this is an acceleration the player can supply,
+ * never a gate the player has to open.
+ */
+interface ServeOrderCommand {
+  readonly t: 'SERVE_ORDER';
   readonly tick: number;
   readonly orderSlot: number;
 }
@@ -255,6 +282,7 @@ export type Command =
   | SetSpeedCommand
   | SetPausedCommand
   | ManualPrepCommand
+  | ServeOrderCommand
   | BuyUpgradeCommand
   | SetPriceCommand
   | HireCommand
@@ -276,6 +304,7 @@ export type CommandInput =
   | Omit<SetSpeedCommand, 'tick'>
   | Omit<SetPausedCommand, 'tick'>
   | Omit<ManualPrepCommand, 'tick'>
+  | Omit<ServeOrderCommand, 'tick'>
   | Omit<BuyUpgradeCommand, 'tick'>
   | Omit<SetPriceCommand, 'tick'>
   | Omit<HireCommand, 'tick'>
@@ -345,6 +374,27 @@ export function apply(world: World, command: Command): void {
        */
       const target = command.orderSlot >= 0 ? command.orderSlot : nextStartable(world);
       if (target >= 0) startPrep(world, target);
+      break;
+    }
+    case 'SERVE_ORDER': {
+      /*
+       * Refusing is normal here too: the tray may have been handed over by a
+       * cook on the same tick, or the customer may already have walked out.
+       * `deliverOrder` checks the tray is whole before it hands anything over,
+       * so a click on a half-cooked basket costs nothing.
+       */
+      /*
+       * `nextServable` also answers *whether the player may serve at all*: it
+       * returns -1 wherever the stage has tables, because a dining room is
+       * carried rather than handed over. A named slot goes through the same
+       * gate rather than around it — a command is replayed from logs written
+       * by builds this one has never seen.
+       */
+      const tray =
+        command.orderSlot >= 0 && isServable(world, command.orderSlot)
+          ? command.orderSlot
+          : nextServable(world);
+      if (tray >= 0) deliverOrder(world, tray);
       break;
     }
     case 'BUY_UPGRADE': {
@@ -456,6 +506,8 @@ export function stampCommand(input: CommandInput, tick: number): Command {
       return { t: 'SET_HIGH_CONTRAST', tick, on: input.on };
     case 'MANUAL_PREP':
       return { t: 'MANUAL_PREP', tick, orderSlot: input.orderSlot };
+    case 'SERVE_ORDER':
+      return { t: 'SERVE_ORDER', tick, orderSlot: input.orderSlot };
     case 'BUY_UPGRADE':
       return { t: 'BUY_UPGRADE', tick, upgradeId: input.upgradeId };
     case 'SET_PRICE':

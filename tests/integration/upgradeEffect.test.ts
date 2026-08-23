@@ -4,7 +4,7 @@ import { UPGRADES } from '@config/economy/upgrades';
 import { ORDERING_MS } from '@config/satisfaction';
 import { TICK_MS } from '@config/simulation';
 import { STAGE1_LAYOUT } from '@config/layouts/stage1';
-import { menuIndexOf, menuItem } from '@config/economy/menu';
+import { MENU, menuIndexOf, menuItem } from '@config/economy/menu';
 import { Sim } from '@sim/core/Sim';
 import { effectValue } from '@sim/systems/UpgradeSystem';
 import { hire } from '@sim/systems/StaffSystem';
@@ -66,6 +66,7 @@ function unlock(sim: Sim, id: string): void {
 function playFor(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
   }
 }
@@ -493,33 +494,47 @@ describe('the cooler — hold tolerance', () => {
       /*
        * **The cooler was inert for three phases, and Phase 11 fixed it.**
        *
-       * At Stage 1 delivery is instantaneous — the customer is standing at the
-       * counter — so nothing is ever held and the cooler changes nothing a
-       * player can feel. PHASE_8_REPORT §6 measured zero ticks out of 24 000
-       * with a plate on the pass, and Phases 9 and 10 each inherited it.
+       * The reason it was inert has since changed, and this test changed with
+       * it. Until 2026-08-23 a Stage-1 tray was handed over on the tick it
+       * reached the pass — PHASE_8_REPORT §6 measured **zero** ticks out of
+       * 24 000 holding food — so the assertion here was `toBe(0)`.
+       *
+       * The counter handover is a player action now, so a Stage-1 pass does
+       * hold food: for one tick when the player is attentive, and for up to
+       * `COUNTER_HANDOVER_MS` when they are not. What makes the cooler still
+       * dormant at Stage 1 is not that nothing waits — it is that nothing waits
+       * anywhere near long enough to decay, and *that* is what is asserted
+       * below: the longest hold in ten minutes of attentive play stays under
+       * the shortest tolerance on the menu.
        *
        * Stage 3 gives the world tables. A seated customer is across the room, so
-       * the food has to be *carried*, and the pass finally holds plates —
+       * the food has to be *carried*, and the pass holds plates for a walk —
        * measured at 10.6% of ticks with one waiter on shift.
        *
-       * Both halves are asserted here rather than one, because "it is dormant"
-       * and "it stopped being dormant" are the same claim seen from either end,
-       * and a test that only checked the second would pass on a build where
-       * Stage 1 had quietly started holding food too.
+       * Both halves are asserted rather than one, because "it is dormant" and
+       * "it stopped being dormant" are the same claim from either end.
        */
+      const shortestTolerance = Math.min(...MENU.map((entry) => entry.holdToleranceMs));
       const sim = new Sim({ seed: 424242 });
-      let ticksWithPlate = 0;
+      let longestHoldMs = 0;
       for (let i = 0; i < TICKS_PER_MINUTE * 10; i++) {
         sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         sim.tick();
         for (let slot = 0; slot < sim.world.orders.scanLimit; slot++) {
           if (!sim.world.orders.isActive(slot)) continue;
-          if (sim.world.orders.at(slot).state === ORDER_ON_PASS) ticksWithPlate++;
+          const order = sim.world.orders.at(slot);
+          if (order.state !== ORDER_ON_PASS) continue;
+          longestHoldMs = Math.max(longestHoldMs, sim.world.clock.simTimeMs - order.readyAtMs);
         }
       }
 
       expect(sim.world.stats.customersServed, 'nobody was served, so this proves nothing').toBeGreaterThan(0);
-      expect(ticksWithPlate, 'Stage 1 started holding food, which it should not').toBe(0);
+      expect(
+        longestHoldMs,
+        `an attentive Stage-1 player held food for ${longestHoldMs} ms, past the ` +
+          `${shortestTolerance} ms tolerance — the cooler is no longer dormant there`,
+      ).toBeLessThan(shortestTolerance);
 
       // And at Stage 3, with somebody to carry it, the pass is genuinely used.
       const diner = new Sim({ seed: 424242 });

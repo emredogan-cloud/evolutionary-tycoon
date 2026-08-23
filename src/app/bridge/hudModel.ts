@@ -206,6 +206,15 @@ export interface OrderCardView {
   /** Remaining patience of its customer, 0..1 — or -1 once they are seated/gone. */
   patience01: number;
   startable: boolean;
+  /**
+   * Whether the player may hand this tray over themselves.
+   *
+   * True for the tray at the head of the pass queue at a **counter** stage.
+   * A dining room is carried rather than handed over, so from Stage 3 this is
+   * false for everything and the card shows what the order is worth instead of
+   * a button that would refuse.
+   */
+  servable: boolean;
   price: number;
   /** 0..1 cook progress while COOKING, else 0. */
   cook01: number;
@@ -378,6 +387,15 @@ export interface UiCommands {
   buyUpgrade(id: string): void;
   /** Start preparing an order — the manual loop. -1 means "the next startable". */
   prep(orderSlot: number): void;
+  /**
+   * Hand a finished tray to the person waiting for it. -1 means "the one that
+   * has been ready longest".
+   *
+   * The player's half of the service loop since 2026-08-23. Before that a
+   * counter stage delivered by itself, so hiring a cook left the player with no
+   * action at all — see `docs/COOK_PLAYER_INTERACTION_DESIGN.md`.
+   */
+  serve(orderSlot: number): void;
   /** Simulation speed, through the same command door as everything else. */
   setSpeed(mult: 1 | 2 | 4): void;
   /** Confirm the stage transition the player has been offered. */

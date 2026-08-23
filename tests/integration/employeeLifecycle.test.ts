@@ -26,6 +26,7 @@ function runFor(sim: Sim, ticks: number): void {
 function cookManually(sim: Sim, ticks: number): void {
   for (let i = 0; i < ticks; i++) {
     sim.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+    sim.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
     sim.tick();
   }
 }

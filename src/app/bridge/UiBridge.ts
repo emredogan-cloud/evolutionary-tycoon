@@ -10,9 +10,9 @@ import { PASS, station } from '@config/economy/stations';
 import type { Sim } from '@sim/core/Sim';
 import { ORDER_PAID, orderStateName } from '@sim/stores/OrderStore';
 import { nextStartable } from '@sim/systems/KitchenSystem';
+import { isServable } from '@sim/systems/ServiceSystem';
 import { playerLevel, upgradeLevelRequirement } from '@sim/systems/playerLevel';
 import { effectValue } from '@sim/systems/UpgradeSystem';
-import { TICK_MS } from '@config/simulation';
 import type { World } from '@sim/core/World';
 import type { ReadonlySimEvent } from '@sim/core/events';
 import { ORDER_COOKING, ORDER_ON_PASS, ORDER_PLACED } from '@sim/stores/OrderStore';
@@ -222,6 +222,7 @@ interface MutableOrderCard {
   ageMs: number;
   patience01: number;
   startable: boolean;
+  servable: boolean;
   price: number;
   cook01: number;
   cookRemainingMs: number;
@@ -379,6 +380,7 @@ export class UiBridge implements HudSource {
         ageMs: 0,
         patience01: -1,
         startable: false,
+        servable: false,
         price: 0,
         cook01: 0,
         cookRemainingMs: 0,
@@ -935,7 +937,25 @@ export class UiBridge implements HudSource {
    */
   private refillOrders(world: World): void {
     const model = this.model;
-    const nowMs = world.tick * TICK_MS;
+    /*
+     * The simulation clock, not the tick count.
+     *
+     * Every timestamp on an order — `orderedAtMs`, `startedAtMs`, `readyAtMs` —
+     * is stamped from `world.clock.simTimeMs`, and that clock does **not** start
+     * at zero: a fresh world opens at `DEFAULT_GAME_START_HOUR` (08:00), which is
+     * `8/24 x MS_PER_GAME_DAY` = **240 000 ms** before the first tick runs. This
+     * line used to read `world.tick * TICK_MS`, which starts at zero, so every
+     * difference computed here was wrong by that whole epoch:
+     *
+     *   cookRemainingMs = duration - (0 - 240000)  ->  a 3.0 s chips read 243 sn
+     *   cook01          = (0 - 240000) / duration  ->  clamped to 0, bar never moved
+     *   ageMs           = max(0, 0 - 240000)       ->  every order aged 0 forever
+     *
+     * The user's 2026-08-23 capture is that arithmetic on screen: "Limonata ·
+     * Hazırlanıyor · 243 sn" over an empty progress bar, for a five-second drink.
+     * Two clocks, one epoch apart, subtracted from each other.
+     */
+    const nowMs = world.clock.simTimeMs;
     const startableSlot = nextStartable(world);
     let count = 0;
     // Oldest first: collect live slots, then sort by orderedAtMs.
@@ -962,6 +982,7 @@ export class UiBridge implements HudSource {
       view.ageMs = Math.max(0, nowMs - order.orderedAtMs);
       view.price = order.price;
       view.startable = slot === startableSlot;
+      view.servable = isServable(world, slot);
       view.cook01 = 0;
       view.cookRemainingMs = 0;
       if (order.state === ORDER_COOKING && order.station >= 0) {

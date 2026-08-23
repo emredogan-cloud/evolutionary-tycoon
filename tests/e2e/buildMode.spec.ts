@@ -47,6 +47,7 @@ async function arm(page: Page, fund = true): Promise<void> {
         const api = (window as unknown as Record<string, TestApi>)['__EVOTYCOON__'];
         for (let i = 0; i < count; i++) {
           api?.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+          api?.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
           api?.advanceTicks(1);
         }
       }, TICKS_PER_MINUTE);

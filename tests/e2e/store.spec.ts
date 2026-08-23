@@ -47,6 +47,7 @@ async function cookUntil(page: Page, target: number): Promise<void> {
       const api = hookOf();
       for (let i = 0; i < count; i++) {
         api.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        api.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         api.advanceTicks(1);
       }
       function hookOf(): Hook {

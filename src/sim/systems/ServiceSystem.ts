@@ -25,10 +25,15 @@ import { effectValue } from './UpgradeSystem';
 /**
  * Ordering, delivery, eating, payment — the half of the loop that earns money.
  *
- * The customer at the front of the queue orders; the kitchen cooks; whatever is
- * on the pass goes to whoever ordered it; they eat and pay. In Stage 1 delivery
- * is automatic because there are no waiters — Phase 10 replaces that one step
- * and nothing else here changes, which is why it is a single method.
+ * The customer at the front of the queue orders; the kitchen cooks; somebody
+ * carries the tray from the pass to them; they eat and pay.
+ *
+ * **This system no longer does the carrying.** Delivery is `deliverOrder`, and
+ * it is called by whoever picks the tray up — the player's `SERVE_ORDER`, a
+ * waiter's `DELIVER_ORDER` task, or a cook taking the counter handover as a
+ * fallback. See the `WAITING_FOR_FOOD` comment in `run` for why the automatic
+ * path went away, and `docs/COOK_PLAYER_INTERACTION_DESIGN.md` for what
+ * replaced it.
  *
  * ## Only the front of the queue orders
  *
@@ -70,9 +75,33 @@ export class ServiceSystem implements SimSystem {
         case STATE_ORDERING:
           this.placeOrder(world, customer, slot, deltaMs);
           break;
-        case STATE_WAITING_FOR_FOOD:
-          this.deliver(world, customer, slot);
-          break;
+        /*
+         * `WAITING_FOR_FOOD` has no case, and that is the 2026-08-23 change.
+         *
+         * It used to hand the whole tray over on the tick it reached the pass,
+         * at any stage with no tables, on the reasoning that "the player is the
+         * waiter and making them click twice would be busywork". Two things
+         * made that wrong.
+         *
+         * The first is measured in PHASE_8_REPORT §6: food sat on the pass for
+         * **zero ticks out of 24 000**, so the pass plate, the cooler upgrade
+         * and hold temperature were dormant mechanics decorating an event with
+         * no duration.
+         *
+         * The second is what the player reported. The instant a cook was
+         * hired, preparation stopped being the player's job — and delivery had
+         * never been one — so the whole service loop ran with the player
+         * watching. An automation purchase that removes *every* action is not
+         * an upgrade, it is an ending.
+         *
+         * A tray now waits for somebody to pick it up: the **player** through
+         * `SERVE_ORDER`, immediately and by choice, or an **employee** through
+         * a `DELIVER_ORDER` task — a waiter wherever there are tables, and a
+         * cook as the counter fallback after `COUNTER_HANDOVER_MS`
+         * (`TaskBoardSystem`). Both go through `deliverOrder` below. Patience
+         * keeps running in this state either way, so a tray nobody collects
+         * ends in an abandonment rather than a customer frozen at the counter.
+         */
         case STATE_EATING:
           this.eat(world, customer, deltaMs);
           break;
@@ -156,49 +185,6 @@ export class ServiceSystem implements SimSystem {
       return;
     }
     customer.state = STATE_WAITING_FOR_FOOD;
-  }
-
-  /**
-   * Hand over whatever is on the pass for this customer.
-   *
-   * Automatic in Stage 1: the player is the waiter, and making them click twice
-   * per customer would be busywork rather than a decision. Phase 10's waiters
-   * replace this method and nothing around it.
-   */
-  private deliver(world: World, customer: CustomerRecord, slot: number): void {
-    /*
-     * The whole tray or nothing — ADR-016. A basket is handed over complete, so
-     * the first-cooked item genuinely waits on the pass for the last, which is
-     * what finally makes multi-item hold temperature a real cost.
-     */
-    if (!basketReady(world, slot)) return;
-
-    /*
-     * **Somebody has to carry it — Stage 3 onward.**
-     *
-     * Until there were tables, delivery happened on the same tick the food
-     * reached the pass: the customer was standing at the counter and the
-     * handover was instantaneous. PHASE_8_REPORT §6 measured the consequence —
-     * food sat on the pass for **zero ticks out of 24 000** — and Phases 9 and
-     * 10 each inherited it, leaving the pass plate indicator, the cooler and the
-     * waiter role built and dormant.
-     *
-     * A seated customer is across the room. The order stays on the pass until a
-     * waiter's `DELIVER_ORDER` task completes, which is what finally makes hold
-     * temperature bite.
-     */
-    if (layoutForStage(world.progression.stage).tables.length > 0) return;
-
-    for (let each = 0; each < world.orders.scanLimit; each++) {
-      if (!world.orders.isActive(each)) continue;
-      const plate = world.orders.at(each);
-      if (plate.customerSlot !== slot || plate.state !== ORDER_ON_PASS) continue;
-      plate.state = ORDER_DELIVERED;
-      plate.deliveredAtMs = world.clock.simTimeMs;
-      world.eventQueue.emitOrderDelivered(plate.entityId, customer.entityId);
-    }
-    customer.state = STATE_EATING;
-    customer.timerMs = 0;
   }
 
   private eat(world: World, customer: CustomerRecord, deltaMs: number): void {
@@ -325,6 +311,130 @@ export function deliverOrder(world: World, orderSlot: number): boolean {
   customer.state = STATE_EATING;
   customer.timerMs = 0;
   return true;
+}
+
+/**
+ * The tray that has been ready longest — what a click on "serve" means.
+ *
+ * FIFO by `readyAtMs`, tie-broken on slot, exactly like `nextStartable`: the
+ * player's default action is the one a queue makes obvious, and the interesting
+ * decision is when they *override* it by naming a different card.
+ *
+ * Only whole trays, because only whole trays can be handed over (ADR-016).
+ * A basket whose last plate is still cooking is not servable and its card says
+ * so, rather than offering a button that would refuse.
+ */
+export function nextServable(world: World): number {
+  if (layoutForStage(world.progression.stage).tables.length > 0) return -1;
+
+  /*
+   * One pass, not one `isServable` per slot.
+   *
+   * `isServable` asks `basketReady` and `firstOrderOf`, and both scan the order
+   * pool — so calling it per slot makes this O(orders²) on a function the
+   * player's serve dispatches every tick. Measured: the balance suite went from
+   * 69 s to **104 s** against a 90 s CI budget the moment this shipped as a
+   * filter, which is the gate doing exactly its job. Deriving the same answer
+   * in a single sweep costs one pass and no allocation (`scratch` is reused —
+   * WORKING_DISCIPLINE §2.3).
+   *
+   * Per customer the sweep collects: their lowest active slot (the tray's
+   * handle), whether anything of theirs is *not* on the pass, and the earliest
+   * `readyAtMs` among the plates that are. A tray qualifies when it has plates,
+   * none of them are still cooking or already handed over, and the customer is
+   * still there.
+   */
+  const capacity = world.customers.capacity;
+  const scratch = ensureServableScratch(capacity);
+  scratch.handle.fill(-1);
+  scratch.blocked.fill(0);
+  scratch.readyAt.fill(Number.POSITIVE_INFINITY);
+
+  for (let slot = 0; slot < world.orders.scanLimit; slot++) {
+    if (!world.orders.isActive(slot)) continue;
+    const order = world.orders.at(slot);
+    const customer = order.customerSlot;
+    if (customer < 0 || customer >= capacity) continue;
+    // Paid and delivered plates are finished business; they neither block a
+    // tray nor make one — the same two states `basketReady` skips.
+    if (order.state === ORDER_PAID || order.state === ORDER_DELIVERED) continue;
+
+    const seen = scratch.handle[customer] ?? -1;
+    if (seen < 0 || slot < seen) scratch.handle[customer] = slot;
+    if (order.state !== ORDER_ON_PASS) scratch.blocked[customer] = 1;
+    else if (order.readyAtMs < (scratch.readyAt[customer] ?? Number.POSITIVE_INFINITY)) {
+      scratch.readyAt[customer] = order.readyAtMs;
+    }
+  }
+
+  let best = -1;
+  let bestTime = Number.POSITIVE_INFINITY;
+  for (let customer = 0; customer < capacity; customer++) {
+    const handle = scratch.handle[customer] ?? -1;
+    if (handle < 0 || scratch.blocked[customer] === 1) continue;
+    if (!world.customers.isActive(customer)) continue;
+    const readyAt = scratch.readyAt[customer] ?? Number.POSITIVE_INFINITY;
+    if (readyAt < bestTime || (readyAt === bestTime && handle < best)) {
+      bestTime = readyAt;
+      best = handle;
+    }
+  }
+  return best;
+}
+
+interface ServableScratch {
+  readonly handle: Int32Array;
+  readonly blocked: Uint8Array;
+  readonly readyAt: Float64Array;
+}
+
+let servableScratch: ServableScratch | null = null;
+
+/** Allocated once, on the first call that has a world to size it against. */
+function ensureServableScratch(capacity: number): ServableScratch {
+  const existing = servableScratch;
+  if (existing !== null && existing.handle.length >= capacity) return existing;
+  const made: ServableScratch = {
+    handle: new Int32Array(capacity),
+    blocked: new Uint8Array(capacity),
+    readyAt: new Float64Array(capacity),
+  };
+  servableScratch = made;
+  return made;
+}
+
+/**
+ * Can the player hand *this* tray over?
+ *
+ * Every ready tray answers true, not merely the oldest, and that difference is
+ * the decision the design is built on: with three ready and one register, which
+ * customer gets theirs first is the player's call, and a card that showed a
+ * button on only one of them would have taken the call for them. `-1` still
+ * means "the one that has waited longest", which is what a keyboard shortcut or
+ * an absent-minded click should do.
+ *
+ * Two conditions, and both are about what a handover *is*:
+ *
+ * 1. **A whole tray** (ADR-016). A basket whose last plate is still cooking
+ *    cannot be handed over, so its card says `Hazırlanıyor` rather than
+ *    offering a button that would refuse. One handle per tray — the customer's
+ *    lowest slot — so three plates of one basket are one action.
+ * 2. **Across a counter.** A dining room is carried, not handed over: a seated
+ *    customer is across the room, the walk is the waiter's whole job, and a
+ *    player who could deliver from the pass would both make the ₡18 pointless
+ *    and rob the customer of the walk to their own table. Measured at Stage 3,
+ *    where the player's serve caught people at the counter and nobody ever sat
+ *    down (`tests/e2e/tableService.spec.ts`).
+ */
+export function isServable(world: World, slot: number): boolean {
+  if (layoutForStage(world.progression.stage).tables.length > 0) return false;
+  if (slot < 0 || !world.orders.isActive(slot)) return false;
+
+  const order = world.orders.at(slot);
+  if (order.state !== ORDER_ON_PASS) return false;
+  if (order.customerSlot < 0 || !world.customers.isActive(order.customerSlot)) return false;
+  if (!basketReady(world, order.customerSlot)) return false;
+  return firstOrderOf(world, order.customerSlot) === slot;
 }
 
 /**

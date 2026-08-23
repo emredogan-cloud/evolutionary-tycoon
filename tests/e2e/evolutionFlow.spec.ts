@@ -80,6 +80,7 @@ async function playTheThreshold(page: Page): Promise<boolean> {
       if (hooks === undefined) return;
       for (let tick = 0; tick < 2000; tick++) {
         hooks.dispatch({ t: 'MANUAL_PREP', orderSlot: -1 });
+        hooks.dispatch({ t: 'SERVE_ORDER', orderSlot: -1 });
         // A player spending as they go, which is how the upgrade milestone is met.
         if ((index * 2000 + tick) % 600 === 0) {
           hooks.dispatch({ t: 'BUY_UPGRADE', upgradeId: 'hand-painted-sign' });
