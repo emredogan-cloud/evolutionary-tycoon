@@ -262,6 +262,53 @@ function buying(option: UpgradeOption | null): CommandInput[] {
 const THROUGHPUT_FAMILIES = new Set(['KITCHEN', 'CAPACITY', 'DRIVE_THRU']);
 const MARGIN_FAMILIES = new Set(['VISIBILITY_APPEAL', 'STAFF']);
 
+/**
+ * A building purchase, when one is worth making.
+ *
+ * Deliberately the same discipline the upgrade rule uses: never spend below
+ * the reserve, and only when the thing is affordable outright. Every
+ * strategic policy takes the cheapest available option — the policies differ
+ * on *which upgrades* they favour, and inventing a second axis of
+ * disagreement here would make the sweep measure the harness rather than the
+ * economy.
+ */
+/**
+ * What a policy keeps back before spending on equipment: the price of the
+ * next stage.
+ *
+ * Measured, a flat "buy what you can afford" pushed Stage 2 from 17 minutes
+ * to 25 — over its ceiling — because a stand holding ₡30 spent ₡24 on a
+ * machine instead of saving toward a ₡140 transition, and at Stage 1's
+ * preparation times that machine saves a fraction of a second on a drink the
+ * kitchen is idle 97% of the time anyway. A player invests out of surplus,
+ * after the thing they are working toward is secured.
+ */
+function stageFloat(snapshot: PolicySnapshot): number {
+  return requirementFor(snapshot.stage)?.cashRequired ?? 0;
+}
+
+function buildingBuy(snapshot: PolicySnapshot): CommandInput[] {
+  let best: PolicySnapshot['buildings'][number] | null = null;
+  for (const option of snapshot.buildings) {
+    /*
+     * Out of surplus, not out of the progression budget.
+     *
+     * The first version bought whatever was affordable, and measured, that
+     * pushed Stage 2 from 17 minutes to 25 — over its ceiling — because a
+     * stand with ₡30 spent ₡24 on equipment instead of saving toward the
+     * ₡140 transition. A player invests from what they can spare; requiring
+     * three times the price in hand is the cheapest expression of that, and
+     * it is the same shape as the evolution float guard above.
+     */
+    if (snapshot.cash - option.nextCost < stageFloat(snapshot)) continue;
+    if (best === null || option.nextCost < best.nextCost) best = option;
+  }
+  if (best === null) return [];
+  if (best.index >= 0) return [{ t: 'UPGRADE_BUILDING', index: best.index }];
+  if (best.spot === null) return [];
+  return [{ t: 'BUY_PLACE', itemId: best.id, x: best.spot.x, y: best.spot.y }];
+}
+
 export const greedyCheapest: Policy = {
   id: 'greedy-cheapest',
   description: 'Always buys the cheapest upgrade it can afford.',
@@ -270,6 +317,11 @@ export const greedyCheapest: Policy = {
   decide(snapshot) {
     const base = common(snapshot);
     if (base.busy) return base.commands;
+
+    // Equipment first when it is affordable: it is the lever the menu's
+    // preparation times are calibrated against.
+    const equipment = buildingBuy(snapshot);
+    if (equipment.length > 0) return equipment;
     return buying(pick(affordable(snapshot), (option) => -option.cost));
   },
 };
@@ -282,6 +334,11 @@ export const roiOptimal: Policy = {
   decide(snapshot) {
     const base = common(snapshot);
     if (base.busy) return base.commands;
+
+    // Equipment first when it is affordable: it is the lever the menu's
+    // preparation times are calibrated against.
+    const equipment = buildingBuy(snapshot);
+    if (equipment.length > 0) return equipment;
 
     /*
      * Return is scored as **first-level effects per credit**, and levels beyond
@@ -308,6 +365,11 @@ export const throughputFirst: Policy = {
     const base = common(snapshot);
     if (base.busy) return base.commands;
 
+    // Equipment first when it is affordable: it is the lever the menu's
+    // preparation times are calibrated against.
+    const equipment = buildingBuy(snapshot);
+    if (equipment.length > 0) return equipment;
+
     const options = affordable(snapshot);
     const preferred = options.filter((option) => THROUGHPUT_FAMILIES.has(option.family));
     // Falls back to anything rather than sitting on money it will never spend —
@@ -324,6 +386,11 @@ export const marginFirst: Policy = {
   decide(snapshot) {
     const base = common(snapshot);
     if (base.busy) return base.commands;
+
+    // Equipment first when it is affordable: it is the lever the menu's
+    // preparation times are calibrated against.
+    const equipment = buildingBuy(snapshot);
+    if (equipment.length > 0) return equipment;
 
     const options = affordable(snapshot);
     const preferred = options.filter((option) => MARGIN_FAMILIES.has(option.family));

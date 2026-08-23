@@ -41,12 +41,18 @@ test.describe('the menu panel', () => {
 
   test('shows each product its preparation time', async ({ page }) => {
     await boot(page);
-    // A drink and a burger are different businesses at the same margin, and
-    // the number comes from the field the kitchen counts down.
-    const lemonade = page.locator('[data-testid="product-card"][data-item="lemonade"]');
-    await expect(lemonade.locator('[data-testid="product-prep"]')).toHaveText('2,5 sn');
-    const burger = page.locator('[data-testid="product-card"][data-item="hamburger"]');
-    await expect(burger.locator('[data-testid="product-prep"]')).toHaveText('9,0 sn');
+    /*
+     * A drink and a burger are different businesses at the same margin, and
+     * the number comes from the field the kitchen counts down — read from the
+     * menu rather than transcribed, so a calibration pass cannot leave this
+     * spec asserting last week's economy. These were literal '2,5 sn' and
+     * '9,0 sn' until Decision C moved them to 5,0 and 30,0.
+     */
+    for (const item of MENU) {
+      const card = page.locator(`[data-testid="product-card"][data-item="${item.id}"]`);
+      const expected = `${(item.prepTimeMs / 1000).toFixed(1).replace('.', ',')} sn`;
+      await expect(card.locator('[data-testid="product-prep"]')).toHaveText(expected);
+    }
   });
 
   test('says which stage a product it cannot sell yet needs', async ({ page }) => {

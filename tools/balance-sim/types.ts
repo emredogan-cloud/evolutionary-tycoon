@@ -71,6 +71,25 @@ export interface PolicySnapshot {
    * flat line for ten hours.
    */
   readonly employeesByRole: Readonly<Record<string, number>>;
+  /**
+   * The functional buildings the player could build or level up right now,
+   * with a spot the runner has already checked is legal.
+   *
+   * Buildings are a second purchase path, and a calibration that could not
+   * see them would measure a menu whose preparation times had risen without
+   * the equipment that exists to bring them back down — which is exactly the
+   * trade Decision C asks to be judged.
+   */
+  readonly buildings: readonly {
+    readonly id: string;
+    /** 0 when nothing is built yet. */
+    readonly level: number;
+    readonly nextCost: number;
+    /** Row index for `UPGRADE_BUILDING`, or -1 when it is not built. */
+    readonly index: number;
+    /** A legal cell for a first purchase, or null when the lot is full. */
+    readonly spot: { readonly x: number; readonly y: number } | null;
+  }[];
   readonly upgradesBought: number;
   /** Credits already spent on upgrades since entering this stage. */
   readonly spentOnUpgradesThisStage: number;

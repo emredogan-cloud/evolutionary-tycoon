@@ -3,6 +3,9 @@ import { UPGRADES } from '@config/economy/upgrades';
 import { Sim } from '@sim/core/Sim';
 import type { World } from '@sim/core/World';
 import { EMPLOYEE_ROLES } from '@config/employees';
+import { BUILDINGS, buildingAsset, buildingCost, stageForLevel } from '@config/buildings';
+import { navigationIntact } from '@sim/nav/reachability';
+import { previewPlacement } from '@sim/systems/LayoutSystem';
 import { netIncomePerMinute } from '@sim/systems/EconomySystem';
 import { nextUpgradeCost, upgradeLevel, totalUpgradeLevels } from '@sim/systems/UpgradeSystem';
 import type {
@@ -120,6 +123,68 @@ function optionsFor(world: World): UpgradeOption[] {
   return options;
 }
 
+/**
+ * Candidate cells for a piece of kitchen equipment, back from the road.
+ *
+ * A short authored list rather than a search over the whole lot: the runner
+ * only needs *a* legal spot, the policies have no opinion about where, and
+ * scanning thousands of cells every decision would dominate a run whose whole
+ * point is to be fast enough to sweep.
+ */
+const BUILD_SPOTS: readonly { x: number; y: number }[] = [
+  { x: 3, y: 16.5 },
+  { x: 5, y: 16.5 },
+  { x: 7, y: 16.5 },
+  { x: 9, y: 16.5 },
+  { x: 3, y: 15 },
+  { x: 5, y: 15 },
+];
+
+/** What the player could build or level up now, with a spot already checked. */
+function buildingOptions(world: World): PolicySnapshot['buildings'] {
+  const options: {
+    id: string;
+    level: number;
+    nextCost: number;
+    index: number;
+    spot: { x: number; y: number } | null;
+  }[] = [];
+
+  for (const item of BUILDINGS) {
+    let index = -1;
+    let level = 0;
+    for (let i = 0; i < world.layout.placed.length; i++) {
+      const row = world.layout.placed[i];
+      if (row?.itemId !== item.id) continue;
+      index = i;
+      level = row.level ?? 0;
+      break;
+    }
+
+    const next = level + 1;
+    if (next > item.maxLevel) continue;
+    if (world.progression.stage < Math.max(item.stageRequired, stageForLevel(next))) continue;
+    const cost = buildingCost(item, next);
+    if (cost === undefined) continue;
+
+    let spot: { x: number; y: number } | null = null;
+    if (index < 0) {
+      for (const candidate of BUILD_SPOTS) {
+        if (
+          previewPlacement(world, buildingAsset(item, 1), candidate.x, candidate.y, navigationIntact) === 'ok'
+        ) {
+          spot = candidate;
+          break;
+        }
+      }
+      if (spot === null) continue;
+    }
+
+    options.push({ id: item.id, level, nextCost: cost, index, spot });
+  }
+  return options;
+}
+
 /** Heads per role id. Allocated per call; the policy runs once every hundred ticks. */
 function roleCounts(world: World): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -143,6 +208,7 @@ function snapshot(world: World, tick: number, spentThisStage: number): PolicySna
     reputation: world.economy.reputation,
     employees: world.employees.activeCount,
     employeesByRole: roleCounts(world),
+    buildings: buildingOptions(world),
     upgradesBought: totalUpgradeLevels(world),
     spentOnUpgradesThisStage: spentThisStage,
     upgrades: optionsFor(world),
