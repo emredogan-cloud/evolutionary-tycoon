@@ -457,8 +457,12 @@ export const WORLD_OBJECTS = [
      * crown and all, and `_upper` is a second, larger loose canopy. Stacked,
      * they made the floating-crown tree of the 2026-08-22 review captures.
      * The lower alone is an honest complete tree; the true split pair is
-     * prompted for regeneration (NEW_STAGE1_WORLD, P309/P310) and restores
-     * `upperFrame` + the 5 m height when it lands.
+     * prompted for regeneration (NEW_STAGE1_CONTINUATION, P309/P310) and
+     * restores `upperFrame` + the 5 m height when it lands.
+     *
+     * The two sibling pairs were reconstructed the same way and are sound —
+     * `broadleaf-02` and `conifer-01` each compose into one coherent tree, so
+     * this is the only mismatched pair rather than a fault in the split rule.
      */
     frame: `nature_tree_broadleaf-01_lower${SUFFIX}`,
     footprintX: 2.4,

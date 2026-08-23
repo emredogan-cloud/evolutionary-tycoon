@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ProgressionView } from '@app/bridge/hudModel';
+  import { upgradeLabel } from '../lib/upgradeLabels';
 
   /**
    * The objective card, top right — "what am I trying to accomplish next",
@@ -30,21 +31,10 @@
     staff: 'Personel çalıştır',
     reputation: 'İtibar kazan',
   };
-  const LABELS: Record<string, string> = {
-    'hand-painted-sign': 'Elle boyanmış tabela',
-    'menu-board': 'Menü panosu',
-    'planter-boxes': 'Saksılar',
-    cooler: 'Soğutucu',
-    'sharper-knives': 'Keskin bıçaklar',
-    'illuminated-sign': 'Işıklı tabela',
-    'pass-heat-lamp': 'Isı lambası',
-    'better-ingredients': 'İyi malzeme',
-    'second-prep-station': 'İkinci istasyon',
-  };
 
   const rows = $derived(progression.requirements.filter((row) => row.need > 0));
   const compact = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
-  const headline = $derived(LABELS[objective] ?? objective);
+  const headline = $derived(upgradeLabel(objective));
 </script>
 
 <section class="card" aria-label="Hedefler" data-testid="objective-panel">

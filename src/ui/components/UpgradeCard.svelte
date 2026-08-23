@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { UpgradeView } from '@app/bridge/hudModel';
+  import { upgradeLabel } from '../lib/upgradeLabels';
 
   /**
    * The world-in-place upgrade card — GAME_DESIGN_DOCUMENT §14.3.
@@ -37,38 +38,6 @@
    * design and this is presentation: the day there is a second language, the
    * translation lands here and the tree does not move.
    */
-  const LABELS: Record<string, string> = {
-    'hand-painted-sign': 'Elle boyanmış tabela',
-    'menu-board': 'Menü panosu',
-    'planter-boxes': 'Saksılar ve cephe',
-    'illuminated-sign': 'Işıklı tabela',
-    'neon-facade': 'Neon cephe',
-    'roadside-pylon': 'Yol kenarı totem',
-    'second-prep-station': 'İkinci hazırlık istasyonu',
-    cooler: 'Soğutucu',
-    'sharper-knives': 'Keskin bıçaklar',
-    'pass-heat-lamp': 'Pass ısı lambası',
-    'better-ingredients': 'İyi malzeme',
-    'drink-dispenser': 'İçecek dispenseri',
-    'prep-automation': 'Mutfak otomasyonu',
-    'pastry-oven': 'Fırın',
-    'bigger-counter': 'Daha büyük tezgâh',
-    'queue-barriers': 'Kuyruk bariyerleri',
-    'shade-canopy': 'Gölgelik',
-    'padded-benches': 'Yastıklı banklar',
-    'widened-forecourt': 'Genişletilmiş ön alan',
-    'covered-terrace': 'Kapalı teras',
-    'second-register': 'İkinci kasa',
-    'lane-extension': 'Şerit uzatma',
-    'second-order-post': 'İkinci sipariş direği',
-    'express-window': 'Hızlı pencere',
-    'tap-to-pay': 'Temassız ödeme',
-    'non-slip-shoes': 'Kaymaz ayakkabı',
-    'training-programme': 'Eğitim programı',
-    headsets: 'Kulaklıklar',
-    'staff-room': 'Dinlenme odası',
-    'shift-supervisor': 'Vardiya sorumlusu',
-  };
 
   const FAMILY_LABELS: Record<string, string> = {
     VISIBILITY_APPEAL: 'Görünürlük & Çekicilik',
@@ -125,7 +94,7 @@
   }
 
   const maxed = $derived(upgrade.level >= upgrade.maxLevel);
-  const name = $derived(LABELS[upgrade.id] ?? upgrade.id);
+  const name = $derived(upgradeLabel(upgrade.id));
   const family = $derived(FAMILY_LABELS[upgrade.family] ?? upgrade.family);
   const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 </script>
@@ -202,7 +171,7 @@
     {#if !upgrade.unlocked}
       <p class="locked" data-testid="upgrade-locked">
         {#if upgrade.missingPrereqs.length > 0}
-          Önce gerekli: {upgrade.missingPrereqs.map((id) => LABELS[id] ?? id).join(', ')}
+          Önce gerekli: {upgrade.missingPrereqs.map((id) => upgradeLabel(id)).join(', ')}
         {:else}
           Aşama {upgrade.stage} gerekiyor
         {/if}

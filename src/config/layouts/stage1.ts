@@ -250,55 +250,49 @@ export const STAGE1_LAYOUT: StageLayout = {
   rejoinPointMetres: 8,
 
   /*
-   * Four bays, parallel to the road along the apron at y = 8.6.
+   * Four bays, parallel to the road, centred at y = 9.4.
    *
-   * Parallel rather than the nose-in bays a real forecourt would have, because
-   * a 4.5 m car nosing in from an apron at y = 8.5 ends up on top of the
-   * counter at y = 11 — the lot is 18 m deep and Stage 1 spends most of that on
-   * the road. Parallel bays also keep the entry manoeuvre a single lane change
-   * rather than a three-point turn, which is the difference between a car that
-   * looks like it is parking and one that looks like it is glitching.
+   * ## Why parallel and not nose-in
    *
-   * The corridor between bays 2 and 3 (x = 10.75 to 13.25) is deliberately
-   * empty: it is how customers walk from their cars to the counter, and how the
-   * queue spills back towards the road when the stand is overwhelmed.
-   */
-  /*
-   * The doors stand 1.5 m out from the bay centre, not 1.2.
+   * A 4.5 m car nosing in from the apron would reach the counter — the lot is
+   * 18 m deep and Stage 1 spends most of that on the road. Parallel bays also
+   * keep the entry manoeuvre a single lane change rather than a three-point
+   * turn, which is the difference between a car that looks like it is parking
+   * and one that looks like it is glitching.
    *
-   * A car is 1.9 m wide, so 1.2 m clears the bodywork by 25 cm — and then the
-   * 0.5 m navigation grid rounds the two into the same cell, so the spot a
-   * customer steps out onto was marked solid by their own car. They could not
-   * be routed from it and could not be routed to it. 1.5 m puts the door in the
-   * next cell out, which is the number that has to be true rather than the one
-   * that looks tidy.
-   */
-  /*
-   * At y = 9.55, not the 8.6 first authored — the UI/world correction pass.
+   * ## Why 9.4 and not the 8.6 first authored
    *
    * The carriageway runs to y = 8.5, and a 1.9 m car centred at 8.6 spans
-   * y 7.65..9.55: most of a metre of every parked car sat **on the road**,
-   * which is exactly what the 2026-08-22 captures show — cars that read as
-   * abandoned in the slow lane, because no painted bay existed and the metal
-   * was genuinely on the asphalt. 9.55 puts the whole body (8.6..10.5) inside
-   * the marked layby the renderer now paints along the frontage, with a coat
-   * of clearance to the through lane.
-   */
-  /*
-   * Two pairs flanking the stand, with the pedestrian mouth between them
-   * centred on the counter. The x positions are navigation geometry, not
-   * taste: a parked car blocks the grid to y 10.5 and the counter blocks
-   * 10.8-11.2, so the only walkable route from the doors to the queue runs
-   * through the mouth — which therefore has to be wider than the counter's
-   * own footprint (10.5..13.5), or the flood fill dead-ends into the
-   * counter's back and every placement in the game reads "blocks-navigation".
-   */
-  /*
-   * Bay centres at y 9.4 so the parked body (8.45..10.35) leaves the whole
-   * 10.5..11.0 navigation row free: that row is the doors' walkway, and it is
-   * what keeps every stage's venue objects (truck, diner) able to sit south
-   * of it without sealing the car park off — measured with the flood-fill
-   * probe across all four stages, not assumed.
+   * 7.65..9.55: most of a metre of every parked car sat **on the road**, which
+   * is what the 2026-08-22 captures show — cars reading as abandoned in the
+   * slow lane, because the metal was genuinely on the asphalt. At 9.4 the body
+   * spans 8.45..10.35, inside the layby the renderer paints along the
+   * frontage, and it leaves the 10.5 and 11.0 navigation rows completely open
+   * across the frontage. That is the doors' walkway, and it is what lets every
+   * later stage's venue (truck, diner) sit south of it without sealing the car
+   * park off.
+   *
+   * ## Why the doors sit 1.35 m out
+   *
+   * Not a tidy number, a necessary one. The body edge is at 10.35 and the
+   * navigation grid is 0.5 m, so a door at 1.2 m out (10.6) lands in the same
+   * cell as the car that is parked there: the spot a customer steps onto is
+   * marked solid by their own vehicle, and they can be routed neither from it
+   * nor to it. 10.75 is the next cell out.
+   *
+   * ## Why the mouth is where it is
+   *
+   * Two pairs flank the stand with a pedestrian mouth between them, centred on
+   * the counter. The x positions are navigation geometry rather than taste: a
+   * parked car blocks the grid to 10.35 and the counter's own cell is blocked,
+   * so the walkable route from the doors to the queue runs through the mouth,
+   * and the mouth has to be wider than the counter's footprint or the flood
+   * fill dead-ends into the counter's back and every placement in the game
+   * reads "blocks-navigation".
+   *
+   * Every figure above is measured from the grid rather than asserted;
+   * `tests/unit/sim/layout/standReachability.test.ts` re-measures the walkway
+   * and the door-to-counter route at all four stages on each run.
    */
   parking: [
     { id: 'p1', x: 2.5, y: 9.4, heading: { x: 1, y: 0 }, door: { x: 2.5, y: 10.75 } },

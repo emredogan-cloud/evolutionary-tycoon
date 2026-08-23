@@ -16,9 +16,19 @@ import { allPrompts, renderPromptHtml } from '../../../tools/asset-pipeline/prom
  */
 
 const DELIVERED_PROMPTS = 172;
-/** The delivered 172, the 2026-08-21 audit's 131 (P173–P303), and the
- * 2026-08-22 UI/world correction pass's 5 (P304–P308). */
-const EXPECTED_PROMPTS = 308;
+/**
+ * The delivered 172, the 2026-08-21 audit's 131 (P173–P303), the 2026-08-22
+ * UI/world correction pass's 5 (P304–P308), and the 2026-08-23 stage-1
+ * continuation's 2 (P309–P310 — the broadleaf-01 split pair, which the
+ * delivery painted as two unrelated pictures).
+ *
+ * The same pass also flipped three role icons to NEEDS REGEN. They do **not**
+ * appear here, and that is the point: they already had audit prompt ids
+ * (P291–P293), and ids are positional, so giving them new numbers at the end
+ * would have renumbered every prompt in between. Their *wording* changed; the
+ * catalogue's numbering did not move.
+ */
+const EXPECTED_PROMPTS = 310;
 const HTML_PATH = resolve(import.meta.dirname, '../../../docs/ASSET_GENERATION_PROMPTS.html');
 
 describe('prompt numbering', () => {
@@ -38,6 +48,7 @@ describe('prompt numbering', () => {
     expect(numbered[302]?.id).toBe('P303');
     // The correction pass appends; nothing renumbers.
     expect(numbered[307]?.id).toBe('P308');
+    expect(numbered[309]?.id).toBe('P310');
     // The delivered core is still exactly 172 — the audit appends, never edits.
     expect(emitPrompts()).toHaveLength(DELIVERED_PROMPTS);
     numbered.forEach((asset, index) => {
@@ -116,7 +127,7 @@ describe('the exported page', () => {
 
   it('lists every batch as its own section', () => {
     const batches = [...new Set(numbered.map((asset) => asset.batch))];
-    expect(batches).toHaveLength(23);
+    expect(batches).toHaveLength(24);
     for (const batch of batches) {
       expect(html).toContain(`id="batch-${batch}"`);
     }
@@ -130,7 +141,7 @@ describe('the exported page', () => {
 
   it('shows the counts a reader would check first', () => {
     expect(html).toContain(`<b>${EXPECTED_PROMPTS}</b><span>prompts</span>`);
-    expect(html).toContain('<b>23</b><span>batches</span>');
+    expect(html).toContain('<b>24</b><span>batches</span>');
   });
 
   it('is self-contained and offline', () => {
@@ -151,7 +162,8 @@ describe('the exported page', () => {
 
   it('offers per-prompt and per-batch copying', () => {
     expect(html.split('data-copy="one"').length - 1).toBe(EXPECTED_PROMPTS);
-    expect(html.split('data-copy="batch"').length - 1).toBe(23);
+    // 24 batches: the stage-1 continuation's regenerations are their own.
+    expect(html.split('data-copy="batch"').length - 1).toBe(24);
   });
 
   it('renders identically on a second run', () => {
@@ -167,7 +179,7 @@ describe('the committed page on disk', () => {
     expect(onDisk).toBe(renderPromptHtml(allPrompts()));
   });
 
-  it('carries all 303 prompts', () => {
+  it('carries every prompt', () => {
     const onDisk = readFileSync(HTML_PATH, 'utf8');
     expect(onDisk.split('data-copy="one"').length - 1).toBe(EXPECTED_PROMPTS);
   });

@@ -4,6 +4,7 @@ import { worldObject, worldObjectIndexOf } from '@config/sprites';
 import { Sim } from '@sim/core/Sim';
 import { buyPlace, movePlaced, refundFor, sellPlaced } from '@sim/systems/StoreSystem';
 import { zoneAllows } from '@sim/systems/LayoutSystem';
+import { restoreWorld, snapshotWorld } from '@sim/core/snapshot';
 
 /**
  * The reported bug, pinned so it cannot come back.
@@ -64,6 +65,54 @@ describe('what the player buys is what appears', () => {
     for (const item of STORE_ITEMS) {
       expect(worldObject(item.objectId), `${item.id} names a missing object`).toBeDefined();
     }
+  });
+
+  it('carries every identity through a save and a reload, then refunds correctly', () => {
+    /*
+     * The one leg of the directive's buy → place → move → save → reload →
+     * remove → refund chain that nothing asserted end to end.
+     *
+     * Identity is the whole point. A save writes `itemId` and a reload reads
+     * it back, and every later answer — what this refunds, whether it may
+     * stand here, what the player actually owns — is derived from that field.
+     * If a round-trip dropped it, the object would still be *drawn* correctly
+     * (`objectId` is stored beside it) and would silently refund nothing: a
+     * sign that became a flower on the only axis the player can measure.
+     */
+    const before = stage4();
+    const spots = STORE_ITEMS.map((item, index) => spotFor(item.id, index));
+    STORE_ITEMS.forEach((item, index) => {
+      expect(buyPlace(before.world, item.id, spots[index]?.x ?? 0, spots[index]?.y ?? 0)).toBe('ok');
+    });
+
+    const snapshot = snapshotWorld(before.world);
+    const after = new Sim({ seed: 7 });
+    restoreWorld(after.world, snapshot);
+
+    expect(after.world.layout.placed).toHaveLength(STORE_ITEMS.length);
+    STORE_ITEMS.forEach((item, index) => {
+      const row = after.world.layout.placed[index];
+      expect(row?.itemId, `${item.id} lost its identity across a reload`).toBe(item.id);
+      expect(row?.objectId, `${item.id} came back as something else`).toBe(item.objectId);
+      expect(row?.x, `${item.id} moved across a reload`).toBeCloseTo(spots[index]?.x ?? 0, 6);
+    });
+
+    /*
+     * And the refund still knows what each row cost — which is only true
+     * because it is read from the reloaded `itemId` rather than guessed from
+     * whatever the row happens to be drawn as.
+     */
+    after.world.economy.cash = 0;
+    for (let index = after.world.layout.placed.length - 1; index >= 0; index--) {
+      const item = storeItem(after.world.layout.placed[index]?.itemId ?? '');
+      const expected = refundFor(after.world, index);
+      expect(expected).toBeCloseTo((item?.cost ?? 0) * DEMOLISH_REFUND_FRACTION, 6);
+      expect(sellPlaced(after.world, index)).toBe(true);
+    }
+
+    expect(after.world.layout.placed, 'something survived being sold back').toHaveLength(0);
+    const total = STORE_ITEMS.reduce((sum, item) => sum + item.cost, 0);
+    expect(after.world.economy.cash).toBeCloseTo(total * DEMOLISH_REFUND_FRACTION, 6);
   });
 
   it('keeps ids unique, so no two cards can claim one identity', () => {

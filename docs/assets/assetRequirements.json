@@ -1098,11 +1098,11 @@
     "stage": "all",
     "role": "runtime frame",
     "consumer": "atlas via AssetRegistry",
-    "status": "PRESENT + VERIFIED",
-    "prompt": "P006",
+    "status": "PRESENT + NEEDS REGEN",
+    "prompt": "P309",
     "priority": "—",
     "requiredBefore": null,
-    "note": ""
+    "note": "regen 2026-08-23: delivered _lower is a complete tree, not a lower half; supersedes P006"
   },
   {
     "id": "nature_tree_broadleaf-01_upper",
@@ -1111,11 +1111,11 @@
     "stage": "all",
     "role": "runtime frame",
     "consumer": "atlas via AssetRegistry",
-    "status": "PRESENT + VERIFIED",
-    "prompt": "P007",
+    "status": "PRESENT + NEEDS REGEN",
+    "prompt": "P310",
     "priority": "—",
     "requiredBefore": null,
-    "note": ""
+    "note": "regen 2026-08-23: delivered _upper is a free-floating canopy painted independently; supersedes P007"
   },
   {
     "id": "nature_tree_broadleaf-02_lower",
@@ -3815,11 +3815,11 @@
     "stage": "2-4",
     "role": "staff screen (P18)",
     "consumer": "src/ui Staff",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P292",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "delivered 2026-08-21 (P292), imported+validated (0 failing)"
+    "note": "regen 2026-08-23: delivered art is a multi-object scene, unreadable at the 38 px the staff panel draws (measured from ui.webp)"
   },
   {
     "id": "ui_icon_role-waiter",
@@ -3828,11 +3828,11 @@
     "stage": "2-4",
     "role": "staff screen (P18)",
     "consumer": "src/ui Staff",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P293",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "delivered 2026-08-21 (P293), imported+validated (0 failing)"
+    "note": "regen 2026-08-23: delivered art is a multi-object scene, unreadable at the 38 px the staff panel draws (measured from ui.webp)"
   },
   {
     "id": "ui_icon_role-cleaner",
@@ -3841,11 +3841,11 @@
     "stage": "2-4",
     "role": "staff screen (P18)",
     "consumer": "src/ui Staff",
-    "status": "PRESENT + VERIFIED",
+    "status": "PRESENT + NEEDS REGEN",
     "prompt": "P291",
     "priority": "P1",
     "requiredBefore": "P18",
-    "note": "delivered 2026-08-21 (P291), imported+validated (0 failing)"
+    "note": "regen 2026-08-23: delivered art is a multi-object scene, unreadable at the 38 px the staff panel draws (measured from ui.webp)"
   },
   {
     "id": "ui_illust_offline",

@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { UpgradeView } from '@app/bridge/hudModel';
+  import { upgrade } from '@config/economy/upgrades';
   import { ensureSheet, frameStyle, onIconsReady } from '../lib/atlasIcons';
+  import { upgradeLabel } from '../lib/upgradeLabels';
 
   /**
    * The contextual build panel, bottom centre — the reference's structure
@@ -20,79 +22,35 @@
 
   const { upgrades, stage, playerLevel, onselect }: Props = $props();
 
-  const LABELS: Record<string, string> = {
-    'hand-painted-sign': 'Elle boyanmış tabela',
-    'menu-board': 'Menü panosu',
-    'planter-boxes': 'Saksılar ve cephe',
-    'illuminated-sign': 'Işıklı tabela',
-    'neon-facade': 'Neon cephe',
-    'roadside-pylon': 'Yol kenarı totem',
-    'second-prep-station': 'İkinci hazırlık istasyonu',
-    cooler: 'Soğutucu',
-    'sharper-knives': 'Keskin bıçaklar',
-    'pass-heat-lamp': 'Pass ısı lambası',
-    'better-ingredients': 'İyi malzeme',
-    'drink-dispenser': 'İçecek dispenseri',
-    'prep-automation': 'Mutfak otomasyonu',
-    'pastry-oven': 'Fırın',
-    'bigger-counter': 'Daha büyük tezgâh',
-    'queue-barriers': 'Kuyruk bariyerleri',
-    'shade-canopy': 'Gölgelik',
-    'padded-benches': 'Yastıklı banklar',
-    'widened-forecourt': 'Genişletilmiş ön alan',
-    'staff-room': 'Personel odası',
-    'training-program': 'Eğitim programı',
-    'comfortable-shoes': 'Rahat ayakkabılar',
-    'kitchen-headsets': 'Mutfak kulaklıkları',
-    'shift-supervisor': 'Vardiya şefi',
-    'order-post': 'Sipariş direği',
-    'lane-markings': 'Şerit çizgileri',
-    'second-window': 'İkinci pencere',
-    'tap-to-pay': 'Temassız ödeme',
-    'crate-storage': 'Kasa deposu',
-    register: 'Yazar kasa',
-  };
-
   ensureSheet('ui2');
   let revision = $state(0);
   $effect(() => onIconsReady(() => (revision += 1)));
+  /**
+   * The card's icon, read from the upgrade's own definition.
+   *
+   * This used to be a thirty-entry table in this file, keyed by upgrade id and
+   * "mirroring" the config's `iconKey`. It did not mirror it. Cross-checked
+   * against `UPGRADES`, the copy had drifted in three separate ways at once:
+   *
+   *   - **eight upgrades had no entry at all** — `covered-terrace`,
+   *     `second-register`, `lane-extension`, `second-order-post`,
+   *     `express-window`, `non-slip-shoes`, `training-programme`, `headsets` —
+   *     so `iconKeyOf` returned `''`, `frameStyle` returned null, and those
+   *     eight cards silently fell back to text with no icon at all;
+   *   - **eight keys matched no upgrade** (`training-program`, `order-post`,
+   *     `register`, `crate-storage`, …) — the same eight under earlier names,
+   *     left behind when the ids were renamed;
+   *   - **one card drew the wrong icon**: `better-ingredients` showed the
+   *     badge while its definition names the crates.
+   *
+   * That last one is the sign-becomes-a-flower failure in miniature — the card
+   * showing one thing while the catalogue says another — and it is exactly
+   * what a second table of the same facts produces given enough renames. The
+   * table is gone; there is one source and the panel reads it.
+   */
   const iconFor = (item: UpgradeView): string | null => {
     void revision;
-    return frameStyle('ui2', iconKeyOf(item.id), 44);
-  };
-  /** iconKey mirrors the config's canonical `ui_upgrade_<slug>@2x` names. */
-  const iconKeyOf = (id: string): string => ICON_KEYS[id] ?? '';
-  const ICON_KEYS: Record<string, string> = {
-    'hand-painted-sign': 'ui_upgrade_sign-painted@2x',
-    'menu-board': 'ui_upgrade_menuboard@2x',
-    'planter-boxes': 'ui_upgrade_planter@2x',
-    'illuminated-sign': 'ui_upgrade_sign-lit@2x',
-    'neon-facade': 'ui_upgrade_neon@2x',
-    'roadside-pylon': 'ui_upgrade_pylon@2x',
-    'second-prep-station': 'ui_upgrade_prep-station@2x',
-    cooler: 'ui_upgrade_cooler@2x',
-    'sharper-knives': 'ui_upgrade_knives@2x',
-    'pass-heat-lamp': 'ui_upgrade_heatlamp@2x',
-    'better-ingredients': 'ui_upgrade_badge@2x',
-    'drink-dispenser': 'ui_upgrade_dispenser@2x',
-    'prep-automation': 'ui_upgrade_automation@2x',
-    'pastry-oven': 'ui_upgrade_oven@2x',
-    'bigger-counter': 'ui_upgrade_counter-wide@2x',
-    'queue-barriers': 'ui_upgrade_barrier@2x',
-    'shade-canopy': 'ui_upgrade_canopy@2x',
-    'padded-benches': 'ui_upgrade_bench@2x',
-    'widened-forecourt': 'ui_upgrade_forecourt@2x',
-    'staff-room': 'ui_upgrade_staffroom@2x',
-    'training-program': 'ui_upgrade_badge@2x',
-    'comfortable-shoes': 'ui_upgrade_shoes@2x',
-    'kitchen-headsets': 'ui_upgrade_headset@2x',
-    'shift-supervisor': 'ui_upgrade_supervisor@2x',
-    'order-post': 'ui_upgrade_orderpost@2x',
-    'lane-markings': 'ui_upgrade_lane@2x',
-    'second-window': 'ui_upgrade_window@2x',
-    'tap-to-pay': 'ui_upgrade_reader@2x',
-    'crate-storage': 'ui_upgrade_crates@2x',
-    register: 'ui_upgrade_register@2x',
+    return frameStyle('ui2', upgrade(item.id).iconKey, 44);
   };
 
   const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -119,8 +77,7 @@
 
   const lockText = (item: UpgradeView): string | null => {
     if (item.stage > stage) return `Aşama ${item.stage}`;
-    if (item.missingPrereqs.length > 0)
-      return `${LABELS[item.missingPrereqs[0] ?? ''] ?? item.missingPrereqs[0] ?? ''} gerekli`;
+    if (item.missingPrereqs.length > 0) return `${upgradeLabel(item.missingPrereqs[0] ?? '')} gerekli`;
     if (item.levelLocked) return `Seviye ${item.requiredLevel}`;
     return null;
   };
@@ -152,7 +109,7 @@
               {:else}
                 <span class="art fallback" aria-hidden="true"></span>
               {/if}
-              <span class="name">{LABELS[item.id] ?? item.id}</span>
+              <span class="name">{upgradeLabel(item.id)}</span>
               {#if item.level > 0}
                 <span class="lvl">Sv. {item.level}</span>
               {/if}

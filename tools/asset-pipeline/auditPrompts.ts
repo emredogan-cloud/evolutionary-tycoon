@@ -89,6 +89,48 @@ const OFF_FAMILY_ICONS = new Set([
   'ui_icon_star',
 ]);
 
+/**
+ * Icons the delivery drew as a *scene* where the brief asked for a glyph.
+ *
+ * A different failure from `OFF_FAMILY_ICONS`, which is about colour. These
+ * three are each a ~120 px composition of four to six objects — a toque over a
+ * chopping board and a pan; a cloche, clipboard, waistcoat and napkin; a mop,
+ * trolley and wet-floor sign — and their own prompt asked for "single-glyph,
+ * instantly readable at 20 px".
+ *
+ * Measured by cropping the frames out of `ui.webp` and rendering them at the
+ * 38 px the staff panel draws: only the cook survives, on the toque's
+ * silhouette. The other two collapse into a grey-white blob and a
+ * blue-yellow blob. The panel currently distinguishes them with a role-tinted
+ * tile, which is a workaround for this, not a substitute.
+ */
+const UNREADABLE_AT_SIZE_ICONS = new Set([
+  'ui_icon_role-cook',
+  'ui_icon_role-waiter',
+  'ui_icon_role-cleaner',
+]);
+
+/** The one object of each of those icons, once the scene is stripped away. */
+const ROLE_GLYPH: Readonly<Record<string, string>> = {
+  'ui_icon_role-cook': "a chef's toque, alone",
+  'ui_icon_role-waiter': 'a serving tray held flat, alone',
+  'ui_icon_role-cleaner': 'a mop head, alone',
+};
+
+/**
+ * A split pair the delivery painted as two independent pictures.
+ *
+ * `_lower` is a complete small tree, crown and all, and `_upper` is a second,
+ * larger loose canopy — proven by cropping both out of `nature.webp` and
+ * stacking them at their own anchors, which produces a tree wearing a second
+ * canopy. `sprites.ts` draws the lower alone until this pair lands.
+ *
+ * The two sibling pairs (`broadleaf-02`, `conifer-01`) were reconstructed the
+ * same way and are correct, so this is one bad pair rather than a fault in the
+ * split rule itself.
+ */
+const MISMATCHED_SPLIT = new Set(['nature_tree_broadleaf-01_lower', 'nature_tree_broadleaf-01_upper']);
+
 const FOOD_SUBJECT: Readonly<Record<string, string>> = {
   breakfast: 'breakfast set — plate with eggs, toast and a small coffee',
   chicken: 'fried chicken meal — drumsticks in a small basket',
@@ -274,6 +316,44 @@ function renderRow(row: RequirementRow): Rendered {
       doNots: ['DO NOT add motion blur or multiple elements — the emitter composes them'],
       batch: 'audit-fx',
       subjectKey: 'fx/particle',
+    };
+  }
+  if (MISMATCHED_SPLIT.has(id)) {
+    const half = id.endsWith('_lower') ? 'LOWER' : 'UPPER';
+    const partner = half === 'LOWER' ? 'P310' : 'P309';
+    const body =
+      half === 'LOWER'
+        ? 'trunk, root flare, the stone kerb bed around it and the first branch stubs, with NO crown above the cut'
+        : 'the crown and the branches that carry it, with the trunk cross-section visible at the bottom edge';
+    return {
+      subject: `REGENERATION — the ${half} HALF ONLY of one broadleaf tree: ${body}, cut cleanly at a single horizontal scanline`,
+      sizeHint: 'same footprint as the delivered file it replaces',
+      notes: [
+        'The delivered pair were never halves of one painting — verified by cropping both out of nature.webp and stacking them at their own anchors, which produces a tree wearing a second canopy.',
+        `Generate the WHOLE tree first, then cut it into this file and its partner (${partner}). Do not paint the two halves separately.`,
+        'This half must look unfinished on its own. That is correct; it is never shown without its partner.',
+        'The renderer puts the upper half’s bottom-centre on the lower half’s top edge with one pixel of overlap, so anything that does not line up shows as a seam.',
+      ],
+      doNots: [
+        'CRITICAL: the cut must be at the same y in both halves, and the trunk width and bark colour at the cut must match to the pixel',
+      ],
+      batch: 'audit-stage1-continuation',
+      subjectKey: 'nature/tree',
+    };
+  }
+  if (row.category === 'UI_ICONS' && UNREADABLE_AT_SIZE_ICONS.has(id)) {
+    const what = id.replace('ui_icon_role-', '');
+    return {
+      subject: `REGENERATION of ${id} — ONE object only: ${ROLE_GLYPH[id] ?? what}. No scene, no props around it, no second object of any kind`,
+      sizeHint: '64 x 64 px at 2x',
+      notes: [
+        `The delivered file does not meet its own brief. It is a ~120 px scene of four to six objects; cropped from ui.webp and rendered at the 38 px the staff panel draws, the ${what} icon collapses into an unreadable blob.`,
+        'ONE object. This icon is drawn at 38 px in a 48 px tile beside a name, not at 120 px in a panel.',
+        'The silhouette alone must identify the role. Test it by filling the shape solid black.',
+      ],
+      doNots: ['DO NOT rely on colour alone to carry meaning — shape first (a11y contract)'],
+      batch: 'audit-stage1-continuation',
+      subjectKey: 'ui/icon',
     };
   }
   if (row.category === 'UI_ICONS' && OFF_FAMILY_ICONS.has(id)) {
